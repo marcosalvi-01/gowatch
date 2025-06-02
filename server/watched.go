@@ -15,13 +15,13 @@ import (
 // postWatched handles marking a movie as watched
 //
 //	@Summary		Mark a movie as watched
-//	@Description	Mark a movie as watched by providing either a TMDB ID or name. If the movie doesn't exist in the database, it will be created. When using TMDB ID, movie details are fetched from TMDB API. When using name only, a basic movie record is created. If no date is provided, the current timestamp is used.
+//	@Description	Mark a movie as watched by providing a TMDB ID. If the movie doesn't exist in the database, it will be fetched from TMDB and created. If no date is provided, the current date is used.
 //	@Tags			Movies
 //	@Accept			json
 //	@Produce		json
-//	@Param			watched	body		model.Watched	true	"Watched movie data - must include either tmdb_id or name"
+//	@Param			watched	body		model.Watched	true	"Watched movie data (must include `id` as TMDB ID; optional `date` in YYYY-MM-DD format)"
 //	@Success		201		{object}	model.Watched	"Successfully marked movie as watched"
-//	@Failure		400		{string}	string			"Invalid request body or missing required fields (tmdb_id or name)"
+//	@Failure		400		{string}	string			"Invalid request body or missing required `id` field"
 //	@Failure		500		{string}	string			"Internal server error, database error, or TMDB API error"
 //	@Router			/api/watched [post]
 func (s *Server) postWatched(w http.ResponseWriter, r *http.Request) {
@@ -115,13 +115,13 @@ func (s *Server) getOrCreateMovie(ctx context.Context, tmdbID int64) (*db.Movie,
 	return &movie, nil
 }
 
-// return all watched movies
+// getWatched returns all watched movies
 //
 //	@Summary	Get all watched movies
 //	@Tags		Movies
 //	@Produce	json
-//	@Success	200	{array}		server.uiWatched	"List of all watched movies (array may be empty)"
-//	@Failure	500	{string}	string				"Server error while fetching watched movies"
+//	@Success	200	{array}	model.Movie	"List of all watched movies (array may be empty)"
+//	@Failure	500	{string}	string			"Server error while fetching watched movies"
 //	@Router		/api/watched [get]
 func (s *Server) getWatched(w http.ResponseWriter, r *http.Request) {
 	watched, err := s.query.GetWatchedJoinMovie(r.Context())

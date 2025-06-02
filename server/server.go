@@ -13,6 +13,8 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
+//go:generate go tool swag init --parseDependency -g ./server.go
+
 var log = logging.Get("server")
 
 type Server struct {

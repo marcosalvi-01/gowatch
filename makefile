@@ -9,17 +9,22 @@ run: gen
 build: gen 
 	go build -o ./tmp/main .
 
-gen:
+gen: fmt
 	go generate ./...
+
+fmt:
+	go tool swag fmt
 
 setup:
 	go mod tidy
 
 vet:
 	go vet ./...
+	sqlc vet
 
 air:
 	go tool air
 
 clean:
 	rm -f ./db.db
+	rm -fr ./docs
