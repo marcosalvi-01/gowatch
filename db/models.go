@@ -10,22 +10,20 @@ import (
 
 type Actor struct {
 	ID          int64
-	TmdbID      *int64
 	Name        string
-	ProfilePath *string
+	ProfilePath string
 }
 
 type ActorMovie struct {
 	MovieID   int64
 	ActorID   int64
-	Character *string
-	CastOrder *int64
+	Character string
+	CastOrder int64
 }
 
 type Genre struct {
-	ID     int64
-	TmdbID int64
-	Name   string
+	ID   int64
+	Name string
 }
 
 type GenreMovie struct {
@@ -35,13 +33,12 @@ type GenreMovie struct {
 
 type Movie struct {
 	ID               int64
-	TmdbID           int64
 	ImdbID           string
 	Title            string
+	ReleaseDate      time.Time
 	OriginalLanguage string
 	Overview         string
 	PosterPath       string
-	ReleaseDate      time.Time
 	Budget           int64
 	Revenue          int64
 	Runtime          int64

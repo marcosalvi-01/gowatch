@@ -6,6 +6,9 @@ export
 run: gen
 	go run .
 
+build: gen 
+	go build -o ./tmp/main .
+
 gen:
 	go generate ./...
 
@@ -17,3 +20,6 @@ vet:
 
 air:
 	go tool air
+
+clean:
+	rm -f ./db.db

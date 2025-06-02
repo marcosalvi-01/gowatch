@@ -1,12 +1,13 @@
+PRAGMA foreign_keys = ON;
+
 CREATE TABLE IF NOT EXISTS movie (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    tmdb_id INTEGER NOT NULL UNIQUE,
+    id INTEGER PRIMARY KEY,
     imdb_id TEXT NOT NULL UNIQUE,
     title TEXT NOT NULL,
+    release_date DATE NOT NULL,
     original_language TEXT NOT NULL,
     overview TEXT NOT NULL,
     poster_path TEXT NOT NULL,
-    release_date DATE NOT NULL,
     budget BIGINT NOT NULL,
     revenue BIGINT NOT NULL,
     runtime INTEGER NOT NULL,
@@ -21,8 +22,7 @@ CREATE TABLE IF NOT EXISTS watched (
 );
 
 CREATE TABLE IF NOT EXISTS genre (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    tmdb_id INTEGER NOT NULL UNIQUE,
+    id INTEGER PRIMARY KEY,
     name TEXT NOT NULL UNIQUE
 );
 
@@ -35,17 +35,16 @@ CREATE TABLE IF NOT EXISTS genre_movie (
 );
 
 CREATE TABLE IF NOT EXISTS actor (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    tmdb_id INTEGER UNIQUE,
+    id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
-    profile_path TEXT
+    profile_path TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS actor_movie (
     movie_id INTEGER NOT NULL,
     actor_id INTEGER NOT NULL,
-    character TEXT,
-    cast_order INTEGER,
+    character TEXT NOT NULL,
+    cast_order INTEGER NOT NULL,
     PRIMARY KEY (movie_id, actor_id),
     FOREIGN KEY (movie_id) REFERENCES movie(id) ON DELETE CASCADE,
     FOREIGN KEY (actor_id) REFERENCES actor(id) ON DELETE CASCADE

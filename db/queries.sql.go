@@ -12,7 +12,7 @@ import (
 
 const getAllMovies = `-- name: GetAllMovies :many
 SELECT
-    id, tmdb_id, imdb_id, title, original_language, overview, poster_path, release_date, budget, revenue, runtime, vote_average
+    id, imdb_id, title, release_date, original_language, overview, poster_path, budget, revenue, runtime, vote_average
 FROM
     movie
 `
@@ -28,13 +28,12 @@ func (q *Queries) GetAllMovies(ctx context.Context) ([]Movie, error) {
 		var i Movie
 		if err := rows.Scan(
 			&i.ID,
-			&i.TmdbID,
 			&i.ImdbID,
 			&i.Title,
+			&i.ReleaseDate,
 			&i.OriginalLanguage,
 			&i.Overview,
 			&i.PosterPath,
-			&i.ReleaseDate,
 			&i.Budget,
 			&i.Revenue,
 			&i.Runtime,
@@ -85,7 +84,7 @@ func (q *Queries) GetAllWatched(ctx context.Context) ([]Watched, error) {
 
 const getMovieFromName = `-- name: GetMovieFromName :one
 SELECT
-    id, tmdb_id, imdb_id, title, original_language, overview, poster_path, release_date, budget, revenue, runtime, vote_average
+    id, imdb_id, title, release_date, original_language, overview, poster_path, budget, revenue, runtime, vote_average
 FROM
     movie
 WHERE
@@ -97,13 +96,12 @@ func (q *Queries) GetMovieFromName(ctx context.Context, title string) (Movie, er
 	var i Movie
 	err := row.Scan(
 		&i.ID,
-		&i.TmdbID,
 		&i.ImdbID,
 		&i.Title,
+		&i.ReleaseDate,
 		&i.OriginalLanguage,
 		&i.Overview,
 		&i.PosterPath,
-		&i.ReleaseDate,
 		&i.Budget,
 		&i.Revenue,
 		&i.Runtime,
@@ -114,25 +112,24 @@ func (q *Queries) GetMovieFromName(ctx context.Context, title string) (Movie, er
 
 const getMovieFromReference = `-- name: GetMovieFromReference :one
 SELECT
-    id, tmdb_id, imdb_id, title, original_language, overview, poster_path, release_date, budget, revenue, runtime, vote_average
+    id, imdb_id, title, release_date, original_language, overview, poster_path, budget, revenue, runtime, vote_average
 FROM
     movie
 WHERE
-    tmdb_id = ?
+    id = ?
 `
 
-func (q *Queries) GetMovieFromReference(ctx context.Context, tmdbID int64) (Movie, error) {
-	row := q.db.QueryRowContext(ctx, getMovieFromReference, tmdbID)
+func (q *Queries) GetMovieFromReference(ctx context.Context, id int64) (Movie, error) {
+	row := q.db.QueryRowContext(ctx, getMovieFromReference, id)
 	var i Movie
 	err := row.Scan(
 		&i.ID,
-		&i.TmdbID,
 		&i.ImdbID,
 		&i.Title,
+		&i.ReleaseDate,
 		&i.OriginalLanguage,
 		&i.Overview,
 		&i.PosterPath,
-		&i.ReleaseDate,
 		&i.Budget,
 		&i.Revenue,
 		&i.Runtime,
@@ -143,7 +140,7 @@ func (q *Queries) GetMovieFromReference(ctx context.Context, tmdbID int64) (Movi
 
 const getWatchedJoinMovie = `-- name: GetWatchedJoinMovie :many
 SELECT
-    movie_id, watched_date, id, tmdb_id, imdb_id, title, original_language, overview, poster_path, release_date, budget, revenue, runtime, vote_average
+    movie_id, watched_date, id, imdb_id, title, release_date, original_language, overview, poster_path, budget, revenue, runtime, vote_average
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
@@ -153,13 +150,12 @@ type GetWatchedJoinMovieRow struct {
 	MovieID          int64
 	WatchedDate      time.Time
 	ID               int64
-	TmdbID           int64
 	ImdbID           string
 	Title            string
+	ReleaseDate      time.Time
 	OriginalLanguage string
 	Overview         string
 	PosterPath       string
-	ReleaseDate      time.Time
 	Budget           int64
 	Revenue          int64
 	Runtime          int64
@@ -179,13 +175,12 @@ func (q *Queries) GetWatchedJoinMovie(ctx context.Context) ([]GetWatchedJoinMovi
 			&i.MovieID,
 			&i.WatchedDate,
 			&i.ID,
-			&i.TmdbID,
 			&i.ImdbID,
 			&i.Title,
+			&i.ReleaseDate,
 			&i.OriginalLanguage,
 			&i.Overview,
 			&i.PosterPath,
-			&i.ReleaseDate,
 			&i.Budget,
 			&i.Revenue,
 			&i.Runtime,
@@ -207,7 +202,7 @@ func (q *Queries) GetWatchedJoinMovie(ctx context.Context) ([]GetWatchedJoinMovi
 const insertMovie = `-- name: InsertMovie :one
 INSERT INTO
     movie (
-        tmdb_id,
+        id,
         imdb_id,
         title,
         original_language,
@@ -222,11 +217,11 @@ INSERT INTO
 VALUES
     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING
-    id, tmdb_id, imdb_id, title, original_language, overview, poster_path, release_date, budget, revenue, runtime, vote_average
+    id, imdb_id, title, release_date, original_language, overview, poster_path, budget, revenue, runtime, vote_average
 `
 
 type InsertMovieParams struct {
-	TmdbID           int64
+	ID               int64
 	ImdbID           string
 	Title            string
 	OriginalLanguage string
@@ -241,7 +236,7 @@ type InsertMovieParams struct {
 
 func (q *Queries) InsertMovie(ctx context.Context, arg InsertMovieParams) (Movie, error) {
 	row := q.db.QueryRowContext(ctx, insertMovie,
-		arg.TmdbID,
+		arg.ID,
 		arg.ImdbID,
 		arg.Title,
 		arg.OriginalLanguage,
@@ -256,13 +251,12 @@ func (q *Queries) InsertMovie(ctx context.Context, arg InsertMovieParams) (Movie
 	var i Movie
 	err := row.Scan(
 		&i.ID,
-		&i.TmdbID,
 		&i.ImdbID,
 		&i.Title,
+		&i.ReleaseDate,
 		&i.OriginalLanguage,
 		&i.Overview,
 		&i.PosterPath,
-		&i.ReleaseDate,
 		&i.Budget,
 		&i.Revenue,
 		&i.Runtime,

@@ -13,7 +13,7 @@ FROM
 -- name: InsertMovie :one
 INSERT INTO
     movie (
-        tmdb_id,
+        id,
         imdb_id,
         title,
         original_language,
@@ -44,7 +44,7 @@ SELECT
 FROM
     movie
 WHERE
-    tmdb_id = ?;
+    id = ?;
 
 -- name: GetMovieFromName :one
 SELECT
