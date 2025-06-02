@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gowatch/db"
+	_ "gowatch/server/docs"
 	"gowatch/logging"
 	"net/http"
 	"time"
@@ -76,15 +77,8 @@ func (s *Server) initRoutes() http.Handler {
 
 	apiMux := http.NewServeMux()
 	log.Debug("Registering API handlers")
-	apiMux.HandleFunc("GET /api/watched", func(w http.ResponseWriter, r *http.Request) {
-		log.Info("Received request", "method", r.Method, "path", r.URL.Path)
-		s.getWatched(w, r)
-	})
-	apiMux.HandleFunc("POST /api/watched", func(w http.ResponseWriter, r *http.Request) {
-		log.Info("Received request", "method", r.Method, "path", r.URL.Path)
-		s.postWatched(w, r)
-	})
-	// apiMux.HandleFunc("GET /api/search/movie", s.tmdbSearchMovie)
+	apiMux.HandleFunc("GET /api/watched", s.getWatched)
+	apiMux.HandleFunc("POST /api/watched", s.postWatched)
 
 	log.Debug("Wrapping API mux with CORS middleware")
 	mux.Handle("/api/", corsMiddlewarer(apiMux))

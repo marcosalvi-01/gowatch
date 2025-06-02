@@ -22,7 +22,7 @@ vet:
 	go vet ./...
 	sqlc vet
 
-air:
+serve:
 	go tool air
 
 clean:

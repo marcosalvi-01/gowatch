@@ -2,6 +2,7 @@ package main
 
 import (
 	"gowatch/db"
+	"gowatch/logging"
 	"gowatch/server"
 	"log"
 	"time"
@@ -18,6 +19,8 @@ type Config struct {
 }
 
 func main() {
+	defer logging.Close()
+
 	cfg := Config{}
 	if err := env.Parse(&cfg); err != nil {
 		log.Fatalf("Failed to parse env: %v", err)
