@@ -14,7 +14,7 @@ type Config struct {
 	Timeout    time.Duration `env:"REQUEST_TIMEOUT" envDefault:"30s"`
 	DBPath     string        `env:"DB_PATH" envDefault:"./"`
 	DBName     string        `env:"DB_NAME" envDefault:"db.db"`
-	TMDBApiKey string        `env:"TMDB_API_KEY"`
+	TmdbApiKey string        `env:"TMDB_API_KEY"`
 }
 
 func main() {
@@ -28,7 +28,7 @@ func main() {
 		panic(err)
 	}
 
-	s, err := server.New(":"+cfg.Port, q, cfg.Timeout, cfg.TMDBApiKey)
+	s, err := server.New(":"+cfg.Port, q, cfg.Timeout, cfg.TmdbApiKey)
 	if err != nil {
 		panic(err)
 	}
