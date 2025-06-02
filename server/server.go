@@ -79,6 +79,7 @@ func (s *Server) initRoutes() http.Handler {
 	log.Debug("Registering API handlers")
 	apiMux.HandleFunc("GET /api/watched", s.getWatched)
 	apiMux.HandleFunc("POST /api/watched", s.postWatched)
+	apiMux.HandleFunc("GET /api/search/movie", s.searchMovie)
 
 	log.Debug("Wrapping API mux with CORS middleware")
 	mux.Handle("/api/", corsMiddlewarer(apiMux))

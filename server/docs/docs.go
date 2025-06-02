@@ -15,6 +15,47 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/search/movie": {
+            "get": {
+                "description": "Search for movies using The Movie Database (TMDB) API. Provide search terms via query parameter to find matching movies.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Movies"
+                ],
+                "summary": "Search movies via TMDB",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query for movie titles",
+                        "name": "query",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "TMDB search results containing matching movies",
+                        "schema": {
+                            "$ref": "#/definitions/tmdb.MovieResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or empty query parameter",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "TMDB API error or server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/api/watched": {
             "get": {
                 "produces": [
@@ -137,6 +178,56 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "tmdb.MovieResult": {
+            "type": "object",
+            "properties": {
+                "adult": {
+                    "type": "boolean"
+                },
+                "backdrop_path": {
+                    "type": "string"
+                },
+                "genre_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "original_language": {
+                    "type": "string"
+                },
+                "original_title": {
+                    "type": "string"
+                },
+                "overview": {
+                    "type": "string"
+                },
+                "popularity": {
+                    "type": "number"
+                },
+                "poster_path": {
+                    "type": "string"
+                },
+                "release_date": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "video": {
+                    "type": "boolean"
+                },
+                "vote_average": {
+                    "type": "number"
+                },
+                "vote_count": {
                     "type": "integer"
                 }
             }

@@ -33,9 +33,70 @@ definitions:
       id:
         type: integer
     type: object
+  tmdb.MovieResult:
+    properties:
+      adult:
+        type: boolean
+      backdrop_path:
+        type: string
+      genre_ids:
+        items:
+          type: integer
+        type: array
+      id:
+        type: integer
+      original_language:
+        type: string
+      original_title:
+        type: string
+      overview:
+        type: string
+      popularity:
+        type: number
+      poster_path:
+        type: string
+      release_date:
+        type: string
+      title:
+        type: string
+      video:
+        type: boolean
+      vote_average:
+        type: number
+      vote_count:
+        type: integer
+    type: object
 info:
   contact: {}
 paths:
+  /api/search/movie:
+    get:
+      description: Search for movies using The Movie Database (TMDB) API. Provide
+        search terms via query parameter to find matching movies.
+      parameters:
+      - description: Search query for movie titles
+        in: query
+        name: query
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: TMDB search results containing matching movies
+          schema:
+            $ref: '#/definitions/tmdb.MovieResult'
+        "400":
+          description: Missing or empty query parameter
+          schema:
+            type: string
+        "500":
+          description: TMDB API error or server error
+          schema:
+            type: string
+      summary: Search movies via TMDB
+      tags:
+      - Movies
   /api/watched:
     get:
       produces:

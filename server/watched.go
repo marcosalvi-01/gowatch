@@ -34,13 +34,6 @@ func (s *Server) postWatched(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("Parsed watched request", "tmdb_id", watched.ID, "date", watched.Date)
 
-	// Set current date if not provided
-	if watched.Date == nil {
-		now := time.Now().Format("2006-01-02")
-		watched.Date = &now
-		log.Debug("Set default watch date", "date", now)
-	}
-
 	// Try to get existing movie
 	log.Debug("Looking up movie in database", "tmdb_id", watched.ID)
 	movie, err := s.query.GetMovieFromReference(r.Context(), watched.ID)
@@ -103,6 +96,9 @@ func (s *Server) postWatched(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid date format", http.StatusBadRequest)
 			return
 		}
+	} else {
+		w := watchDate.Format("2006-01-02")
+		watched.Date = &w
 	}
 
 	// Record watched entry
