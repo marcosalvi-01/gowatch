@@ -55,11 +55,14 @@ func (s *Server) postWatched(w http.ResponseWriter, r *http.Request) {
 
 		log.Debug("Successfully fetched movie from TMDB", "tmdb_id", watched.ID, "title", details.Title)
 
-		releaseDate, err := time.Parse("2006-01-02", details.ReleaseDate)
-		if err != nil {
-			log.Error("Failed to parse release date from TMDB", "tmdb_id", watched.ID, "release_date", details.ReleaseDate, "error", err)
-			http.Error(w, "Invalid release date from TMDB", http.StatusInternalServerError)
-			return
+		var releaseDate time.Time
+		if details.ReleaseDate != "" {
+			releaseDate, err = time.Parse("2006-01-02", details.ReleaseDate)
+			if err != nil {
+				log.Error("Failed to parse release date from TMDB", "tmdb_id", watched.ID, "release_date", details.ReleaseDate, "error", err)
+				http.Error(w, "Invalid release date from TMDB", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		// Create movie in database

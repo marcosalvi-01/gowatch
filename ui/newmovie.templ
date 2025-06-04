@@ -51,7 +51,7 @@ templ SearchMovieList(movies []model.Movie) {
 	<div class="flex flex-col">
 		<div class="flex flex-row overflow-x-auto overflow-y-hidden gap-4 py-4">
 			for _, movie := range movies {
-				<label class="cursor-pointer block">
+				<label class="cursor-pointer">
 					<input
 						type="radio"
 						name="selected_movie"
@@ -63,40 +63,24 @@ templ SearchMovieList(movies []model.Movie) {
 						hx-indicator="#loading"
 						hx-swap="innerHTML show:bottom"
 					/>
-					// TODO: fix the styling here
 					<div
-						class="border-2 border-transparent peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300 transition-colors cursor-pointer"
+						class="flex-none border-2 border-transparent peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300 transition-colors cursor-pointer"
 						id="movie-card-container"
 					>
 						@movieCard(movie.PosterPath, movie.Title) {
-							<div class="flex flex-col">
-								<div class="flex flex-row justify-between items-center">
-									<div class="font-bold text-sm leading-tight overflow-hidden text-ellipsis whitespace-nowrap" title={ movie.Title }>{ movie.Title }</div>
-									if movie.VoteAverage > 0 {
-										<div class="font-bold pl-2 text-base self-start flex-shrink-0 text-green-500">{ fmt.Sprintf("%.1f", movie.VoteAverage) } ⭐</div>
-									}
-								</div>
-								<div>
-									if movie.ReleaseDate.IsZero() {
-										<div class="text-xs text-gray-600">📅 Unknown release date</div>
-									} else {
-										<div class="text-xs text-gray-600">📅 Released on { movie.ReleaseDate.Format("2006-01-02") }</div>
-									}
-								</div>
+							<div class="flex flex-row justify-between items-center">
+								<div class="font-bold text-sm leading-tight overflow-hidden text-ellipsis whitespace-nowrap" title={ movie.Title }>{ movie.Title }</div>
+								if movie.VoteAverage > 0 {
+									<div class="font-bold pl-2 text-base self-start flex-shrink-0 text-green-500">{ fmt.Sprintf("%.1f", movie.VoteAverage) } ⭐</div>
+								}
 							</div>
-							// <div class="flex p-2 gap-2 flex-shrink-0">
-							// 	<div class="flex-1 flex flex-col gap-1 min-w-0">
-							// 		<div class="font-bold text-sm leading-tight overflow-hidden text-ellipsis whitespace-nowrap" title={ movie.Title }>{ movie.Title }</div>
-							// 		if movie.ReleaseDate == "" {
-							// 			<div class="text-xs text-gray-600">📅 Unknown release date</div>
-							// 		} else {
-							// 			<div class="text-xs text-gray-600">📅 Released on { movie.ReleaseDate }</div>
-							// 		}
-							// 	</div>
-							// 	if movie.VoteAverage > 0 {
-							// 		<div class="font-bold text-base self-start flex-shrink-0 text-green-500">{ fmt.Sprintf("%.1f", movie.VoteAverage) } ⭐</div>
-							// 	}
-							// </div>
+							<div>
+								if movie.ReleaseDate.IsZero() {
+									<div class="text-xs text-gray-600">📅 Unknown release date</div>
+								} else {
+									<div class="text-xs text-gray-600">📅 Released on { movie.ReleaseDate.Format("2006-01-02") }</div>
+								}
+							</div>
 						}
 					</div>
 				</label>
