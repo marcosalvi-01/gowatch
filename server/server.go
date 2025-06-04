@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"gowatch/db"
-	_ "gowatch/server/docs"
 	"gowatch/logging"
+	_ "gowatch/server/docs"
+	"gowatch/ui"
 	"net/http"
 	"time"
 
@@ -22,10 +23,17 @@ type Server struct {
 	query  *db.Queries
 	server http.Server
 	tmdb   *tmdb.Client
+	ui     *ui.App
 }
 
 // New creates a new Server. The TMDB API key is passed as an argument for better testability.
-func New(port string, q *db.Queries, timeout time.Duration, apiKey string) (*Server, error) {
+func New(
+	port string,
+	q *db.Queries,
+	timeout time.Duration,
+	apiKey string,
+	ui *ui.App,
+) (*Server, error) {
 	log.Info("Initializing new server instance",
 		"port", port,
 		"read_timeout", timeout,
@@ -45,6 +53,7 @@ func New(port string, q *db.Queries, timeout time.Duration, apiKey string) (*Ser
 			ReadTimeout: timeout,
 		},
 		tmdb: tmdbClient,
+		ui:   ui,
 	}
 	log.Debug("Server struct created", "server_addr", srv.server.Addr)
 	return &srv, nil
@@ -83,6 +92,9 @@ func (s *Server) initRoutes() http.Handler {
 
 	log.Debug("Wrapping API mux with CORS middleware")
 	mux.Handle("/api/", corsMiddlewarer(apiMux))
+
+	// ui
+	mux.Handle("/", s.ui.Routes())
 
 	return mux
 }

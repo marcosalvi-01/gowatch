@@ -1,0 +1,24 @@
+package ui
+
+templ movieCard(poster string, title string) {
+	<div
+		class="p-1 bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-xl flex-shrink-0 min-w-50 max-w-50"
+		title={ title }
+	>
+		if poster != "" {
+			<img
+				src={ "https://image.tmdb.org/t/p/w500" + poster }
+				alt={ title + " poster" }
+				class="w-full h-72 object-cover bg-gray-100 rounded-xl shadow-lg border-5 border-gray-50"
+				loading="lazy"
+			/>
+		} else {
+			<div class="w-full h-72 bg-gradient-to-br rounded-xl from-indigo-500 to-purple-600 flex items-center justify-center text-white text-lg font-medium text-center p-5">
+				{ title }
+			</div>
+		}
+		<div class="p-2">
+			{ children... }
+		</div>
+	</div>
+}

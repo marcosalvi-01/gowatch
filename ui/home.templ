@@ -1,0 +1,50 @@
+package ui
+
+templ Index() {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<title>Movie app</title>
+			<script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+			<script src="https://cdn.tailwindcss.com"></script>
+		</head>
+		<body class="font-sans leading-relaxed text-gray-800 bg-gradient-to-br from-indigo-500 to-purple-600 min-h-screen p-8">
+			<div class={ titleClass() }>
+				<p>Welcome! </p>
+			</div>
+			<!-- Button to load the search form -->
+			<button
+				hx-get="/ui/add-watched-movie-html"
+				hx-trigger="click"
+				hx-target="#add-movie-section"
+				hx-indicator="#loading"
+				class={ btnClass() }
+			>
+				Add new watched movie
+			</button>
+			<div id="add-movie-section">
+				<!-- Search form will appear here when button is clicked -->
+			</div>
+			<p class={ sectionTitleClass() + " mt-3" }>
+				Watched movies:
+			</p>
+			<div
+				id="watched-movies"
+				hx-get="/ui/watched-movies-html"
+				hx-trigger="load, refreshWatched from:body"
+				hx-indicator="#loading"
+			>
+				<div id="loading" class="htmx-indicator hidden text-gray-600 italic">
+					<p>Loading your watched movies...</p>
+				</div>
+			</div>
+			<style>
+				.htmx-request .htmx-indicator {
+					display: block !important;
+				}
+			</style>
+			<div id="toast-container" class="fixed top-4 right-4 z-50"></div>
+		</body>
+	</html>
+}

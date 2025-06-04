@@ -4,6 +4,7 @@ import (
 	"gowatch/db"
 	"gowatch/logging"
 	"gowatch/server"
+	"gowatch/ui"
 	"log"
 	"time"
 
@@ -11,11 +12,12 @@ import (
 )
 
 type Config struct {
-	Port       string        `env:"PORT" envDefault:"8080"`
-	Timeout    time.Duration `env:"REQUEST_TIMEOUT" envDefault:"30s"`
-	DBPath     string        `env:"DB_PATH" envDefault:"./"`
-	DBName     string        `env:"DB_NAME" envDefault:"db.db"`
-	TmdbApiKey string        `env:"TMDB_API_KEY"`
+	Port             string        `env:"PORT" envDefault:"8080"`
+	Timeout          time.Duration `env:"REQUEST_TIMEOUT" envDefault:"30s"`
+	DBPath           string        `env:"DB_PATH" envDefault:"./"`
+	DBName           string        `env:"DB_NAME" envDefault:"db.db"`
+	TmdbApiKey       string        `env:"TMDB_API_KEY"`
+	TmdbPosterPrefix string        `env:"TMDB_POSTER_PREFIX" envDefault:"https://image.tmdb.org/t/p/w500"`
 }
 
 func main() {
@@ -31,7 +33,9 @@ func main() {
 		panic(err)
 	}
 
-	s, err := server.New(":"+cfg.Port, q, cfg.Timeout, cfg.TmdbApiKey)
+	u := ui.New(q)
+
+	s, err := server.New(":"+cfg.Port, q, cfg.Timeout, cfg.TmdbApiKey, u)
 	if err != nil {
 		panic(err)
 	}
