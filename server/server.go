@@ -11,6 +11,8 @@ import (
 	"time"
 
 	tmdb "github.com/cyruzin/golang-tmdb"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/cors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
@@ -27,24 +29,18 @@ type Server struct {
 }
 
 // New creates a new Server. The TMDB API key is passed as an argument for better testability.
-func New(
-	port string,
-	q *db.Queries,
-	timeout time.Duration,
-	apiKey string,
-	ui *ui.App,
-) (*Server, error) {
+func New(port string, q *db.Queries, timeout time.Duration, tmdbClient *tmdb.Client, ui *ui.App) (*Server, error) {
 	log.Info("Initializing new server instance",
 		"port", port,
 		"read_timeout", timeout,
 	)
-	log.Debug("Initializing TMDB client", "api_key_provided", apiKey != "")
-	tmdbClient, err := tmdb.Init(apiKey)
-	if err != nil {
-		log.Error("Failed to initialize TMDB client", "error", err)
-		return nil, err
-	}
-	log.Info("TMDB client initialized successfully")
+	// log.Debug("Initializing TMDB client", "api_key_provided", apiKey != "")
+	// tmdbClient, err := tmdb.Init(apiKey)
+	// if err != nil {
+	// 	log.Error("Failed to initialize TMDB client", "error", err)
+	// 	return nil, err
+	// }
+	// log.Info("TMDB client initialized successfully")
 
 	srv := Server{
 		query: q,
@@ -75,28 +71,38 @@ func (s *Server) ListenAndServe() error {
 }
 
 func (s *Server) initRoutes() http.Handler {
-	log.Debug("Initializing routes")
-	mux := http.NewServeMux()
+	r := chi.NewRouter()
 
-	log.Debug("Registering /metrics endpoint")
-	mux.Handle("/metrics", promhttp.Handler())
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: false,
+		MaxAge:           300,
+	}))
+	// r.Use(middleware.Logger)
+	// r.Use(middleware.Recoverer)
 
-	log.Debug("Registering /swagger/ endpoint")
-	mux.Handle("/swagger/", httpSwagger.WrapHandler)
+	r.Handle("/metrics", promhttp.Handler())
+	r.Handle("/swagger/*", httpSwagger.WrapHandler)
 
-	apiMux := http.NewServeMux()
-	log.Debug("Registering API handlers")
-	apiMux.HandleFunc("GET /api/watched", s.getWatched)
-	apiMux.HandleFunc("POST /api/watched", s.postWatched)
-	apiMux.HandleFunc("GET /api/search/movie", s.searchMovie)
+	r.Route("/api", func(api chi.Router) {
+		api.Route("/watched", func(watched chi.Router) {
+			watched.Get("/", s.getWatched)
+			watched.Post("/", s.postWatched)
+		})
 
-	log.Debug("Wrapping API mux with CORS middleware")
-	mux.Handle("/api/", corsMiddlewarer(apiMux))
+		api.Get("/search/movie", s.searchMovie)
+	})
 
 	// ui
-	mux.Handle("/", s.ui.Routes())
+	r.Mount("/ui", s.ui.Routes())
 
-	return mux
+	// home
+	r.Handle("/", s.ui.Index())
+
+	return r
 }
 
 func jsonResponse(w http.ResponseWriter, status int, body any) {

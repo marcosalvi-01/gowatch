@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/caarlos0/env"
+	tmdb "github.com/cyruzin/golang-tmdb"
 )
 
 type Config struct {
@@ -33,9 +34,10 @@ func main() {
 		panic(err)
 	}
 
-	u := ui.New(q)
+	tmdb, err := tmdb.Init(cfg.TmdbApiKey)
+	u := ui.New(q, tmdb)
 
-	s, err := server.New(":"+cfg.Port, q, cfg.Timeout, cfg.TmdbApiKey, u)
+	s, err := server.New(":"+cfg.Port, q, cfg.Timeout, tmdb, u)
 	if err != nil {
 		panic(err)
 	}
