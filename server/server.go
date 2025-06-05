@@ -12,7 +12,6 @@ import (
 
 	tmdb "github.com/cyruzin/golang-tmdb"
 	"github.com/go-chi/chi"
-	"github.com/go-chi/cors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
@@ -34,13 +33,6 @@ func New(port string, q *db.Queries, timeout time.Duration, tmdbClient *tmdb.Cli
 		"port", port,
 		"read_timeout", timeout,
 	)
-	// log.Debug("Initializing TMDB client", "api_key_provided", apiKey != "")
-	// tmdbClient, err := tmdb.Init(apiKey)
-	// if err != nil {
-	// 	log.Error("Failed to initialize TMDB client", "error", err)
-	// 	return nil, err
-	// }
-	// log.Info("TMDB client initialized successfully")
 
 	srv := Server{
 		query: q,
@@ -72,17 +64,6 @@ func (s *Server) ListenAndServe() error {
 
 func (s *Server) initRoutes() http.Handler {
 	r := chi.NewRouter()
-
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: false,
-		MaxAge:           300,
-	}))
-	// r.Use(middleware.Logger)
-	// r.Use(middleware.Recoverer)
 
 	r.Handle("/metrics", promhttp.Handler())
 	r.Handle("/swagger/*", httpSwagger.WrapHandler)

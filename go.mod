@@ -6,6 +6,7 @@ require (
 	github.com/a-h/templ v0.3.887
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/cyruzin/golang-tmdb v1.8.1
+	github.com/go-chi/chi v1.5.5
 	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/prometheus/client_golang v1.22.0
 	github.com/swaggo/http-swagger v1.3.4
@@ -35,8 +36,6 @@ require (
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
-	github.com/go-chi/chi v1.5.5 // indirect
-	github.com/go-chi/cors v1.2.1 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.20.0 // indirect
 	github.com/go-openapi/spec v0.20.6 // indirect

@@ -17,7 +17,7 @@ templ WatchedList(app *App) {
 			<div class="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-5">
 				for _, w := range watched {
 					@movieCard(w.PosterPath, w.Title) {
-						<h3 class="text-lg font-semibold text-gray-800 mb-2">{ w.Title }</h3>
+						<div class="text-sm overflow-hidden text-ellipsis whitespace-nowrap font-semibold text-gray-800 mb-2">{ w.Title }</div>
 						<div class="text-gray-500 text-sm flex items-center gap-1.5">
 							<span>📅 { w.WatchedDate.Format("2006-01-02") }</span>
 						</div>

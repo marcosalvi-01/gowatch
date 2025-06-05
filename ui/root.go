@@ -6,6 +6,8 @@ import (
 	"gowatch/logging"
 	"gowatch/model"
 	"net/http"
+	"sort"
+	"strconv"
 	"time"
 
 	"github.com/a-h/templ"
@@ -39,7 +41,9 @@ func (a *App) Routes() chi.Router {
 	ui.Handle("/watched-movies-html", templ.Handler(WatchedList(a)))
 	ui.Handle("/add-watched-movie-html", templ.Handler(AddWatched()))
 	ui.Handle("/add-watched-date-input", templ.Handler(AddWatchedDateAndSubmit()))
+	ui.Handle("/add-watched-date-input", templ.Handler(AddWatchedDateAndSubmit()))
 
+	ui.Post("/add-watched", a.postWatched)
 	ui.Post("/search", a.searchMovie)
 
 	return ui
@@ -68,6 +72,17 @@ func (a *App) getWatchedMovies() ([]model.Movie, error) {
 			WatchedDate:      &movie.WatchedDate,
 		}
 	}
+
+	// reverse the original slice to keep an order of first = last watched movie added
+	for i, j := 0, len(movies)-1; i < j; i, j = i+1, j-1 {
+		movies[i], movies[j] = movies[j], movies[i]
+	}
+
+	// sort keeping the original order for items that are equal
+	sort.SliceStable(movies, func(i, j int) bool {
+		return movies[i].WatchedDate.After(*movies[j].WatchedDate)
+	})
+
 	return movies, nil
 }
 
@@ -105,5 +120,37 @@ func (a *App) searchMovie(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	component := SearchMovieList(movies)
+	component.Render(r.Context(), w)
+}
+
+func (a *App) postWatched(w http.ResponseWriter, r *http.Request) {
+	movie := r.FormValue("selected_movie")
+	if movie == "" {
+		log.Error("TODO")
+		http.Error(w, "TODO", http.StatusInternalServerError)
+		return
+	}
+	tmdbID, err := strconv.ParseInt(movie, 10, 64)
+	if err != nil {
+		log.Error("TODO")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	date := r.FormValue("date_watched")
+	if date == "" {
+		log.Error("TODO")
+		http.Error(w, "TODO", http.StatusInternalServerError)
+		return
+	}
+
+	a.query.NewWatched(context.Background(), model.Watched{
+		ID:   tmdbID,
+		Date: &date,
+	}, a.tmdb)
+
+	w.Header().Set("HX-Trigger", "refreshWatched")
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	component := Toast()
 	component.Render(r.Context(), w)
 }

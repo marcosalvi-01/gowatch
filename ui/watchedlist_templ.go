@@ -75,20 +75,20 @@ func WatchedList(app *App) templ.Component {
 						}()
 					}
 					ctx = templ.InitializeContext(ctx)
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<h3 class=\"text-lg font-semibold text-gray-800 mb-2\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"text-sm overflow-hidden text-ellipsis whitespace-nowrap font-semibold text-gray-800 mb-2\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var4 string
 					templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(w.Title)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `watchedlist.templ`, Line: 20, Col: 68}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `watchedlist.templ`, Line: 20, Col: 117}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</h3><div class=\"text-gray-500 text-sm flex items-center gap-1.5\"><span>📅 ")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</div><div class=\"text-gray-500 text-sm flex items-center gap-1.5\"><span>📅 ")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
