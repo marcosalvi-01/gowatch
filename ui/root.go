@@ -2,6 +2,8 @@ package ui
 
 import (
 	"context"
+	"embed"
+	_ "embed"
 	"gowatch/db"
 	"gowatch/logging"
 	"gowatch/model"
@@ -16,6 +18,9 @@ import (
 )
 
 //go:generate go tool templ generate
+
+//go:embed static/css/*
+var staticFiles embed.FS
 
 var log = logging.Get("ui")
 
@@ -35,8 +40,14 @@ func (a *App) Index() *templ.ComponentHandler {
 	return templ.Handler(Index())
 }
 
+func (a *App) Static() http.Handler {
+	return http.FileServer(http.FS(staticFiles))
+}
+
 func (a *App) Routes() chi.Router {
 	ui := chi.NewRouter()
+
+	// ui.Handle("/static/*", http.FileServer(http.FS(staticFiles)))
 
 	ui.Handle("/watched-movies-html", templ.Handler(WatchedList(a)))
 	ui.Handle("/add-watched-movie-html", templ.Handler(AddWatched()))

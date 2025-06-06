@@ -1,5 +1,7 @@
 package ui
 
+//go:generate npx tailwindcss --cwd ./../ -i ./ui/assets/input.css -o ./ui/static/css/output.css
+
 // Page title styling - reused across pages
 func titleClass() string {
 	return "text-4xl font-bold mb-2 text-white text-center"

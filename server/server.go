@@ -83,6 +83,8 @@ func (s *Server) initRoutes() http.Handler {
 	// home
 	r.Handle("/", s.ui.Index())
 
+	r.Handle("/static/*", s.ui.Static())
+
 	return r
 }
 

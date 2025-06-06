@@ -17,6 +17,7 @@ fmt:
 
 setup:
 	go mod tidy
+	npm install -D tailwindcss
 
 vet:
 	go vet ./...
