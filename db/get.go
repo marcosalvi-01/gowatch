@@ -7,7 +7,7 @@ import (
 	"os"
 	"path"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 //go:generate go tool sqlc generate -f ../sqlc.yaml
@@ -41,7 +41,7 @@ func Get(DBPath, DBName string) (*Queries, error) {
 		log.Debug("DB file already exists", "dbFile", dbFile)
 	}
 
-	db, err := sql.Open("sqlite3", dbFile)
+	db, err := sql.Open("sqlite", dbFile)
 	if err != nil {
 		log.Error("Failed to open DB connection", "dbFile", dbFile, "error", err)
 		return nil, err

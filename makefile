@@ -6,8 +6,11 @@ export
 run: gen
 	go run .
 
-build: gen 
-	go build -o ./tmp/main .
+build: clean gen 
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./tmp/app .
+
+build-docker: build
+	docker build -t gowatch .
 
 gen: fmt
 	go generate ./...
@@ -29,3 +32,4 @@ serve:
 clean:
 	rm -f ./db.db
 	rm -fr ./docs
+	rm -fr ./tmp
