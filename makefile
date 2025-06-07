@@ -16,12 +16,12 @@ fmt:
 	go tool swag fmt
 
 setup:
-	go mod tidy
-	npm install -D tailwindcss
+	go install
+	npm install tailwindcss
 
 vet:
 	go vet ./...
-	sqlc vet
+	go tool sqlc vet
 
 serve:
 	go tool air
