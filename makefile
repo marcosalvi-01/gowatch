@@ -1,7 +1,10 @@
 include ./.env
 export
 
-.PHONY: run gen build setup vet
+.PHONY: serve run build build-docker gen fmt setup vet clean
+
+serve:
+	go tool air
 
 run: gen
 	go run .
@@ -19,15 +22,17 @@ fmt:
 	go tool swag fmt
 
 setup:
-	go install
+	@echo "Checking prerequisites..."
+	@command -v go >/dev/null 2>&1 || { echo "Go is required but not installed. Please install Go 1.24.3+"; exit 1; }
+	@command -v npm >/dev/null 2>&1 || { echo "npm is required but not installed. Please install Node.js/npm"; exit 1; }
+	@echo "Installing Go dependencies..."
+	go mod download
+	@echo "Installing npm dependencies..."
 	npm install tailwindcss
 
 vet:
 	go vet ./...
 	go tool sqlc vet
-
-serve:
-	go tool air
 
 clean:
 	rm -f ./db.db
