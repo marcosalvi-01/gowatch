@@ -3,7 +3,6 @@ package ui
 import (
 	"context"
 	"embed"
-	_ "embed"
 	"gowatch/db"
 	"gowatch/logging"
 	"gowatch/model"
@@ -138,30 +137,44 @@ func (a *App) postWatched(w http.ResponseWriter, r *http.Request) {
 	movie := r.FormValue("selected_movie")
 	if movie == "" {
 		log.Error("TODO")
-		http.Error(w, "TODO", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		component := Toast(false, "wrong movie format")
+		component.Render(r.Context(), w)
 		return
 	}
 	tmdbID, err := strconv.ParseInt(movie, 10, 64)
 	if err != nil {
 		log.Error("TODO")
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		component := Toast(false, err.Error())
+		component.Render(r.Context(), w)
 		return
 	}
 	date := r.FormValue("date_watched")
 	if date == "" {
 		log.Error("TODO")
-		http.Error(w, "TODO", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		component := Toast(false, "wrong date format")
+		component.Render(r.Context(), w)
 		return
 	}
 
-	a.query.NewWatched(context.Background(), model.Watched{
+	err = a.query.NewWatched(context.Background(), model.Watched{
 		ID:   tmdbID,
 		Date: &date,
 	}, a.tmdb)
+	if err != nil {
+		log.Error("TODO", "err", err.Error())
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		component := Toast(false, err.Error())
+		component.Render(r.Context(), w)
+		return
+	}
 
 	w.Header().Set("HX-Trigger", "refreshWatched")
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	component := Toast()
+	w.WriteHeader(http.StatusCreated)
+	component := Toast(true, "Movie added!")
 	component.Render(r.Context(), w)
 }

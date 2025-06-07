@@ -7,7 +7,7 @@ import (
 )
 
 templ AddWatched() {
-	<div class="bg-white p-5 rounded-xl shadow-lg mt-3">
+	<div class="bg-white p-5 rounded-xl shadow-lg mt-3" id="add-watched-container">
 		<div class="flex flex-row justify-between items-center mb-5">
 			<h2 class={ sectionTitleClass() }>Add watched movie</h2>
 		</div>
@@ -15,7 +15,7 @@ templ AddWatched() {
 			hx-post="/ui/search"
 			hx-target="#search-results"
 			hx-indicator="#loading"
-			hx-swap="innerHTML show:#movie-card-container:bottom"
+			hx-swap="innerHTML show:#add-watched-container:bottom"
 		>
 			<div class="flex flex-row">
 				<div class="flex flex-col">
@@ -48,35 +48,36 @@ templ AddWatched() {
 }
 
 templ SearchMovieList(movies []model.Movie) {
-	<div class="flex flex-col">
-		<div class="flex flex-row overflow-x-auto overflow-y-hidden gap-4 py-4">
+	<div
+		id="search-movie-list-container"
+	>
+		<div class="flex flex-row gap-4 overflow-x-auto py-4">
 			for _, movie := range movies {
 				<label class="cursor-pointer">
 					<input
 						type="radio"
 						name="selected_movie"
 						value={ movie.ID }
-						class="sr-only peer"
+						class="hidden peer"
 						form="add-watched-form"
 						hx-get="/ui/add-watched-date-input"
 						hx-target="#add-watched-date-input"
 						hx-indicator="#loading"
-						hx-swap="innerHTML show:bottom"
+						hx-swap="innerHTML show:#add-watched-container:bottom"
 					/>
 					<div
-						class="p-1 peer-checked:bg-gradient-to-br rounded-xl shadow-lg overflow-hidden transition-all duration-200 peer-checked:-translate-y-2 peer-checked:shadow-xl hover:-translate-y-2 hover:shadow-xl w-56"
+						class="p-1 w-56 h-full duration-200 peer-checked:bg-gradient-to-br from-indigo-500 to-purple-600 peer-checked:-translate-y-2 hover:-translate-y-2 rounded-xl shadow-md pb-6"
 						title={ movie.Title }
-						id="movie-card-container"
 					>
 						if movie.PosterPath != "" {
 							<img
 								src={ "https://image.tmdb.org/t/p/w500" + movie.PosterPath }
 								alt={ movie.Title + " poster" }
-								class="w-full h-72 object-cover bg-gray-100 rounded-xl shadow-lg border-5 border-gray-50"
+								class="h-80 object-cover rounded-xl"
 								loading="lazy"
 							/>
 						} else {
-							<div class="w-full h-72 bg-gradient-to-br rounded-xl from-indigo-500 to-purple-600 flex items-center justify-center text-white text-lg font-medium text-center p-5">
+							<div class="h-80 bg-gradient-to-br to-indigo-500 from-purple-600 rounded-xl text-white text-lg font-medium flex items-center justify-center">
 								{ movie.Title }
 							</div>
 						}
@@ -84,7 +85,7 @@ templ SearchMovieList(movies []model.Movie) {
 							<div class="flex flex-row justify-between items-center pb-2">
 								<div class="font-bold text-sm leading-tight overflow-hidden text-ellipsis whitespace-nowrap" title={ movie.Title }>{ movie.Title }</div>
 								if movie.VoteAverage > 0 {
-									<div class="font-bold pl-2 text-base self-start flex-shrink-0 text-green-500">{ fmt.Sprintf("%.1f", movie.VoteAverage) } ⭐</div>
+									<div class="pl-2 text-base flex-shrink-0">{ fmt.Sprintf("%.1f", movie.VoteAverage) } ⭐</div>
 								}
 							</div>
 							<div>
@@ -104,7 +105,7 @@ templ SearchMovieList(movies []model.Movie) {
 }
 
 templ AddWatchedDateAndSubmit() {
-	<div class="flex flex-col">
+	<div class="flex flex-col" id="watched-date-input">
 		<label for="date" class="block font-medium text-gray-600">When did you watch it? (YYYY-MM-DD)</label>
 		<input
 			type="text"
@@ -122,19 +123,4 @@ templ AddWatchedDateAndSubmit() {
 		</p>
 		<button type="submit" form="add-watched-form" class={ btnClass() }>Add</button>
 	</div>
-}
-
-templ Toast() {
-	<div
-		class="bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out"
-		hx-trigger="load delay:3s"
-		hx-delete=""
-		hx-target="this"
-		hx-swap="delete"
-	>
-		<div class="flex items-center">
-			<span class="text-lg font-semibold">Movie added successfully!</span>
-		</div>
-	</div>
-	<div id="add-movie-section" hx-swap-oob="innerHTML"></div>
 }

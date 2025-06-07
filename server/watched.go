@@ -33,7 +33,7 @@ func (s *Server) postWatched(w http.ResponseWriter, r *http.Request) {
 	err := s.query.NewWatched(r.Context(), watched, s.tmdb)
 	if err != nil {
 		log.Error("Failed to insert new watched movie", "error", err)
-		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		http.Error(w, "Failed to insert new watched movie", http.StatusInternalServerError)
 		return
 	}
 
