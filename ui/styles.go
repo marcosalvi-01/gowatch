@@ -14,7 +14,7 @@ func sectionTitleClass() string {
 
 // Button styling - reused across components
 func btnClass() string {
-	return "px-5 py-2.5 my-2.5 cursor-pointer bg-green-500 text-white border-none rounded-lg text-sm font-medium transition-all duration-200 hover:bg-green-600 hover:-translate-y-0.5 active:translate-y-0"
+	return "shadow-md px-5 py-2.5 my-2.5 cursor-pointer bg-green-500 text-white border-none rounded-lg text-sm font-medium transition-all duration-200 hover:bg-green-600 hover:-translate-y-0.5 active:translate-y-0"
 }
 
 // Form input styling - reused for all inputs

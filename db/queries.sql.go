@@ -150,7 +150,7 @@ type GetWatchedJoinMovieRow struct {
 	MovieID          int64
 	WatchedDate      time.Time
 	ID               int64
-	ImdbID           string
+	ImdbID           *string
 	Title            string
 	ReleaseDate      time.Time
 	OriginalLanguage string
@@ -222,7 +222,7 @@ RETURNING
 
 type InsertMovieParams struct {
 	ID               int64
-	ImdbID           string
+	ImdbID           *string
 	Title            string
 	OriginalLanguage string
 	Overview         string

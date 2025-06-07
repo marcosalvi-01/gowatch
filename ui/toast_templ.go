@@ -30,7 +30,7 @@ func Toast(positive bool, message string) templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		var templ_7745c5c3_Var2 = []any{
-			"text-white px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out",
+			"text-white px-6 py-2 rounded-lg shadow-2xl transform transition-all duration-300 ease-in-out",
 			templ.KV("bg-green-500", positive),
 			templ.KV("bg-red-500", !positive),
 		}

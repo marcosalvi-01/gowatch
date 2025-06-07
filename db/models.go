@@ -33,7 +33,7 @@ type GenreMovie struct {
 
 type Movie struct {
 	ID               int64
-	ImdbID           string
+	ImdbID           *string
 	Title            string
 	ReleaseDate      time.Time
 	OriginalLanguage string

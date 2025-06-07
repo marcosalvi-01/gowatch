@@ -48,7 +48,7 @@ func (q *Queries) NewWatched(ctx context.Context, watched model.Watched, tmdb *t
 			ID:               watched.ID,
 			Title:            details.Title,
 			ReleaseDate:      releaseDate,
-			ImdbID:           details.IMDbID,
+			ImdbID:           &details.IMDbID,
 			OriginalLanguage: details.OriginalLanguage,
 			Overview:         details.Overview,
 			PosterPath:       details.PosterPath,

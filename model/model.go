@@ -9,7 +9,7 @@ type Watched struct {
 
 type Movie struct {
 	ID               int64     `json:"id"`
-	IMDbID           string    `json:"imdb_id"`
+	IMDbID           *string   `json:"imdb_id"`
 	Title            string    `json:"name"`
 	ReleaseDate      time.Time `json:"release"`
 	OriginalLanguage string    `json:"original_language"`

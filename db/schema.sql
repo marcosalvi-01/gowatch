@@ -2,7 +2,7 @@ PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS movie (
     id INTEGER PRIMARY KEY,
-    imdb_id TEXT NOT NULL UNIQUE,
+    imdb_id TEXT,
     title TEXT NOT NULL,
     release_date DATE NOT NULL,
     original_language TEXT NOT NULL,

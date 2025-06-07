@@ -3,7 +3,7 @@ package ui
 templ Toast(positive bool, message string) {
 	<div
 		class={
-			"text-white px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out",
+			"text-white px-6 py-2 rounded-lg shadow-2xl transform transition-all duration-300 ease-in-out",
 			templ.KV("bg-green-500", positive),
 			templ.KV("bg-red-500", !positive),
 		}
