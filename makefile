@@ -9,7 +9,7 @@ serve:
 run: gen
 	go run .
 
-build: clean gen 
+build: gen 
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./tmp/app .
 
 build-docker: build

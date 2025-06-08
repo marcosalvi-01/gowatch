@@ -16,29 +16,22 @@ templ WatchedList(app *App) {
 		} else {
 			<div class="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-5">
 				for _, w := range watched {
-					<div
-						class="p-1 bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-xl w-56"
-						title={ w.Title }
-					>
-						if w.PosterPath != "" {
-							<img
-								src={ "https://image.tmdb.org/t/p/w500" + w.PosterPath }
-								alt={ w.Title + " poster" }
-								class="w-full h-72 object-cover rounded-xl"
-								loading="lazy"
-							/>
-						} else {
-							<div class="w-full h-72 bg-gradient-to-br rounded-xl from-indigo-500 to-purple-600 flex items-center justify-center text-white text-lg font-medium text-center p-5">
-								{ w.Title }
-							</div>
-						}
-						<div class="p-2">
-							<div class="text-sm overflow-hidden text-ellipsis whitespace-nowrap font-semibold text-gray-800 mb-2">{ w.Title }</div>
-							<div class="text-gray-500 text-sm flex items-center gap-1.5">
-								<span>📅 { w.WatchedDate.Format("2006-01-02") }</span>
-							</div>
+					@MovieCard(w.Title, w.PosterPath, nil) {
+						<div class="pb-2">
+							if w.ReleaseDate.IsZero() {
+								<div class="text-xs text-white">📅 Unknown</div>
+							} else {
+								<div class="text-xs text-white">📅 { w.ReleaseDate.Format("2006") }</div>
+							}
 						</div>
-					</div>
+						<div class="text-sm font-semibold text-white pb-2">{ w.Title }</div>
+						if w.Overview != "" {
+							<div class="text-xs text-white line-clamp-4 mb-1">{ w.Overview }</div>
+						}
+						<div class="text-white text-sm">
+							<span>⌚ { w.WatchedDate.Format("2006-01-02") }</span>
+						</div>
+					}
 				}
 			</div>
 		}

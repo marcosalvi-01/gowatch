@@ -1,6 +1,6 @@
 package ui
 
-//go:generate npx tailwindcss --cwd ./../ -i ./ui/assets/input.css -o ./ui/static/css/output.css
+//go:generate npx tailwindcss --cwd ./../ -i ./ui/assets/input.css -o ./ui/static/css/output.css --minify
 
 // Page title styling - reused across pages
 func titleClass() string {

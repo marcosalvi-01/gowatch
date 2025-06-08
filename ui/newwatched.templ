@@ -51,57 +51,46 @@ templ SearchMovieList(movies []model.Movie) {
 	<div
 		id="search-movie-list-container"
 	>
-		<div class="flex flex-row gap-4 overflow-x-auto py-4">
+		<div class="flex flex-row gap-4 overflow-x-auto py-4 pl-4">
 			for _, movie := range movies {
-				<label class="cursor-pointer">
-					<input
-						type="radio"
-						name="selected_movie"
-						value={ movie.ID }
-						class="hidden peer"
-						form="add-watched-form"
-						hx-get="/ui/add-watched-date-input"
-						hx-target="#add-watched-date-input"
-						hx-indicator="#loading"
-						hx-swap="innerHTML show:#add-watched-container:bottom"
-					/>
-					<div
-						class="p-1 w-56 h-full duration-200 peer-checked:bg-gradient-to-br from-indigo-500 to-purple-600 peer-checked:-translate-y-2 hover:-translate-y-2 rounded-xl shadow-md pb-6"
-						title={ movie.Title }
-					>
-						if movie.PosterPath != "" {
-							<img
-								src={ "https://image.tmdb.org/t/p/w500" + movie.PosterPath }
-								alt={ movie.Title + " poster" }
-								class="h-80 object-cover rounded-xl"
-								loading="lazy"
-							/>
+				@MovieCard(movie.Title, movie.PosterPath, MovieCardInput(movie.ID)) {
+					<div class="pb-2">
+						if movie.ReleaseDate.IsZero() {
+							<div class="text-xs text-white">📅 Unknown</div>
 						} else {
-							<div class="h-80 bg-gradient-to-br to-indigo-500 from-purple-600 rounded-xl text-white text-lg font-medium flex items-center justify-center">
-								{ movie.Title }
-							</div>
+							<div class="text-xs text-white">📅 { movie.ReleaseDate.Format("2006") }</div>
 						}
-						<div class="p-2">
-							<div class="flex flex-row justify-between items-center pb-2">
-								<div class="font-bold text-sm leading-tight overflow-hidden text-ellipsis whitespace-nowrap" title={ movie.Title }>{ movie.Title }</div>
-								if movie.VoteAverage > 0 {
-									<div class="pl-2 text-base flex-shrink-0">{ fmt.Sprintf("%.1f", movie.VoteAverage) } ⭐</div>
-								}
-							</div>
-							<div>
-								if movie.ReleaseDate.IsZero() {
-									<div class="text-xs text-gray-800">📅 Unknown release date</div>
-								} else {
-									<div class="text-xs text-gray-800">📅 Released on { movie.ReleaseDate.Format("2006-01-02") }</div>
-								}
-							</div>
-						</div>
 					</div>
-				</label>
+					<div class="flex flex-row justify-between items-center pb-2">
+						<div class="font-bold text-sm leading-tight text-white" title={ movie.Title }>{ movie.Title }</div>
+						if movie.VoteAverage > 0 {
+							<div class="pl-2 text-sm text-white flex-shrink-0">{ fmt.Sprintf("%.1f", movie.VoteAverage) } ⭐</div>
+						}
+					</div>
+					<div>
+						if movie.Overview != "" {
+							<div class="text-xs text-white line-clamp-4">{ movie.Overview }</div>
+						}
+					</div>
+				}
 			}
 		</div>
 		<div id="add-watched-date-input"></div>
 	</div>
+}
+
+templ MovieCardInput(movieID int64) {
+	<input
+		type="radio"
+		name="selected_movie"
+		value={ movieID }
+		class="hidden peer"
+		form="add-watched-form"
+		hx-get="/ui/add-watched-date-input"
+		hx-target="#add-watched-date-input"
+		hx-indicator="#loading"
+		hx-swap="innerHTML show:#add-watched-container:bottom"
+	/>
 }
 
 templ AddWatchedDateAndSubmit() {
