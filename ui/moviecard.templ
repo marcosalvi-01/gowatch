@@ -23,7 +23,7 @@ templ MovieCard(title, posterPath string, input templ.Component) {
 			@input
 		}
 		<!-- Main card container -->
-		<div class="h-full border-2 border-slate-600 rounded-xl shadow-lg overflow-hidden transition-all duration-200 hover:scale-105 hover:shadow-xl peer-checked:scale-105 peer-checked:shadow-xl">
+		<div class="h-full border-2 border-slate-600 rounded-xl shadow-lg overflow-hidden transition-all duration-200 hover:scale-105 hover:shadow-xl peer-checked:scale-105 peer-checked:shadow-xl w-48">
 			if posterPath != "" {
 				<img
 					src={ "https://image.tmdb.org/t/p/w500" + posterPath }

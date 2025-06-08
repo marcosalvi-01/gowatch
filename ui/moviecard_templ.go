@@ -56,7 +56,7 @@ func MovieCard(title, posterPath string, input templ.Component) templ.Component 
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<!-- Main card container --><div class=\"h-full border-2 border-slate-600 rounded-xl shadow-lg overflow-hidden transition-all duration-200 hover:scale-105 hover:shadow-xl peer-checked:scale-105 peer-checked:shadow-xl\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<!-- Main card container --><div class=\"h-full border-2 border-slate-600 rounded-xl shadow-lg overflow-hidden transition-all duration-200 hover:scale-105 hover:shadow-xl peer-checked:scale-105 peer-checked:shadow-xl w-48\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
