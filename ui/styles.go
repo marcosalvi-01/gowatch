@@ -19,5 +19,5 @@ func btnClass() string {
 
 // Form input styling - reused for all inputs with responsive sizing
 func formInputClass() string {
-	return "px-3 py-2 border border-gray-300 rounded text-sm w-full max-w-full sm:max-w-none focus:outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-400 text-white"
+	return "px-4 sm:px-5 py-2 sm:py-2.5 my-2 sm:my-2.5 border border-gray-300 rounded text-sm w-full max-w-full sm:max-w-none focus:outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-400 text-white"
 }

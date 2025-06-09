@@ -1,5 +1,7 @@
 package ui
 
+import "strconv"
+
 templ WatchedList(app *App) {
 	{{ watched, err := app.getWatchedMovies() }}
 	<div class="px-2 sm:px-0">
@@ -16,22 +18,24 @@ templ WatchedList(app *App) {
 		} else {
 			<div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-2 sm:gap-3 md:gap-4">
 				for _, w := range watched {
-					@MovieCard(w.Title, w.PosterPath, nil) {
-						<div class="pb-1">
-							if w.ReleaseDate.IsZero() {
-								<div class="text-xs text-white">📅 Unknown</div>
-							} else {
-								<div class="text-xs text-white">📅 { w.ReleaseDate.Format("2006") }</div>
+					<a class="cursor-pointer" href={ templ.SafeURL("https://www.themoviedb.org/movie/" + strconv.FormatInt(w.ID, 10)) } target="_blank" rel="noopener noreferrer">
+						@MovieCard(w.Title, w.PosterPath, nil) {
+							<div class="pb-1">
+								if w.ReleaseDate.IsZero() {
+									<div class="text-xs text-white">📅 Unknown</div>
+								} else {
+									<div class="text-xs text-white">📅 { w.ReleaseDate.Format("2006") }</div>
+								}
+							</div>
+							<div class="text-xs sm:text-sm font-semibold text-white pb-1 leading-tight">{ w.Title }</div>
+							if w.Overview != "" {
+								<div class="text-xs text-white line-clamp-2 sm:line-clamp-3 mb-1 leading-tight">{ w.Overview }</div>
 							}
-						</div>
-						<div class="text-xs sm:text-sm font-semibold text-white pb-1 leading-tight">{ w.Title }</div>
-						if w.Overview != "" {
-							<div class="text-xs text-white line-clamp-2 sm:line-clamp-3 mb-1 leading-tight">{ w.Overview }</div>
+							<div class="text-white text-xs">
+								<span>⌚ { w.WatchedDate.Format("2006-01-02") }</span>
+							</div>
 						}
-						<div class="text-white text-xs">
-							<span>⌚ { w.WatchedDate.Format("2006-01-02") }</span>
-						</div>
-					}
+					</a>
 				}
 			</div>
 		}

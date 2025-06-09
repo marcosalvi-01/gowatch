@@ -36,7 +36,7 @@ func New(query *db.Queries, tmdb *tmdb.Client) *App {
 }
 
 func (a *App) Index() *templ.ComponentHandler {
-	return templ.Handler(Index())
+	return templ.Handler(Index(a))
 }
 
 func (a *App) Static() http.Handler {

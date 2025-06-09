@@ -1,6 +1,6 @@
 package ui
 
-templ Index() {
+templ Index(app *App) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
@@ -30,9 +30,15 @@ templ Index() {
 				<div id="add-movie-section">
 					<!-- Search form will appear here when button is clicked -->
 				</div>
-				<p class={ sectionTitleClass() + " mt-8 text-center sm:text-left" }>
-					Watched movies:
-				</p>
+				<div class="flex flex-row justify-between">
+					<p class={ sectionTitleClass() + " mt-8 text-center sm:text-left" }>
+						Watched movies:
+					</p>
+					{{ watched, _ := app.getWatchedMovies() }}
+					<p class={ sectionTitleClass() + " mt-8 text-center sm:text-left" }>
+						{ len(watched) }
+					</p>
+				</div>
 				<div
 					id="watched-movies"
 					hx-get="/ui/watched-movies-html"
