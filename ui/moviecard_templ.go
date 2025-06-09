@@ -14,17 +14,18 @@ import templruntime "github.com/a-h/templ/runtime"
 // interactive behaviors through an optional input element (checkbox, radio, etc.).
 //
 // Features:
-//   - Scales and shows shadow on hover and when selected
-//   - Displays a gradient tint overlay on hover/selection
-//   - Shows custom content (children) overlay on hover/selection
-//   - Responsive design with fixed dimensions (48x72 in Tailwind units)
-//   - Accessible with proper alt text and cursor pointer
+// - Scales and shows shadow on hover and when selected
+// - Displays a gradient tint overlay on hover/selection
+// - Shows custom content (children) overlay on hover/selection
+// - Responsive design that adapts to container size
+// - Maintains proper aspect ratio (2:3 for movie posters)
+// - Accessible with proper alt text and cursor pointer
 //
 // Parameters:
-//   - title: Movie title for alt text and fallback display
-//   - posterPath: URL path to poster image (empty string shows fallback)
-//   - input: Optional input component (checkbox/radio) for selection behavior
-//   - children: Content to display in the overlay (rating, date, description, etc.)
+// - title: Movie title for alt text and fallback display
+// - posterPath: URL path to poster image (empty string shows fallback)
+// - input: Optional input component (checkbox/radio) for selection behavior
+// - children: Content to display in the overlay (rating, date, description, etc.)
 func MovieCard(title, posterPath string, input templ.Component) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -46,7 +47,7 @@ func MovieCard(title, posterPath string, input templ.Component) templ.Component 
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<label class=\"cursor-pointer group relative h-72 w-48 mb-4\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<label class=\"cursor-pointer group relative block w-full h-full\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -56,7 +57,7 @@ func MovieCard(title, posterPath string, input templ.Component) templ.Component 
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<!-- Main card container --><div class=\"h-full border-2 border-slate-600 rounded-xl shadow-lg overflow-hidden transition-all duration-200 hover:scale-105 hover:shadow-xl peer-checked:scale-105 peer-checked:shadow-xl w-48\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<!-- Main card container with responsive dimensions and aspect ratio --><div class=\"w-full h-full aspect-[2/3] border-2 border-slate-600 rounded-xl shadow-lg overflow-hidden transition-all duration-200 hover:scale-105 hover:shadow-xl peer-checked:scale-105 peer-checked:shadow-xl\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -68,7 +69,7 @@ func MovieCard(title, posterPath string, input templ.Component) templ.Component 
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs("https://image.tmdb.org/t/p/w500" + posterPath)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `moviecard.templ`, Line: 29, Col: 57}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `moviecard.templ`, Line: 30, Col: 57}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
@@ -81,7 +82,7 @@ func MovieCard(title, posterPath string, input templ.Component) templ.Component 
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(title + " poster")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `moviecard.templ`, Line: 30, Col: 28}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `moviecard.templ`, Line: 31, Col: 28}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -92,14 +93,14 @@ func MovieCard(title, posterPath string, input templ.Component) templ.Component 
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-lg font-medium text-center p-5\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs sm:text-sm md:text-base font-medium text-center p-2 sm:p-3 md:p-4\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `moviecard.templ`, Line: 36, Col: 12}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `moviecard.templ`, Line: 37, Col: 12}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -110,7 +111,7 @@ func MovieCard(title, posterPath string, input templ.Component) templ.Component 
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div><!-- Tint overlay --><div class=\"absolute inset-0 rounded-xl pointer-events-none transition-all duration-200 \n\t\t\t\t\tgroup-hover:scale-105 group-hover:bg-gradient-to-t group-hover:from-slate-600/90 group-hover:to-slate-600/20 \n\t\t\t\t\tpeer-checked:scale-105 peer-checked:bg-gradient-to-t peer-checked:from-slate-600/80 peer-checked:to-slate-600/20\"></div><!-- Content overlay --><div class=\"absolute inset-0 p-2 pointer-events-none transition-all duration-200 flex flex-col justify-end\n\t\t\t\t\topacity-0 group-hover:opacity-100 group-hover:scale-105 \n\t\t\t\t\tpeer-checked:opacity-100 peer-checked:scale-105\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div><!-- Tint overlay --><div class=\"absolute inset-0 rounded-xl pointer-events-none transition-all duration-200 \n\t\t\t\t   group-hover:scale-105 group-hover:bg-gradient-to-t group-hover:from-slate-600/90 group-hover:to-slate-600/20 \n\t\t\t\t   peer-checked:scale-105 peer-checked:bg-gradient-to-t peer-checked:from-slate-600/80 peer-checked:to-slate-600/20\"></div><!-- Content overlay --><div class=\"absolute inset-0 p-1 sm:p-2 md:p-3 pointer-events-none transition-all duration-200 flex flex-col justify-end\n\t\t\t\t   opacity-0 group-hover:opacity-100 group-hover:scale-105 \n\t\t\t\t   peer-checked:opacity-100 peer-checked:scale-105\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
