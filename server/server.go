@@ -72,6 +72,7 @@ func (s *Server) initRoutes() http.Handler {
 		api.Route("/watched", func(watched chi.Router) {
 			watched.Get("/", s.getWatched)
 			watched.Post("/", s.postWatched)
+			watched.Get("/export", s.exportWatched)
 		})
 
 		api.Get("/search/movie", s.searchMovie)
