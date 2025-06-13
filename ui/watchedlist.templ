@@ -4,6 +4,14 @@ import "strconv"
 
 templ WatchedList(app *App) {
 	{{ watched, err := app.getWatchedMovies() }}
+	<div class="flex flex-row justify-between">
+		<p class={ sectionTitleClass() + " mt-8 text-center sm:text-left" }>
+			Watched movies:
+		</p>
+		<p class={ sectionTitleClass() + " mt-8 text-center sm:text-left" }>
+			{ len(watched) }
+		</p>
+	</div>
 	<div class="px-2 sm:px-0">
 		if err != nil {
 			<div class="bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg mb-5 mx-2 sm:mx-0">
