@@ -33,6 +33,22 @@ definitions:
       id:
         type: integer
     type: object
+  server.exportMovie:
+    properties:
+      date:
+        type: string
+      movies:
+        items:
+          $ref: '#/definitions/server.watchedMovie'
+        type: array
+    type: object
+  server.watchedMovie:
+    properties:
+      in_theater:
+        type: boolean
+      movie_id:
+        type: integer
+    type: object
   tmdb.MovieResult:
     properties:
       adult:
@@ -145,30 +161,6 @@ paths:
           schema:
             type: string
       summary: Mark a movie as watched
-      tags:
-      - Movies
-  /api/watched/export:
-    get:
-      description: Export all watched movies grouped by their watched date. Returns
-        a map where keys are dates and values are arrays of TMDB movie IDs watched
-        on that date.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Map of watched dates to arrays of TMDB movie IDs (dates as
-            keys, movie ID arrays as values)
-          schema:
-            additionalProperties:
-              items:
-                type: integer
-              type: array
-            type: object
-        "500":
-          description: Server error while fetching watched movies
-          schema:
-            type: string
-      summary: Export watched movies grouped by date
       tags:
       - Movies
 swagger: "2.0"

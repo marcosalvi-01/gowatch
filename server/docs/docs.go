@@ -127,38 +127,6 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "/api/watched/export": {
-            "get": {
-                "description": "Export all watched movies grouped by their watched date. Returns a map where keys are dates and values are arrays of TMDB movie IDs watched on that date.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Movies"
-                ],
-                "summary": "Export watched movies grouped by date",
-                "responses": {
-                    "200": {
-                        "description": "Map of watched dates to arrays of TMDB movie IDs (dates as keys, movie ID arrays as values)",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "array",
-                                "items": {
-                                    "type": "integer"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error while fetching watched movies",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {
@@ -210,6 +178,31 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "server.exportMovie": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "movies": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/server.watchedMovie"
+                    }
+                }
+            }
+        },
+        "server.watchedMovie": {
+            "type": "object",
+            "properties": {
+                "in_theater": {
+                    "type": "boolean"
+                },
+                "movie_id": {
                     "type": "integer"
                 }
             }

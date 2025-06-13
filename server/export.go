@@ -5,15 +5,24 @@ import (
 	"time"
 )
 
+type watchedMovie struct {
+	MovieID   int64 `json:"movie_id"`
+	InTheater bool  `json:"in_theater,omitempty"`
+}
+
+type exportMovie struct {
+	Date   time.Time      `json:"date"`
+	Movies []watchedMovie `json:"movies"`
+}
+
 // exportWatched returns all watched movies grouped by watched date
 //
 //	@Summary		Export watched movies grouped by date
-//	@Description	Export all watched movies grouped by their watched date. Returns a map where keys are dates and values are arrays of TMDB movie IDs watched on that date.
+//	@Description	Export all watched movies grouped by their watched date. Returns an array of objects containing date and movie IDs watched on that date.
 //	@Tags			Movies
 //	@Produce		json
-//	@Success		200	{object}	map[string][]int64	"Map of watched dates to arrays of TMDB movie IDs (dates as keys, movie ID arrays as values)"
-//	@Failure		500	{string}	string				"Server error while fetching watched movies"
-//	@Router			/api/watched/export [get]
+//	@Success		200	{array}		exportMovie	"Array of objects with date and movie IDs watched on that date"
+//	@Failure		500	{string}	string		"Server error while fetching watched movies"
 func (s *Server) exportWatched(w http.ResponseWriter, r *http.Request) {
 	movies, err := s.query.GetAllWatched(r.Context())
 	if err != nil {
@@ -21,12 +30,25 @@ func (s *Server) exportWatched(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to retrieve watched movies", http.StatusInternalServerError)
 		return
 	}
-	result := map[time.Time][]int64{}
+
+	// Group movies by watched date
+	movieMap := make(map[time.Time][]watchedMovie)
 	for _, movie := range movies {
-		if _, ok := result[movie.WatchedDate]; !ok {
-			result[movie.WatchedDate] = []int64{}
+		watchedMovie := watchedMovie{
+			MovieID: movie.MovieID,
+			// InTheater: movie.InTheater,
 		}
-		result[movie.WatchedDate] = append(result[movie.WatchedDate], movie.MovieID)
+		movieMap[movie.WatchedDate] = append(movieMap[movie.WatchedDate], watchedMovie)
 	}
+
+	// Convert map to slice of exportMovie
+	result := make([]exportMovie, 0, len(movieMap))
+	for date, movieList := range movieMap {
+		result = append(result, exportMovie{
+			Date:   date,
+			Movies: movieList,
+		})
+	}
+
 	jsonResponse(w, http.StatusOK, result)
-}
+} //	@Router	/api/watched/export [get]
