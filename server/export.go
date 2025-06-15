@@ -23,6 +23,7 @@ type exportMovie struct {
 //	@Produce		json
 //	@Success		200	{array}		exportMovie	"Array of objects with date and movie IDs watched on that date"
 //	@Failure		500	{string}	string		"Server error while fetching watched movies"
+//	@Router			/api/watched/export [get]
 func (s *Server) exportWatched(w http.ResponseWriter, r *http.Request) {
 	movies, err := s.query.GetAllWatched(r.Context())
 	if err != nil {

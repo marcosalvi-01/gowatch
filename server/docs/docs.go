@@ -127,6 +127,35 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/api/watched/export": {
+            "get": {
+                "description": "Export all watched movies grouped by their watched date. Returns an array of objects containing date and movie IDs watched on that date.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Movies"
+                ],
+                "summary": "Export watched movies grouped by date",
+                "responses": {
+                    "200": {
+                        "description": "Array of objects with date and movie IDs watched on that date",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/server.exportMovie"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error while fetching watched movies",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
