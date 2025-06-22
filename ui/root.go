@@ -6,6 +6,7 @@ import (
 	"gowatch/db"
 	"gowatch/logging"
 	"gowatch/model"
+	"gowatch/ui/stats"
 	"net/http"
 	"sort"
 	"strconv"
@@ -26,17 +27,23 @@ var log = logging.Get("ui")
 type App struct {
 	query *db.Queries
 	tmdb  *tmdb.Client
+	stats *stats.Stats
 }
 
 func New(query *db.Queries, tmdb *tmdb.Client) *App {
 	return &App{
 		query: query,
 		tmdb:  tmdb,
+		stats: stats.NewStats(query),
 	}
 }
 
 func (a *App) Index() *templ.ComponentHandler {
 	return templ.Handler(Index(a))
+}
+
+func (a *App) Stats() *templ.ComponentHandler {
+	return templ.Handler(StatsPage(a))
 }
 
 func (a *App) Static() http.Handler {
@@ -45,8 +52,6 @@ func (a *App) Static() http.Handler {
 
 func (a *App) Routes() chi.Router {
 	ui := chi.NewRouter()
-
-	// ui.Handle("/static/*", http.FileServer(http.FS(staticFiles)))
 
 	ui.Handle("/watched-movies-html", templ.Handler(WatchedList(a)))
 	ui.Handle("/add-watched-movie-html", templ.Handler(AddWatched()))

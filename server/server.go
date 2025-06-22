@@ -78,11 +78,12 @@ func (s *Server) initRoutes() http.Handler {
 		api.Get("/search/movie", s.searchMovie)
 	})
 
-	// ui
+	// htmx ui routes
 	r.Mount("/ui", s.ui.Routes())
 
-	// home
+	// Pages
 	r.Handle("/", s.ui.Index())
+	r.Handle("/stats", s.ui.Stats())
 
 	r.Handle("/static/*", s.ui.Static())
 

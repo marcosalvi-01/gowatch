@@ -8,10 +8,12 @@ templ Index(app *App) {
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>Movie app</title>
 			<script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+			<script src="https://go-echarts.github.io/go-echarts-assets/assets/echarts.min.js"></script>
+			<script src="https://go-echarts.github.io/go-echarts-assets/assets/themes/westeros.js"></script>
 			<link rel="stylesheet" href="/static/css/output.css"/>
 		</head>
-		<body class="font-sans leading-relaxed text-gray-800 bg-gradient-to-br from-gray-800 to-slate-800 min-h-screen">
-			<div class="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
+		<body hx-ext="head-support" class="font-sans leading-relaxed text-gray-800 bg-gradient-to-br from-gray-800 to-slate-800 min-h-screen">
+			<div id="main-content" class="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
 				<div class={ titleClass() }>
 					<p>Gowatch</p>
 				</div>
@@ -25,6 +27,15 @@ templ Index(app *App) {
 						class={ btnClass() }
 					>
 						Add new watched movie
+					</button>
+					<button
+						hx-get="/stats"
+						hx-trigger="click"
+						hx-target="body"
+						hx-push-url="/stats"
+						class={ btnClass() }
+					>
+						Stats
 					</button>
 				</div>
 				<div id="add-movie-section">
@@ -45,7 +56,7 @@ templ Index(app *App) {
 			.htmx-request .htmx-indicator {
 				display: block !important;
 			}
-		</style>
+			</style>
 			<div id="toast-container" class="fixed top-4 right-4 z-50 max-w-xs sm:max-w-sm"></div>
 		</body>
 	</html>

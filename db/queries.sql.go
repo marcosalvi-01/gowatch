@@ -82,6 +82,70 @@ func (q *Queries) GetAllWatched(ctx context.Context) ([]Watched, error) {
 	return items, nil
 }
 
+const getMostWatchedMovies = `-- name: GetMostWatchedMovies :many
+SELECT
+    movie.id, movie.imdb_id, movie.title, movie.release_date, movie.original_language, movie.overview, movie.poster_path, movie.budget, movie.revenue, movie.runtime, movie.vote_average,
+    COUNT(*) AS view_count
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+GROUP BY
+    movie.id
+ORDER BY
+    view_count DESC
+`
+
+type GetMostWatchedMoviesRow struct {
+	ID               int64
+	ImdbID           *string
+	Title            string
+	ReleaseDate      time.Time
+	OriginalLanguage string
+	Overview         string
+	PosterPath       string
+	Budget           int64
+	Revenue          int64
+	Runtime          int64
+	VoteAverage      float64
+	ViewCount        int64
+}
+
+func (q *Queries) GetMostWatchedMovies(ctx context.Context) ([]GetMostWatchedMoviesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMostWatchedMovies)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMostWatchedMoviesRow
+	for rows.Next() {
+		var i GetMostWatchedMoviesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ImdbID,
+			&i.Title,
+			&i.ReleaseDate,
+			&i.OriginalLanguage,
+			&i.Overview,
+			&i.PosterPath,
+			&i.Budget,
+			&i.Revenue,
+			&i.Runtime,
+			&i.VoteAverage,
+			&i.ViewCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getMovieFromName = `-- name: GetMovieFromName :one
 SELECT
     id, imdb_id, title, release_date, original_language, overview, poster_path, budget, revenue, runtime, vote_average

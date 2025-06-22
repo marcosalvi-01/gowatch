@@ -29,7 +29,7 @@ func Index(app *App) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Movie app</title><script src=\"https://unpkg.com/htmx.org@2.0.4\" integrity=\"sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+\" crossorigin=\"anonymous\"></script><link rel=\"stylesheet\" href=\"/static/css/output.css\"></head><body class=\"font-sans leading-relaxed text-gray-800 bg-gradient-to-br from-gray-800 to-slate-800 min-h-screen\"><div class=\"container mx-auto px-4 py-6 sm:px-6 lg:px-8\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Movie app</title><script src=\"https://unpkg.com/htmx.org@2.0.4\" integrity=\"sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+\" crossorigin=\"anonymous\"></script><script src=\"https://go-echarts.github.io/go-echarts-assets/assets/echarts.min.js\"></script><script src=\"https://go-echarts.github.io/go-echarts-assets/assets/themes/westeros.js\"></script><link rel=\"stylesheet\" href=\"/static/css/output.css\"></head><body hx-ext=\"head-support\" class=\"font-sans leading-relaxed text-gray-800 bg-gradient-to-br from-gray-800 to-slate-800 min-h-screen\"><div id=\"main-content\" class=\"container mx-auto px-4 py-6 sm:px-6 lg:px-8\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -73,7 +73,29 @@ func Index(app *App) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\">Add new watched movie</button></div><div id=\"add-movie-section\"><!-- Search form will appear here when button is clicked --></div><div id=\"watched-movies\" hx-get=\"/ui/watched-movies-html\" hx-trigger=\"load, refreshWatched from:body\" hx-indicator=\"#loading\"><div id=\"loading\" class=\"htmx-indicator hidden text-gray-600 italic text-center\"><p>Loading your watched movies...</p></div></div></div><style>\n\t\t\t.htmx-request .htmx-indicator {\n\t\t\t\tdisplay: block !important;\n\t\t\t}\n\t\t</style><div id=\"toast-container\" class=\"fixed top-4 right-4 z-50 max-w-xs sm:max-w-sm\"></div></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\">Add new watched movie</button> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var6 = []any{btnClass()}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var6...)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<button hx-get=\"/stats\" hx-trigger=\"click\" hx-target=\"body\" hx-push-url=\"/stats\" class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var7 string
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var6).String())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `home.templ`, Line: 1, Col: 0}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\">Stats</button></div><div id=\"add-movie-section\"><!-- Search form will appear here when button is clicked --></div><div id=\"watched-movies\" hx-get=\"/ui/watched-movies-html\" hx-trigger=\"load, refreshWatched from:body\" hx-indicator=\"#loading\"><div id=\"loading\" class=\"htmx-indicator hidden text-gray-600 italic text-center\"><p>Loading your watched movies...</p></div></div></div><style>\n\t\t\t.htmx-request .htmx-indicator {\n\t\t\t\tdisplay: block !important;\n\t\t\t}\n\t\t\t</style><div id=\"toast-container\" class=\"fixed top-4 right-4 z-50 max-w-xs sm:max-w-sm\"></div></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
