@@ -16,7 +16,7 @@ templ StatsPage(app *App) {
 			<div class={ titleClass() }>
 				<p>Gowatch Stats</p>
 			</div>
-			<div class="pr-8 pl-8 rounded-xl overflow-hidden bg-gradient-to-br from-gray-700 to-slate-700">
+			<div class="pr-8 pl-8 w-full rounded-xl bg-gradient-to-br from-gray-700 to-slate-700 flex justify-center">
 				if graph, err := app.stats.MostWatchedMovie(); err != nil {
 					Something went wrong
 				} else {

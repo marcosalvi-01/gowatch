@@ -2,6 +2,7 @@ package stats
 
 import (
 	"context"
+	_ "embed"
 	"gowatch/db"
 	"slices"
 
@@ -17,7 +18,7 @@ type Stats struct {
 
 func NewStats(query *db.Queries) *Stats {
 	return &Stats{
-		query,
+		query: query,
 	}
 }
 
@@ -33,6 +34,9 @@ func (s *Stats) MostWatchedMovie() (templ.Component, error) {
 
 	bar := charts.NewBar()
 	bar.SetGlobalOptions(
+		charts.WithGridOpts(opts.Grid{
+			Left: "100px",
+		}),
 		charts.WithInitializationOpts(opts.Initialization{
 			Theme:           types.ThemeChalk,
 			Width:           "100%",
@@ -42,6 +46,7 @@ func (s *Stats) MostWatchedMovie() (templ.Component, error) {
 		charts.WithTitleOpts(opts.Title{
 			Title:    "Most Watched Movies",
 			Subtitle: "Top movies by view count",
+			Left:     "center",
 		}),
 		charts.WithTooltipOpts(opts.Tooltip{
 			Show: opts.Bool(true),
@@ -59,15 +64,12 @@ func (s *Stats) MostWatchedMovie() (templ.Component, error) {
 		charts.WithYAxisOpts(opts.YAxis{
 			Type: "category",
 			AxisLabel: &opts.AxisLabel{
-				Show:       opts.Bool(true),
-				Color:      "white",
-				FontStyle:  "",
-				FontWeight: "",
-				FontFamily: "",
-				FontSize:   18,
-				Width:      150,
-				Overflow:   "truncate",
-				Ellipsis:   "...",
+				Show:     opts.Bool(true),
+				Color:    "white",
+				FontSize: 14,
+				Width:    100,
+				Overflow: "truncate",
+				Ellipsis: "...",
 			},
 		}),
 	)
@@ -99,8 +101,8 @@ func (s *Stats) MostWatchedMovie() (templ.Component, error) {
 			charts.WithLabelOpts(opts.Label{
 				Show:     opts.Bool(true),
 				Position: "right",
-			}),
-		)
+				Color:    "white", // Text color
+			}))
 
 	return ConvertChartToTemplComponent(bar), nil
 }

@@ -51,7 +51,7 @@ func StatsPage(app *App) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\"><p>Gowatch Stats</p></div><div class=\"pr-8 pl-8 rounded-xl overflow-hidden bg-gradient-to-br from-gray-700 to-slate-700\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\"><p>Gowatch Stats</p></div><div class=\"pr-8 pl-8 w-full rounded-xl bg-gradient-to-br from-gray-700 to-slate-700 flex justify-center\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
