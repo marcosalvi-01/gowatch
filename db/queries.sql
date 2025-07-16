@@ -59,4 +59,16 @@ SELECT
     *
 FROM
     watched
+    JOIN movie ON watched.movie_id = movie.id;
+
+-- name: GetMostWatchedMovies :many
+SELECT
+    movie.*,
+    COUNT(*) AS view_count
+FROM
+    watched
     JOIN movie ON watched.movie_id = movie.id
+GROUP BY
+    movie.id
+ORDER BY
+    view_count DESC;
