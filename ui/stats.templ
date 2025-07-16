@@ -9,19 +9,21 @@ templ StatsPage(app *App) {
 			<title>Movie app stats</title>
 			<script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
 			<script src="https://go-echarts.github.io/go-echarts-assets/assets/echarts.min.js"></script>
-			<script src="https://go-echarts.github.io/go-echarts-assets/assets/themes/westeros.js"></script>
+			<script src="https://go-echarts.github.io/go-echarts-assets/assets/themes/chalk.js"></script>
 			<link rel="stylesheet" href="/static/css/output.css"/>
 		</head>
-		<body class="font-sans p-8 leading-relaxed text-gray-800 bg-gradient-to-br from-gray-800 to-slate-800 min-h-screen">
-			<div class={ titleClass() }>
-				<p>Gowatch Stats</p>
-			</div>
-			<div class="pr-8 pl-8 w-full rounded-xl bg-gradient-to-br from-gray-700 to-slate-700 flex justify-center">
-				if graph, err := app.stats.MostWatchedMovie(); err != nil {
-					Something went wrong
-				} else {
-					@graph
-				}
+		<body class="font-sans leading-relaxed text-gray-800 bg-gradient-to-br from-gray-800 to-slate-800 min-h-screen">
+			<div id="main-content" class="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
+				<div class={ titleClass() }>
+					<p>Gowatch Stats</p>
+				</div>
+				<div class="pr-8 pl-8 w-full rounded-xl bg-gradient-to-br from-gray-700 to-slate-700">
+					if graph, err := app.stats.MostWatchedMovie(); err != nil {
+						Something went wrong
+					} else {
+						@graph
+					}
+				</div>
 			</div>
 		</body>
 	</html>
