@@ -1,9 +1,3 @@
--- name: GetAllMovies :many
-SELECT
-    *
-FROM
-    movie;
-
 -- name: GetAllWatched :many
 SELECT
     *
@@ -16,17 +10,43 @@ INSERT INTO
         id,
         imdb_id,
         title,
+        original_title,
+        release_date,
         original_language,
         overview,
         poster_path,
-        release_date,
+        backdrop_path,
         budget,
         revenue,
         runtime,
-        vote_average
+        vote_average,
+        vote_count,
+        popularity,
+        homepage,
+        STATUS,
+        tagline
     )
 VALUES
-    (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?
+    )
 RETURNING
     *;
 
@@ -38,7 +58,7 @@ VALUES
 RETURNING
     *;
 
--- name: GetMovieFromReference :one
+-- name: GetMovieByID :one
 SELECT
     *
 FROM
@@ -46,7 +66,7 @@ FROM
 WHERE
     id = ?;
 
--- name: GetMovieFromName :one
+-- name: GetMovieByName :one
 SELECT
     *
 FROM
@@ -56,14 +76,15 @@ WHERE
 
 -- name: GetWatchedJoinMovie :many
 SELECT
-    *
+    sqlc.embed(movie),
+    sqlc.embed(watched)
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id;
 
 -- name: GetMostWatchedMovies :many
 SELECT
-    movie.*,
+    sqlc.embed(movie),
     COUNT(*) AS view_count
 FROM
     watched

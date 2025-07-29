@@ -2,13 +2,14 @@ package main
 
 import (
 	"gowatch/db"
+	"gowatch/internal/routes"
+	"gowatch/internal/services"
 	"gowatch/logging"
-	"gowatch/server"
-	"gowatch/ui"
 	"log"
+	"net/http"
 	"time"
 
-	"github.com/caarlos0/env"
+	"github.com/caarlos0/env/v11"
 	tmdb "github.com/cyruzin/golang-tmdb"
 )
 
@@ -17,8 +18,8 @@ type Config struct {
 	Timeout          time.Duration `env:"REQUEST_TIMEOUT" envDefault:"30s"`
 	DBPath           string        `env:"DB_PATH" envDefault:"./"`
 	DBName           string        `env:"DB_NAME" envDefault:"db.db"`
-	TmdbApiKey       string        `env:"TMDB_API_KEY"`
-	TmdbPosterPrefix string        `env:"TMDB_POSTER_PREFIX" envDefault:"https://image.tmdb.org/t/p/w500"`
+	TMDBAPIKey       string        `env:"TMDB_API_KEY"`
+	TMDBPosterPrefix string        `env:"TMDB_POSTER_PREFIX" envDefault:"https://image.tmdb.org/t/p/w500"`
 }
 
 func main() {
@@ -29,18 +30,30 @@ func main() {
 		log.Fatalf("Failed to parse env: %v", err)
 	}
 
-	q, err := db.Get(cfg.DBPath, cfg.DBName)
+	db, err := db.NewSqliteDB(cfg.DBPath, cfg.DBName)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	tmdb, err := tmdb.Init(cfg.TMDBAPIKey)
 	if err != nil {
 		panic(err)
 	}
 
-	tmdb, err := tmdb.Init(cfg.TmdbApiKey)
-	u := ui.New(q, tmdb)
+	movieService := services.NewMovieService(db, tmdb)
 
-	s, err := server.New(":"+cfg.Port, q, cfg.Timeout, tmdb, u)
-	if err != nil {
-		panic(err)
+	router := routes.NewRouter(movieService)
+
+	server := &http.Server{
+		Addr:         ":" + cfg.Port,
+		Handler:      router,
+		ReadTimeout:  cfg.Timeout,
+		WriteTimeout: cfg.Timeout,
 	}
 
-	s.ListenAndServe()
+	log.Printf("Server starting on port %s", cfg.Port)
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatal("Server failed to start:", err)
+	}
 }

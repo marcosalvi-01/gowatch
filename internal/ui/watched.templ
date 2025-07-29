@@ -1,0 +1,51 @@
+package ui
+
+import (
+	"fmt"
+
+	"gowatch/internal/models"
+	"gowatch/internal/ui/components/aspectratio"
+	"gowatch/internal/ui/components/card"
+	"gowatch/internal/ui/components/page"
+)
+
+templ WatchedPage(days []models.WatchedDay) {
+	@page.Page(page.Props{
+		Title:       "Gowatch",
+		Name:        "Watched Movies",
+		CurrentPath: "/watched",
+	}) {
+		<div class="flex flex-wrap gap-6">
+			for _, day := range days {
+				<section
+					class="flex-shrink-0 px-4 py-2 rounded-lg space-y-2"
+					style={ fmt.Sprintf("background:hsl(%d,100%%,85%%)", (day.Date.YearDay()*137)%360) }
+				>
+					<h2 class="text-lg font-medium tracking-wide text-black">
+						{ day.Date.Format("Mon 02 Jan 2006") }
+					</h2>
+					<div class="flex flex-wrap gap-6 w-full">
+						for _, movie := range day.Movies {
+							@card.Card(card.Props{
+								Class: "w-[180px]",
+							}) {
+								@aspectratio.AspectRatio(aspectratio.Props{
+									ID:    "poster",
+									Ratio: aspectratio.RatioPoster,
+									Class: "h-full w-full",
+								}) {
+									<img
+										src={ "https://image.tmdb.org/t/p/w500" + movie.PosterPath }
+										alt={ movie.Title }
+										loading="lazy"
+										class="h-full w-full object-cover rounded"
+									/>
+								}
+							}
+						}
+					</div>
+				</section>
+			}
+		</div>
+	}
+}

@@ -1,0 +1,12 @@
+package ui
+
+import "gowatch/internal/ui/components/page"
+
+templ SearchPage(searchContent string) {
+	@page.Page(page.Props{
+		Title:         "Gowatch",
+		Name:          "Search",
+		CurrentPath:   "/search",
+		SearchContent: searchContent,
+	})
+}

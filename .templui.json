@@ -1,0 +1,7 @@
+{
+  "componentsDir": "internal/ui/components",
+  "utilsDir": "internal/ui/utils",
+  "moduleName": "gowatch",
+  "jsDir": "internal/handlers/static/static/js",
+  "jsPublicPath": "/static/js"
+}
