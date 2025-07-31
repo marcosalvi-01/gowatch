@@ -68,7 +68,9 @@ templ Page(props Props, extraHead ...templ.Component) {
 				</div>
 				// Scrollable Main content area
 				<div class="flex-1 overflow-auto p-4">
-					<h1 class="text-xl mb-4">{ props.Name }</h1>
+					if props.Name != "" {
+						<h1 class="text-xl mb-4">{ props.Name }</h1>
+					}
 					{ children... }
 				</div>
 			</div>

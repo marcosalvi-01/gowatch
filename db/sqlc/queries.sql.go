@@ -229,6 +229,51 @@ func (q *Queries) GetWatchedJoinMovie(ctx context.Context) ([]GetWatchedJoinMovi
 	return items, nil
 }
 
+const getWatchedMovieDetails = `-- name: GetWatchedMovieDetails :one
+SELECT
+    movie.id, movie.imdb_id, movie.title, movie.original_title, movie.release_date, movie.original_language, movie.overview, movie.poster_path, movie.backdrop_path, movie.budget, movie.revenue, movie.runtime, movie.vote_average, movie.vote_count, movie.popularity, movie.homepage, movie.status, movie.tagline,
+    COUNT(*) AS view_count
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+WHERE
+    movie.id = ?1
+GROUP BY
+    movie.id
+`
+
+type GetWatchedMovieDetailsRow struct {
+	Movie     Movie
+	ViewCount int64
+}
+
+func (q *Queries) GetWatchedMovieDetails(ctx context.Context, movieID int64) (GetWatchedMovieDetailsRow, error) {
+	row := q.db.QueryRowContext(ctx, getWatchedMovieDetails, movieID)
+	var i GetWatchedMovieDetailsRow
+	err := row.Scan(
+		&i.Movie.ID,
+		&i.Movie.ImdbID,
+		&i.Movie.Title,
+		&i.Movie.OriginalTitle,
+		&i.Movie.ReleaseDate,
+		&i.Movie.OriginalLanguage,
+		&i.Movie.Overview,
+		&i.Movie.PosterPath,
+		&i.Movie.BackdropPath,
+		&i.Movie.Budget,
+		&i.Movie.Revenue,
+		&i.Movie.Runtime,
+		&i.Movie.VoteAverage,
+		&i.Movie.VoteCount,
+		&i.Movie.Popularity,
+		&i.Movie.Homepage,
+		&i.Movie.Status,
+		&i.Movie.Tagline,
+		&i.ViewCount,
+	)
+	return i, err
+}
+
 const insertMovie = `-- name: InsertMovie :one
 INSERT INTO
     movie (

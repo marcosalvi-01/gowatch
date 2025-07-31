@@ -80,9 +80,18 @@ type WatchedMovie struct {
 	WatchedDate time.Time
 }
 
-type WatchedMovieCount struct {
+// WatchedMovieDetails represents a watched movie and some additional details about it.
+// Used in the movie page details about a specific movie (if watched)
+type WatchedMovieDetails struct {
 	Movie     Movie
 	ViewCount int
+}
+
+// WatchedDay represents a day and all the movies watched in that day.
+// Used in the watched page to group movies by watched day
+type WatchedDay struct {
+	Movies []Movie
+	Date   time.Time
 }
 
 // For importing/exporting watched movie data from JSON
@@ -96,9 +105,4 @@ type WatchedMoviesEntry struct {
 
 type WatchedMovieRef struct {
 	MovieID int `json:"movie_id"`
-}
-
-type WatchedDay struct {
-	Date   time.Time
-	Movies []Movie
 }

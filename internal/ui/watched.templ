@@ -4,9 +4,10 @@ import (
 	"fmt"
 
 	"gowatch/internal/models"
-	"gowatch/internal/ui/components/aspectratio"
-	"gowatch/internal/ui/components/card"
+	"gowatch/internal/ui/components/icon"
+	"gowatch/internal/ui/components/moviecard"
 	"gowatch/internal/ui/components/page"
+	"strconv"
 )
 
 templ WatchedPage(days []models.WatchedDay) {
@@ -15,32 +16,40 @@ templ WatchedPage(days []models.WatchedDay) {
 		Name:        "Watched Movies",
 		CurrentPath: "/watched",
 	}) {
-		<div class="flex flex-wrap gap-6">
+		<div class="flex flex-wrap gap-x-6 gap-y-4">
 			for _, day := range days {
 				<section
-					class="flex-shrink-0 px-4 py-2 rounded-lg space-y-2"
-					style={ fmt.Sprintf("background:hsl(%d,100%%,85%%)", (day.Date.YearDay()*137)%360) }
+					class="flex-shrink-0 p-2 md:p-4 rounded-lg space-y-2"
+					style={ "background:hsl(" + fmt.Sprint(day.Date.YearDay()*137%360) + ",100%,85%)" }
 				>
-					<h2 class="text-lg font-medium tracking-wide text-black">
+					<h2 class="text-md font-medium tracking-wide text-black">
 						{ day.Date.Format("Mon 02 Jan 2006") }
 					</h2>
 					<div class="flex flex-wrap gap-6 w-full">
 						for _, movie := range day.Movies {
-							@card.Card(card.Props{
-								Class: "w-[180px]",
+							@moviecard.MovieCard(moviecard.Props{
+								Title:      movie.Title,
+								Href:       "/movie/" + strconv.Itoa(int(movie.ID)),
+								PosterPath: movie.PosterPath,
+								Hoverable:  true,
 							}) {
-								@aspectratio.AspectRatio(aspectratio.Props{
-									ID:    "poster",
-									Ratio: aspectratio.RatioPoster,
-									Class: "h-full w-full",
-								}) {
-									<img
-										src={ "https://image.tmdb.org/t/p/w500" + movie.PosterPath }
-										alt={ movie.Title }
-										loading="lazy"
-										class="h-full w-full object-cover rounded"
-									/>
-								}
+								<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight">{ movie.Title }</h3>
+								<div class="flex items-center justify-between">
+									<div class="flex items-center">
+										@icon.Calendar(icon.Props{Size: 12})
+										<p class="ml-2 text-xs opacity-90">{ movie.ReleaseDate.Format("2006") }</p>
+									</div>
+									if movie.VoteAverage > 0 {
+										<div class="flex items-center">
+											@icon.Star(icon.Props{
+												Size:   12,
+												Fill:   "orange",
+												Stroke: "orange",
+											})
+											<span class="ml-1 text-xs">{ fmt.Sprintf("%.1f", movie.VoteAverage) }</span>
+										</div>
+									}
+								</div>
 							}
 						}
 					</div>

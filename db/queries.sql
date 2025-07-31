@@ -93,3 +93,15 @@ GROUP BY
     movie.id
 ORDER BY
     view_count DESC;
+
+-- name: GetWatchedMovieDetails :one
+SELECT
+    sqlc.embed(movie),
+    COUNT(*) AS view_count
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+WHERE
+    movie.id = :movie_id
+GROUP BY
+    movie.id;

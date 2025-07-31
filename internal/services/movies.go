@@ -66,6 +66,23 @@ func (s *MovieService) SearchMovie(query string) ([]models.SearchMovie, error) {
 	return movies, nil
 }
 
+func (s *MovieService) SearchMovieByID(id int64) (models.Movie, error) {
+	log.Debug("searching movie by id", "id", id)
+
+	details, err := s.tmdb.GetMovieDetails(int(id), nil)
+	if err != nil {
+		log.Error("TMDB get movie details failed", "id", id, "error", err)
+		return models.Movie{}, fmt.Errorf("error searching TMDB for movie details with id '%d': %w", id, err)
+	}
+
+	movie, err := models.MovieFromTMDBMovieDetails(*details)
+	if err != nil {
+		return models.Movie{}, fmt.Errorf("failed to convert from TMDB movie into model movie: %w", err)
+	}
+
+	return movie, nil
+}
+
 func (s *MovieService) CreateMovie(ctx context.Context, movie models.Movie) error {
 	log.Debug("creating movie", "movie_id", movie.ID, "title", movie.Title)
 
@@ -94,23 +111,14 @@ func (s *MovieService) AddWatched(ctx context.Context, watchedEntry models.Watch
 
 		log.Debug("movie not found, fetching from TMDB", "movie_id", watchedEntry.MovieID)
 
-		// Movie doesn't exist, fetch from TMDB and add it
-		movieDetails, err := s.tmdb.GetMovieDetails(int(watchedEntry.MovieID), nil)
+		newMovie, err := s.SearchMovieByID(watchedEntry.MovieID)
 		if err != nil {
-			log.Error("TMDB fetch failed", "movie_id", watchedEntry.MovieID, "error", err)
-			return fmt.Errorf("failed to fetch movie details from TMDB: %w", err)
+			return fmt.Errorf("failed to get movie details from TMDB: %w", err)
 		}
 
-		newMovie, err := models.MovieFromTMDBMovieDetails(*movieDetails)
+		err = s.AddMovie(ctx, newMovie)
 		if err != nil {
-			log.Error("movie conversion failed", "movie_id", watchedEntry.MovieID, "error", err)
-			return fmt.Errorf("failed to convert TMDB data to movie model: %w", err)
-		}
-
-		err = s.CreateMovie(ctx, newMovie)
-		if err != nil {
-			log.Error("movie creation failed", "movie_id", watchedEntry.MovieID, "error", err)
-			return fmt.Errorf("failed to save movie to database: %w", err)
+			return fmt.Errorf("failed to add new movie to db: %w", err)
 		}
 	}
 
@@ -121,6 +129,15 @@ func (s *MovieService) AddWatched(ctx context.Context, watchedEntry models.Watch
 	}
 
 	log.Info("watched entry added", "movie_id", watchedEntry.MovieID)
+	return nil
+}
+
+func (s *MovieService) AddMovie(ctx context.Context, movie models.Movie) error {
+	err := s.CreateMovie(ctx, movie)
+	if err != nil {
+		log.Error("movie creation failed", "movie_id", movie.ID, "error", err)
+		return fmt.Errorf("failed to save movie to database: %w", err)
+	}
 	return nil
 }
 
@@ -192,4 +209,53 @@ func (s *MovieService) GetAllWatchedMovies(ctx context.Context) ([]models.Watche
 	})
 
 	return movies, nil
+}
+
+// GetWatchedDayMovies returns all the movies watched in a single day grouped by day
+func (s *MovieService) GetWatchedDayMovies(ctx context.Context) ([]models.WatchedDay, error) {
+	movies, err := s.db.GetWatchedJoinMovie(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch watched join movie: %w", err)
+	}
+
+	sort.Slice(movies, func(i, j int) bool {
+		return movies[i].WatchedDate.After(movies[j].WatchedDate)
+	})
+
+	var out []models.WatchedDay
+	for _, m := range movies {
+		d := m.WatchedDate.Truncate(24 * time.Hour)
+		if len(out) == 0 || !d.Equal(out[len(out)-1].Date) {
+			out = append(out, models.WatchedDay{Date: d})
+		}
+		out[len(out)-1].Movies = append(out[len(out)-1].Movies, m.Movie)
+	}
+
+	return out, nil
+}
+
+func (s *MovieService) GetWatchedMovieDetails(ctx context.Context, id int64) (models.WatchedMovieDetails, error) {
+	movie, err := s.db.GetWatchedMovieDetails(ctx, id)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return models.WatchedMovieDetails{}, fmt.Errorf("failed to get movie details by id: %w", err)
+		}
+
+		tmdbMovie, err := s.SearchMovieByID(id)
+		if err != nil {
+			return models.WatchedMovieDetails{}, fmt.Errorf("failed to get movie details from TMDB: %w", err)
+		}
+
+		err = s.AddMovie(ctx, tmdbMovie)
+		if err != nil {
+			return models.WatchedMovieDetails{}, fmt.Errorf("failed to add new movie to db: %w", err)
+		}
+
+		movie = models.WatchedMovieDetails{
+			Movie:     tmdbMovie,
+			ViewCount: 0,
+		}
+	}
+
+	return movie, nil
 }

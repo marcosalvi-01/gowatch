@@ -1,0 +1,146 @@
+package ui
+
+import (
+	"fmt"
+	"gowatch/internal/models"
+	"gowatch/internal/ui/components/button"
+	"gowatch/internal/ui/components/card"
+	"gowatch/internal/ui/components/moviecard"
+	"gowatch/internal/ui/components/page"
+	"gowatch/internal/ui/components/separator"
+	"gowatch/internal/ui/components/table"
+	"strconv"
+)
+
+templ MoviePage(watched models.WatchedMovieDetails) {
+	@page.Page(page.Props{
+		Title:       "Gowatch",
+		CurrentPath: "/movie",
+	}) {
+		@movieHero(watched.Movie)
+		@table.Table() {
+			@table.Header() {
+				@table.Row() {
+					@table.Head() {
+						Release Date
+					}
+					@table.Head() {
+						Original Language
+					}
+					@table.Head() {
+						Budget
+					}
+					@table.Head() {
+						Revenue
+					}
+					@table.Head() {
+						Runtime
+					}
+					@table.Head() {
+						Rating (TMDB)
+					}
+				}
+			}
+			@table.Body() {
+				@table.Row() {
+					@table.Cell() {
+						{ watched.Movie.ReleaseDate.Format("January 2006") }
+					}
+					@table.Cell() {
+						{ watched.Movie.OriginalLanguage }
+					}
+					@table.Cell() {
+						{ formatMoney(watched.Movie.Budget) }
+					}
+					@table.Cell() {
+						{ formatMoney(watched.Movie.Revenue) }
+					}
+					@table.Cell() {
+						{ fmt.Sprintf("%d min", watched.Movie.Runtime) }
+					}
+					@table.Cell() {
+						{ fmt.Sprintf("%.1f", watched.Movie.VoteAverage) }
+					}
+				}
+			}
+		}
+		if watched.ViewCount != 0 {
+			@card.Card() {
+				@card.Header() {
+					@card.Title() {
+						Number of times watched
+					}
+					@card.Description() {
+						The amount of times you have watched this movie
+					}
+				}
+				@card.Content() {
+					{ watched.ViewCount }
+				}
+			}
+		} else {
+			<p>You have never watched this movie yet</p>
+		}
+		@button.Button() {
+			Add to watched list
+		}
+		@button.Button() {
+			Add to watchlist
+		}
+	}
+}
+
+templ movieHero(movie models.Movie) {
+	<div class="relative -m-4 mb-4">
+		if movie.BackdropPath != "" {
+			<div class="h-74 md:h-100">
+				<div class="absolute inset-0 bg-gradient-to-b from-black/40 via-black/40 to-transparent"></div>
+				<img
+					src={ "https://image.tmdb.org/t/p/w1280" + movie.BackdropPath }
+					alt={ movie.Title + " backdrop" }
+					class="w-full h-full object-cover object-center"
+				/>
+				<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+				<div class="absolute inset-0 p-4 md:p-8 flex flex-col justify-center">
+					<div class="flex flex-row items-baseline mb-4 md:mb-8">
+						<p class="text-3xl font-bold text-white drop-shadow-md mr-2">
+							{ movie.Title }
+						</p>
+						<p class="text-2xl font-bold text-white drop-shadow-md">
+							{ " (" + movie.ReleaseDate.Format("2006") + ")" }
+						</p>
+					</div>
+					<div class="flex flex-row gap-4 items-end">
+						if movie.PosterPath != "" {
+							<div class="flex-shrink-0">
+								@moviecard.MovieCard(moviecard.Props{
+									Title:      movie.Title,
+									PosterPath: movie.PosterPath,
+								})
+							</div>
+						}
+						if movie.Tagline != "" {
+							<p class="text-sm italic text-white/90">
+								{ movie.Tagline }
+							</p>
+						}
+					</div>
+				</div>
+			</div>
+		} else {
+			<h1>TODO</h1>
+		}
+		@separator.Separator()
+	</div>
+}
+
+func formatMoney(amount int64) string {
+	if amount >= 1000000000 {
+		return fmt.Sprintf("$%.1fB", float64(amount)/1000000000)
+	} else if amount >= 1000000 {
+		return fmt.Sprintf("$%.1fM", float64(amount)/1000000)
+	} else if amount >= 1000 {
+		return fmt.Sprintf("$%.1fK", float64(amount)/1000)
+	}
+	return strconv.FormatInt(amount, 10)
+}

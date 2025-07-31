@@ -66,17 +66,28 @@ func (d *SqliteDB) GetWatchedJoinMovie(ctx context.Context) ([]models.WatchedMov
 }
 
 // GetMostWatchedMovies retrieves movies ordered by watch count
-func (d *SqliteDB) GetMostWatchedMovies(ctx context.Context) ([]models.WatchedMovieCount, error) {
+func (d *SqliteDB) GetMostWatchedMovies(ctx context.Context) ([]models.WatchedMovieDetails, error) {
 	rows, err := d.queries.GetMostWatchedMovies(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get most watched movies: %w", err)
 	}
-	movieCounts := make([]models.WatchedMovieCount, len(rows))
+	movieCounts := make([]models.WatchedMovieDetails, len(rows))
 	for i, row := range rows {
-		movieCounts[i] = models.WatchedMovieCount{
+		movieCounts[i] = models.WatchedMovieDetails{
 			Movie:     toModelsMovie(row.Movie),
 			ViewCount: int(row.ViewCount),
 		}
 	}
 	return movieCounts, nil
+}
+
+func (d *SqliteDB) GetWatchedMovieDetails(ctx context.Context, id int64) (models.WatchedMovieDetails, error) {
+	result, err := d.queries.GetWatchedMovieDetails(ctx, id)
+	if err != nil {
+		return models.WatchedMovieDetails{}, fmt.Errorf("failed to get most watched movies: %w", err)
+	}
+	return models.WatchedMovieDetails{
+		Movie:     toModelsMovie(result.Movie),
+		ViewCount: int(result.ViewCount),
+	}, nil
 }
