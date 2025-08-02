@@ -29,6 +29,22 @@ type Movie struct {
 	Homepage         string
 	Status           string
 	Tagline          string
+	Genres           []Genre
+}
+
+func GenreFromTMDBGenre(TMDBGenre tmdb.Genre) Genre {
+	return Genre{
+		ID:   TMDBGenre.ID,
+		Name: TMDBGenre.Name,
+	}
+}
+
+func GenreFromTMDBGenres(TMDBGenre []tmdb.Genre) []Genre {
+	genres := make([]Genre, len(TMDBGenre))
+	for _, genre := range TMDBGenre {
+		genres = append(genres, GenreFromTMDBGenre(genre))
+	}
+	return genres
 }
 
 func MovieFromTMDBMovieDetails(TMDBMovie tmdb.MovieDetails) (Movie, error) {
@@ -55,6 +71,7 @@ func MovieFromTMDBMovieDetails(TMDBMovie tmdb.MovieDetails) (Movie, error) {
 		Homepage:         TMDBMovie.Homepage,
 		Status:           TMDBMovie.Status,
 		Tagline:          TMDBMovie.Tagline,
+		Genres:           GenreFromTMDBGenres(TMDBMovie.Genres),
 	}, nil
 }
 

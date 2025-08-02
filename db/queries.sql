@@ -191,3 +191,12 @@ FROM
     cast
 WHERE
     movie_id = ?;
+
+-- name: GetMovieGenre :many
+SELECT
+    *
+FROM
+    genre
+    JOIN genre_movie ON genre.id = genre_movie.genre_id
+WHERE
+    genre_movie.movie_id = ?;

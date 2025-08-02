@@ -248,6 +248,51 @@ func (q *Queries) GetMovieByName(ctx context.Context, title string) (Movie, erro
 	return i, err
 }
 
+const getMovieGenre = `-- name: GetMovieGenre :many
+SELECT
+    id, name, movie_id, genre_id
+FROM
+    genre
+    JOIN genre_movie ON genre.id = genre_movie.genre_id
+WHERE
+    genre_movie.movie_id = ?
+`
+
+type GetMovieGenreRow struct {
+	ID      int64
+	Name    string
+	MovieID int64
+	GenreID int64
+}
+
+func (q *Queries) GetMovieGenre(ctx context.Context, movieID int64) ([]GetMovieGenreRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMovieGenre, movieID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMovieGenreRow
+	for rows.Next() {
+		var i GetMovieGenreRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.MovieID,
+			&i.GenreID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPerson = `-- name: GetPerson :one
 SELECT
     id, name, original_name, profile_path, known_for_department, popularity, gender, adult

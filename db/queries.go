@@ -200,3 +200,31 @@ func (d *SqliteDB) GetMovieCrew(ctx context.Context, movieID int64) ([]models.Cr
 
 	return crew, nil
 }
+
+func (d *SqliteDB) GetMovieGenre(ctx context.Context, movieID int64) ([]models.Genre, error) {
+	results, err := d.queries.GetMovieGenre(ctx, movieID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get movie genres from db: %w", err)
+	}
+
+	genres := make([]models.Genre, len(results))
+	for _, result := range results {
+		genres = append(genres, models.Genre{
+			ID:   result.GenreID,
+			Name: result.Name,
+		})
+	}
+
+	return genres, nil
+}
+
+func (d *SqliteDB) InsertGenre(ctx context.Context, genre models.Genre) error {
+	_, err := d.queries.InsertGenre(ctx, sqlc.InsertGenreParams{
+		ID:   genre.ID,
+		Name: genre.Name,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to insert genre in db: %w", err)
+	}
+	return nil
+}

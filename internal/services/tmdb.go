@@ -76,7 +76,6 @@ func (s *TMDBService) GetMovieCredits(id int64) (models.MovieCredits, error) {
 		return models.MovieCredits{}, fmt.Errorf("error getting TMDB movie credits for id '%d': %w", id, err)
 	}
 
-	// Convert cast
 	cast := make([]models.Cast, len(credits.Cast))
 	for i, c := range credits.Cast {
 		cast[i] = models.Cast{
@@ -99,7 +98,6 @@ func (s *TMDBService) GetMovieCredits(id int64) (models.MovieCredits, error) {
 		}
 	}
 
-	// Convert crew
 	crew := make([]models.Crew, len(credits.Crew))
 	for i, c := range credits.Crew {
 		crew[i] = models.Crew{

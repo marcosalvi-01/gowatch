@@ -45,6 +45,9 @@ type DB interface {
 	InsertCast(ctx context.Context, cast models.Cast) error
 	GetMovieCast(ctx context.Context, movieID int64) ([]models.Cast, error)
 	GetMovieCrew(ctx context.Context, movieID int64) ([]models.Crew, error)
+
+	GetMovieGenre(ctx context.Context, movieID int64) ([]models.Genre, error)
+	InsertGenre(ctx context.Context, genre models.Genre) error
 }
 
 // SqliteDB wraps database connection and queries
