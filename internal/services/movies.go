@@ -12,75 +12,23 @@ import (
 	"gowatch/db"
 	"gowatch/internal/models"
 	"gowatch/logging"
-	"sort"
-	"time"
-
-	tmdb "github.com/cyruzin/golang-tmdb"
 )
 
-var log = logging.Get("MovieService")
+var log = logging.Get("services")
 
+// MovieService handles movie database operations and business logic
 type MovieService struct {
-	db   db.DB
-	tmdb *tmdb.Client
+	db             db.DB
+	tmdb           *TMDBService
+	creditsService *CreditsService
 }
 
-func NewMovieService(db db.DB, tmdb *tmdb.Client) *MovieService {
+func NewMovieService(db db.DB, tmdbService *TMDBService, creditsService *CreditsService) *MovieService {
 	return &MovieService{
-		db:   db,
-		tmdb: tmdb,
+		db:             db,
+		tmdb:           tmdbService,
+		creditsService: creditsService,
 	}
-}
-
-func (s *MovieService) SearchMovie(query string) ([]models.SearchMovie, error) {
-	log.Debug("searching movie", "query", query)
-
-	search, err := s.tmdb.GetSearchMovies(query, nil)
-	if err != nil {
-		log.Error("TMDB search failed", "query", query, "error", err)
-		return nil, fmt.Errorf("error searching TMDB for query '%s': %w", query, err)
-	}
-
-	log.Info("movie search completed", "query", query, "results", search.TotalResults)
-
-	movies := make([]models.SearchMovie, len(search.Results))
-	for i, m := range search.Results {
-		movies[i] = models.SearchMovie{
-			ID:               m.ID,
-			Title:            m.Title,
-			OriginalTitle:    m.OriginalTitle,
-			OriginalLanguage: m.OriginalLanguage,
-			Overview:         m.Overview,
-			ReleaseDate:      m.ReleaseDate,
-			PosterPath:       m.PosterPath,
-			BackdropPath:     m.BackdropPath,
-			Popularity:       m.Popularity,
-			VoteCount:        m.VoteCount,
-			VoteAverage:      m.VoteAverage,
-			GenreIDs:         m.GenreIDs,
-			Adult:            m.Adult,
-			Video:            m.Video,
-		}
-	}
-
-	return movies, nil
-}
-
-func (s *MovieService) SearchMovieByID(id int64) (models.Movie, error) {
-	log.Debug("searching movie by id", "id", id)
-
-	details, err := s.tmdb.GetMovieDetails(int(id), nil)
-	if err != nil {
-		log.Error("TMDB get movie details failed", "id", id, "error", err)
-		return models.Movie{}, fmt.Errorf("error searching TMDB for movie details with id '%d': %w", id, err)
-	}
-
-	movie, err := models.MovieFromTMDBMovieDetails(*details)
-	if err != nil {
-		return models.Movie{}, fmt.Errorf("failed to convert from TMDB movie into model movie: %w", err)
-	}
-
-	return movie, nil
 }
 
 func (s *MovieService) CreateMovie(ctx context.Context, movie models.Movie) error {
@@ -92,161 +40,33 @@ func (s *MovieService) CreateMovie(ctx context.Context, movie models.Movie) erro
 		return fmt.Errorf("failed to insert movie %d: %w", movie.ID, err)
 	}
 
+	credits, err := s.tmdb.GetMovieCredits(movie.ID)
+	if err != nil {
+		return fmt.Errorf("TODO: %w", err)
+	}
+
+	err = s.creditsService.CreateMovieCredits(ctx, credits)
+	if err != nil {
+		return fmt.Errorf("failed to add movie credits to db: %w", err)
+	}
+
 	log.Info("movie created", "movie_id", movie.ID, "title", movie.Title)
 	return nil
 }
 
-// AddWatched records a movie as watched. If the movie doesn't exist in the database,
-// it fetches the movie details from TMDB and adds it first. Used for tracking user's
-// watched movie history.
-func (s *MovieService) AddWatched(ctx context.Context, watchedEntry models.Watched) error {
-	log.Debug("adding watched entry", "movie_id", watchedEntry.MovieID)
-
-	_, err := s.db.GetMovieByID(ctx, watchedEntry.MovieID)
-	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			log.Error("database error checking movie", "movie_id", watchedEntry.MovieID, "error", err)
-			return fmt.Errorf("failed to check if movie exists: %w", err)
-		}
-
-		log.Debug("movie not found, fetching from TMDB", "movie_id", watchedEntry.MovieID)
-
-		newMovie, err := s.SearchMovieByID(watchedEntry.MovieID)
-		if err != nil {
-			return fmt.Errorf("failed to get movie details from TMDB: %w", err)
-		}
-
-		err = s.AddMovie(ctx, newMovie)
-		if err != nil {
-			return fmt.Errorf("failed to add new movie to db: %w", err)
-		}
-	}
-
-	err = s.db.InsertWatched(ctx, watchedEntry)
-	if err != nil {
-		log.Error("failed to insert watched entry", "movie_id", watchedEntry.MovieID, "error", err)
-		return fmt.Errorf("failed to record watched entry: %w", err)
-	}
-
-	log.Info("watched entry added", "movie_id", watchedEntry.MovieID)
-	return nil
-}
-
-func (s *MovieService) AddMovie(ctx context.Context, movie models.Movie) error {
-	err := s.CreateMovie(ctx, movie)
-	if err != nil {
-		log.Error("movie creation failed", "movie_id", movie.ID, "error", err)
-		return fmt.Errorf("failed to save movie to database: %w", err)
-	}
-	return nil
-}
-
-func (s *MovieService) ImportWatched(ctx context.Context, movies models.WatchedMoviesLog) error {
-	totalMovies := 0
-	for _, importMovie := range movies {
-		totalMovies += len(importMovie.Movies)
-	}
-
-	log.Info("starting movie import", "total_movies", totalMovies)
-
-	for _, importMovie := range movies {
-		for _, movieRef := range importMovie.Movies {
-			err := s.AddWatched(ctx, models.Watched{
-				MovieID:     int64(movieRef.MovieID),
-				WatchedDate: importMovie.Date,
-			})
-			if err != nil {
-				log.Warn("movie import failed", "movie_id", movieRef.MovieID, "error", err)
-				// TODO: handle the error better. ImportMovies could be made idempotent?
-				return fmt.Errorf("failed to import movie: %w", err)
-			}
-		}
-	}
-
-	log.Info("movie import completed", "total_movies", totalMovies)
-	return nil
-}
-
-func (s *MovieService) ExportWatched(ctx context.Context) (models.WatchedMoviesLog, error) {
-	watched, err := s.db.GetAllWatched(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("TODO: %w", err)
-	}
-
-	// Group movies by watched date
-	movieMap := make(map[time.Time][]models.WatchedMovieRef)
-	for _, w := range watched {
-		movieMap[w.WatchedDate] = append(movieMap[w.WatchedDate], models.WatchedMovieRef{
-			MovieID: int(w.MovieID),
-		})
-	}
-
-	export := make(models.WatchedMoviesLog, 0, len(watched))
-	for k, v := range movieMap {
-		export = append(export, models.WatchedMoviesEntry{
-			Date:   k,
-			Movies: v,
-		})
-	}
-
-	return export, nil
-}
-
-func (s *MovieService) GetAllWatchedMovies(ctx context.Context) ([]models.WatchedMovie, error) {
-	movies, err := s.db.GetWatchedJoinMovie(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get watched join movies: %w", err)
-	}
-
-	// reverse the original slice to keep an order of first = last watched movie added
-	for i, j := 0, len(movies)-1; i < j; i, j = i+1, j-1 {
-		movies[i], movies[j] = movies[j], movies[i]
-	}
-
-	// sort keeping the original order for items that are equal
-	sort.SliceStable(movies, func(i, j int) bool {
-		return movies[i].WatchedDate.After(movies[j].WatchedDate)
-	})
-
-	return movies, nil
-}
-
-// GetWatchedDayMovies returns all the movies watched in a single day grouped by day
-func (s *MovieService) GetWatchedDayMovies(ctx context.Context) ([]models.WatchedDay, error) {
-	movies, err := s.db.GetWatchedJoinMovie(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch watched join movie: %w", err)
-	}
-
-	sort.Slice(movies, func(i, j int) bool {
-		return movies[i].WatchedDate.After(movies[j].WatchedDate)
-	})
-
-	var out []models.WatchedDay
-	for _, m := range movies {
-		d := m.WatchedDate.Truncate(24 * time.Hour)
-		if len(out) == 0 || !d.Equal(out[len(out)-1].Date) {
-			out = append(out, models.WatchedDay{Date: d})
-		}
-		out[len(out)-1].Movies = append(out[len(out)-1].Movies, m.Movie)
-	}
-
-	return out, nil
-}
-
-func (s *MovieService) GetWatchedMovieDetails(ctx context.Context, id int64) (models.WatchedMovieDetails, error) {
+func (s *MovieService) GetMovieDetails(ctx context.Context, id int64) (models.WatchedMovieDetails, error) {
 	movie, err := s.db.GetWatchedMovieDetails(ctx, id)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return models.WatchedMovieDetails{}, fmt.Errorf("failed to get movie details by id: %w", err)
 		}
 
-		tmdbMovie, err := s.SearchMovieByID(id)
+		tmdbMovie, err := s.tmdb.GetMovieDetails(id)
 		if err != nil {
 			return models.WatchedMovieDetails{}, fmt.Errorf("failed to get movie details from TMDB: %w", err)
 		}
 
-		err = s.AddMovie(ctx, tmdbMovie)
+		err = s.CreateMovie(ctx, tmdbMovie)
 		if err != nil {
 			return models.WatchedMovieDetails{}, fmt.Errorf("failed to add new movie to db: %w", err)
 		}
@@ -256,6 +76,25 @@ func (s *MovieService) GetWatchedMovieDetails(ctx context.Context, id int64) (mo
 			ViewCount: 0,
 		}
 	}
+
+	credits, err := s.creditsService.GetMovieCredits(ctx, id)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return models.WatchedMovieDetails{}, fmt.Errorf("TODO: %w", err)
+		}
+
+		credits, err = s.tmdb.GetMovieCredits(id)
+		if err != nil {
+			return models.WatchedMovieDetails{}, fmt.Errorf("TODO: %w", err)
+		}
+
+		err = s.creditsService.CreateMovieCredits(ctx, credits)
+		if err != nil {
+			return models.WatchedMovieDetails{}, fmt.Errorf("TODO: %w", err)
+		}
+	}
+
+	movie.Credits = credits
 
 	return movie, nil
 }

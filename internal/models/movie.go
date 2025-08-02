@@ -85,6 +85,8 @@ type WatchedMovie struct {
 type WatchedMovieDetails struct {
 	Movie     Movie
 	ViewCount int
+	Genres    []Genre
+	Credits   MovieCredits
 }
 
 // WatchedDay represents a day and all the movies watched in that day.

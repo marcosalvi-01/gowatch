@@ -14,19 +14,19 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func NewRouter(movieService *services.MovieService) chi.Router {
+func NewRouter(movieService *services.MovieService, watchedService *services.WatchedService) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	apiHandlers := api.NewHandlers(movieService)
+	apiHandlers := api.NewHandlers(movieService, watchedService)
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(middleware.JSONMiddleware)
 		apiHandlers.RegisterRoutes(r)
 	})
 
-	pagesHandlers := pages.NewHandlers(movieService)
+	pagesHandlers := pages.NewHandlers(movieService, watchedService)
 	r.Route("/", func(r chi.Router) {
 		r.Use(middleware.HTMLMiddleware)
 		pagesHandlers.RegisterRoutes(r)

@@ -40,31 +40,50 @@ CREATE TABLE genre_movie (
     FOREIGN KEY (genre_id) REFERENCES genre(id) ON DELETE CASCADE
 );
 
-CREATE TABLE actor (
+CREATE TABLE person (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
+    original_name TEXT NOT NULL,
     profile_path TEXT NOT NULL,
-    imdb_id TEXT NOT NULL
+    known_for_department TEXT NOT NULL,
+    popularity REAL NOT NULL,
+    gender INTEGER NOT NULL,
+    adult BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE TABLE actor_movie (
+CREATE TABLE cast (
     movie_id INTEGER NOT NULL,
-    actor_id INTEGER NOT NULL,
+    person_id INTEGER NOT NULL,
+    cast_id INTEGER NOT NULL,
+    credit_id TEXT NOT NULL,
     character TEXT NOT NULL,
     cast_order INTEGER NOT NULL,
-    PRIMARY KEY (movie_id, actor_id),
+    PRIMARY KEY (movie_id, person_id, cast_id),
     FOREIGN KEY (movie_id) REFERENCES movie(id) ON DELETE CASCADE,
-    FOREIGN KEY (actor_id) REFERENCES actor(id) ON DELETE CASCADE
+    FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
+);
+
+CREATE TABLE crew (
+    movie_id INTEGER NOT NULL,
+    person_id INTEGER NOT NULL,
+    credit_id TEXT NOT NULL,
+    job TEXT NOT NULL,
+    department TEXT NOT NULL,
+    PRIMARY KEY (movie_id, person_id, credit_id),
+    FOREIGN KEY (movie_id) REFERENCES movie(id) ON DELETE CASCADE,
+    FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 );
 
 -- +goose Down
-DROP TABLE actor_movie;
+DROP TABLE crew;
+
+DROP TABLE cast;
 
 DROP TABLE genre_movie;
 
 DROP TABLE watched;
 
-DROP TABLE actor;
+DROP TABLE person;
 
 DROP TABLE genre;
 

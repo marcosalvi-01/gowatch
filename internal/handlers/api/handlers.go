@@ -17,12 +17,14 @@ import (
 var log = logging.Get("api")
 
 type Handlers struct {
-	movieService *services.MovieService
+	movieService   *services.MovieService
+	watchedService *services.WatchedService
 }
 
-func NewHandlers(movieService *services.MovieService) *Handlers {
+func NewHandlers(movieService *services.MovieService, watchedService *services.WatchedService) *Handlers {
 	return &Handlers{
-		movieService: movieService,
+		movieService:   movieService,
+		watchedService: watchedService,
 	}
 }
 
@@ -34,7 +36,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 }
 
 func (h *Handlers) exportWatched(w http.ResponseWriter, r *http.Request) {
-	export, err := h.movieService.ExportWatched(r.Context())
+	export, err := h.watchedService.ExportWatched(r.Context())
 	if err != nil {
 		log.Error("TODO", "error", err)
 		http.Error(w, "TODO", http.StatusInternalServerError)
@@ -56,7 +58,7 @@ func (h *Handlers) importWatched(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		log.Info("import job started")
-		if err := h.movieService.ImportWatched(ctx, payload); err != nil {
+		if err := h.watchedService.ImportWatched(ctx, payload); err != nil {
 			log.Error("import job failed", "error", err)
 			return
 		}

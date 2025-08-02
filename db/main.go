@@ -40,6 +40,11 @@ type DB interface {
 	GetWatchedJoinMovie(ctx context.Context) ([]models.WatchedMovie, error)
 	GetMostWatchedMovies(ctx context.Context) ([]models.WatchedMovieDetails, error)
 	GetWatchedMovieDetails(ctx context.Context, id int64) (models.WatchedMovieDetails, error)
+
+	InsertCrew(ctx context.Context, crew models.Crew) error
+	InsertCast(ctx context.Context, cast models.Cast) error
+	GetMovieCast(ctx context.Context, movieID int64) ([]models.Cast, error)
+	GetMovieCrew(ctx context.Context, movieID int64) ([]models.Crew, error)
 }
 
 // SqliteDB wraps database connection and queries

@@ -102,6 +102,92 @@ FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
 WHERE
-    movie.id = :movie_id
+    movie.id = ?
 GROUP BY
     movie.id;
+
+-- name: InsertGenre :one
+INSERT INTO
+    genre (id, name)
+VALUES
+    (?, ?)
+RETURNING
+    *;
+
+-- name: InsertGenreMovie :one
+INSERT INTO
+    genre_movie (movie_id, genre_id)
+VALUES
+    (?, ?)
+RETURNING
+    *;
+
+-- name: InsertPerson :one
+INSERT INTO
+    person (
+        id,
+        name,
+        original_name,
+        profile_path,
+        known_for_department,
+        popularity,
+        gender,
+        adult
+    )
+VALUES
+    (?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING
+    *;
+
+-- name: InsertCast :one
+INSERT INTO
+    cast (
+        movie_id,
+        person_id,
+        cast_id,
+        credit_id,
+        character,
+        cast_order
+    )
+VALUES
+    (?, ?, ?, ?, ?, ?)
+RETURNING
+    *;
+
+-- name: InsertCrew :one
+INSERT INTO
+    crew (
+        movie_id,
+        person_id,
+        credit_id,
+        job,
+        department
+    )
+VALUES
+    (?, ?, ?, ?, ?)
+RETURNING
+    *;
+
+-- name: GetPerson :one
+SELECT
+    *
+FROM
+    person
+WHERE
+    id = ?;
+
+-- name: GetCrewByMovieID :many
+SELECT
+    *
+FROM
+    crew
+WHERE
+    movie_id = ?;
+
+-- name: GetCastByMovieID :many
+SELECT
+    *
+FROM
+    cast
+WHERE
+    movie_id = ?;

@@ -60,3 +60,29 @@ func toSqlcInsertWatchedParams(watched models.Watched) sqlc.InsertWatchedParams 
 		WatchedDate: watched.WatchedDate,
 	}
 }
+
+func toSqlcInsertPersonParams(person models.Person) sqlc.InsertPersonParams {
+	return sqlc.InsertPersonParams{
+		ID:                 person.ID,
+		Name:               person.Name,
+		OriginalName:       person.OriginalName,
+		ProfilePath:        person.ProfilePath,
+		KnownForDepartment: person.KnownForDepartment,
+		Popularity:         person.Popularity,
+		Gender:             person.Gender,
+		Adult:              person.Adult,
+	}
+}
+
+func toModelsPerson(person sqlc.Person) models.Person {
+	return models.Person{
+		ID:                 person.ID,
+		Name:               person.Name,
+		OriginalName:       person.OriginalName,
+		ProfilePath:        person.ProfilePath,
+		KnownForDepartment: person.KnownForDepartment,
+		Popularity:         person.Popularity,
+		Gender:             person.Gender,
+		Adult:              person.Adult,
+	}
+}

@@ -15,12 +15,14 @@ import (
 var log = logging.Get("pages")
 
 type Handlers struct {
-	movieService *services.MovieService
+	movieService   *services.MovieService
+	watchedService *services.WatchedService
 }
 
-func NewHandlers(movieService *services.MovieService) *Handlers {
+func NewHandlers(movieService *services.MovieService, watchedService *services.WatchedService) *Handlers {
 	return &Handlers{
-		movieService: movieService,
+		movieService:   movieService,
+		watchedService: watchedService,
 	}
 }
 
@@ -33,7 +35,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 }
 
 func (h *Handlers) WatchedPage(w http.ResponseWriter, r *http.Request) {
-	movies, err := h.movieService.GetWatchedDayMovies(r.Context())
+	movies, err := h.watchedService.GetWatchedDayMovies(r.Context())
 	if err != nil {
 		// TODO: wrap error
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -50,7 +52,7 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	movie, err := h.movieService.GetWatchedMovieDetails(r.Context(), id)
+	movie, err := h.movieService.GetMovieDetails(r.Context(), id)
 	if err != nil {
 		// TODO: wrap error
 		http.Error(w, err.Error(), http.StatusInternalServerError)

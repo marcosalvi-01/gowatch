@@ -8,18 +8,21 @@ import (
 	"time"
 )
 
-type Actor struct {
-	ID          int64
-	Name        string
-	ProfilePath string
-	ImdbID      string
-}
-
-type ActorMovie struct {
+type Cast struct {
 	MovieID   int64
-	ActorID   int64
+	PersonID  int64
+	CastID    int64
+	CreditID  string
 	Character string
 	CastOrder int64
+}
+
+type Crew struct {
+	MovieID    int64
+	PersonID   int64
+	CreditID   string
+	Job        string
+	Department string
 }
 
 type Genre struct {
@@ -51,6 +54,17 @@ type Movie struct {
 	Homepage         string
 	Status           string
 	Tagline          string
+}
+
+type Person struct {
+	ID                 int64
+	Name               string
+	OriginalName       string
+	ProfilePath        string
+	KnownForDepartment string
+	Popularity         float64
+	Gender             int64
+	Adult              bool
 }
 
 type Watched struct {

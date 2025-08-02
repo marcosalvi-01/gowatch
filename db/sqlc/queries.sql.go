@@ -40,6 +40,83 @@ func (q *Queries) GetAllWatched(ctx context.Context) ([]Watched, error) {
 	return items, nil
 }
 
+const getCastByMovieID = `-- name: GetCastByMovieID :many
+SELECT
+    movie_id, person_id, cast_id, credit_id, character, cast_order
+FROM
+    cast
+WHERE
+    movie_id = ?
+`
+
+func (q *Queries) GetCastByMovieID(ctx context.Context, movieID int64) ([]Cast, error) {
+	rows, err := q.db.QueryContext(ctx, getCastByMovieID, movieID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Cast
+	for rows.Next() {
+		var i Cast
+		if err := rows.Scan(
+			&i.MovieID,
+			&i.PersonID,
+			&i.CastID,
+			&i.CreditID,
+			&i.Character,
+			&i.CastOrder,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getCrewByMovieID = `-- name: GetCrewByMovieID :many
+SELECT
+    movie_id, person_id, credit_id, job, department
+FROM
+    crew
+WHERE
+    movie_id = ?
+`
+
+func (q *Queries) GetCrewByMovieID(ctx context.Context, movieID int64) ([]Crew, error) {
+	rows, err := q.db.QueryContext(ctx, getCrewByMovieID, movieID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Crew
+	for rows.Next() {
+		var i Crew
+		if err := rows.Scan(
+			&i.MovieID,
+			&i.PersonID,
+			&i.CreditID,
+			&i.Job,
+			&i.Department,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getMostWatchedMovies = `-- name: GetMostWatchedMovies :many
 SELECT
     movie.id, movie.imdb_id, movie.title, movie.original_title, movie.release_date, movie.original_language, movie.overview, movie.poster_path, movie.backdrop_path, movie.budget, movie.revenue, movie.runtime, movie.vote_average, movie.vote_count, movie.popularity, movie.homepage, movie.status, movie.tagline,
@@ -171,6 +248,31 @@ func (q *Queries) GetMovieByName(ctx context.Context, title string) (Movie, erro
 	return i, err
 }
 
+const getPerson = `-- name: GetPerson :one
+SELECT
+    id, name, original_name, profile_path, known_for_department, popularity, gender, adult
+FROM
+    person
+WHERE
+    id = ?
+`
+
+func (q *Queries) GetPerson(ctx context.Context, id int64) (Person, error) {
+	row := q.db.QueryRowContext(ctx, getPerson, id)
+	var i Person
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.OriginalName,
+		&i.ProfilePath,
+		&i.KnownForDepartment,
+		&i.Popularity,
+		&i.Gender,
+		&i.Adult,
+	)
+	return i, err
+}
+
 const getWatchedJoinMovie = `-- name: GetWatchedJoinMovie :many
 SELECT
     movie.id, movie.imdb_id, movie.title, movie.original_title, movie.release_date, movie.original_language, movie.overview, movie.poster_path, movie.backdrop_path, movie.budget, movie.revenue, movie.runtime, movie.vote_average, movie.vote_count, movie.popularity, movie.homepage, movie.status, movie.tagline,
@@ -237,7 +339,7 @@ FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
 WHERE
-    movie.id = ?1
+    movie.id = ?
 GROUP BY
     movie.id
 `
@@ -247,8 +349,8 @@ type GetWatchedMovieDetailsRow struct {
 	ViewCount int64
 }
 
-func (q *Queries) GetWatchedMovieDetails(ctx context.Context, movieID int64) (GetWatchedMovieDetailsRow, error) {
-	row := q.db.QueryRowContext(ctx, getWatchedMovieDetails, movieID)
+func (q *Queries) GetWatchedMovieDetails(ctx context.Context, id int64) (GetWatchedMovieDetailsRow, error) {
+	row := q.db.QueryRowContext(ctx, getWatchedMovieDetails, id)
 	var i GetWatchedMovieDetailsRow
 	err := row.Scan(
 		&i.Movie.ID,
@@ -271,6 +373,136 @@ func (q *Queries) GetWatchedMovieDetails(ctx context.Context, movieID int64) (Ge
 		&i.Movie.Tagline,
 		&i.ViewCount,
 	)
+	return i, err
+}
+
+const insertCast = `-- name: InsertCast :one
+INSERT INTO
+    cast (
+        movie_id,
+        person_id,
+        cast_id,
+        credit_id,
+        character,
+        cast_order
+    )
+VALUES
+    (?, ?, ?, ?, ?, ?)
+RETURNING
+    movie_id, person_id, cast_id, credit_id, character, cast_order
+`
+
+type InsertCastParams struct {
+	MovieID   int64
+	PersonID  int64
+	CastID    int64
+	CreditID  string
+	Character string
+	CastOrder int64
+}
+
+func (q *Queries) InsertCast(ctx context.Context, arg InsertCastParams) (Cast, error) {
+	row := q.db.QueryRowContext(ctx, insertCast,
+		arg.MovieID,
+		arg.PersonID,
+		arg.CastID,
+		arg.CreditID,
+		arg.Character,
+		arg.CastOrder,
+	)
+	var i Cast
+	err := row.Scan(
+		&i.MovieID,
+		&i.PersonID,
+		&i.CastID,
+		&i.CreditID,
+		&i.Character,
+		&i.CastOrder,
+	)
+	return i, err
+}
+
+const insertCrew = `-- name: InsertCrew :one
+INSERT INTO
+    crew (
+        movie_id,
+        person_id,
+        credit_id,
+        job,
+        department
+    )
+VALUES
+    (?, ?, ?, ?, ?)
+RETURNING
+    movie_id, person_id, credit_id, job, department
+`
+
+type InsertCrewParams struct {
+	MovieID    int64
+	PersonID   int64
+	CreditID   string
+	Job        string
+	Department string
+}
+
+func (q *Queries) InsertCrew(ctx context.Context, arg InsertCrewParams) (Crew, error) {
+	row := q.db.QueryRowContext(ctx, insertCrew,
+		arg.MovieID,
+		arg.PersonID,
+		arg.CreditID,
+		arg.Job,
+		arg.Department,
+	)
+	var i Crew
+	err := row.Scan(
+		&i.MovieID,
+		&i.PersonID,
+		&i.CreditID,
+		&i.Job,
+		&i.Department,
+	)
+	return i, err
+}
+
+const insertGenre = `-- name: InsertGenre :one
+INSERT INTO
+    genre (id, name)
+VALUES
+    (?, ?)
+RETURNING
+    id, name
+`
+
+type InsertGenreParams struct {
+	ID   int64
+	Name string
+}
+
+func (q *Queries) InsertGenre(ctx context.Context, arg InsertGenreParams) (Genre, error) {
+	row := q.db.QueryRowContext(ctx, insertGenre, arg.ID, arg.Name)
+	var i Genre
+	err := row.Scan(&i.ID, &i.Name)
+	return i, err
+}
+
+const insertGenreMovie = `-- name: InsertGenreMovie :one
+INSERT INTO
+    genre_movie (movie_id, genre_id)
+VALUES
+    (?, ?)
+RETURNING
+    movie_id, genre_id
+`
+
+type InsertGenreMovieParams struct {
+	MovieID int64
+	GenreID int64
+}
+
+func (q *Queries) InsertGenreMovie(ctx context.Context, arg InsertGenreMovieParams) (GenreMovie, error) {
+	row := q.db.QueryRowContext(ctx, insertGenreMovie, arg.MovieID, arg.GenreID)
+	var i GenreMovie
+	err := row.Scan(&i.MovieID, &i.GenreID)
 	return i, err
 }
 
@@ -383,6 +615,60 @@ func (q *Queries) InsertMovie(ctx context.Context, arg InsertMovieParams) (Movie
 		&i.Homepage,
 		&i.Status,
 		&i.Tagline,
+	)
+	return i, err
+}
+
+const insertPerson = `-- name: InsertPerson :one
+INSERT INTO
+    person (
+        id,
+        name,
+        original_name,
+        profile_path,
+        known_for_department,
+        popularity,
+        gender,
+        adult
+    )
+VALUES
+    (?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING
+    id, name, original_name, profile_path, known_for_department, popularity, gender, adult
+`
+
+type InsertPersonParams struct {
+	ID                 int64
+	Name               string
+	OriginalName       string
+	ProfilePath        string
+	KnownForDepartment string
+	Popularity         float64
+	Gender             int64
+	Adult              bool
+}
+
+func (q *Queries) InsertPerson(ctx context.Context, arg InsertPersonParams) (Person, error) {
+	row := q.db.QueryRowContext(ctx, insertPerson,
+		arg.ID,
+		arg.Name,
+		arg.OriginalName,
+		arg.ProfilePath,
+		arg.KnownForDepartment,
+		arg.Popularity,
+		arg.Gender,
+		arg.Adult,
+	)
+	var i Person
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.OriginalName,
+		&i.ProfilePath,
+		&i.KnownForDepartment,
+		&i.Popularity,
+		&i.Gender,
+		&i.Adult,
 	)
 	return i, err
 }
