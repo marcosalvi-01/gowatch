@@ -16,11 +16,11 @@ import (
 // WatchedService handles user's watched movie tracking
 type WatchedService struct {
 	db   db.DB
-	tmdb *TMDBService
+	tmdb *MovieService
 	log  *slog.Logger
 }
 
-func NewWatchedService(db db.DB, tmdb *TMDBService) *WatchedService {
+func NewWatchedService(db db.DB, tmdb *MovieService) *WatchedService {
 	log := logging.Get("watched service")
 	log.Debug("creating new WatchedService instance")
 	return &WatchedService{

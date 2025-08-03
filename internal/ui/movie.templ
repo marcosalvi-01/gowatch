@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-templ MoviePageWithStats(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) {
+templ MoviePage(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) {
 	@page.Page(page.Props{
 		Title:       "Gowatch",
 		CurrentPath: "/movie",
@@ -347,7 +347,7 @@ templ crewMemberItem(crew models.Crew) {
 }
 
 templ userActivitySection(watchRecords []models.WatchedMovieRecord) {
-	<div>
+	<div class="border-1 rounded-lg p-3">
 		<h2 class="text-xl font-semibold mb-4">Your Activity</h2>
 		<div class="space-y-6">
 			@activityStats(watchRecords)

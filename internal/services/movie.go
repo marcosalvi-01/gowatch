@@ -14,24 +14,22 @@ import (
 	tmdb "github.com/cyruzin/golang-tmdb"
 )
 
-// TMDBService handles all external TMDB API interactions
-type TMDBService struct {
+type MovieService struct {
 	client *tmdb.Client
 	db     db.DB
 	log    *slog.Logger
 }
 
-func NewTMDBService(db db.DB, client *tmdb.Client) *TMDBService {
+func NewMovieService(db db.DB, client *tmdb.Client) *MovieService {
 	log := logging.Get("movie service")
-	log.Debug("creating new TMDBService instance")
-	return &TMDBService{
+	return &MovieService{
 		client: client,
 		db:     db,
 		log:    log,
 	}
 }
 
-func (s *TMDBService) SearchMovies(query string) ([]models.Movie, error) {
+func (s *MovieService) SearchMovies(query string) ([]models.Movie, error) {
 	s.log.Debug("searching movies", "query", query)
 
 	search, err := s.client.GetSearchMovies(query, nil)
@@ -68,7 +66,7 @@ func (s *TMDBService) SearchMovies(query string) ([]models.Movie, error) {
 	return movies, nil
 }
 
-func (s *TMDBService) GetMovieDetails(ctx context.Context, id int64) (*models.MovieDetails, error) {
+func (s *MovieService) GetMovieDetails(ctx context.Context, id int64) (*models.MovieDetails, error) {
 	s.log.Debug("getting movie details", "movieID", id)
 
 	movie, err := s.db.GetMovieDetailsByID(ctx, id)
@@ -118,7 +116,7 @@ func (s *TMDBService) GetMovieDetails(ctx context.Context, id int64) (*models.Mo
 	return movie, nil
 }
 
-func (s *TMDBService) getMovieCredits(id int64) (models.MovieCredits, error) {
+func (s *MovieService) getMovieCredits(id int64) (models.MovieCredits, error) {
 	s.log.Debug("getting movie credits from TMDB", "movieID", id)
 
 	credits, err := s.client.GetMovieCredits(int(id), nil)

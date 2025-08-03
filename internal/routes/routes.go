@@ -14,7 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func NewRouter(tmdbService *services.TMDBService, watchedService *services.WatchedService) chi.Router {
+func NewRouter(tmdbService *services.MovieService, watchedService *services.WatchedService) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)

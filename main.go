@@ -41,7 +41,7 @@ func main() {
 		panic(err)
 	}
 
-	tmdbService := services.NewTMDBService(db, tmdb)
+	tmdbService := services.NewMovieService(db, tmdb)
 	watchedService := services.NewWatchedService(db, tmdbService)
 
 	router := routes.NewRouter(tmdbService, watchedService)

@@ -2,10 +2,12 @@
 package pages
 
 import (
+	"fmt"
 	"gowatch/internal/services"
 	"gowatch/internal/ui"
 	"gowatch/logging"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/a-h/templ"
@@ -15,11 +17,11 @@ import (
 var log = logging.Get("pages")
 
 type Handlers struct {
-	tmdbService    *services.TMDBService
+	tmdbService    *services.MovieService
 	watchedService *services.WatchedService
 }
 
-func NewHandlers(tmdbService *services.TMDBService, watchedService *services.WatchedService) *Handlers {
+func NewHandlers(tmdbService *services.MovieService, watchedService *services.WatchedService) *Handlers {
 	log.Info("initializing page handlers")
 	return &Handlers{
 		tmdbService:    tmdbService,
@@ -67,11 +69,13 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Fprintf(os.Stderr, "DEBUGPRINT: handlers.go:70: movie.Genres=%+v\n", movie.Genres)
+
 	rec, err := h.watchedService.GetWatchedMovieRecordsByID(ctx, id)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	templ.Handler(ui.MoviePageWithStats(*movie, rec)).ServeHTTP(w, r)
+	templ.Handler(ui.MoviePage(*movie, rec)).ServeHTTP(w, r)
 }

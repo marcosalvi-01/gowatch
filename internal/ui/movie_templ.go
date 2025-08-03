@@ -27,7 +27,7 @@ import (
 	"time"
 )
 
-func MoviePageWithStats(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) templ.Component {
+func MoviePage(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -1860,7 +1860,7 @@ func userActivitySection(watchRecords []models.WatchedMovieRecord) templ.Compone
 			templ_7745c5c3_Var87 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 85, "<div><h2 class=\"text-xl font-semibold mb-4\">Your Activity</h2><div class=\"space-y-6\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 85, "<div class=\"border-1 rounded-lg p-3\"><h2 class=\"text-xl font-semibold mb-4\">Your Activity</h2><div class=\"space-y-6\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
