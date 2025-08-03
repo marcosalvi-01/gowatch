@@ -190,3 +190,15 @@ FROM
     JOIN genre_movie ON genre.id = genre_movie.genre_id
 WHERE
     genre_movie.movie_id = ?;
+
+-- name: GetWatchedJoinMovieByID :many
+SELECT
+    sqlc.embed(movie),
+    sqlc.embed(watched)
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.movie_id = ?
+ORDER BY
+    watched.watched_date DESC;

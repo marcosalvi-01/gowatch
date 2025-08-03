@@ -282,3 +282,24 @@ func (d *SqliteDB) GetWatchedJoinMovie(ctx context.Context) ([]models.WatchedMov
 	log.Debug("converted watched movies to internal models", "count", len(watched))
 	return watched, nil
 }
+
+func (d *SqliteDB) GetWatchedJoinMovieByID(ctx context.Context, movieID int64) ([]models.WatchedMovie, error) {
+	log.Debug("retrieving watched rows for movie", "movieID", movieID)
+
+	rows, err := d.queries.GetWatchedJoinMovieByID(ctx, movieID)
+	if err != nil {
+		log.Error("db query failed", "movieID", movieID, "error", err)
+		return nil, fmt.Errorf("get watched by id: %w", err)
+	}
+
+	watched := make([]models.WatchedMovie, len(rows))
+	for i, r := range rows {
+		watched[i] = models.WatchedMovie{
+			MovieDetails: toModelsMovieDetails(r.Movie),
+			Date:         r.Watched.WatchedDate,
+			InTheaters:   r.Watched.WatchedInTheater,
+		}
+	}
+
+	return watched, nil
+}

@@ -15,3 +15,13 @@ type WatchedMoviesInDay struct {
 	Movies []MovieDetails
 	Date   time.Time
 }
+
+type WatchedMovieRecord struct {
+	Date       time.Time
+	InTheaters bool
+}
+
+type WatchedMovieRecords struct {
+	MovieDetails MovieDetails
+	Records      []WatchedMovieRecord
+}

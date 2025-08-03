@@ -3,120 +3,421 @@ package ui
 import (
 	"fmt"
 	"gowatch/internal/models"
+	"gowatch/internal/ui/components/badge"
 	"gowatch/internal/ui/components/button"
+	"gowatch/internal/ui/components/card"
 	"gowatch/internal/ui/components/moviecard"
 	"gowatch/internal/ui/components/page"
 	"gowatch/internal/ui/components/separator"
-	"gowatch/internal/ui/components/table"
 	"strconv"
+	"strings"
+	"time"
 )
 
-templ MoviePage(movie models.MovieDetails) {
+// MoviePageWithStats includes user watch statistics
+templ MoviePageWithStats(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) {
 	@page.Page(page.Props{
-		Title:       "Gowatch",
+		Title:       fmt.Sprintf("%s - Gowatch", movie.Movie.Title),
 		CurrentPath: "/movie",
 	}) {
 		@movieHero(movie)
-		@table.Table() {
-			@table.Header() {
-				@table.Row() {
-					@table.Head() {
-						Release Date
-					}
-					@table.Head() {
-						Original Language
-					}
-					@table.Head() {
-						Budget
-					}
-					@table.Head() {
-						Revenue
-					}
-					@table.Head() {
-						Runtime
-					}
-					@table.Head() {
-						Rating (TMDB)
-					}
-				}
-			}
-			@table.Body() {
-				@table.Row() {
-					@table.Cell() {
-						{ movie.Movie.ReleaseDate.Format("January 2006") }
-					}
-					@table.Cell() {
-						{ movie.Movie.OriginalLanguage }
-					}
-					@table.Cell() {
-						{ formatMoney(movie.Budget) }
-					}
-					@table.Cell() {
-						{ formatMoney(movie.Revenue) }
-					}
-					@table.Cell() {
-						{ fmt.Sprintf("%d min", movie.Runtime) }
-					}
-					@table.Cell() {
-						{ fmt.Sprintf("%.1f", movie.Movie.VoteAverage) }
-					}
-				}
-			}
-		}
-		@button.Button() {
-			Add to watched list
-		}
-		@button.Button() {
-			Add to watchlist
-		}
+		@movieContentWithStats(movie, watchRecords)
 	}
 }
 
 templ movieHero(movie models.MovieDetails) {
-	<div class="relative -m-4 mb-4">
+	<div class="relative -m-4 mb-6">
 		if movie.Movie.BackdropPath != "" {
-			<div class="h-74 md:h-100">
-				<div class="absolute inset-0 bg-gradient-to-b from-black/40 via-black/40 to-transparent"></div>
+			<div class="h-80 md:h-96 lg:h-[28rem]">
+				<div class="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-transparent z-10"></div>
 				<img
 					src={ "https://image.tmdb.org/t/p/w1280" + movie.Movie.BackdropPath }
 					alt={ movie.Movie.Title + " backdrop" }
 					class="w-full h-full object-cover object-center"
 				/>
-				<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
-				<div class="absolute inset-0 p-4 md:p-8 flex flex-col justify-center">
-					<div class="flex flex-row items-baseline mb-4 md:mb-8">
-						<p class="text-3xl font-bold text-white drop-shadow-md mr-2">
-							{ movie.Movie.Title }
-						</p>
-						<p class="text-2xl font-bold text-white drop-shadow-md">
-							{ " (" + movie.Movie.ReleaseDate.Format("2006") + ")" }
-						</p>
-					</div>
-					<div class="flex flex-row gap-4 items-end">
+				<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10"></div>
+				<!-- Hero Content -->
+				<div class="absolute inset-0 z-20 p-4 md:p-6 lg:p-8 flex flex-col justify-end">
+					<div class="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+						<!-- Poster -->
 						if movie.Movie.PosterPath != "" {
-							<div class="flex-shrink-0">
+							<div class="flex-shrink-0 hidden sm:block">
+								<div class="w-32 md:w-40 lg:w-48">
+									@moviecard.MovieCard(moviecard.Props{
+										Title:      movie.Movie.Title,
+										PosterPath: movie.Movie.PosterPath,
+									})
+								</div>
+							</div>
+						}
+						<!-- Movie Info -->
+						<div class="flex-1 min-w-0">
+							<div class="mb-4">
+								<h1 class="text-2xl md:text-3xl lg:text-4xl font-bold text-white drop-shadow-lg mb-2">
+									{ movie.Movie.Title }
+								</h1>
+								<p class="text-lg md:text-xl text-white/90 drop-shadow-md">
+									{ movie.Movie.ReleaseDate.Format("2006") }
+								</p>
+							</div>
+							if movie.Tagline != "" {
+								<p class="text-sm md:text-base italic text-white/90 drop-shadow-sm mb-4 lg:mb-6">
+									"{ movie.Tagline }"
+								</p>
+							}
+							<!-- Action Buttons -->
+							<div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
+								@button.Button(button.Props{
+									Variant: "default",
+									Size:    "default",
+								}) {
+									<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+									</svg>
+									Mark as Watched
+								}
+								@button.Button(button.Props{
+									Variant: "outline",
+									Size:    "default",
+								}) {
+									<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+									</svg>
+									Add to Watchlist
+								}
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		} else {
+			<!-- Fallback without backdrop -->
+			<div class="p-6 md:p-8">
+				<div class="flex flex-col sm:flex-row gap-6 items-start">
+					if movie.Movie.PosterPath != "" {
+						<div class="flex-shrink-0">
+							<div class="w-32 md:w-40">
 								@moviecard.MovieCard(moviecard.Props{
 									Title:      movie.Movie.Title,
 									PosterPath: movie.Movie.PosterPath,
 								})
 							</div>
-						}
+						</div>
+					}
+					<div class="flex-1 min-w-0">
+						<div class="mb-4">
+							<h1 class="text-2xl md:text-3xl font-bold text-foreground mb-2">
+								{ movie.Movie.Title }
+							</h1>
+							<p class="text-lg text-muted-foreground">
+								{ movie.Movie.ReleaseDate.Format("2006") }
+							</p>
+						</div>
 						if movie.Tagline != "" {
-							<p class="text-sm italic text-white/90">
-								{ movie.Tagline }
+							<p class="text-sm md:text-base italic text-muted-foreground mb-6">
+								"{ movie.Tagline }"
 							</p>
 						}
+						<!-- Action Buttons -->
+						<div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
+							@button.Button(button.Props{
+								Variant: "default",
+								Size:    "default",
+							}) {
+								<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+								</svg>
+								Mark as Watched
+							}
+							@button.Button(button.Props{
+								Variant: "outline",
+								Size:    "default",
+							}) {
+								<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+								</svg>
+								Add to Watchlist
+							}
+						</div>
 					</div>
 				</div>
 			</div>
-		} else {
-			<h1>TODO</h1>
 		}
 		@separator.Separator()
 	</div>
 }
 
+templ movieContent(movie models.MovieDetails) {
+	<div class="space-y-8">
+		<!-- Overview Section -->
+		if movie.Movie.Overview != "" {
+			<div>
+				<h2 class="text-xl font-semibold mb-4">Overview</h2>
+				<p class="text-muted-foreground leading-relaxed">
+					{ movie.Movie.Overview }
+				</p>
+			</div>
+		}
+		<!-- Genres -->
+		if len(movie.Genres) > 0 {
+			<div>
+				<h3 class="text-lg font-medium mb-3">Genres</h3>
+				<div class="flex flex-wrap gap-2">
+					for _, genre := range movie.Genres {
+						@badge.Badge(badge.Props{
+							Variant: "secondary",
+						}) {
+							{ genre.Name }
+						}
+					}
+				</div>
+			</div>
+		}
+		<!-- Movie Details Grid -->
+		<div>
+			<h2 class="text-xl font-semibold mb-4">Details</h2>
+			@card.Card() {
+				@card.Card() {
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+						@movieDetailItem("Release Date", movie.Movie.ReleaseDate.Format("January 2, 2006"))
+						@movieDetailItem("Runtime", fmt.Sprintf("%d minutes", movie.Runtime))
+						@movieDetailItem("Rating", fmt.Sprintf("%.1f/10 (%s votes)", movie.Movie.VoteAverage, formatNumber(movie.Movie.VoteCount)))
+						@movieDetailItem("Original Language", movie.Movie.OriginalLanguage)
+						if movie.Budget > 0 {
+							@movieDetailItem("Budget", formatMoney(movie.Budget))
+						}
+						if movie.Revenue > 0 {
+							@movieDetailItem("Revenue", formatMoney(movie.Revenue))
+						}
+						@movieDetailItem("Status", movie.Status)
+						if movie.Homepage != "" {
+							@movieDetailItem("Homepage", fmt.Sprintf(`<a href="%s" target="_blank" class="text-primary hover:underline">Visit Website</a>`, movie.Homepage))
+						}
+					</div>
+				}
+			}
+		</div>
+		<!-- Cast Section -->
+		if len(movie.Credits.Cast) > 0 {
+			<div>
+				<h2 class="text-xl font-semibold mb-4">Cast</h2>
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+					for i, cast := range movie.Credits.Cast {
+						if i < 9 {
+							@castMemberCard(cast)
+						}
+					}
+				</div>
+			</div>
+		}
+		<!-- Crew Section (Director and Key Crew) -->
+		@crewSection(movie.Credits.Crew)
+	</div>
+}
+
+templ movieContentWithStats(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) {
+	<div class="space-y-8">
+		<!-- Overview Section -->
+		if movie.Movie.Overview != "" {
+			<div>
+				<h2 class="text-xl font-semibold mb-4">Overview</h2>
+				<p class="text-muted-foreground leading-relaxed">
+					{ movie.Movie.Overview }
+				</p>
+			</div>
+		}
+		<!-- Genres -->
+		if len(movie.Genres) > 0 {
+			<div>
+				<h3 class="text-lg font-medium mb-3">Genres</h3>
+				<div class="flex flex-wrap gap-2">
+					for _, genre := range movie.Genres {
+						@badge.Badge(badge.Props{
+							Variant: "secondary",
+						}) {
+							{ genre.Name }
+						}
+					}
+				</div>
+			</div>
+		}
+		<!-- User Activity Section -->
+		if len(watchRecords.Records) > 0 {
+			@userActivitySection(watchRecords.Records)
+		}
+		<!-- Movie Details Grid -->
+		<div>
+			<h2 class="text-xl font-semibold mb-4">Details</h2>
+			@card.Card() {
+				@card.Card() {
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+						@movieDetailItem("Release Date", movie.Movie.ReleaseDate.Format("January 2, 2006"))
+						@movieDetailItem("Runtime", fmt.Sprintf("%d minutes", movie.Runtime))
+						@movieDetailItem("Rating", fmt.Sprintf("%.1f/10 (%s votes)", movie.Movie.VoteAverage, formatNumber(movie.Movie.VoteCount)))
+						@movieDetailItem("Original Language", movie.Movie.OriginalLanguage)
+						if movie.Budget > 0 {
+							@movieDetailItem("Budget", formatMoney(movie.Budget))
+						}
+						if movie.Revenue > 0 {
+							@movieDetailItem("Revenue", formatMoney(movie.Revenue))
+						}
+						@movieDetailItem("Status", movie.Status)
+						if movie.Homepage != "" {
+							@movieDetailItem("Homepage", fmt.Sprintf(`<a href="%s" target="_blank" class="text-primary hover:underline">Visit Website</a>`, movie.Homepage))
+						}
+					</div>
+				}
+			}
+		</div>
+		<!-- Cast Section -->
+		if len(movie.Credits.Cast) > 0 {
+			<div>
+				<h2 class="text-xl font-semibold mb-4">Cast</h2>
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+					for i, cast := range movie.Credits.Cast {
+						if i < 9 {
+							@castMemberCard(cast)
+						}
+					}
+				</div>
+			</div>
+		}
+		<!-- Crew Section (Director and Key Crew) -->
+		@crewSection(movie.Credits.Crew)
+	</div>
+}
+
+templ movieDetailItem(label, value string) {
+	<div class="space-y-1">
+		<dt class="text-sm font-medium text-muted-foreground">{ label }</dt>
+		<dd class="text-sm">{ value }</dd>
+	</div>
+}
+
+templ castMemberCard(cast models.Cast) {
+	@card.Card() {
+		@card.Card() {
+			<div class="flex items-center space-x-3 p-2">
+				if cast.Person.ProfilePath != "" {
+					<img
+						src={ "https://image.tmdb.org/t/p/w185" + cast.Person.ProfilePath }
+						alt={ cast.Person.Name }
+						class="w-12 h-12 rounded-full object-cover"
+					/>
+				} else {
+					<div class="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+						<svg class="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+						</svg>
+					</div>
+				}
+				<div class="flex-1 min-w-0">
+					<p class="text-sm font-medium truncate">{ cast.Person.Name }</p>
+					<p class="text-xs text-muted-foreground truncate">{ cast.Character }</p>
+				</div>
+			</div>
+		}
+	}
+}
+
+templ crewSection(crew []models.Crew) {
+	<!-- Extract key crew members -->
+	<div>
+		<h2 class="text-xl font-semibold mb-4">Key Crew</h2>
+		@card.Card() {
+			@card.Card() {
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+					for _, member := range crew {
+						if member.Job == "Director" || member.Job == "Producer" || member.Job == "Executive Producer" || member.Job == "Screenplay" || member.Job == "Writer" {
+							@crewMemberItem(member)
+						}
+					}
+				</div>
+			}
+		}
+	</div>
+}
+
+templ crewMemberItem(crew models.Crew) {
+	<div class="space-y-1">
+		<dt class="text-sm font-medium text-muted-foreground">{ crew.Job }</dt>
+		<dd class="text-sm font-medium">{ crew.Person.Name }</dd>
+	</div>
+}
+
+templ userActivitySection(watchRecords []models.WatchedMovieRecord) {
+	<div>
+		<h2 class="text-xl font-semibold mb-4">Your Activity</h2>
+		@card.Card() {
+			@card.Card() {
+				<div class="space-y-6">
+					<!-- Summary Stats -->
+					<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+						@activityStat("Times Watched", fmt.Sprintf("%d", len(watchRecords)))
+						@activityStat("In Theater", fmt.Sprintf("%d", countTheaterWatches(watchRecords)))
+						@activityStat("At Home", fmt.Sprintf("%d", len(watchRecords)-countTheaterWatches(watchRecords)))
+						if len(watchRecords) > 0 {
+							@activityStat("Last Watched", getLastWatchDate(watchRecords).Format("Jan 2006"))
+						}
+					</div>
+					@separator.Separator()
+					<!-- Watch History -->
+					<div>
+						<h3 class="text-sm font-medium text-muted-foreground mb-3">Watch History</h3>
+						<div class="space-y-2 max-h-48 overflow-y-auto">
+							for _, record := range sortWatchRecordsDesc(watchRecords) {
+								@watchHistoryItem(record)
+							}
+						</div>
+					</div>
+				</div>
+			}
+		}
+	</div>
+}
+
+templ activityStat(label, value string) {
+	<div class="text-center">
+		<div class="text-2xl font-bold text-primary">{ value }</div>
+		<div class="text-xs text-muted-foreground">{ label }</div>
+	</div>
+}
+
+templ watchHistoryItem(record models.WatchedMovieRecord) {
+	<div class="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
+		<div class="flex items-center space-x-3">
+			if record.InTheaters {
+				<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+					<svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2h3a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1h3zM9 12l2 2 4-4"></path>
+					</svg>
+				</div>
+				<div>
+					<div class="text-sm font-medium">Theater</div>
+					<div class="text-xs text-muted-foreground">{ record.Date.Format("January 2, 2006") }</div>
+				</div>
+			} else {
+				<div class="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center">
+					<svg class="w-4 h-4 text-secondary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+					</svg>
+				</div>
+				<div>
+					<div class="text-sm font-medium">Home</div>
+					<div class="text-xs text-muted-foreground">{ record.Date.Format("January 2, 2006") }</div>
+				</div>
+			}
+		</div>
+		<div class="text-xs text-muted-foreground">
+			{ formatTimeAgo(record.Date) }
+		</div>
+	</div>
+}
+
 func formatMoney(amount int64) string {
+	if amount == 0 {
+		return "N/A"
+	}
 	if amount >= 1000000000 {
 		return fmt.Sprintf("$%.1fB", float64(amount)/1000000000)
 	} else if amount >= 1000000 {
@@ -124,5 +425,92 @@ func formatMoney(amount int64) string {
 	} else if amount >= 1000 {
 		return fmt.Sprintf("$%.1fK", float64(amount)/1000)
 	}
-	return strconv.FormatInt(amount, 10)
+	return "$" + strconv.FormatInt(amount, 10)
+}
+
+func formatNumber(num int64) string {
+	str := strconv.FormatInt(num, 10)
+	n := len(str)
+	if n <= 3 {
+		return str
+	}
+
+	var result strings.Builder
+	for i, digit := range str {
+		if i > 0 && (n-i)%3 == 0 {
+			result.WriteString(",")
+		}
+		result.WriteRune(digit)
+	}
+	return result.String()
+}
+
+// Helper functions for user activity
+func countTheaterWatches(records []models.WatchedMovieRecord) int {
+	count := 0
+	for _, record := range records {
+		if record.InTheaters {
+			count++
+		}
+	}
+	return count
+}
+
+func getLastWatchDate(records []models.WatchedMovieRecord) time.Time {
+	if len(records) == 0 {
+		return time.Time{}
+	}
+
+	latest := records[0].Date
+	for _, record := range records[1:] {
+		if record.Date.After(latest) {
+			latest = record.Date
+		}
+	}
+	return latest
+}
+
+func sortWatchRecordsDesc(records []models.WatchedMovieRecord) []models.WatchedMovieRecord {
+	sorted := make([]models.WatchedMovieRecord, len(records))
+	copy(sorted, records)
+
+	// Simple bubble sort by date (descending)
+	for i := 0; i < len(sorted)-1; i++ {
+		for j := 0; j < len(sorted)-i-1; j++ {
+			if sorted[j].Date.Before(sorted[j+1].Date) {
+				sorted[j], sorted[j+1] = sorted[j+1], sorted[j]
+			}
+		}
+	}
+	return sorted
+}
+
+func formatTimeAgo(t time.Time) string {
+	now := time.Now()
+	diff := now.Sub(t)
+
+	if diff < 24*time.Hour {
+		if diff < time.Hour {
+			minutes := int(diff.Minutes())
+			if minutes < 1 {
+				return "Just now"
+			}
+			return fmt.Sprintf("%dm ago", minutes)
+		}
+		hours := int(diff.Hours())
+		return fmt.Sprintf("%dh ago", hours)
+	}
+
+	days := int(diff.Hours() / 24)
+	if days < 30 {
+		return fmt.Sprintf("%dd ago", days)
+	}
+
+	months := days / 30
+	if months < 12 {
+		return fmt.Sprintf("%dmo ago", months)
+	}
+
+	years := months / 12
+	return fmt.Sprintf("%dy ago", years)
 }

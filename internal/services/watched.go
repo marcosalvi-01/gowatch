@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"gowatch/db"
 	"gowatch/internal/models"
@@ -111,22 +113,52 @@ func (s *WatchedService) ExportWatched(ctx context.Context) (models.ImportWatche
 	export := make(models.ImportWatchedMoviesLog, len(watched))
 	totalMovies := 0
 
-	for _, w := range watched {
+	for i, w := range watched {
 		ids := make([]models.ImportWatchedMovieRef, len(w.Movies))
-		for _, movieDetails := range w.Movies {
-			ids = append(ids, models.ImportWatchedMovieRef{
+		for j, movieDetails := range w.Movies {
+			ids[j] = models.ImportWatchedMovieRef{
 				MovieID: int(movieDetails.Movie.ID),
 				// TODO: find a way to include the inTheaters in the export, we would need to modify the GetAllWatchedMoviesInDay model to include it
 				InTheaters: false,
-			})
+			}
 		}
 		totalMovies += len(w.Movies)
-		export = append(export, models.ImportWatchedMoviesEntry{
+		export[i] = models.ImportWatchedMoviesEntry{
 			Date:   w.Date,
 			Movies: ids,
-		})
+		}
 	}
 
 	s.log.Info("successfully exported watched movies", "dayCount", len(export), "totalMovies", totalMovies)
 	return export, nil
+}
+
+func (s *WatchedService) GetWatchedMovieRecordsByID(ctx context.Context, movieID int64) (models.WatchedMovieRecords, error) {
+	s.log.Debug("get watch records", "movieID", movieID)
+
+	rows, err := s.db.GetWatchedJoinMovieByID(ctx, movieID)
+	if errors.Is(err, sql.ErrNoRows) || len(rows) == 0 {
+		return models.WatchedMovieRecords{}, nil
+	}
+	if err != nil {
+		s.log.Error("db query failed", "movieID", movieID, "error", err)
+		return models.WatchedMovieRecords{}, fmt.Errorf("get watched records: %w", err)
+	}
+
+	rec := models.WatchedMovieRecords{
+		MovieDetails: rows[0].MovieDetails, // same in every row
+		Records:      make([]models.WatchedMovieRecord, 0, len(rows)),
+	}
+	for _, r := range rows {
+		rec.Records = append(rec.Records, models.WatchedMovieRecord{
+			Date:       r.Date,
+			InTheaters: r.InTheaters,
+		})
+	}
+
+	sort.Slice(rec.Records, func(i, j int) bool {
+		return rec.Records[i].Date.After(rec.Records[j].Date)
+	})
+
+	return rec, nil
 }

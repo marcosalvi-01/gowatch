@@ -39,6 +39,7 @@ type DB interface {
 
 	InsertWatched(ctx context.Context, movieID int64, date time.Time, inTheaters bool) error
 	GetWatchedJoinMovie(ctx context.Context) ([]models.WatchedMovie, error)
+	GetWatchedJoinMovieByID(ctx context.Context, movieID int64) ([]models.WatchedMovie, error)
 
 	// GetMostWatchedMovies(ctx context.Context) ([]models.WatchedMovieDetails, error)
 	// GetWatchedMovieDetails(ctx context.Context, id int64) (models.WatchedMovieDetails, error)

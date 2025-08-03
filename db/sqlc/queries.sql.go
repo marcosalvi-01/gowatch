@@ -406,6 +406,69 @@ func (q *Queries) GetWatchedJoinMovie(ctx context.Context) ([]GetWatchedJoinMovi
 	return items, nil
 }
 
+const getWatchedJoinMovieByID = `-- name: GetWatchedJoinMovieByID :many
+SELECT
+    movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline,
+    watched.movie_id, watched.watched_date, watched.watched_in_theater
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.movie_id = ?
+ORDER BY
+    watched.watched_date DESC
+`
+
+type GetWatchedJoinMovieByIDRow struct {
+	Movie   Movie
+	Watched Watched
+}
+
+func (q *Queries) GetWatchedJoinMovieByID(ctx context.Context, movieID int64) ([]GetWatchedJoinMovieByIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, getWatchedJoinMovieByID, movieID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetWatchedJoinMovieByIDRow
+	for rows.Next() {
+		var i GetWatchedJoinMovieByIDRow
+		if err := rows.Scan(
+			&i.Movie.ID,
+			&i.Movie.Title,
+			&i.Movie.OriginalTitle,
+			&i.Movie.OriginalLanguage,
+			&i.Movie.Overview,
+			&i.Movie.ReleaseDate,
+			&i.Movie.PosterPath,
+			&i.Movie.BackdropPath,
+			&i.Movie.Popularity,
+			&i.Movie.VoteCount,
+			&i.Movie.VoteAverage,
+			&i.Movie.Budget,
+			&i.Movie.Homepage,
+			&i.Movie.ImdbID,
+			&i.Movie.Revenue,
+			&i.Movie.Runtime,
+			&i.Movie.Status,
+			&i.Movie.Tagline,
+			&i.Watched.MovieID,
+			&i.Watched.WatchedDate,
+			&i.Watched.WatchedInTheater,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getWatchedMovieDetails = `-- name: GetWatchedMovieDetails :one
 SELECT
     movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline,
