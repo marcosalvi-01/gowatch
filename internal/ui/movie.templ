@@ -8,7 +8,11 @@ import (
 	"gowatch/internal/ui/components/badge"
 	"gowatch/internal/ui/components/button"
 	"gowatch/internal/ui/components/card"
+	"gowatch/internal/ui/components/checkbox"
+	"gowatch/internal/ui/components/datepicker"
+	"gowatch/internal/ui/components/form"
 	"gowatch/internal/ui/components/icon"
+	"gowatch/internal/ui/components/modal"
 	"gowatch/internal/ui/components/moviecard"
 	"gowatch/internal/ui/components/page"
 	"gowatch/internal/ui/components/separator"
@@ -138,18 +142,88 @@ templ movieInfo(movie models.MovieDetails, isDark bool) {
 				"{ movie.Tagline }"
 			</p>
 		}
-		@actionButtons()
+		@actionButtons(movie.Movie.ID)
 	</div>
 }
 
-templ actionButtons() {
+templ actionButtons(movieID int64) {
 	<div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
-		@button.Button(button.Props{
-			Variant: "default",
-			Size:    "default",
+		@modal.Trigger(modal.TriggerProps{
+			For: "default-modal-watched",
 		}) {
-			@icon.Check()
-			Mark as Watched
+			@button.Button() {
+				@icon.Check()
+				Mark as Watched
+			}
+		}
+		@modal.Modal(modal.Props{
+			ID:               "default-modal-watched",
+			Class:            "max-w-md",
+			DisableClickAway: true,
+		}) {
+			<form
+				hx-post="/htmx/movies/watched"
+				hx-target="#toast"
+				hx-include="[name='watched_date']"
+			>
+				// hidden input just for the movieid to be in the post
+				<input type="hidden" name="movie_id" value={ movieID }/>
+				@modal.Header() {
+					Add movie to the watched movies list
+				}
+				@modal.Body() {
+					<div class="w-full max-w-sm space-y-4">
+						@form.Item() {
+							@form.Label(form.LabelProps{
+								For: "date-picker-form",
+							}) {
+								Select the day when you watched the movie
+							}
+							@datepicker.DatePicker(datepicker.Props{
+								ID:       "date-picker-form",
+								Name:     "watched_date",
+								HasError: false,
+								Value:    time.Now(),
+							})
+						}
+						@form.Item() {
+							@form.Label(form.LabelProps{
+								For: "theater-checkbox",
+							}) {
+								Watched at theater
+							}
+							@checkbox.Checkbox(checkbox.Props{
+								ID:    "theater-checkbox",
+								Name:  "watched_at_theater",
+								Value: "theater",
+							})
+						}
+					</div>
+				}
+				@modal.Footer() {
+					<div class="flex gap-2">
+						@modal.Close(modal.CloseProps{
+							For: "default-modal-watched",
+						}) {
+							@button.Button(button.Props{
+								Variant: button.VariantDestructive,
+							}) {
+								Cancel
+							}
+						}
+						@modal.Close(modal.CloseProps{
+							For: "default-modal-watched",
+						}) {
+							@button.Button(button.Props{
+								Variant: button.VariantDefault,
+								Type:    button.TypeSubmit,
+							}) {
+								Add
+							}
+						}
+					</div>
+				}
+			</form>
 		}
 		@button.Button(button.Props{
 			Variant: "outline",

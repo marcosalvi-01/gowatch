@@ -2,9 +2,14 @@ package page
 
 import (
 	"gowatch/internal/ui/components/button"
+	"gowatch/internal/ui/components/calendar"
+	"gowatch/internal/ui/components/datepicker"
 	"gowatch/internal/ui/components/drawer"
 	"gowatch/internal/ui/components/icon"
 	"gowatch/internal/ui/components/input"
+	"gowatch/internal/ui/components/modal"
+	"gowatch/internal/ui/components/popover"
+	"gowatch/internal/ui/components/toast"
 )
 
 type Props struct {
@@ -37,6 +42,7 @@ templ Page(props Props, extraHead ...templ.Component) {
 			// Main content area with fixed header and scrollable content
 			<div class="flex-1 flex flex-col min-w-0 h-full md:h-auto">
 				// Header 
+				<div id="toast"></div>
 				<div class="flex items-center justify-between p-4 border-b flex-shrink-0">
 					<div class="flex items-center w-full">
 						// Mobile Navigation Drawer trigger
@@ -157,24 +163,34 @@ templ DrawerDefault(title, currentPath string) {
 templ Scripts() {
 	<script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
 	<script>
+	  document.addEventListener("DOMContentLoaded", () => {
+		// Re-initialize templUI components after HTMX swaps
 		document.body.addEventListener("htmx:afterSwap", (e) => {
-			if (window.templUI) {
-				for (const comp of Object.values(window.templUI)) {
-					comp.init?.(e.detail.elt);
-				}
-			}
+		  if (window.templUI) {
+			Object.values(window.templUI).forEach(comp => {
+			  comp.init?.(e.detail.elt);
+			});
+		  }
 		});
+
+		// Re-initialize components after out-of-band swaps
 		document.body.addEventListener("htmx:oobAfterSwap", (e) => {
-			if (window.templUI) {
-				for (const comp of Object.values(window.templUI)) {
-					comp.init?.(e.detail.target);
-				}
-			}
+		  if (window.templUI) {
+			Object.values(window.templUI).forEach(comp => {
+			  comp.init?.(e.detail.target);
+			});
+		  }
 		});
+	  });
 	</script>
 	@ThemeScript()
 	@drawer.Script()
 	@input.Script()
+	@modal.Script()
+	@datepicker.Script()
+	@popover.Script()
+	@calendar.Script()
+	@toast.Script()
 }
 
 templ ThemeScript() {

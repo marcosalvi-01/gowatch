@@ -6,6 +6,7 @@ package routes
 
 import (
 	"gowatch/internal/handlers/api"
+	"gowatch/internal/handlers/htmx"
 	"gowatch/internal/handlers/pages"
 	"gowatch/internal/handlers/static"
 	"gowatch/internal/middleware"
@@ -35,6 +36,11 @@ func NewRouter(tmdbService *services.MovieService, watchedService *services.Watc
 	staticHandlers := static.NewHandlers()
 	r.Route("/static", func(r chi.Router) {
 		staticHandlers.RegisterRoutes(r)
+	})
+
+	htmxHandlers := htmx.NewHandlers(watchedService)
+	r.Route("/htmx", func(r chi.Router) {
+		htmxHandlers.RegisterRoutes(r)
 	})
 
 	return r
