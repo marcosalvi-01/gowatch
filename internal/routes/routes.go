@@ -40,6 +40,7 @@ func NewRouter(tmdbService *services.MovieService, watchedService *services.Watc
 
 	htmxHandlers := htmx.NewHandlers(watchedService)
 	r.Route("/htmx", func(r chi.Router) {
+		r.Use(middleware.HTMLMiddleware)
 		htmxHandlers.RegisterRoutes(r)
 	})
 

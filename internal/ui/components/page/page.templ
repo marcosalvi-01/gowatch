@@ -2,14 +2,9 @@ package page
 
 import (
 	"gowatch/internal/ui/components/button"
-	"gowatch/internal/ui/components/calendar"
-	"gowatch/internal/ui/components/datepicker"
 	"gowatch/internal/ui/components/drawer"
 	"gowatch/internal/ui/components/icon"
 	"gowatch/internal/ui/components/input"
-	"gowatch/internal/ui/components/modal"
-	"gowatch/internal/ui/components/popover"
-	"gowatch/internal/ui/components/toast"
 )
 
 type Props struct {
@@ -186,11 +181,6 @@ templ Scripts() {
 	@ThemeScript()
 	@drawer.Script()
 	@input.Script()
-	@modal.Script()
-	@datepicker.Script()
-	@popover.Script()
-	@calendar.Script()
-	@toast.Script()
 }
 
 templ ThemeScript() {

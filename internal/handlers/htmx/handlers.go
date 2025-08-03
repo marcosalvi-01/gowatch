@@ -1,6 +1,7 @@
 package htmx
 
 import (
+	"fmt"
 	"gowatch/internal/services"
 	"gowatch/internal/ui/components/toast"
 	"gowatch/logging"
@@ -31,31 +32,95 @@ func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
 	movieIDParam := r.FormValue("movie_id")
 	movieID, err := strconv.Atoi(movieIDParam)
 	if err != nil {
-		http.Error(w, "Bad movie id parameter", http.StatusBadRequest)
+		log.Error("invalid movie ID parameter", "movieID", movieIDParam, "error", err)
+		toast.Toast(toast.Props{
+			Title:         "Invalid Movie ID",
+			Description:   "The movie ID provided is not valid. Please try again.",
+			Variant:       toast.VariantError,
+			Position:      toast.PositionTopRight,
+			Duration:      4000,
+			ShowIndicator: true,
+			Icon:          true,
+		}).Render(r.Context(), w)
 		return
 	}
 
 	watchedDateParam := r.FormValue("watched_date")
-	watchedDate, err := time.Parse("2006-01-02", watchedDateParam)
-	if err != nil {
-		http.Error(w, "Bad watched_date param", http.StatusBadRequest)
+	if watchedDateParam == "" {
+		log.Error("missing watched_date parameter")
+		toast.Toast(toast.Props{
+			Title:         "Missing Date",
+			Description:   "Please select the date when you watched the movie.",
+			Variant:       toast.VariantError,
+			Position:      toast.PositionTopRight,
+			Duration:      4000,
+			ShowIndicator: true,
+			Icon:          true,
+		}).Render(r.Context(), w)
 		return
 	}
 
-	watchedAtTheater := r.FormValue("watched_at_theater") == "true"
+	watchedDate, err := time.Parse("2006-01-02", watchedDateParam)
+	if err != nil {
+		log.Error("invalid watched_date parameter", "watchedDate", watchedDateParam, "error", err)
+		toast.Toast(toast.Props{
+			Title:         "Invalid Date Format",
+			Description:   "The date format is invalid. Please select a valid date.",
+			Variant:       toast.VariantError,
+			Position:      toast.PositionTopRight,
+			Duration:      4000,
+			ShowIndicator: true,
+			Icon:          true,
+		}).Render(r.Context(), w)
+		return
+	}
+
+	if watchedDate.After(time.Now()) {
+		log.Error("watched date is in the future", "watchedDate", watchedDate)
+		toast.Toast(toast.Props{
+			Title:         "Future Date Not Allowed",
+			Description:   "You cannot mark a movie as watched for a future date.",
+			Variant:       toast.VariantError,
+			Position:      toast.PositionTopRight,
+			Duration:      4000,
+			ShowIndicator: true,
+			Icon:          true,
+		}).Render(r.Context(), w)
+		return
+	}
+
+	watchedAtTheater := r.FormValue("watched_at_theater") != ""
 
 	err = h.watchedService.AddWatched(r.Context(), int64(movieID), watchedDate, watchedAtTheater)
 	if err != nil {
-		log.Error("failed to add new watched movie", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Error("failed to add new watched movie", "movieID", movieID, "watchedDate", watchedDate, "theater", watchedAtTheater, "error", err)
+		// TODO: Check for specific error types
+
+		toast.Toast(toast.Props{
+			Title:         "Unexpected error",
+			Description:   "An unexpected error occurred, please try again",
+			Variant:       toast.VariantError,
+			Position:      toast.PositionTopRight,
+			Duration:      5000,
+			ShowIndicator: true,
+			Icon:          true,
+		}).Render(r.Context(), w)
 		return
+	}
+
+	var successMessage string
+	if watchedAtTheater {
+		successMessage = fmt.Sprintf("Movie marked as watched on %s", watchedDate.Format("Jan 2, 2006"))
+	} else {
+		successMessage = fmt.Sprintf("Movie marked as watched on %s", watchedDate.Format("Jan 2, 2006"))
 	}
 
 	toast.Toast(toast.Props{
 		Title:         "Movie Added Successfully",
+		Description:   successMessage,
 		Variant:       toast.VariantSuccess,
 		Position:      toast.PositionTopRight,
-		Duration:      2000,
+		Duration:      3000,
 		ShowIndicator: true,
 		Icon:          true,
 	}).Render(r.Context(), w)

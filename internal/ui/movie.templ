@@ -7,6 +7,7 @@ import (
 	"gowatch/internal/ui/components/avatar"
 	"gowatch/internal/ui/components/badge"
 	"gowatch/internal/ui/components/button"
+	"gowatch/internal/ui/components/calendar"
 	"gowatch/internal/ui/components/card"
 	"gowatch/internal/ui/components/checkbox"
 	"gowatch/internal/ui/components/datepicker"
@@ -15,8 +16,10 @@ import (
 	"gowatch/internal/ui/components/modal"
 	"gowatch/internal/ui/components/moviecard"
 	"gowatch/internal/ui/components/page"
+	"gowatch/internal/ui/components/popover"
 	"gowatch/internal/ui/components/separator"
 	"gowatch/internal/ui/components/table"
+	"gowatch/internal/ui/components/toast"
 	"slices"
 	"strconv"
 	"strings"
@@ -27,7 +30,12 @@ templ MoviePage(movie models.MovieDetails, watchRecords models.WatchedMovieRecor
 	@page.Page(page.Props{
 		Title:       "Gowatch",
 		CurrentPath: "/movie",
-	}) {
+	}, modal.Script(),
+		datepicker.Script(),
+		popover.Script(),
+		calendar.Script(),
+		toast.Script(),
+	) {
 		@movieHero(movie)
 		@movieContent(movie, watchRecords)
 	}
@@ -166,18 +174,17 @@ templ actionButtons(movieID int64) {
 				hx-target="#toast"
 				hx-include="[name='watched_date']"
 			>
-				// hidden input just for the movieid to be in the post
 				<input type="hidden" name="movie_id" value={ movieID }/>
 				@modal.Header() {
-					Add movie to the watched movies list
+					Mark as Watched
 				}
 				@modal.Body() {
-					<div class="w-full max-w-sm space-y-4">
-						@form.Item() {
+					<div class="space-y-4">
+						<div class="space-y-2">
 							@form.Label(form.LabelProps{
 								For: "date-picker-form",
 							}) {
-								Select the day when you watched the movie
+								When did you watch this movie?
 							}
 							@datepicker.DatePicker(datepicker.Props{
 								ID:       "date-picker-form",
@@ -185,28 +192,32 @@ templ actionButtons(movieID int64) {
 								HasError: false,
 								Value:    time.Now(),
 							})
-						}
-						@form.Item() {
-							@form.Label(form.LabelProps{
-								For: "theater-checkbox",
-							}) {
-								Watched at theater
-							}
+						</div>
+						<div class="flex items-start space-x-3">
 							@checkbox.Checkbox(checkbox.Props{
 								ID:    "theater-checkbox",
 								Name:  "watched_at_theater",
 								Value: "theater",
 							})
-						}
+							@form.Label(form.LabelProps{
+								For:   "theater-checkbox",
+								Class: "cursor-pointer",
+							}) {
+								<div class="space-y-1">
+									<div class="text-sm font-medium">Watched at theater</div>
+									<div class="text-xs text-muted-foreground">Check if you saw this in a cinema</div>
+								</div>
+							}
+						</div>
 					</div>
 				}
 				@modal.Footer() {
-					<div class="flex gap-2">
+					<div class="flex justify-end gap-3">
 						@modal.Close(modal.CloseProps{
 							For: "default-modal-watched",
 						}) {
 							@button.Button(button.Props{
-								Variant: button.VariantDestructive,
+								Variant: button.VariantOutline,
 							}) {
 								Cancel
 							}
@@ -218,7 +229,7 @@ templ actionButtons(movieID int64) {
 								Variant: button.VariantDefault,
 								Type:    button.TypeSubmit,
 							}) {
-								Add
+								Add to Watched
 							}
 						}
 					</div>
@@ -482,19 +493,17 @@ templ watchHistoryItem(record models.WatchedMovieRecord) {
 }
 
 templ watchLocationIcon(inTheaters bool) {
-	if inTheaters {
-		<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+	<div class="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center">
+		if inTheaters {
 			@icon.Popcorn(icon.Props{
 				Size: 18,
 			})
-		</div>
-	} else {
-		<div class="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center">
+		} else {
 			@icon.House(icon.Props{
 				Size: 18,
 			})
-		</div>
-	}
+		}
+	</div>
 }
 
 // Helper functions
