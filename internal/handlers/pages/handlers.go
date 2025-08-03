@@ -31,7 +31,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 
 	r.Handle("/", templ.Handler(ui.HomePage()))
 	r.Handle("/stats", templ.Handler(ui.StatsPage()))
-	r.Get("/search/{title}", h.SearchPage)
+	r.Get("/search", h.SearchPage)
 	r.Get("/watched", h.WatchedPage)
 	r.Get("/movie/{id}", h.MoviePage)
 
@@ -78,7 +78,7 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
-	query := chi.URLParam(r, "title")
+	query := r.URL.Query().Get("q")
 
 	results, err := h.tmdbService.SearchMovies(query)
 	if err != nil {

@@ -89,6 +89,14 @@ templ SearchBar(searchContent string) {
 			Placeholder: "Search Movies...",
 			Class:       "pl-10",
 			Value:       searchContent,
+			Name:        "q", // Add name attribute for form data
+			Attributes: templ.Attributes{
+				"hx-get":      "/search",
+				"hx-trigger":  "keyup[key=='Enter']",
+				"hx-target":   "body", // or wherever you want to replace content
+				"hx-push-url": "true", // This updates the URL in browser
+				"hx-include":  "this", // Include this input's value
+			},
 		})
 	</div>
 }
