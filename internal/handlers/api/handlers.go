@@ -17,13 +17,11 @@ import (
 var log = logging.Get("api")
 
 type Handlers struct {
-	movieService   *services.MovieService
 	watchedService *services.WatchedService
 }
 
-func NewHandlers(movieService *services.MovieService, watchedService *services.WatchedService) *Handlers {
+func NewHandlers(watchedService *services.WatchedService) *Handlers {
 	return &Handlers{
-		movieService:   movieService,
 		watchedService: watchedService,
 	}
 }
@@ -47,7 +45,7 @@ func (h *Handlers) exportWatched(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) importWatched(w http.ResponseWriter, r *http.Request) {
-	var payload models.WatchedMoviesLog
+	var payload models.ImportWatchedMoviesLog
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		log.Error("failed to marshal JSON response", "error", err)
 		http.Error(w, "failed to encode response as JSON", http.StatusInternalServerError)

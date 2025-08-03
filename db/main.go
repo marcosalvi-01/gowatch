@@ -14,6 +14,7 @@ import (
 	"gowatch/logging"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
@@ -33,21 +34,22 @@ type DB interface {
 	Close() error
 	Health() error
 
-	GetAllWatched(ctx context.Context) ([]models.Watched, error)
-	InsertMovie(ctx context.Context, movie models.Movie) error
-	InsertWatched(ctx context.Context, watched models.Watched) error
-	GetMovieByID(ctx context.Context, id int64) (models.Movie, error)
+	GetMovieDetailsByID(ctx context.Context, id int64) (*models.MovieDetails, error)
+	InsertMovie(ctx context.Context, movie *models.MovieDetails) error
+
+	InsertWatched(ctx context.Context, movieID int64, date time.Time, inTheaters bool) error
 	GetWatchedJoinMovie(ctx context.Context) ([]models.WatchedMovie, error)
-	GetMostWatchedMovies(ctx context.Context) ([]models.WatchedMovieDetails, error)
-	GetWatchedMovieDetails(ctx context.Context, id int64) (models.WatchedMovieDetails, error)
 
-	InsertCrew(ctx context.Context, crew models.Crew) error
-	InsertCast(ctx context.Context, cast models.Cast) error
-	GetMovieCast(ctx context.Context, movieID int64) ([]models.Cast, error)
-	GetMovieCrew(ctx context.Context, movieID int64) ([]models.Crew, error)
-
-	GetMovieGenre(ctx context.Context, movieID int64) ([]models.Genre, error)
-	InsertGenre(ctx context.Context, genre models.Genre) error
+	// GetMostWatchedMovies(ctx context.Context) ([]models.WatchedMovieDetails, error)
+	// GetWatchedMovieDetails(ctx context.Context, id int64) (models.WatchedMovieDetails, error)
+	//
+	// InsertCrew(ctx context.Context, crew models.Crew) error
+	// InsertCast(ctx context.Context, cast models.Cast) error
+	// GetMovieCast(ctx context.Context, movieID int64) ([]models.Cast, error)
+	// GetMovieCrew(ctx context.Context, movieID int64) ([]models.Crew, error)
+	//
+	// GetMovieGenre(ctx context.Context, movieID int64) ([]models.Genre, error)
+	// InsertGenre(ctx context.Context, genre models.Genre) error
 }
 
 // SqliteDB wraps database connection and queries

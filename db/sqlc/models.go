@@ -37,21 +37,21 @@ type GenreMovie struct {
 
 type Movie struct {
 	ID               int64
-	ImdbID           string
 	Title            string
 	OriginalTitle    string
-	ReleaseDate      time.Time
 	OriginalLanguage string
 	Overview         string
+	ReleaseDate      time.Time
 	PosterPath       string
 	BackdropPath     string
+	Popularity       float64
+	VoteCount        int64
+	VoteAverage      float64
 	Budget           int64
+	Homepage         string
+	ImdbID           string
 	Revenue          int64
 	Runtime          int64
-	VoteAverage      float64
-	VoteCount        int64
-	Popularity       float64
-	Homepage         string
 	Status           string
 	Tagline          string
 }
@@ -68,6 +68,7 @@ type Person struct {
 }
 
 type Watched struct {
-	MovieID     int64
-	WatchedDate time.Time
+	MovieID          int64
+	WatchedDate      time.Time
+	WatchedInTheater bool
 }

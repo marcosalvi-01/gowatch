@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"gowatch/internal/models"
 	"gowatch/internal/ui/components/button"
-	"gowatch/internal/ui/components/card"
 	"gowatch/internal/ui/components/moviecard"
 	"gowatch/internal/ui/components/page"
 	"gowatch/internal/ui/components/separator"
@@ -12,12 +11,12 @@ import (
 	"strconv"
 )
 
-templ MoviePage(watched models.WatchedMovieDetails) {
+templ MoviePage(movie models.MovieDetails) {
 	@page.Page(page.Props{
 		Title:       "Gowatch",
 		CurrentPath: "/movie",
 	}) {
-		@movieHero(watched.Movie)
+		@movieHero(movie)
 		@table.Table() {
 			@table.Header() {
 				@table.Row() {
@@ -44,42 +43,25 @@ templ MoviePage(watched models.WatchedMovieDetails) {
 			@table.Body() {
 				@table.Row() {
 					@table.Cell() {
-						{ watched.Movie.ReleaseDate.Format("January 2006") }
+						{ movie.Movie.ReleaseDate.Format("January 2006") }
 					}
 					@table.Cell() {
-						{ watched.Movie.OriginalLanguage }
+						{ movie.Movie.OriginalLanguage }
 					}
 					@table.Cell() {
-						{ formatMoney(watched.Movie.Budget) }
+						{ formatMoney(movie.Budget) }
 					}
 					@table.Cell() {
-						{ formatMoney(watched.Movie.Revenue) }
+						{ formatMoney(movie.Revenue) }
 					}
 					@table.Cell() {
-						{ fmt.Sprintf("%d min", watched.Movie.Runtime) }
+						{ fmt.Sprintf("%d min", movie.Runtime) }
 					}
 					@table.Cell() {
-						{ fmt.Sprintf("%.1f", watched.Movie.VoteAverage) }
+						{ fmt.Sprintf("%.1f", movie.Movie.VoteAverage) }
 					}
 				}
 			}
-		}
-		if watched.ViewCount != 0 {
-			@card.Card() {
-				@card.Header() {
-					@card.Title() {
-						Number of times watched
-					}
-					@card.Description() {
-						The amount of times you have watched this movie
-					}
-				}
-				@card.Content() {
-					{ watched.ViewCount }
-				}
-			}
-		} else {
-			<p>You have never watched this movie yet</p>
 		}
 		@button.Button() {
 			Add to watched list
@@ -90,32 +72,32 @@ templ MoviePage(watched models.WatchedMovieDetails) {
 	}
 }
 
-templ movieHero(movie models.Movie) {
+templ movieHero(movie models.MovieDetails) {
 	<div class="relative -m-4 mb-4">
-		if movie.BackdropPath != "" {
+		if movie.Movie.BackdropPath != "" {
 			<div class="h-74 md:h-100">
 				<div class="absolute inset-0 bg-gradient-to-b from-black/40 via-black/40 to-transparent"></div>
 				<img
-					src={ "https://image.tmdb.org/t/p/w1280" + movie.BackdropPath }
-					alt={ movie.Title + " backdrop" }
+					src={ "https://image.tmdb.org/t/p/w1280" + movie.Movie.BackdropPath }
+					alt={ movie.Movie.Title + " backdrop" }
 					class="w-full h-full object-cover object-center"
 				/>
 				<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
 				<div class="absolute inset-0 p-4 md:p-8 flex flex-col justify-center">
 					<div class="flex flex-row items-baseline mb-4 md:mb-8">
 						<p class="text-3xl font-bold text-white drop-shadow-md mr-2">
-							{ movie.Title }
+							{ movie.Movie.Title }
 						</p>
 						<p class="text-2xl font-bold text-white drop-shadow-md">
-							{ " (" + movie.ReleaseDate.Format("2006") + ")" }
+							{ " (" + movie.Movie.ReleaseDate.Format("2006") + ")" }
 						</p>
 					</div>
 					<div class="flex flex-row gap-4 items-end">
-						if movie.PosterPath != "" {
+						if movie.Movie.PosterPath != "" {
 							<div class="flex-shrink-0">
 								@moviecard.MovieCard(moviecard.Props{
-									Title:      movie.Title,
-									PosterPath: movie.PosterPath,
+									Title:      movie.Movie.Title,
+									PosterPath: movie.Movie.PosterPath,
 								})
 							</div>
 						}

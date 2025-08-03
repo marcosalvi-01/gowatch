@@ -41,12 +41,10 @@ func main() {
 		panic(err)
 	}
 
-	tmdbService := services.NewTMDBService(tmdb)
-	creditsService := services.NewCreditsService(db, tmdbService)
-	movieService := services.NewMovieService(db, tmdbService, creditsService)
-	watchedService := services.NewWatchedService(db, movieService, creditsService)
+	tmdbService := services.NewTMDBService(db, tmdb)
+	watchedService := services.NewWatchedService(db, tmdbService)
 
-	router := routes.NewRouter(movieService, watchedService)
+	router := routes.NewRouter(tmdbService, watchedService)
 
 	server := &http.Server{
 		Addr:         ":" + cfg.Port,

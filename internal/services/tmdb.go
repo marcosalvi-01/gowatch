@@ -1,8 +1,13 @@
 package services
 
 import (
+	"context"
+	"database/sql"
+	"errors"
 	"fmt"
+	"gowatch/db"
 	"gowatch/internal/models"
+	"time"
 
 	tmdb "github.com/cyruzin/golang-tmdb"
 )
@@ -10,14 +15,19 @@ import (
 // TMDBService handles all external TMDB API interactions
 type TMDBService struct {
 	client *tmdb.Client
+	db     db.DB
 }
 
-func NewTMDBService(client *tmdb.Client) *TMDBService {
-	return &TMDBService{client: client}
+func NewTMDBService(db db.DB, client *tmdb.Client) *TMDBService {
+	log.Debug("creating new TMDBService instance")
+	return &TMDBService{
+		client: client,
+		db:     db,
+	}
 }
 
-func (s *TMDBService) SearchMovies(query string) ([]models.SearchMovie, error) {
-	log.Debug("searching movie", "query", query)
+func (s *TMDBService) SearchMovies(query string) ([]models.Movie, error) {
+	log.Debug("searching movies", "query", query)
 
 	search, err := s.client.GetSearchMovies(query, nil)
 	if err != nil {
@@ -27,54 +37,92 @@ func (s *TMDBService) SearchMovies(query string) ([]models.SearchMovie, error) {
 
 	log.Info("movie search completed", "query", query, "results", search.TotalResults)
 
-	movies := make([]models.SearchMovie, len(search.Results))
+	movies := make([]models.Movie, len(search.Results))
 	for i, m := range search.Results {
-		movies[i] = models.SearchMovie{
+		releaseDate, err := time.Parse("2006-01-02", m.ReleaseDate)
+		if err != nil {
+			log.Error("failed to parse movie release date", "movieID", m.ID, "releaseDate", m.ReleaseDate, "error", err)
+			return nil, fmt.Errorf("failed to parse movie release date '%s': %w", m.ReleaseDate, err)
+		}
+		movies[i] = models.Movie{
 			ID:               m.ID,
 			Title:            m.Title,
 			OriginalTitle:    m.OriginalTitle,
 			OriginalLanguage: m.OriginalLanguage,
 			Overview:         m.Overview,
-			ReleaseDate:      m.ReleaseDate,
+			ReleaseDate:      releaseDate,
 			PosterPath:       m.PosterPath,
 			BackdropPath:     m.BackdropPath,
 			Popularity:       m.Popularity,
 			VoteCount:        m.VoteCount,
 			VoteAverage:      m.VoteAverage,
-			GenreIDs:         m.GenreIDs,
-			Adult:            m.Adult,
-			Video:            m.Video,
 		}
 	}
 
+	log.Debug("converted TMDB search results to internal models", "movieCount", len(movies))
 	return movies, nil
 }
 
-func (s *TMDBService) GetMovieDetails(id int64) (models.Movie, error) {
-	log.Debug("getting movie details", "id", id)
+func (s *TMDBService) GetMovieDetails(ctx context.Context, id int64) (*models.MovieDetails, error) {
+	log.Debug("getting movie details", "movieID", id)
 
+	movie, err := s.db.GetMovieDetailsByID(ctx, id)
+	if err == nil {
+		log.Debug("found movie details in database cache", "movieID", id)
+		return movie, nil
+	}
+
+	if !errors.Is(err, sql.ErrNoRows) {
+		log.Error("failed to get movie details from database", "movieID", id, "error", err)
+		return nil, fmt.Errorf("failed to get movie details from db: %w", err)
+	}
+
+	log.Debug("movie not found in cache, fetching from TMDB", "movieID", id)
+
+	// cache miss
 	details, err := s.client.GetMovieDetails(int(id), nil)
 	if err != nil {
-		log.Error("TMDB get movie details failed", "id", id, "error", err)
-		return models.Movie{}, fmt.Errorf("error getting TMDB movie details for id '%d': %w", id, err)
+		log.Error("failed to get movie details from TMDB", "movieID", id, "error", err)
+		return nil, fmt.Errorf("error getting TMDB movie details for id '%d': %w", id, err)
 	}
 
-	movie, err := models.MovieFromTMDBMovieDetails(*details)
+	log.Debug("successfully fetched movie details from TMDB", "movieID", id, "title", details.Title)
+
+	movie, err = models.MovieDetailsFromTMDBMovieDetails(*details)
 	if err != nil {
-		return models.Movie{}, fmt.Errorf("failed to convert TMDB movie to model: %w", err)
+		log.Error("failed to convert TMDB movie details to internal model", "movieID", id, "error", err)
+		return nil, fmt.Errorf("failed to convert from TMDB results to internal model: %w", err)
 	}
 
+	// remember the credits
+	credits, err := s.getMovieCredits(id)
+	if err != nil {
+		log.Error("failed to get movie credits", "movieID", id, "error", err)
+		return nil, fmt.Errorf("failed to get movie credits: %w", err)
+	}
+
+	movie.Credits = credits
+
+	err = s.db.InsertMovie(ctx, movie)
+	if err != nil {
+		log.Error("failed to save movie to database", "movieID", id, "error", err)
+		return nil, fmt.Errorf("failed to save movie in db: %w", err)
+	}
+
+	log.Info("successfully cached movie details", "movieID", id, "title", movie.Movie.Title)
 	return movie, nil
 }
 
-func (s *TMDBService) GetMovieCredits(id int64) (models.MovieCredits, error) {
-	log.Debug("getting movie credits", "id", id)
+func (s *TMDBService) getMovieCredits(id int64) (models.MovieCredits, error) {
+	log.Debug("getting movie credits from TMDB", "movieID", id)
 
 	credits, err := s.client.GetMovieCredits(int(id), nil)
 	if err != nil {
-		log.Error("TMDB get movie credits failed", "id", id, "error", err)
+		log.Error("TMDB get movie credits failed", "movieID", id, "error", err)
 		return models.MovieCredits{}, fmt.Errorf("error getting TMDB movie credits for id '%d': %w", id, err)
 	}
+
+	log.Debug("fetched movie credits from TMDB", "movieID", id, "castCount", len(credits.Cast), "crewCount", len(credits.Crew))
 
 	cast := make([]models.Cast, len(credits.Cast))
 	for i, c := range credits.Cast {
@@ -118,6 +166,8 @@ func (s *TMDBService) GetMovieCredits(id int64) (models.MovieCredits, error) {
 			},
 		}
 	}
+
+	log.Debug("converted TMDB credits to internal models", "movieID", id, "castCount", len(cast), "crewCount", len(crew))
 
 	return models.MovieCredits{
 		Crew: crew,

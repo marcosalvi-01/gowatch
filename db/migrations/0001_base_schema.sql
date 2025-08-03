@@ -1,21 +1,22 @@
 -- +goose Up
 CREATE TABLE movie (
     id INTEGER PRIMARY KEY,
-    imdb_id TEXT NOT NULL,
     title TEXT NOT NULL,
     original_title TEXT NOT NULL,
-    release_date DATE NOT NULL,
     original_language TEXT NOT NULL,
     overview TEXT NOT NULL,
+    release_date DATE NOT NULL,
     poster_path TEXT NOT NULL,
     backdrop_path TEXT NOT NULL,
+    popularity REAL NOT NULL,
+    vote_count INTEGER NOT NULL,
+    vote_average DECIMAL(4, 2) NOT NULL,
     budget INTEGER NOT NULL,
+    homepage TEXT NOT NULL,
+    imdb_id TEXT NOT NULL,
+    -- origin_country []string
     revenue INTEGER NOT NULL,
     runtime INTEGER NOT NULL,
-    vote_average DECIMAL(4, 2) NOT NULL,
-    vote_count INTEGER NOT NULL,
-    popularity REAL NOT NULL,
-    homepage TEXT NOT NULL,
     status TEXT NOT NULL,
     tagline TEXT NOT NULL
 );
@@ -23,6 +24,7 @@ CREATE TABLE movie (
 CREATE TABLE watched (
     movie_id INTEGER NOT NULL,
     watched_date DATE NOT NULL,
+    watched_in_theater BOOLEAN DEFAULT false NOT NULL,
     PRIMARY KEY (movie_id, watched_date),
     FOREIGN KEY (movie_id) REFERENCES movie(id) ON DELETE CASCADE
 );

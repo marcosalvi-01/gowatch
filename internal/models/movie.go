@@ -10,118 +10,70 @@ import (
 	tmdb "github.com/cyruzin/golang-tmdb"
 )
 
-type Movie struct {
-	ID               int64
-	IMDbID           string
-	Title            string
-	OriginalTitle    string
-	ReleaseDate      time.Time
-	OriginalLanguage string
-	Overview         string
-	PosterPath       string
-	BackdropPath     string
-	Budget           int64
-	Revenue          int64
-	Runtime          int64
-	VoteAverage      float64
-	VoteCount        int64
-	Popularity       float64
-	Homepage         string
-	Status           string
-	Tagline          string
-	Genres           []Genre
-}
-
-func GenreFromTMDBGenre(TMDBGenre tmdb.Genre) Genre {
-	return Genre{
-		ID:   TMDBGenre.ID,
-		Name: TMDBGenre.Name,
-	}
-}
-
-func GenreFromTMDBGenres(TMDBGenre []tmdb.Genre) []Genre {
-	genres := make([]Genre, len(TMDBGenre))
-	for _, genre := range TMDBGenre {
-		genres = append(genres, GenreFromTMDBGenre(genre))
-	}
-	return genres
-}
-
-func MovieFromTMDBMovieDetails(TMDBMovie tmdb.MovieDetails) (Movie, error) {
-	releaseDate, err := time.Parse("2006-01-02", TMDBMovie.ReleaseDate)
+func MovieDetailsFromTMDBMovieDetails(movie tmdb.MovieDetails) (*MovieDetails, error) {
+	releaseDate, err := time.Parse("2006-01-02", movie.ReleaseDate)
 	if err != nil {
-		return Movie{}, fmt.Errorf("failed to parse movie release date '%s': %w", TMDBMovie.ReleaseDate, err)
+		return nil, fmt.Errorf("failed to parse movie release date '%s': %w", movie.ReleaseDate, err)
 	}
-	return Movie{
-		ID:               TMDBMovie.ID,
-		IMDbID:           TMDBMovie.IMDbID,
-		Title:            TMDBMovie.Title,
-		OriginalTitle:    TMDBMovie.OriginalTitle,
-		ReleaseDate:      releaseDate,
-		OriginalLanguage: TMDBMovie.OriginalLanguage,
-		Overview:         TMDBMovie.Overview,
-		PosterPath:       TMDBMovie.PosterPath,
-		BackdropPath:     TMDBMovie.BackdropPath,
-		Budget:           TMDBMovie.Budget,
-		Revenue:          TMDBMovie.Revenue,
-		Runtime:          int64(TMDBMovie.Runtime),
-		VoteAverage:      float64(TMDBMovie.VoteAverage),
-		VoteCount:        TMDBMovie.VoteCount,
-		Popularity:       float64(TMDBMovie.Popularity),
-		Homepage:         TMDBMovie.Homepage,
-		Status:           TMDBMovie.Status,
-		Tagline:          TMDBMovie.Tagline,
-		Genres:           GenreFromTMDBGenres(TMDBMovie.Genres),
+	return &MovieDetails{
+		Movie: Movie{
+			ID:               movie.ID,
+			Title:            movie.Title,
+			OriginalTitle:    movie.OriginalTitle,
+			OriginalLanguage: movie.OriginalLanguage,
+			Overview:         movie.Overview,
+			ReleaseDate:      releaseDate,
+			PosterPath:       movie.PosterPath,
+			BackdropPath:     movie.BackdropPath,
+			Popularity:       movie.Popularity,
+			VoteCount:        movie.VoteCount,
+			VoteAverage:      movie.VoteAverage,
+		},
+		Budget:   movie.Budget,
+		Genres:   GenreFromTMDBGenres(movie.Genres),
+		Homepage: movie.Homepage,
+		IMDbID:   movie.IMDbID,
+		Revenue:  movie.Revenue,
+		Runtime:  movie.Runtime,
+		Status:   movie.Status,
+		Tagline:  movie.Tagline,
 	}, nil
 }
 
-type SearchMovie struct {
+// Movie is a simple movie, the necessary things for a poster in every list view (search, watched, to watch, ...)
+type Movie struct {
+	// just simple stuff for the cards, the kind of things that a tmdb.search would give so to use it in both the search and in the watched list
 	ID               int64
 	Title            string
 	OriginalTitle    string
 	OriginalLanguage string
 	Overview         string
-	ReleaseDate      string
+	ReleaseDate      time.Time
 	PosterPath       string
 	BackdropPath     string
 	Popularity       float32
 	VoteCount        int64
 	VoteAverage      float32
-	GenreIDs         []int64
-	Adult            bool
-	Video            bool
 }
 
-type WatchedMovie struct {
-	Movie       Movie
-	WatchedDate time.Time
-}
+// MovieDetails is a more detailed movie with all the info necessary for a detailed view of it (e.g. when clicking on a movie after a search)
+type MovieDetails struct {
+	Movie Movie
 
-// WatchedMovieDetails represents a watched movie and some additional details about it.
-// Used in the movie page details about a specific movie (if watched)
-type WatchedMovieDetails struct {
-	Movie     Movie
-	ViewCount int
-	Genres    []Genre
-	Credits   MovieCredits
-}
+	Budget   int64
+	Homepage string
+	IMDbID   string
+	Revenue  int64
+	Runtime  int
+	Status   string
+	Tagline  string
 
-// WatchedDay represents a day and all the movies watched in that day.
-// Used in the watched page to group movies by watched day
-type WatchedDay struct {
-	Movies []Movie
-	Date   time.Time
-}
+	Genres  []Genre
+	Credits MovieCredits
 
-// For importing/exporting watched movie data from JSON
-
-type WatchedMoviesLog []WatchedMoviesEntry
-
-type WatchedMoviesEntry struct {
-	Date   time.Time         `json:"date"`
-	Movies []WatchedMovieRef `json:"movies"`
-}
-
-type WatchedMovieRef struct {
-	MovieID int `json:"movie_id"`
+	// OriginCountry []string
+	// BelongsToCollection BelongsToCollection
+	// ProductionCompanies []ProductionCompany
+	// ProductionCountries []ProductionCountry
+	// SpokenLanguages     []SpokenLanguage
 }

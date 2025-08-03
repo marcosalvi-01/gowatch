@@ -1,28 +1,22 @@
--- name: GetAllWatched :many
-SELECT
-    *
-FROM
-    watched;
-
--- name: InsertMovie :one
-INSERT INTO
-    movie (
+-- name: InsertMovie :exec
+INSERT
+    OR IGNORE INTO movie (
         id,
-        imdb_id,
         title,
         original_title,
-        release_date,
         original_language,
         overview,
+        release_date,
         poster_path,
         backdrop_path,
+        popularity,
+        vote_count,
+        vote_average,
         budget,
+        homepage,
+        imdb_id,
         revenue,
         runtime,
-        vote_average,
-        vote_count,
-        popularity,
-        homepage,
         STATUS,
         tagline
     )
@@ -46,17 +40,35 @@ VALUES
         ?,
         ?,
         ?
-    )
-RETURNING
-    *;
+    );
+
+-- name: InsertGenre :exec
+INSERT
+    OR IGNORE INTO genre (id, name)
+VALUES
+    (?, ?);
+
+-- name: InsertGenreMovie :exec
+INSERT
+    OR IGNORE INTO genre_movie (movie_id, genre_id)
+VALUES
+    (?, ?);
 
 -- name: InsertWatched :one
 INSERT INTO
-    watched (movie_id, watched_date)
+    watched (movie_id, watched_date, watched_in_theater)
 VALUES
-    (?, ?)
+    (?, ?, ?)
 RETURNING
     *;
+
+-- name: GetAllWatchedForExport :many
+SELECT
+    sqlc.embed(movie),
+    sqlc.embed(watched)
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id;
 
 -- name: GetMovieByID :one
 SELECT
@@ -106,25 +118,9 @@ WHERE
 GROUP BY
     movie.id;
 
--- name: InsertGenre :one
-INSERT INTO
-    genre (id, name)
-VALUES
-    (?, ?)
-RETURNING
-    *;
-
--- name: InsertGenreMovie :one
-INSERT INTO
-    genre_movie (movie_id, genre_id)
-VALUES
-    (?, ?)
-RETURNING
-    *;
-
--- name: InsertPerson :one
-INSERT INTO
-    person (
+-- name: InsertPerson :exec
+INSERT
+    OR IGNORE INTO person (
         id,
         name,
         original_name,
@@ -135,13 +131,11 @@ INSERT INTO
         adult
     )
 VALUES
-    (?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING
-    *;
+    (?, ?, ?, ?, ?, ?, ?, ?);
 
--- name: InsertCast :one
-INSERT INTO
-    cast (
+-- name: InsertCast :exec
+INSERT
+    OR IGNORE INTO cast (
         movie_id,
         person_id,
         cast_id,
@@ -150,13 +144,11 @@ INSERT INTO
         cast_order
     )
 VALUES
-    (?, ?, ?, ?, ?, ?)
-RETURNING
-    *;
+    (?, ?, ?, ?, ?, ?);
 
--- name: InsertCrew :one
-INSERT INTO
-    crew (
+-- name: InsertCrew :exec
+INSERT
+    OR IGNORE INTO crew (
         movie_id,
         person_id,
         credit_id,
@@ -164,9 +156,7 @@ INSERT INTO
         department
     )
 VALUES
-    (?, ?, ?, ?, ?)
-RETURNING
-    *;
+    (?, ?, ?, ?, ?);
 
 -- name: GetPerson :one
 SELECT

@@ -10,23 +10,52 @@ import (
 	"time"
 )
 
-const getAllWatched = `-- name: GetAllWatched :many
+const getAllWatchedForExport = `-- name: GetAllWatchedForExport :many
 SELECT
-    movie_id, watched_date
+    movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline,
+    watched.movie_id, watched.watched_date, watched.watched_in_theater
 FROM
     watched
+    JOIN movie ON watched.movie_id = movie.id
 `
 
-func (q *Queries) GetAllWatched(ctx context.Context) ([]Watched, error) {
-	rows, err := q.db.QueryContext(ctx, getAllWatched)
+type GetAllWatchedForExportRow struct {
+	Movie   Movie
+	Watched Watched
+}
+
+func (q *Queries) GetAllWatchedForExport(ctx context.Context) ([]GetAllWatchedForExportRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAllWatchedForExport)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Watched
+	var items []GetAllWatchedForExportRow
 	for rows.Next() {
-		var i Watched
-		if err := rows.Scan(&i.MovieID, &i.WatchedDate); err != nil {
+		var i GetAllWatchedForExportRow
+		if err := rows.Scan(
+			&i.Movie.ID,
+			&i.Movie.Title,
+			&i.Movie.OriginalTitle,
+			&i.Movie.OriginalLanguage,
+			&i.Movie.Overview,
+			&i.Movie.ReleaseDate,
+			&i.Movie.PosterPath,
+			&i.Movie.BackdropPath,
+			&i.Movie.Popularity,
+			&i.Movie.VoteCount,
+			&i.Movie.VoteAverage,
+			&i.Movie.Budget,
+			&i.Movie.Homepage,
+			&i.Movie.ImdbID,
+			&i.Movie.Revenue,
+			&i.Movie.Runtime,
+			&i.Movie.Status,
+			&i.Movie.Tagline,
+			&i.Watched.MovieID,
+			&i.Watched.WatchedDate,
+			&i.Watched.WatchedInTheater,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -119,7 +148,7 @@ func (q *Queries) GetCrewByMovieID(ctx context.Context, movieID int64) ([]Crew, 
 
 const getMostWatchedMovies = `-- name: GetMostWatchedMovies :many
 SELECT
-    movie.id, movie.imdb_id, movie.title, movie.original_title, movie.release_date, movie.original_language, movie.overview, movie.poster_path, movie.backdrop_path, movie.budget, movie.revenue, movie.runtime, movie.vote_average, movie.vote_count, movie.popularity, movie.homepage, movie.status, movie.tagline,
+    movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline,
     COUNT(*) AS view_count
 FROM
     watched
@@ -146,21 +175,21 @@ func (q *Queries) GetMostWatchedMovies(ctx context.Context) ([]GetMostWatchedMov
 		var i GetMostWatchedMoviesRow
 		if err := rows.Scan(
 			&i.Movie.ID,
-			&i.Movie.ImdbID,
 			&i.Movie.Title,
 			&i.Movie.OriginalTitle,
-			&i.Movie.ReleaseDate,
 			&i.Movie.OriginalLanguage,
 			&i.Movie.Overview,
+			&i.Movie.ReleaseDate,
 			&i.Movie.PosterPath,
 			&i.Movie.BackdropPath,
+			&i.Movie.Popularity,
+			&i.Movie.VoteCount,
+			&i.Movie.VoteAverage,
 			&i.Movie.Budget,
+			&i.Movie.Homepage,
+			&i.Movie.ImdbID,
 			&i.Movie.Revenue,
 			&i.Movie.Runtime,
-			&i.Movie.VoteAverage,
-			&i.Movie.VoteCount,
-			&i.Movie.Popularity,
-			&i.Movie.Homepage,
 			&i.Movie.Status,
 			&i.Movie.Tagline,
 			&i.ViewCount,
@@ -180,7 +209,7 @@ func (q *Queries) GetMostWatchedMovies(ctx context.Context) ([]GetMostWatchedMov
 
 const getMovieByID = `-- name: GetMovieByID :one
 SELECT
-    id, imdb_id, title, original_title, release_date, original_language, overview, poster_path, backdrop_path, budget, revenue, runtime, vote_average, vote_count, popularity, homepage, status, tagline
+    id, title, original_title, original_language, overview, release_date, poster_path, backdrop_path, popularity, vote_count, vote_average, budget, homepage, imdb_id, revenue, runtime, status, tagline
 FROM
     movie
 WHERE
@@ -192,21 +221,21 @@ func (q *Queries) GetMovieByID(ctx context.Context, id int64) (Movie, error) {
 	var i Movie
 	err := row.Scan(
 		&i.ID,
-		&i.ImdbID,
 		&i.Title,
 		&i.OriginalTitle,
-		&i.ReleaseDate,
 		&i.OriginalLanguage,
 		&i.Overview,
+		&i.ReleaseDate,
 		&i.PosterPath,
 		&i.BackdropPath,
+		&i.Popularity,
+		&i.VoteCount,
+		&i.VoteAverage,
 		&i.Budget,
+		&i.Homepage,
+		&i.ImdbID,
 		&i.Revenue,
 		&i.Runtime,
-		&i.VoteAverage,
-		&i.VoteCount,
-		&i.Popularity,
-		&i.Homepage,
 		&i.Status,
 		&i.Tagline,
 	)
@@ -215,7 +244,7 @@ func (q *Queries) GetMovieByID(ctx context.Context, id int64) (Movie, error) {
 
 const getMovieByName = `-- name: GetMovieByName :one
 SELECT
-    id, imdb_id, title, original_title, release_date, original_language, overview, poster_path, backdrop_path, budget, revenue, runtime, vote_average, vote_count, popularity, homepage, status, tagline
+    id, title, original_title, original_language, overview, release_date, poster_path, backdrop_path, popularity, vote_count, vote_average, budget, homepage, imdb_id, revenue, runtime, status, tagline
 FROM
     movie
 WHERE
@@ -227,21 +256,21 @@ func (q *Queries) GetMovieByName(ctx context.Context, title string) (Movie, erro
 	var i Movie
 	err := row.Scan(
 		&i.ID,
-		&i.ImdbID,
 		&i.Title,
 		&i.OriginalTitle,
-		&i.ReleaseDate,
 		&i.OriginalLanguage,
 		&i.Overview,
+		&i.ReleaseDate,
 		&i.PosterPath,
 		&i.BackdropPath,
+		&i.Popularity,
+		&i.VoteCount,
+		&i.VoteAverage,
 		&i.Budget,
+		&i.Homepage,
+		&i.ImdbID,
 		&i.Revenue,
 		&i.Runtime,
-		&i.VoteAverage,
-		&i.VoteCount,
-		&i.Popularity,
-		&i.Homepage,
 		&i.Status,
 		&i.Tagline,
 	)
@@ -320,8 +349,8 @@ func (q *Queries) GetPerson(ctx context.Context, id int64) (Person, error) {
 
 const getWatchedJoinMovie = `-- name: GetWatchedJoinMovie :many
 SELECT
-    movie.id, movie.imdb_id, movie.title, movie.original_title, movie.release_date, movie.original_language, movie.overview, movie.poster_path, movie.backdrop_path, movie.budget, movie.revenue, movie.runtime, movie.vote_average, movie.vote_count, movie.popularity, movie.homepage, movie.status, movie.tagline,
-    watched.movie_id, watched.watched_date
+    movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline,
+    watched.movie_id, watched.watched_date, watched.watched_in_theater
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
@@ -343,25 +372,26 @@ func (q *Queries) GetWatchedJoinMovie(ctx context.Context) ([]GetWatchedJoinMovi
 		var i GetWatchedJoinMovieRow
 		if err := rows.Scan(
 			&i.Movie.ID,
-			&i.Movie.ImdbID,
 			&i.Movie.Title,
 			&i.Movie.OriginalTitle,
-			&i.Movie.ReleaseDate,
 			&i.Movie.OriginalLanguage,
 			&i.Movie.Overview,
+			&i.Movie.ReleaseDate,
 			&i.Movie.PosterPath,
 			&i.Movie.BackdropPath,
+			&i.Movie.Popularity,
+			&i.Movie.VoteCount,
+			&i.Movie.VoteAverage,
 			&i.Movie.Budget,
+			&i.Movie.Homepage,
+			&i.Movie.ImdbID,
 			&i.Movie.Revenue,
 			&i.Movie.Runtime,
-			&i.Movie.VoteAverage,
-			&i.Movie.VoteCount,
-			&i.Movie.Popularity,
-			&i.Movie.Homepage,
 			&i.Movie.Status,
 			&i.Movie.Tagline,
 			&i.Watched.MovieID,
 			&i.Watched.WatchedDate,
+			&i.Watched.WatchedInTheater,
 		); err != nil {
 			return nil, err
 		}
@@ -378,7 +408,7 @@ func (q *Queries) GetWatchedJoinMovie(ctx context.Context) ([]GetWatchedJoinMovi
 
 const getWatchedMovieDetails = `-- name: GetWatchedMovieDetails :one
 SELECT
-    movie.id, movie.imdb_id, movie.title, movie.original_title, movie.release_date, movie.original_language, movie.overview, movie.poster_path, movie.backdrop_path, movie.budget, movie.revenue, movie.runtime, movie.vote_average, movie.vote_count, movie.popularity, movie.homepage, movie.status, movie.tagline,
+    movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline,
     COUNT(*) AS view_count
 FROM
     watched
@@ -399,21 +429,21 @@ func (q *Queries) GetWatchedMovieDetails(ctx context.Context, id int64) (GetWatc
 	var i GetWatchedMovieDetailsRow
 	err := row.Scan(
 		&i.Movie.ID,
-		&i.Movie.ImdbID,
 		&i.Movie.Title,
 		&i.Movie.OriginalTitle,
-		&i.Movie.ReleaseDate,
 		&i.Movie.OriginalLanguage,
 		&i.Movie.Overview,
+		&i.Movie.ReleaseDate,
 		&i.Movie.PosterPath,
 		&i.Movie.BackdropPath,
+		&i.Movie.Popularity,
+		&i.Movie.VoteCount,
+		&i.Movie.VoteAverage,
 		&i.Movie.Budget,
+		&i.Movie.Homepage,
+		&i.Movie.ImdbID,
 		&i.Movie.Revenue,
 		&i.Movie.Runtime,
-		&i.Movie.VoteAverage,
-		&i.Movie.VoteCount,
-		&i.Movie.Popularity,
-		&i.Movie.Homepage,
 		&i.Movie.Status,
 		&i.Movie.Tagline,
 		&i.ViewCount,
@@ -421,9 +451,9 @@ func (q *Queries) GetWatchedMovieDetails(ctx context.Context, id int64) (GetWatc
 	return i, err
 }
 
-const insertCast = `-- name: InsertCast :one
-INSERT INTO
-    cast (
+const insertCast = `-- name: InsertCast :exec
+INSERT
+    OR IGNORE INTO cast (
         movie_id,
         person_id,
         cast_id,
@@ -433,8 +463,6 @@ INSERT INTO
     )
 VALUES
     (?, ?, ?, ?, ?, ?)
-RETURNING
-    movie_id, person_id, cast_id, credit_id, character, cast_order
 `
 
 type InsertCastParams struct {
@@ -446,8 +474,8 @@ type InsertCastParams struct {
 	CastOrder int64
 }
 
-func (q *Queries) InsertCast(ctx context.Context, arg InsertCastParams) (Cast, error) {
-	row := q.db.QueryRowContext(ctx, insertCast,
+func (q *Queries) InsertCast(ctx context.Context, arg InsertCastParams) error {
+	_, err := q.db.ExecContext(ctx, insertCast,
 		arg.MovieID,
 		arg.PersonID,
 		arg.CastID,
@@ -455,21 +483,12 @@ func (q *Queries) InsertCast(ctx context.Context, arg InsertCastParams) (Cast, e
 		arg.Character,
 		arg.CastOrder,
 	)
-	var i Cast
-	err := row.Scan(
-		&i.MovieID,
-		&i.PersonID,
-		&i.CastID,
-		&i.CreditID,
-		&i.Character,
-		&i.CastOrder,
-	)
-	return i, err
+	return err
 }
 
-const insertCrew = `-- name: InsertCrew :one
-INSERT INTO
-    crew (
+const insertCrew = `-- name: InsertCrew :exec
+INSERT
+    OR IGNORE INTO crew (
         movie_id,
         person_id,
         credit_id,
@@ -478,8 +497,6 @@ INSERT INTO
     )
 VALUES
     (?, ?, ?, ?, ?)
-RETURNING
-    movie_id, person_id, credit_id, job, department
 `
 
 type InsertCrewParams struct {
@@ -490,32 +507,22 @@ type InsertCrewParams struct {
 	Department string
 }
 
-func (q *Queries) InsertCrew(ctx context.Context, arg InsertCrewParams) (Crew, error) {
-	row := q.db.QueryRowContext(ctx, insertCrew,
+func (q *Queries) InsertCrew(ctx context.Context, arg InsertCrewParams) error {
+	_, err := q.db.ExecContext(ctx, insertCrew,
 		arg.MovieID,
 		arg.PersonID,
 		arg.CreditID,
 		arg.Job,
 		arg.Department,
 	)
-	var i Crew
-	err := row.Scan(
-		&i.MovieID,
-		&i.PersonID,
-		&i.CreditID,
-		&i.Job,
-		&i.Department,
-	)
-	return i, err
+	return err
 }
 
-const insertGenre = `-- name: InsertGenre :one
-INSERT INTO
-    genre (id, name)
+const insertGenre = `-- name: InsertGenre :exec
+INSERT
+    OR IGNORE INTO genre (id, name)
 VALUES
     (?, ?)
-RETURNING
-    id, name
 `
 
 type InsertGenreParams struct {
@@ -523,20 +530,16 @@ type InsertGenreParams struct {
 	Name string
 }
 
-func (q *Queries) InsertGenre(ctx context.Context, arg InsertGenreParams) (Genre, error) {
-	row := q.db.QueryRowContext(ctx, insertGenre, arg.ID, arg.Name)
-	var i Genre
-	err := row.Scan(&i.ID, &i.Name)
-	return i, err
+func (q *Queries) InsertGenre(ctx context.Context, arg InsertGenreParams) error {
+	_, err := q.db.ExecContext(ctx, insertGenre, arg.ID, arg.Name)
+	return err
 }
 
-const insertGenreMovie = `-- name: InsertGenreMovie :one
-INSERT INTO
-    genre_movie (movie_id, genre_id)
+const insertGenreMovie = `-- name: InsertGenreMovie :exec
+INSERT
+    OR IGNORE INTO genre_movie (movie_id, genre_id)
 VALUES
     (?, ?)
-RETURNING
-    movie_id, genre_id
 `
 
 type InsertGenreMovieParams struct {
@@ -544,32 +547,30 @@ type InsertGenreMovieParams struct {
 	GenreID int64
 }
 
-func (q *Queries) InsertGenreMovie(ctx context.Context, arg InsertGenreMovieParams) (GenreMovie, error) {
-	row := q.db.QueryRowContext(ctx, insertGenreMovie, arg.MovieID, arg.GenreID)
-	var i GenreMovie
-	err := row.Scan(&i.MovieID, &i.GenreID)
-	return i, err
+func (q *Queries) InsertGenreMovie(ctx context.Context, arg InsertGenreMovieParams) error {
+	_, err := q.db.ExecContext(ctx, insertGenreMovie, arg.MovieID, arg.GenreID)
+	return err
 }
 
-const insertMovie = `-- name: InsertMovie :one
-INSERT INTO
-    movie (
+const insertMovie = `-- name: InsertMovie :exec
+INSERT
+    OR IGNORE INTO movie (
         id,
-        imdb_id,
         title,
         original_title,
-        release_date,
         original_language,
         overview,
+        release_date,
         poster_path,
         backdrop_path,
+        popularity,
+        vote_count,
+        vote_average,
         budget,
+        homepage,
+        imdb_id,
         revenue,
         runtime,
-        vote_average,
-        vote_count,
-        popularity,
-        homepage,
         STATUS,
         tagline
     )
@@ -594,79 +595,56 @@ VALUES
         ?,
         ?
     )
-RETURNING
-    id, imdb_id, title, original_title, release_date, original_language, overview, poster_path, backdrop_path, budget, revenue, runtime, vote_average, vote_count, popularity, homepage, status, tagline
 `
 
 type InsertMovieParams struct {
 	ID               int64
-	ImdbID           string
 	Title            string
 	OriginalTitle    string
-	ReleaseDate      time.Time
 	OriginalLanguage string
 	Overview         string
+	ReleaseDate      time.Time
 	PosterPath       string
 	BackdropPath     string
+	Popularity       float64
+	VoteCount        int64
+	VoteAverage      float64
 	Budget           int64
+	Homepage         string
+	ImdbID           string
 	Revenue          int64
 	Runtime          int64
-	VoteAverage      float64
-	VoteCount        int64
-	Popularity       float64
-	Homepage         string
 	Status           string
 	Tagline          string
 }
 
-func (q *Queries) InsertMovie(ctx context.Context, arg InsertMovieParams) (Movie, error) {
-	row := q.db.QueryRowContext(ctx, insertMovie,
+func (q *Queries) InsertMovie(ctx context.Context, arg InsertMovieParams) error {
+	_, err := q.db.ExecContext(ctx, insertMovie,
 		arg.ID,
-		arg.ImdbID,
 		arg.Title,
 		arg.OriginalTitle,
-		arg.ReleaseDate,
 		arg.OriginalLanguage,
 		arg.Overview,
+		arg.ReleaseDate,
 		arg.PosterPath,
 		arg.BackdropPath,
+		arg.Popularity,
+		arg.VoteCount,
+		arg.VoteAverage,
 		arg.Budget,
+		arg.Homepage,
+		arg.ImdbID,
 		arg.Revenue,
 		arg.Runtime,
-		arg.VoteAverage,
-		arg.VoteCount,
-		arg.Popularity,
-		arg.Homepage,
 		arg.Status,
 		arg.Tagline,
 	)
-	var i Movie
-	err := row.Scan(
-		&i.ID,
-		&i.ImdbID,
-		&i.Title,
-		&i.OriginalTitle,
-		&i.ReleaseDate,
-		&i.OriginalLanguage,
-		&i.Overview,
-		&i.PosterPath,
-		&i.BackdropPath,
-		&i.Budget,
-		&i.Revenue,
-		&i.Runtime,
-		&i.VoteAverage,
-		&i.VoteCount,
-		&i.Popularity,
-		&i.Homepage,
-		&i.Status,
-		&i.Tagline,
-	)
-	return i, err
+	return err
 }
 
-const insertPerson = `-- name: InsertPerson :one
-INSERT INTO
-    person (
+const insertPerson = `-- name: InsertPerson :exec
+INSERT
+    OR IGNORE INTO person (
         id,
         name,
         original_name,
@@ -678,8 +656,6 @@ INSERT INTO
     )
 VALUES
     (?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING
-    id, name, original_name, profile_path, known_for_department, popularity, gender, adult
 `
 
 type InsertPersonParams struct {
@@ -693,8 +669,8 @@ type InsertPersonParams struct {
 	Adult              bool
 }
 
-func (q *Queries) InsertPerson(ctx context.Context, arg InsertPersonParams) (Person, error) {
-	row := q.db.QueryRowContext(ctx, insertPerson,
+func (q *Queries) InsertPerson(ctx context.Context, arg InsertPersonParams) error {
+	_, err := q.db.ExecContext(ctx, insertPerson,
 		arg.ID,
 		arg.Name,
 		arg.OriginalName,
@@ -704,37 +680,27 @@ func (q *Queries) InsertPerson(ctx context.Context, arg InsertPersonParams) (Per
 		arg.Gender,
 		arg.Adult,
 	)
-	var i Person
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.OriginalName,
-		&i.ProfilePath,
-		&i.KnownForDepartment,
-		&i.Popularity,
-		&i.Gender,
-		&i.Adult,
-	)
-	return i, err
+	return err
 }
 
 const insertWatched = `-- name: InsertWatched :one
 INSERT INTO
-    watched (movie_id, watched_date)
+    watched (movie_id, watched_date, watched_in_theater)
 VALUES
-    (?, ?)
+    (?, ?, ?)
 RETURNING
-    movie_id, watched_date
+    movie_id, watched_date, watched_in_theater
 `
 
 type InsertWatchedParams struct {
-	MovieID     int64
-	WatchedDate time.Time
+	MovieID          int64
+	WatchedDate      time.Time
+	WatchedInTheater bool
 }
 
 func (q *Queries) InsertWatched(ctx context.Context, arg InsertWatchedParams) (Watched, error) {
-	row := q.db.QueryRowContext(ctx, insertWatched, arg.MovieID, arg.WatchedDate)
+	row := q.db.QueryRowContext(ctx, insertWatched, arg.MovieID, arg.WatchedDate, arg.WatchedInTheater)
 	var i Watched
-	err := row.Scan(&i.MovieID, &i.WatchedDate)
+	err := row.Scan(&i.MovieID, &i.WatchedDate, &i.WatchedInTheater)
 	return i, err
 }

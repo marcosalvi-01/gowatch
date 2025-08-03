@@ -2,229 +2,283 @@ package db
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 	"gowatch/db/sqlc"
 	"gowatch/internal/models"
+	"time"
 )
 
-// GetAllWatched retrieves all watched movie records from the database
-func (d *SqliteDB) GetAllWatched(ctx context.Context) ([]models.Watched, error) {
-	rows, err := d.queries.GetAllWatched(ctx)
+// InsertMovie adds a new movie to the database
+func (d *SqliteDB) InsertMovie(ctx context.Context, movie *models.MovieDetails) error {
+	log.Debug("inserting movie into database", "movieID", movie.Movie.ID, "title", movie.Movie.Title)
+
+	tx, err := d.db.Begin()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get all watched movies: %w", err)
+		log.Error("failed to start database transaction for movie insert", "movieID", movie.Movie.ID, "error", err)
+		return fmt.Errorf("failed to start db transaction: %w", err)
 	}
-	watchedMovies := make([]models.Watched, len(rows))
-	for i, row := range rows {
-		watchedMovies[i] = models.Watched{
-			MovieID:     row.MovieID,
-			WatchedDate: row.WatchedDate,
+	defer tx.Rollback()
+
+	qtx := d.queries.WithTx(tx)
+
+	err = qtx.InsertMovie(ctx, sqlc.InsertMovieParams{
+		ID:               movie.Movie.ID,
+		Title:            movie.Movie.Title,
+		OriginalTitle:    movie.Movie.OriginalTitle,
+		OriginalLanguage: movie.Movie.OriginalLanguage,
+		Overview:         movie.Movie.Overview,
+		ReleaseDate:      movie.Movie.ReleaseDate,
+		PosterPath:       movie.Movie.PosterPath,
+		BackdropPath:     movie.Movie.BackdropPath,
+		Popularity:       float64(movie.Movie.Popularity),
+		VoteCount:        movie.Movie.VoteCount,
+		VoteAverage:      float64(movie.Movie.VoteAverage),
+		Budget:           movie.Budget,
+		Homepage:         movie.Homepage,
+		ImdbID:           movie.IMDbID,
+		Revenue:          movie.Revenue,
+		Runtime:          int64(movie.Runtime),
+		Status:           movie.Status,
+		Tagline:          movie.Tagline,
+	})
+	if err != nil {
+		log.Error("failed to insert movie record", "movieID", movie.Movie.ID, "error", err)
+		return fmt.Errorf("failed to insert movie with ID %d: %w", movie.Movie.ID, err)
+	}
+
+	log.Debug("inserted movie record, processing genres", "movieID", movie.Movie.ID, "genreCount", len(movie.Genres))
+
+	for _, genre := range movie.Genres {
+		err := qtx.InsertGenre(ctx, sqlc.InsertGenreParams{
+			ID:   genre.ID,
+			Name: genre.Name,
+		})
+		if err != nil {
+			log.Error("failed to insert genre", "movieID", movie.Movie.ID, "genreID", genre.ID, "error", err)
+			return fmt.Errorf("failed to insert genre %d: %w", genre.ID, err)
+		}
+
+		err = qtx.InsertGenreMovie(ctx, sqlc.InsertGenreMovieParams{
+			MovieID: movie.Movie.ID,
+			GenreID: genre.ID,
+		})
+		if err != nil {
+			log.Error("failed to insert movie-genre relationship", "movieID", movie.Movie.ID, "genreID", genre.ID, "error", err)
+			return fmt.Errorf("failed to insert movie-genre relationship: %w", err)
 		}
 	}
-	return watchedMovies, nil
-}
 
-// InsertMovie adds a new movie to the database
-func (d *SqliteDB) InsertMovie(ctx context.Context, movie models.Movie) error {
-	_, err := d.queries.InsertMovie(ctx, toSqlcInsertMovieParams(movie))
-	if err != nil {
-		return fmt.Errorf("failed to insert movie with ID %d: %w", movie.ID, err)
+	log.Debug("processed genres, inserting cast", "movieID", movie.Movie.ID, "castCount", len(movie.Credits.Cast))
+
+	for _, cast := range movie.Credits.Cast {
+		err := qtx.InsertCast(ctx, sqlc.InsertCastParams{
+			MovieID:   cast.MovieID,
+			PersonID:  cast.PersonID,
+			CastID:    cast.CastID,
+			CreditID:  cast.CreditID,
+			Character: cast.Character,
+			CastOrder: cast.CastOrder,
+		})
+		if err != nil {
+			log.Error("failed to insert cast record", "movieID", movie.Movie.ID, "personID", cast.PersonID, "error", err)
+			return fmt.Errorf("failed to insert cast record: %w", err)
+		}
+
+		err = qtx.InsertPerson(ctx, sqlc.InsertPersonParams{
+			ID:                 cast.Person.ID,
+			Name:               cast.Person.Name,
+			OriginalName:       cast.Person.OriginalName,
+			ProfilePath:        cast.Person.ProfilePath,
+			KnownForDepartment: cast.Person.KnownForDepartment,
+			Popularity:         cast.Person.Popularity,
+			Gender:             cast.Person.Gender,
+			Adult:              cast.Person.Adult,
+		})
+		if err != nil {
+			log.Error("failed to insert person record from cast", "movieID", movie.Movie.ID, "personID", cast.Person.ID, "error", err)
+			return fmt.Errorf("failed to insert person from cast: %w", err)
+		}
 	}
+
+	log.Debug("processed cast, inserting crew", "movieID", movie.Movie.ID, "crewCount", len(movie.Credits.Crew))
+
+	for _, crew := range movie.Credits.Crew {
+		err := qtx.InsertCrew(ctx, sqlc.InsertCrewParams{
+			MovieID:    crew.MovieID,
+			PersonID:   crew.PersonID,
+			CreditID:   crew.CreditID,
+			Job:        crew.Job,
+			Department: crew.Department,
+		})
+		if err != nil {
+			log.Error("failed to insert crew record", "movieID", movie.Movie.ID, "personID", crew.PersonID, "error", err)
+			return fmt.Errorf("failed to insert crew record: %w", err)
+		}
+
+		err = qtx.InsertPerson(ctx, sqlc.InsertPersonParams{
+			ID:                 crew.Person.ID,
+			Name:               crew.Person.Name,
+			OriginalName:       crew.Person.OriginalName,
+			ProfilePath:        crew.Person.ProfilePath,
+			KnownForDepartment: crew.Person.KnownForDepartment,
+			Popularity:         crew.Person.Popularity,
+			Gender:             crew.Person.Gender,
+			Adult:              crew.Person.Adult,
+		})
+		if err != nil {
+			log.Error("failed to insert person record from crew", "movieID", movie.Movie.ID, "personID", crew.Person.ID, "error", err)
+			return fmt.Errorf("failed to insert person from crew: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Error("failed to commit movie insert transaction", "movieID", movie.Movie.ID, "error", err)
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	log.Info("successfully inserted movie with all related data", "movieID", movie.Movie.ID, "title", movie.Movie.Title,
+		"genreCount", len(movie.Genres), "castCount", len(movie.Credits.Cast), "crewCount", len(movie.Credits.Crew))
 	return nil
 }
 
 // InsertWatched records a movie as watched in the database
-func (d *SqliteDB) InsertWatched(ctx context.Context, watched models.Watched) error {
-	_, err := d.queries.InsertWatched(ctx, toSqlcInsertWatchedParams(watched))
-	if err != nil {
-		return fmt.Errorf("failed to insert watched record for movie ID %d: %w", watched.MovieID, err)
-	}
-	return nil
-}
+func (d *SqliteDB) InsertWatched(ctx context.Context, movieID int64, date time.Time, inTheaters bool) error {
+	log.Debug("inserting watched record", "movieID", movieID, "date", date, "inTheaters", inTheaters)
 
-// GetMovieByID retrieves a specific movie by its ID
-func (d *SqliteDB) GetMovieByID(ctx context.Context, id int64) (models.Movie, error) {
-	sqlcMovie, err := d.queries.GetMovieByID(ctx, id)
-	if err != nil {
-		return models.Movie{}, fmt.Errorf("failed to get movie with ID %d: %w", id, err)
-	}
-	return toModelsMovie(sqlcMovie), nil
-}
-
-// GetWatchedJoinMovie retrieves all watched movies with their details
-func (d *SqliteDB) GetWatchedJoinMovie(ctx context.Context) ([]models.WatchedMovie, error) {
-	rows, err := d.queries.GetWatchedJoinMovie(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get watched movies with details: %w", err)
-	}
-	watchedMovies := make([]models.WatchedMovie, len(rows))
-	for i, row := range rows {
-		watchedMovies[i] = models.WatchedMovie{
-			Movie:       toModelsMovie(row.Movie),
-			WatchedDate: row.Watched.WatchedDate,
-		}
-	}
-	return watchedMovies, nil
-}
-
-// GetMostWatchedMovies retrieves movies ordered by watch count
-func (d *SqliteDB) GetMostWatchedMovies(ctx context.Context) ([]models.WatchedMovieDetails, error) {
-	rows, err := d.queries.GetMostWatchedMovies(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get most watched movies: %w", err)
-	}
-	movieCounts := make([]models.WatchedMovieDetails, len(rows))
-	for i, row := range rows {
-		movieCounts[i] = models.WatchedMovieDetails{
-			Movie:     toModelsMovie(row.Movie),
-			ViewCount: int(row.ViewCount),
-		}
-	}
-	return movieCounts, nil
-}
-
-func (d *SqliteDB) GetWatchedMovieDetails(ctx context.Context, id int64) (models.WatchedMovieDetails, error) {
-	result, err := d.queries.GetWatchedMovieDetails(ctx, id)
-	if err != nil {
-		return models.WatchedMovieDetails{}, fmt.Errorf("failed to get most watched movies: %w", err)
-	}
-	return models.WatchedMovieDetails{
-		Movie:     toModelsMovie(result.Movie),
-		ViewCount: int(result.ViewCount),
-	}, nil
-}
-
-func (d *SqliteDB) InsertCast(ctx context.Context, cast models.Cast) error {
-	_, err := d.queries.GetPerson(ctx, cast.Person.ID)
-	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("failed to check if person exists with ID %d: %w", cast.Person.ID, err)
-		}
-		// insert the person too
-		_, err := d.queries.InsertPerson(ctx, toSqlcInsertPersonParams(cast.Person))
-		if err != nil {
-			return fmt.Errorf("failed to insert person with ID %d: %w", cast.Person.ID, err)
-		}
-	}
-
-	_, err = d.queries.InsertCast(ctx, sqlc.InsertCastParams{
-		MovieID:   cast.MovieID,
-		PersonID:  cast.PersonID,
-		CastID:    cast.CastID,
-		CreditID:  cast.CreditID,
-		Character: cast.Character,
-		CastOrder: cast.CastOrder,
+	_, err := d.queries.InsertWatched(ctx, sqlc.InsertWatchedParams{
+		MovieID:          movieID,
+		WatchedDate:      date,
+		WatchedInTheater: inTheaters,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to insert cast record for movie ID %d and person ID %d: %w", cast.MovieID, cast.PersonID, err)
+		log.Error("failed to insert watched record", "movieID", movieID, "error", err)
+		return fmt.Errorf("failed to insert watched record for movie ID %d: %w", movieID, err)
 	}
 
+	log.Debug("successfully inserted watched record", "movieID", movieID)
 	return nil
 }
 
-func (d *SqliteDB) InsertCrew(ctx context.Context, crew models.Crew) error {
-	_, err := d.queries.GetPerson(ctx, crew.Person.ID)
+// GetMovieDetailsByID retrieves a specific movie by its ID
+func (d *SqliteDB) GetMovieDetailsByID(ctx context.Context, id int64) (*models.MovieDetails, error) {
+	log.Debug("retrieving movie details from database", "movieID", id)
+
+	tx, err := d.db.Begin()
 	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("failed to check if person exists with ID %d: %w", crew.Person.ID, err)
+		log.Error("failed to start database transaction for movie retrieval", "movieID", id, "error", err)
+		return nil, fmt.Errorf("failed to start db transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	qtx := d.queries.WithTx(tx)
+
+	sqlcMovie, err := qtx.GetMovieByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get movie with ID %d: %w", id, err)
+	}
+
+	log.Debug("found movie record, retrieving related data", "movieID", id, "title", sqlcMovie.Title)
+	movie := toModelsMovieDetails(sqlcMovie)
+
+	dbGenres, err := qtx.GetMovieGenre(ctx, id)
+	if err != nil {
+		log.Error("failed to get movie genres", "movieID", id, "error", err)
+		return nil, fmt.Errorf("failed to get movie genres: %w", err)
+	}
+
+	log.Debug("retrieved movie genres", "movieID", id, "genreCount", len(dbGenres))
+
+	genres := make([]models.Genre, len(dbGenres))
+	for i, g := range dbGenres {
+		genres[i] = models.Genre{
+			ID:   g.GenreID,
+			Name: g.Name,
 		}
-		// insert the person too
-		_, err := d.queries.InsertPerson(ctx, toSqlcInsertPersonParams(crew.Person))
+	}
+
+	movie.Genres = genres
+
+	dbCast, err := qtx.GetCastByMovieID(ctx, id)
+	if err != nil {
+		log.Error("failed to get movie cast", "movieID", id, "error", err)
+		return nil, fmt.Errorf("failed to get movie cast: %w", err)
+	}
+
+	log.Debug("retrieved movie cast", "movieID", id, "castCount", len(dbCast))
+
+	cast := make([]models.Cast, len(dbCast))
+	for i, c := range dbCast {
+		person, err := qtx.GetPerson(ctx, c.PersonID)
 		if err != nil {
-			return fmt.Errorf("failed to insert person with ID %d: %w", crew.Person.ID, err)
+			log.Error("failed to get person for cast", "movieID", id, "personID", c.PersonID, "error", err)
+			return nil, fmt.Errorf("failed to get person for cast: %w", err)
 		}
-	}
 
-	_, err = d.queries.InsertCrew(ctx, sqlc.InsertCrewParams{
-		MovieID:    crew.MovieID,
-		PersonID:   crew.PersonID,
-		CreditID:   crew.CreditID,
-		Job:        crew.Job,
-		Department: crew.Department,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to insert crew record for movie ID %d and person ID %d: %w", crew.MovieID, crew.PersonID, err)
-	}
-
-	return nil
-}
-
-func (d *SqliteDB) GetMovieCast(ctx context.Context, movieID int64) ([]models.Cast, error) {
-	results, err := d.queries.GetCastByMovieID(ctx, movieID)
-	if err != nil {
-		return nil, fmt.Errorf("TODO: %w", err)
-	}
-
-	cast := make([]models.Cast, len(results))
-	for _, result := range results {
-		person, err := d.queries.GetPerson(ctx, result.PersonID)
-		if err != nil {
-			return nil, fmt.Errorf("TODO: %w", err)
-		}
-		cast = append(cast, models.Cast{
-			MovieID:   result.MovieID,
-			PersonID:  result.PersonID,
-			CastID:    result.CastID,
-			CreditID:  result.CreditID,
-			Character: result.Character,
-			CastOrder: result.CastOrder,
+		cast[i] = models.Cast{
+			MovieID:   c.MovieID,
+			PersonID:  c.PersonID,
+			CastID:    c.CastID,
+			CreditID:  c.CreditID,
+			Character: c.Character,
+			CastOrder: c.CastOrder,
 			Person:    toModelsPerson(person),
-		})
-	}
-
-	return cast, nil
-}
-
-func (d *SqliteDB) GetMovieCrew(ctx context.Context, movieID int64) ([]models.Crew, error) {
-	results, err := d.queries.GetCrewByMovieID(ctx, movieID)
-	if err != nil {
-		return nil, fmt.Errorf("TODO: %w", err)
-	}
-
-	crew := make([]models.Crew, len(results))
-	for _, result := range results {
-		person, err := d.queries.GetPerson(ctx, result.PersonID)
-		if err != nil {
-			return nil, fmt.Errorf("TODO: %w", err)
 		}
-		crew = append(crew, models.Crew{
-			MovieID:    result.MovieID,
-			PersonID:   result.PersonID,
-			CreditID:   result.CreditID,
-			Job:        result.Job,
-			Department: result.Department,
+	}
+	movie.Credits.Cast = cast
+
+	dbCrew, err := qtx.GetCrewByMovieID(ctx, id)
+	if err != nil {
+		log.Error("failed to get movie crew", "movieID", id, "error", err)
+		return nil, fmt.Errorf("failed to get movie crew: %w", err)
+	}
+
+	log.Debug("retrieved movie crew", "movieID", id, "crewCount", len(dbCrew))
+
+	crew := make([]models.Crew, len(dbCrew))
+	for i, c := range dbCrew {
+		person, err := qtx.GetPerson(ctx, c.PersonID)
+		if err != nil {
+			log.Error("failed to get person for crew", "movieID", id, "personID", c.PersonID, "error", err)
+			return nil, fmt.Errorf("failed to get person for crew: %w", err)
+		}
+
+		crew[i] = models.Crew{
+			MovieID:    c.MovieID,
+			PersonID:   c.PersonID,
+			CreditID:   c.CreditID,
+			Job:        c.Job,
+			Department: c.Department,
 			Person:     toModelsPerson(person),
-		})
+		}
 	}
 
-	return crew, nil
+	movie.Credits.Crew = crew
+
+	log.Info("successfully retrieved complete movie details", "movieID", id, "title", movie.Movie.Title,
+		"genreCount", len(movie.Genres), "castCount", len(movie.Credits.Cast), "crewCount", len(movie.Credits.Crew))
+	return &movie, nil
 }
 
-func (d *SqliteDB) GetMovieGenre(ctx context.Context, movieID int64) ([]models.Genre, error) {
-	results, err := d.queries.GetMovieGenre(ctx, movieID)
+func (d *SqliteDB) GetWatchedJoinMovie(ctx context.Context) ([]models.WatchedMovie, error) {
+	log.Debug("retrieving all watched movies with details")
+
+	results, err := d.queries.GetWatchedJoinMovie(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get movie genres from db: %w", err)
+		log.Error("failed to get watched movies from database", "error", err)
+		return nil, fmt.Errorf("failed to get watched movies: %w", err)
 	}
 
-	genres := make([]models.Genre, len(results))
-	for _, result := range results {
-		genres = append(genres, models.Genre{
-			ID:   result.GenreID,
-			Name: result.Name,
-		})
+	log.Debug("retrieved watched movies from database", "count", len(results))
+
+	watched := make([]models.WatchedMovie, len(results))
+	for i, result := range results {
+		watched[i] = models.WatchedMovie{
+			MovieDetails: toModelsMovieDetails(result.Movie),
+			Date:         result.Watched.WatchedDate,
+			InTheaters:   result.Watched.WatchedInTheater,
+		}
 	}
 
-	return genres, nil
-}
-
-func (d *SqliteDB) InsertGenre(ctx context.Context, genre models.Genre) error {
-	_, err := d.queries.InsertGenre(ctx, sqlc.InsertGenreParams{
-		ID:   genre.ID,
-		Name: genre.Name,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to insert genre in db: %w", err)
-	}
-	return nil
+	log.Debug("converted watched movies to internal models", "count", len(watched))
+	return watched, nil
 }

@@ -15,48 +15,60 @@ import (
 var log = logging.Get("pages")
 
 type Handlers struct {
-	movieService   *services.MovieService
+	tmdbService    *services.TMDBService
 	watchedService *services.WatchedService
 }
 
-func NewHandlers(movieService *services.MovieService, watchedService *services.WatchedService) *Handlers {
+func NewHandlers(tmdbService *services.TMDBService, watchedService *services.WatchedService) *Handlers {
+	log.Info("initializing page handlers")
 	return &Handlers{
-		movieService:   movieService,
+		tmdbService:    tmdbService,
 		watchedService: watchedService,
 	}
 }
 
 func (h *Handlers) RegisterRoutes(r chi.Router) {
+	log.Info("registering page routes")
 	r.Handle("/", templ.Handler(ui.HomePage()))
 	r.Handle("/stats", templ.Handler(ui.StatsPage()))
-	r.Handle("/search", templ.Handler(ui.SearchPage("TODO")))
+	r.Handle("/search", templ.Handler(ui.SearchPage("Enter movie title to search...")))
 	r.Get("/watched", h.WatchedPage)
 	r.Get("/movie/{id}", h.MoviePage)
+	log.Debug("registered routes", "routes", []string{"/", "/stats", "/search", "/watched", "/movie/{id}"})
 }
 
 func (h *Handlers) WatchedPage(w http.ResponseWriter, r *http.Request) {
-	movies, err := h.watchedService.GetWatchedDayMovies(r.Context())
+	log.Debug("handling watched page request", "method", r.Method, "url", r.URL.Path)
+
+	movies, err := h.watchedService.GetAllWatchedMoviesInDay(r.Context())
 	if err != nil {
-		// TODO: wrap error
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Error("failed to retrieve watched movies", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
 
+	log.Info("successfully retrieved watched movies", "count", len(movies))
 	templ.Handler(ui.WatchedPage(movies)).ServeHTTP(w, r)
 }
 
 func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
-	paramId := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(paramId, 10, 64)
+	paramID := chi.URLParam(r, "id")
+	log.Debug("handling movie page request", "method", r.Method, "url", r.URL.Path, "movieID", paramID)
+
+	id, err := strconv.ParseInt(paramID, 10, 64)
 	if err != nil {
-		// TODO: wrap error
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Error("invalid movie ID parameter", "paramID", paramID, "error", err)
+		http.Error(w, "Invalid movie ID", http.StatusBadRequest)
+		return
 	}
 
-	movie, err := h.movieService.GetMovieDetails(r.Context(), id)
+	movie, err := h.tmdbService.GetMovieDetails(r.Context(), id)
 	if err != nil {
-		// TODO: wrap error
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Error("failed to retrieve movie details", "movieID", id, "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
 
-	templ.Handler(ui.MoviePage(movie)).ServeHTTP(w, r)
+	log.Info("successfully retrieved movie details", "movieID", id, "title", movie.Movie.Title)
+	templ.Handler(ui.MoviePage(*movie)).ServeHTTP(w, r)
 }
