@@ -42,10 +42,14 @@ func (s *MovieService) SearchMovies(query string) ([]models.Movie, error) {
 
 	movies := make([]models.Movie, len(search.Results))
 	for i, m := range search.Results {
-		releaseDate, err := time.Parse("2006-01-02", m.ReleaseDate)
-		if err != nil {
-			s.log.Error("failed to parse movie release date", "movieID", m.ID, "releaseDate", m.ReleaseDate, "error", err)
-			return nil, fmt.Errorf("failed to parse movie release date '%s': %w", m.ReleaseDate, err)
+		var releaseDate *time.Time
+		if m.ReleaseDate != "" {
+			date, err := time.Parse("2006-01-02", m.ReleaseDate)
+			if err != nil {
+				s.log.Error("failed to parse movie release date", "movieID", m.ID, "releaseDate", m.ReleaseDate, "error", err)
+				return nil, fmt.Errorf("failed to parse movie release date '%s': %w", m.ReleaseDate, err)
+			}
+			releaseDate = &date
 		}
 		movies[i] = models.Movie{
 			ID:               m.ID,

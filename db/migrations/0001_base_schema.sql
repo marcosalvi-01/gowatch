@@ -5,7 +5,7 @@ CREATE TABLE movie (
     original_title TEXT NOT NULL,
     original_language TEXT NOT NULL,
     overview TEXT NOT NULL,
-    release_date DATE NOT NULL,
+    release_date DATE,
     poster_path TEXT NOT NULL,
     backdrop_path TEXT NOT NULL,
     popularity REAL NOT NULL,

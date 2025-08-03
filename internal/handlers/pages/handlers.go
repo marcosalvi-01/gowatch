@@ -2,12 +2,10 @@
 package pages
 
 import (
-	"fmt"
 	"gowatch/internal/services"
 	"gowatch/internal/ui"
 	"gowatch/logging"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/a-h/templ"
@@ -22,7 +20,6 @@ type Handlers struct {
 }
 
 func NewHandlers(tmdbService *services.MovieService, watchedService *services.WatchedService) *Handlers {
-	log.Info("initializing page handlers")
 	return &Handlers{
 		tmdbService:    tmdbService,
 		watchedService: watchedService,
@@ -31,11 +28,13 @@ func NewHandlers(tmdbService *services.MovieService, watchedService *services.Wa
 
 func (h *Handlers) RegisterRoutes(r chi.Router) {
 	log.Info("registering page routes")
+
 	r.Handle("/", templ.Handler(ui.HomePage()))
 	r.Handle("/stats", templ.Handler(ui.StatsPage()))
-	r.Handle("/search", templ.Handler(ui.SearchPage("Enter movie title to search...")))
+	r.Get("/search/{title}", h.SearchPage)
 	r.Get("/watched", h.WatchedPage)
 	r.Get("/movie/{id}", h.MoviePage)
+
 	log.Debug("registered routes", "routes", []string{"/", "/stats", "/search", "/watched", "/movie/{id}"})
 }
 
@@ -69,8 +68,6 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(os.Stderr, "DEBUGPRINT: handlers.go:70: movie.Genres=%+v\n", movie.Genres)
-
 	rec, err := h.watchedService.GetWatchedMovieRecordsByID(ctx, id)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -78,4 +75,17 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	templ.Handler(ui.MoviePage(*movie, rec)).ServeHTTP(w, r)
+}
+
+func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
+	query := chi.URLParam(r, "title")
+
+	results, err := h.tmdbService.SearchMovies(query)
+	if err != nil {
+		log.Error("failed to search for movie", "query", query, "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	templ.Handler(ui.SearchPage(query, results)).ServeHTTP(w, r)
 }

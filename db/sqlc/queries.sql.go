@@ -666,7 +666,7 @@ type InsertMovieParams struct {
 	OriginalTitle    string
 	OriginalLanguage string
 	Overview         string
-	ReleaseDate      time.Time
+	ReleaseDate      *time.Time
 	PosterPath       string
 	BackdropPath     string
 	Popularity       float64

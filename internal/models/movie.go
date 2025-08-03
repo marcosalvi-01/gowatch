@@ -11,9 +11,13 @@ import (
 )
 
 func MovieDetailsFromTMDBMovieDetails(movie tmdb.MovieDetails) (*MovieDetails, error) {
-	releaseDate, err := time.Parse("2006-01-02", movie.ReleaseDate)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse movie release date '%s': %w", movie.ReleaseDate, err)
+	var releaseDate *time.Time
+	if movie.ReleaseDate != "" {
+		date, err := time.Parse("2006-01-02", movie.ReleaseDate)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse movie release date '%s': %w", movie.ReleaseDate, err)
+		}
+		releaseDate = &date
 	}
 	return &MovieDetails{
 		Movie: Movie{
@@ -48,7 +52,7 @@ type Movie struct {
 	OriginalTitle    string
 	OriginalLanguage string
 	Overview         string
-	ReleaseDate      time.Time
+	ReleaseDate      *time.Time
 	PosterPath       string
 	BackdropPath     string
 	Popularity       float32
