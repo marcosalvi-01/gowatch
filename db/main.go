@@ -40,17 +40,6 @@ type DB interface {
 	InsertWatched(ctx context.Context, movieID int64, date time.Time, inTheaters bool) error
 	GetWatchedJoinMovie(ctx context.Context) ([]models.WatchedMovie, error)
 	GetWatchedJoinMovieByID(ctx context.Context, movieID int64) ([]models.WatchedMovie, error)
-
-	// GetMostWatchedMovies(ctx context.Context) ([]models.WatchedMovieDetails, error)
-	// GetWatchedMovieDetails(ctx context.Context, id int64) (models.WatchedMovieDetails, error)
-	//
-	// InsertCrew(ctx context.Context, crew models.Crew) error
-	// InsertCast(ctx context.Context, cast models.Cast) error
-	// GetMovieCast(ctx context.Context, movieID int64) ([]models.Cast, error)
-	// GetMovieCrew(ctx context.Context, movieID int64) ([]models.Crew, error)
-	//
-	// GetMovieGenre(ctx context.Context, movieID int64) ([]models.Genre, error)
-	// InsertGenre(ctx context.Context, genre models.Genre) error
 }
 
 // SqliteDB wraps database connection and queries

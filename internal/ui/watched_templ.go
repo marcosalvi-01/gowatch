@@ -104,9 +104,9 @@ func WatchedPage(days []models.WatchedMoviesInDay) templ.Component {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var6 string
-						templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(movie.Movie.Title)
+						templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(movie.MovieDetails.Movie.Title)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/watched.templ`, Line: 36, Col: 87}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/watched.templ`, Line: 36, Col: 100}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 						if templ_7745c5c3_Err != nil {
@@ -125,9 +125,9 @@ func WatchedPage(days []models.WatchedMoviesInDay) templ.Component {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var7 string
-						templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(movie.Movie.ReleaseDate.Format("2006"))
+						templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(movie.MovieDetails.Movie.ReleaseDate.Format("2006"))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/watched.templ`, Line: 40, Col: 85}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/watched.templ`, Line: 40, Col: 98}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 						if templ_7745c5c3_Err != nil {
@@ -137,7 +137,7 @@ func WatchedPage(days []models.WatchedMoviesInDay) templ.Component {
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						if movie.Movie.VoteAverage > 0 {
+						if movie.MovieDetails.Movie.VoteAverage > 0 {
 							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<div class=\"flex items-center\">")
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
@@ -155,9 +155,9 @@ func WatchedPage(days []models.WatchedMoviesInDay) templ.Component {
 								return templ_7745c5c3_Err
 							}
 							var templ_7745c5c3_Var8 string
-							templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", movie.Movie.VoteAverage))
+							templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", movie.MovieDetails.Movie.VoteAverage))
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/watched.templ`, Line: 49, Col: 84}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/watched.templ`, Line: 49, Col: 97}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 							if templ_7745c5c3_Err != nil {
@@ -175,9 +175,9 @@ func WatchedPage(days []models.WatchedMoviesInDay) templ.Component {
 						return nil
 					})
 					templ_7745c5c3_Err = moviecard.MovieCard(moviecard.Props{
-						Title:      movie.Movie.Title,
-						Href:       "/movie/" + strconv.Itoa(int(movie.Movie.ID)),
-						PosterPath: movie.Movie.PosterPath,
+						Title:      movie.MovieDetails.Movie.Title,
+						Href:       "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+						PosterPath: movie.MovieDetails.Movie.PosterPath,
 						Hoverable:  true,
 					}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {

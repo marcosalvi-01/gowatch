@@ -64,7 +64,10 @@ func (s *WatchedService) GetAllWatchedMoviesInDay(ctx context.Context) ([]models
 		if len(out) == 0 || !d.Equal(out[len(out)-1].Date) {
 			out = append(out, models.WatchedMoviesInDay{Date: d})
 		}
-		out[len(out)-1].Movies = append(out[len(out)-1].Movies, m.MovieDetails)
+		out[len(out)-1].Movies = append(out[len(out)-1].Movies, models.WatchedMovieInDay{
+			MovieDetails: m.MovieDetails,
+			InTheaters:   m.InTheaters,
+		})
 	}
 
 	s.log.Debug("grouped movies by day", "dayCount", len(out))
@@ -117,9 +120,9 @@ func (s *WatchedService) ExportWatched(ctx context.Context) (models.ImportWatche
 		ids := make([]models.ImportWatchedMovieRef, len(w.Movies))
 		for j, movieDetails := range w.Movies {
 			ids[j] = models.ImportWatchedMovieRef{
-				MovieID: int(movieDetails.Movie.ID),
+				MovieID: int(movieDetails.MovieDetails.Movie.ID),
 				// TODO: find a way to include the inTheaters in the export, we would need to modify the GetAllWatchedMoviesInDay model to include it
-				InTheaters: false,
+				InTheaters: movieDetails.InTheaters,
 			}
 		}
 		totalMovies += len(w.Movies)
