@@ -1,7 +1,7 @@
 FROM alpine:3.22.0
 
-WORKDIR /app
-COPY ./tmp/app app
-RUN chmod +x app
+WORKDIR /gowatch
+COPY ./tmp/gowatch gowatch
+RUN chmod +x gowatch
 
-CMD ["./app"]
+CMD ["./gowatch"]
