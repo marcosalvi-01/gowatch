@@ -56,14 +56,14 @@ func WatchedPage(days []models.WatchedMoviesInDay) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			for _, day := range days {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<section class=\"flex-shrink-0 p-2 md:p-4 rounded-lg space-y-2\" style=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<section class=\"flex-shrink-0 p-2 md:p-4 rounded-lg space-y-2 backdrop-filter backdrop-blur-xl border-2\" style=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var3 string
-				templ_7745c5c3_Var3, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background:hsl(" + fmt.Sprint(day.Date.YearDay()*137%360) + ",100%,85%)")
+				templ_7745c5c3_Var3, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background: hsla(" + fmt.Sprint(day.Date.YearDay()*137%360) + ",100%,85%,0.4); border-color: hsla(" + fmt.Sprint(day.Date.YearDay()*137%360) + ",100%,75%,0.2); filter: drop-shadow(0mm 0mm 20mm hsla(" + fmt.Sprint(day.Date.YearDay()*137%360) + ",100%,50%,0.7));")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/watched.templ`, Line: 23, Col: 86}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/watched.templ`, Line: 23, Col: 275}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {

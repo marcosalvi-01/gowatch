@@ -53,7 +53,7 @@ templ movieHero(movie models.MovieDetails) {
 }
 
 templ backdropHero(movie models.MovieDetails) {
-	<div class="h-80 md:h-96 lg:h-[28rem]">
+	<div class="h-96 md:h-108 lg:h-160">
 		<div class="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-transparent z-10"></div>
 		<img
 			src={ "https://image.tmdb.org/t/p/w1280" + movie.Movie.BackdropPath }
@@ -74,10 +74,11 @@ templ fallbackHero(movie models.MovieDetails) {
 }
 
 templ heroContent(movie models.MovieDetails, isDark bool) {
-	<div class="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+	<div class="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start mb-20">
 		@posterSection(movie, isDark)
 		@movieInfo(movie, isDark)
 	</div>
+	@overviewSection(movie.Movie.Overview)
 }
 
 templ posterSection(movie models.MovieDetails, isDark bool) {
@@ -248,7 +249,6 @@ templ actionButtons(movieID int64) {
 
 templ movieContent(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) {
 	<div class="space-y-8">
-		@overviewSection(movie.Movie.Overview)
 		@genresSection(movie.Genres)
 		if len(watchRecords.Records) > 0 {
 			@userActivitySection(watchRecords.Records)
