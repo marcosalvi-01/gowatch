@@ -10,7 +10,7 @@ tailwind:
 	npx tailwindcss -i ./internal/handlers/static/static/css/input.css -o ./internal/handlers/static/static/css/output.css --minify --watch
 
 templ:
-	templ generate --watch --proxy="http://localhost:8090" --open-browser=false
+	go tool templ generate --watch --proxy="http://localhost:8090" --open-browser=false
 
 air:
 	go tool air 

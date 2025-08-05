@@ -245,7 +245,7 @@ func cardContent(props Props) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				if props.Hoverable {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<div class=\"absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 bg-black/80 p-2 md:p-3 text-white duration-300 ease-out\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<div class=\"absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 backdrop-blur-lg bg-black/70 p-2 md:p-3 text-white duration-300 ease-out\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
