@@ -9,10 +9,11 @@ import (
 const tmdbBase = "https://image.tmdb.org/t/p/w500"
 
 type Props struct {
-	Title      string
-	PosterPath string
-	Href       string
-	Hoverable  bool
+	Title             string
+	PosterPath        string
+	Href              string
+	Hoverable         bool
+	TopHoverComponent templ.Component
 }
 
 templ MovieCard(props Props) {
@@ -54,6 +55,11 @@ templ cardContent(props Props) {
 					</div>
 				}
 				if props.Hoverable {
+					if props.TopHoverComponent != nil {
+						<div class="absolute inset-x-0 top-0 -translate-y-full group-hover:translate-y-0 bg-black/80 p-2 md:p-3 text-white duration-300 ease-out">
+							@props.TopHoverComponent
+						</div>
+					}
 					<div class="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 bg-black/80 p-2 md:p-3 text-white duration-300 ease-out">
 						{ children... }
 					</div>
