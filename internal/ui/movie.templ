@@ -14,7 +14,6 @@ import (
 	"gowatch/internal/ui/components/form"
 	"gowatch/internal/ui/components/icon"
 	"gowatch/internal/ui/components/modal"
-	"gowatch/internal/ui/components/moviecard"
 	"gowatch/internal/ui/components/page"
 	"gowatch/internal/ui/components/popover"
 	"gowatch/internal/ui/components/separator"
@@ -53,105 +52,126 @@ templ movieHero(movie models.MovieDetails) {
 }
 
 templ backdropHero(movie models.MovieDetails) {
-	<div class="h-96 md:h-108 lg:h-160">
-		<div class="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-transparent z-10"></div>
+	<div class="relative w-full h-[50vh] min-h-[400px] max-h-[600px] sm:h-[60vh] md:h-[70vh] lg:h-[75vh] overflow-hidden">
+		<!-- Background Image -->
 		<img
 			src={ "https://image.tmdb.org/t/p/w1280" + movie.Movie.BackdropPath }
 			alt={ movie.Movie.Title + " backdrop" }
-			class="w-full h-full object-cover object-center"
+			class="absolute inset-0 w-full h-full object-cover object-center"
 		/>
-		<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10"></div>
-		<div class="absolute inset-0 z-20 p-4 md:p-6 lg:p-8 flex flex-col justify-end">
-			@heroContent(movie, true)
+		<!-- Gradient Overlays -->
+		<div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent"></div>
+		<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent"></div>
+		<div class="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-black/20 sm:from-black/60 sm:via-transparent sm:to-black/20"></div>
+		<!-- Content Container -->
+		<div class="absolute inset-0 flex flex-col justify-end">
+			<div class="p-4 sm:p-6 md:p-8 lg:p-10">
+				@heroContent(movie, true)
+			</div>
 		</div>
 	</div>
 }
 
 templ fallbackHero(movie models.MovieDetails) {
-	<div class="p-6 md:p-8">
+	<div class="p-4 sm:p-6 md:p-8 lg:p-10 bg-muted/20">
 		@heroContent(movie, false)
 	</div>
 }
 
 templ heroContent(movie models.MovieDetails, isDark bool) {
-	<div class="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start mb-20">
-		@posterSection(movie, isDark)
-		@movieInfo(movie, isDark)
+	<div class="max-w-7xl mx-auto w-full">
+		<div class="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start">
+			@posterSection(movie, isDark)
+			@movieInfo(movie, isDark)
+		</div>
+		<div class="mt-6 sm:mt-8">
+			@overviewSection(movie.Movie.Overview, isDark)
+		</div>
 	</div>
-	@overviewSection(movie.Movie.Overview)
 }
 
 templ posterSection(movie models.MovieDetails, isDark bool) {
 	if movie.Movie.PosterPath != "" {
-		<div class={ "flex-shrink-0", templ.KV("hidden sm:block", isDark) }>
-			<div class={ templ.KV("w-32 md:w-40 lg:w-48", isDark), templ.KV("w-32 md:w-40", !isDark) }>
-				@moviecard.MovieCard(moviecard.Props{
-					Title:      movie.Movie.Title,
-					PosterPath: movie.Movie.PosterPath,
-				})
+		<div class="hidden lg:block flex-shrink-0">
+			<div class="w-32 md:w-40 lg:w-48 xl:w-52">
+				<div class="aspect-[2/3] rounded-lg overflow-hidden shadow-lg">
+					<img
+						src={ "https://image.tmdb.org/t/p/w500" + movie.Movie.PosterPath }
+						alt={ movie.Movie.Title + " poster" }
+						class="w-full h-full object-cover"
+					/>
+				</div>
 			</div>
 		</div>
 	}
 }
 
 templ movieInfo(movie models.MovieDetails, isDark bool) {
-	<div class="flex-1 min-w-0">
-		<div class="mb-4">
+	<div class="flex-1 min-w-0 space-y-3 sm:space-y-4">
+		<!-- Title -->
+		<div>
 			<h1
 				class={
-					"text-2xl md:text-3xl font-bold mb-2",
-					templ.KV("lg:text-4xl text-white drop-shadow-lg", isDark),
+					"text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold leading-tight",
+					templ.KV("text-white drop-shadow-2xl", isDark),
 					templ.KV("text-foreground", !isDark),
 				}
 			>
 				{ movie.Movie.Title }
 			</h1>
-			<div class="flex flex-col sm:flex-row sm:items-center sm:gap-4 gap-1">
-				<p
-					class={
-						"text-lg",
-						templ.KV("md:text-xl text-white/90 drop-shadow-md", isDark),
-						templ.KV("text-muted-foreground", !isDark),
-					}
-				>
-					{ movie.Movie.ReleaseDate.Format("2006") }
-				</p>
-				if director := getDirector(movie.Credits.Crew); director != "" {
-					<div class="flex items-center gap-1">
-						<span
-							class={
-								"text-sm",
-								templ.KV("text-white/70 drop-shadow-sm", isDark),
-								templ.KV("text-muted-foreground", !isDark),
-							}
-						>
-							•
-						</span>
-						<p
-							class={
-								"text-sm md:text-base font-medium",
-								templ.KV("text-white/90 drop-shadow-md", isDark),
-								templ.KV("text-foreground", !isDark),
-							}
-						>
-							Directed by { director }
-						</p>
-					</div>
-				}
-			</div>
 		</div>
-		if movie.Tagline !="" {
+		<!-- Year and Director -->
+		<div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
 			<p
 				class={
-					"text-sm md:text-base italic mb-4 lg:mb-6",
-					templ.KV("text-white/90 drop-shadow-sm", isDark),
+					"text-base sm:text-lg md:text-xl font-medium",
+					templ.KV("text-white/90 drop-shadow-lg", isDark),
 					templ.KV("text-muted-foreground", !isDark),
 				}
 			>
-				"{ movie.Tagline }"
+				{ movie.Movie.ReleaseDate.Format("2006") }
 			</p>
+			if director := getDirector(movie.Credits.Crew); director != "" {
+				<div class="flex items-center gap-2">
+					<span
+						class={
+							"hidden sm:block text-sm",
+							templ.KV("text-white/60", isDark),
+							templ.KV("text-muted-foreground", !isDark),
+						}
+					>
+						•
+					</span>
+					<p
+						class={
+							"text-sm sm:text-base font-medium",
+							templ.KV("text-white/90 drop-shadow-lg", isDark),
+							templ.KV("text-foreground", !isDark),
+						}
+					>
+						Directed by { director }
+					</p>
+				</div>
+			}
+		</div>
+		<!-- Tagline -->
+		if movie.Tagline != "" {
+			<div class="max-w-2xl">
+				<p
+					class={
+						"text-sm sm:text-base md:text-lg italic",
+						templ.KV("text-white/85 drop-shadow-md", isDark),
+						templ.KV("text-muted-foreground", !isDark),
+					}
+				>
+					"{ movie.Tagline }"
+				</p>
+			</div>
 		}
-		@actionButtons(movie.Movie.ID)
+		<!-- Action Buttons -->
+		<div class="pt-2 sm:pt-4">
+			@actionButtons(movie.Movie.ID)
+		</div>
 	</div>
 }
 
@@ -259,11 +279,27 @@ templ movieContent(movie models.MovieDetails, watchRecords models.WatchedMovieRe
 	</div>
 }
 
-templ overviewSection(overview string) {
+templ overviewSection(overview string, isDark bool) {
 	if overview != "" {
-		<div>
-			<h2 class="text-xl font-semibold mb-4">Overview</h2>
-			<p class="text-muted-foreground leading-relaxed">{ overview }</p>
+		<div class="max-w-4xl">
+			<h2
+				class={
+					"text-lg sm:text-xl font-semibold mb-3 sm:mb-4",
+					templ.KV("text-white drop-shadow-lg", isDark),
+					templ.KV("text-foreground", !isDark),
+				}
+			>
+				Overview
+			</h2>
+			<p
+				class={
+					"text-sm sm:text-base leading-relaxed",
+					templ.KV("text-white/90 drop-shadow-sm", isDark),
+					templ.KV("text-muted-foreground", !isDark),
+				}
+			>
+				{ overview }
+			</p>
 		</div>
 	}
 }
@@ -382,7 +418,9 @@ templ castSection(cast []models.Cast) {
 }
 
 templ castMemberCard(cast models.Cast) {
-	@card.Card() {
+	@card.Card(card.Props{
+		Class: "hover:bg-white/20 transition-colors duration-300",
+	}) {
 		<a
 			class="flex items-center space-x-3 p-2"
 			href={ "https://www.themoviedb.org/person/" + strconv.Itoa(int(cast.Person.ID)) }
