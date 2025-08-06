@@ -40,7 +40,6 @@ templ cardContent(props Props) {
 				Ratio: aspectratio.RatioPoster,
 				Class: "h-full w-full",
 			}) {
-				<span class="sr-only">{ props.Title }</span>
 				if props.PosterPath != "" {
 					<img
 						src={ tmdbBase + props.PosterPath }
