@@ -29,7 +29,10 @@ func NewHandlers(tmdbService *services.MovieService, watchedService *services.Wa
 func (h *Handlers) RegisterRoutes(r chi.Router) {
 	log.Info("registering page routes")
 
-	r.Handle("/", templ.Handler(ui.HomePage()))
+	// r.Handle("/", templ.Handler(ui.HomePage()))
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/watched", http.StatusFound) // 302 redirect
+	})
 	r.Handle("/stats", templ.Handler(ui.StatsPage()))
 	r.Get("/search", h.SearchPage)
 	r.Get("/watched", h.WatchedPage)

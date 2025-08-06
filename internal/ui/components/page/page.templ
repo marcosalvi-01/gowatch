@@ -139,7 +139,7 @@ templ NavigationDrawer(title string, currentPath string) {
 		}
 	}
 	<div class="space-y-2 flex flex-col">
-		@NavigationItem("/", "Home", icon.House(), currentPath == "/")
+		// @NavigationItem("/", "Home", icon.House(), currentPath == "/")
 		@NavigationItem("/watched", "Watched", icon.Film(), currentPath == "/watched")
 		@NavigationItem("/stats", "Stats", icon.ChartBarBig(), currentPath == "/stats")
 	</div>
