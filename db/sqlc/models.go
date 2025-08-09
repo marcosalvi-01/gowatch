@@ -35,6 +35,21 @@ type GenreMovie struct {
 	GenreID int64
 }
 
+type List struct {
+	ID           int64
+	Name         string
+	CreationDate string
+	Description  *string
+}
+
+type ListMovie struct {
+	MovieID   int64
+	ListID    int64
+	DateAdded string
+	Position  *int64
+	Note      *string
+}
+
 type Movie struct {
 	ID               int64
 	Title            string

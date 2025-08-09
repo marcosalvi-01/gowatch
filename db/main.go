@@ -5,16 +5,13 @@
 package db
 
 import (
-	"context"
 	"database/sql"
 	"embed"
 	"fmt"
 	"gowatch/db/sqlc"
-	"gowatch/internal/models"
 	"gowatch/logging"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
@@ -28,18 +25,6 @@ var embedMigrations embed.FS
 func init() {
 	goose.SetBaseFS(embedMigrations)
 	goose.SetDialect("sqlite")
-}
-
-type DB interface {
-	Close() error
-	Health() error
-
-	GetMovieDetailsByID(ctx context.Context, id int64) (*models.MovieDetails, error)
-	InsertMovie(ctx context.Context, movie *models.MovieDetails) error
-
-	InsertWatched(ctx context.Context, movieID int64, date time.Time, inTheaters bool) error
-	GetWatchedJoinMovie(ctx context.Context) ([]models.WatchedMovie, error)
-	GetWatchedJoinMovieByID(ctx context.Context, movieID int64) ([]models.WatchedMovie, error)
 }
 
 // SqliteDB wraps database connection and queries

@@ -62,14 +62,6 @@ VALUES
 RETURNING
     *;
 
--- name: GetAllWatchedForExport :many
-SELECT
-    sqlc.embed(movie),
-    sqlc.embed(watched)
-FROM
-    watched
-    JOIN movie ON watched.movie_id = movie.id;
-
 -- name: GetMovieByID :one
 SELECT
     *
@@ -78,14 +70,6 @@ FROM
 WHERE
     id = ?;
 
--- name: GetMovieByName :one
-SELECT
-    *
-FROM
-    movie
-WHERE
-    title = ?;
-
 -- name: GetWatchedJoinMovie :many
 SELECT
     sqlc.embed(movie),
@@ -93,30 +77,6 @@ SELECT
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id;
-
--- name: GetMostWatchedMovies :many
-SELECT
-    sqlc.embed(movie),
-    COUNT(*) AS view_count
-FROM
-    watched
-    JOIN movie ON watched.movie_id = movie.id
-GROUP BY
-    movie.id
-ORDER BY
-    view_count DESC;
-
--- name: GetWatchedMovieDetails :one
-SELECT
-    sqlc.embed(movie),
-    COUNT(*) AS view_count
-FROM
-    watched
-    JOIN movie ON watched.movie_id = movie.id
-WHERE
-    movie.id = ?
-GROUP BY
-    movie.id;
 
 -- name: InsertPerson :exec
 INSERT
@@ -202,3 +162,43 @@ WHERE
     watched.movie_id = ?
 ORDER BY
     watched.watched_date DESC;
+
+-- name: InsertList :exec
+INSERT INTO
+    list (
+        name,
+        creation_date,
+        description
+    )
+VALUES
+    (?, ?, ?);
+
+-- name: GetListJoinMovieByID :many
+SELECT
+    sqlc.embed(movie),
+    sqlc.embed(list_movie),
+    sqlc.embed(list)
+FROM
+    list
+    JOIN list_movie ON list_movie.list_id = list.id
+    JOIN movie ON movie.id = list_movie.movie_id
+WHERE
+    list.id = ?;
+
+-- name: AddMovieToList :exec
+INSERT INTO
+    list_movie (
+        movie_id,
+        list_id,
+        date_added,
+        position,
+        note
+    )
+VALUES
+    (?, ?, ?, ?, ?);
+
+-- name: GetAllLists :many
+SELECT
+    *
+FROM
+    list;

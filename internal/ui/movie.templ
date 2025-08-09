@@ -18,22 +18,21 @@ import (
 	"gowatch/internal/ui/components/popover"
 	"gowatch/internal/ui/components/separator"
 	"gowatch/internal/ui/components/table"
-	"gowatch/internal/ui/components/toast"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 )
 
-templ MoviePage(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) {
+templ MoviePage(movie models.MovieDetails, watchRecords models.WatchedMovieRecords, lists []models.ListEntry) {
 	@page.Page(page.Props{
 		Title:       "Gowatch",
 		CurrentPath: "/movie",
-	}, modal.Script(),
+		Lists:       lists,
+	},
 		datepicker.Script(),
 		popover.Script(),
 		calendar.Script(),
-		toast.Script(),
 	) {
 		@movieHero(movie)
 		@movieContent(movie, watchRecords)

@@ -142,20 +142,20 @@ func (d *SqliteDB) InsertMovie(ctx context.Context, movie *models.MovieDetails) 
 }
 
 // InsertWatched records a movie as watched in the database
-func (d *SqliteDB) InsertWatched(ctx context.Context, movieID int64, date time.Time, inTheaters bool) error {
-	log.Debug("inserting watched record", "movieID", movieID, "date", date, "inTheaters", inTheaters)
+func (d *SqliteDB) InsertWatched(ctx context.Context, watched InsertWatched) error {
+	log.Debug("inserting watched record", "movieID", watched.MovieID, "date", watched.Date, "inTheaters", watched.InTheaters)
 
 	_, err := d.queries.InsertWatched(ctx, sqlc.InsertWatchedParams{
-		MovieID:          movieID,
-		WatchedDate:      date,
-		WatchedInTheater: inTheaters,
+		MovieID:          watched.MovieID,
+		WatchedDate:      watched.Date,
+		WatchedInTheater: watched.InTheaters,
 	})
 	if err != nil {
-		log.Error("failed to insert watched record", "movieID", movieID, "error", err)
-		return fmt.Errorf("failed to insert watched record for movie ID %d: %w", movieID, err)
+		log.Error("failed to insert watched record", "movieID", watched.MovieID, "error", err)
+		return fmt.Errorf("failed to insert watched record for movie ID %d: %w", watched.MovieID, err)
 	}
 
-	log.Debug("successfully inserted watched record", "movieID", movieID)
+	log.Debug("successfully inserted watched record", "movieID", watched.MovieID)
 	return nil
 }
 
@@ -254,6 +254,11 @@ func (d *SqliteDB) GetMovieDetailsByID(ctx context.Context, id int64) (*models.M
 
 	movie.Credits.Crew = crew
 
+	if err := tx.Commit(); err != nil {
+		log.Error("failed to commit movie insert transaction", "movieID", movie.Movie.ID, "error", err)
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
 	log.Info("successfully retrieved complete movie details", "movieID", id, "title", movie.Movie.Title,
 		"genreCount", len(movie.Genres), "castCount", len(movie.Credits.Cast), "crewCount", len(movie.Credits.Crew))
 	return &movie, nil
@@ -302,4 +307,122 @@ func (d *SqliteDB) GetWatchedJoinMovieByID(ctx context.Context, movieID int64) (
 	}
 
 	return watched, nil
+}
+
+func (d *SqliteDB) InsertList(ctx context.Context, list InsertList) error {
+	log.Debug("inserting new list into database", "name", list.Name)
+
+	err := d.queries.InsertList(ctx, sqlc.InsertListParams{
+		Name:         list.Name,
+		CreationDate: time.Now().String(),
+		Description:  list.Description,
+	})
+	if err != nil {
+		log.Error("failed to insert list", "name", list.Name, "error", err)
+		return fmt.Errorf("failed to insert list %q: %w", list.Name, err)
+	}
+
+	log.Info("successfully inserted list", "name", list.Name)
+	return nil
+}
+
+func (d *SqliteDB) GetList(ctx context.Context, id int64) (*models.List, error) {
+	log.Debug("retrieving list with movies", "listID", id)
+
+	tx, err := d.db.Begin()
+	if err != nil {
+		log.Error("failed to start database transaction for list retrieval", "listID", id, "error", err)
+		return nil, fmt.Errorf("failed to start db transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	qtx := d.queries.WithTx(tx)
+
+	results, err := qtx.GetListJoinMovieByID(ctx, id)
+	if err != nil {
+		log.Error("failed to fetch list with movies", "listID", id, "error", err)
+		return nil, fmt.Errorf("failed to fetch list with ID %d: %w", id, err)
+	}
+	if len(results) == 0 {
+		log.Debug("no list found for given ID", "listID", id)
+		return nil, nil
+	}
+
+	list := results[0].List
+	movies := make([]models.MovieItem, len(results))
+
+	for i, result := range results {
+		dateAdded, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", result.ListMovie.DateAdded)
+		if err != nil {
+			log.Error("failed to parse movie date_added in list", "listID", id, "movieID", result.Movie.ID, "error", err)
+			return nil, fmt.Errorf("failed to parse date_added for movie %d: %w", result.Movie.ID, err)
+		}
+
+		movies[i] = models.MovieItem{
+			MovieDetails: toModelsMovieDetails(result.Movie),
+			DateAdded:    dateAdded,
+			Position:     result.ListMovie.Position,
+			Note:         result.ListMovie.Note,
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Error("failed to commit list retrieval transaction", "listID", id, "error", err)
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	creationDate, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", list.CreationDate)
+	if err != nil {
+		log.Error("failed to parse list creation_date", "listID", id, "error", err)
+		return nil, fmt.Errorf("failed to parse creation_date for list %d: %w", id, err)
+	}
+
+	log.Info("successfully retrieved list with movies", "listID", id, "movieCount", len(movies))
+	return &models.List{
+		ID:           list.ID,
+		Name:         list.Name,
+		CreationDate: creationDate,
+		Description:  list.Description,
+		Movies:       movies,
+	}, nil
+}
+
+func (d *SqliteDB) AddMovieToList(ctx context.Context, insertMovieList InsertMovieList) error {
+	log.Debug("adding movie to list", "movieID", insertMovieList.MovieID, "position", insertMovieList.Position)
+
+	err := d.queries.AddMovieToList(ctx, sqlc.AddMovieToListParams{
+		MovieID:   insertMovieList.MovieID,
+		DateAdded: insertMovieList.DateAdded.String(),
+		Position:  insertMovieList.Position,
+		Note:      insertMovieList.Note,
+	})
+	if err != nil {
+		log.Error("failed to add movie to list", "movieID", insertMovieList.MovieID, "error", err)
+		return fmt.Errorf("failed to add movie %d to list: %w", insertMovieList.MovieID, err)
+	}
+
+	log.Info("successfully added movie to list", "movieID", insertMovieList.MovieID)
+	return nil
+}
+
+func (d *SqliteDB) GetAllLists(ctx context.Context) ([]InsertList, error) {
+	log.Debug("retrieving all lists from database")
+
+	results, err := d.queries.GetAllLists(ctx)
+	if err != nil {
+		log.Error("failed to get all lists", "error", err)
+		return nil, fmt.Errorf("failed to get all lists: %w", err)
+	}
+
+	lists := make([]InsertList, len(results))
+	for i, result := range results {
+		lists[i] = InsertList{
+			ID:          result.ID,
+			Name:        result.Name,
+			Description: result.Description,
+		}
+	}
+
+	log.Info("successfully retrieved all lists", "count", len(lists))
+	return lists, nil
 }

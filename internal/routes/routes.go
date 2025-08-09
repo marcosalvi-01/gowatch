@@ -15,7 +15,11 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func NewRouter(tmdbService *services.MovieService, watchedService *services.WatchedService) chi.Router {
+func NewRouter(
+	tmdbService *services.MovieService,
+	watchedService *services.WatchedService,
+	listService *services.ListService,
+) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
@@ -27,7 +31,7 @@ func NewRouter(tmdbService *services.MovieService, watchedService *services.Watc
 		apiHandlers.RegisterRoutes(r)
 	})
 
-	pagesHandlers := pages.NewHandlers(tmdbService, watchedService)
+	pagesHandlers := pages.NewHandlers(tmdbService, watchedService, listService)
 	r.Route("/", func(r chi.Router) {
 		r.Use(middleware.HTMLMiddleware)
 		pagesHandlers.RegisterRoutes(r)
@@ -38,7 +42,7 @@ func NewRouter(tmdbService *services.MovieService, watchedService *services.Watc
 		staticHandlers.RegisterRoutes(r)
 	})
 
-	htmxHandlers := htmx.NewHandlers(watchedService)
+	htmxHandlers := htmx.NewHandlers(watchedService, listService)
 	r.Route("/htmx", func(r chi.Router) {
 		r.Use(middleware.HTMLMiddleware)
 		htmxHandlers.RegisterRoutes(r)

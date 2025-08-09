@@ -1,10 +1,17 @@
 package page
 
 import (
+	"gowatch/internal/models"
 	"gowatch/internal/ui/components/button"
 	"gowatch/internal/ui/components/drawer"
+	"gowatch/internal/ui/components/form"
 	"gowatch/internal/ui/components/icon"
 	"gowatch/internal/ui/components/input"
+	"gowatch/internal/ui/components/modal"
+	"gowatch/internal/ui/components/separator"
+	"gowatch/internal/ui/components/textarea"
+	"gowatch/internal/ui/components/toast"
+	"strconv"
 )
 
 type Props struct {
@@ -12,6 +19,7 @@ type Props struct {
 	Name          string
 	CurrentPath   string
 	SearchContent string
+	Lists         []models.ListEntry
 }
 
 templ Page(props Props, extraHead ...templ.Component) {
@@ -31,9 +39,9 @@ templ Page(props Props, extraHead ...templ.Component) {
 		<body class="bg-background flex flex-col md:flex-row h-screen overflow-hidden">
 			// Navigation Drawer only shown on desktop
 			<div class="hidden md:flex md:w-64 md:flex-shrink-0 md:flex-col p-4 border-r-1">
-				@NavigationDrawer(props.Title, props.CurrentPath)
+				@NavigationDrawer(props.Title, props.CurrentPath, props.Lists)
 			</div>
-			@DrawerDefault(props.Title, props.CurrentPath)
+			@DrawerDefault(props.Title, props.CurrentPath, props.Lists)
 			// Main content area with fixed header and scrollable content
 			<div class="flex-1 flex flex-col min-w-0 h-full md:h-auto">
 				// Header 
@@ -73,6 +81,72 @@ templ Page(props Props, extraHead ...templ.Component) {
 						<h1 class="text-xl mb-4">{ props.Name }</h1>
 					}
 					{ children... }
+					@modal.Modal(modal.Props{
+						ID:    "add-list-modal",
+						Class: "max-w-md",
+					}) {
+						<form
+							hx-post="/htmx/lists/create"
+							hx-target="#toast"
+						>
+							@modal.Header() {
+								Create New List
+							}
+							@modal.Body() {
+								<div class="space-y-4">
+									<div class="space-y-2">
+										@form.Item() {
+											@form.Label(form.LabelProps{
+												For: "add-list-name-input",
+											}) {
+												Give a name to the list
+											}
+											@input.Input(input.Props{
+												ID:          "add-list-input",
+												Required:    true,
+												Placeholder: "A cool name",
+												Name:        "title",
+											})
+										}
+										@form.Label(form.LabelProps{
+											For: "add-list-description-input",
+										}) {
+											Give the list a description
+										}
+										@textarea.Textarea(textarea.Props{
+											ID:          "add-list-description-input",
+											Placeholder: "A list of funny movies",
+											Required:    false,
+											Name:        "description",
+										})
+									</div>
+								</div>
+							}
+							@modal.Footer() {
+								<div class="flex justify-end gap-3">
+									@modal.Close(modal.CloseProps{
+										For: "add-list-modal",
+									}) {
+										@button.Button(button.Props{
+											Variant: button.VariantOutline,
+										}) {
+											Cancel
+										}
+									}
+									@modal.Close(modal.CloseProps{
+										For: "add-list-modal",
+									}) {
+										@button.Button(button.Props{
+											Variant: button.VariantDefault,
+											Type:    button.TypeSubmit,
+										}) {
+											Create List
+										}
+									}
+								</div>
+							}
+						</form>
+					}
 				</div>
 			</div>
 		</body>
@@ -90,13 +164,13 @@ templ SearchBar(searchContent string) {
 			Placeholder: "Search Movies...",
 			Class:       "pl-10",
 			Value:       searchContent,
-			Name:        "q", // Add name attribute for form data
+			Name:        "q",
 			Attributes: templ.Attributes{
 				"hx-get":      "/search",
 				"hx-trigger":  "keyup[key=='Enter']",
-				"hx-target":   "body", // or wherever you want to replace content
-				"hx-push-url": "true", // This updates the URL in browser
-				"hx-include":  "this", // Include this input's value
+				"hx-target":   "body",
+				"hx-push-url": "true",
+				"hx-include":  "this",
 			},
 		})
 	</div>
@@ -129,7 +203,7 @@ templ NavigationItem(href, label string, iconComponent templ.Component, isActive
 	}
 }
 
-templ NavigationDrawer(title string, currentPath string) {
+templ NavigationDrawer(title string, currentPath string, lists []models.ListEntry) {
 	@drawer.Header() {
 		@drawer.Title(drawer.TitleProps{
 			Class: "flex items-center gap-2 text-2xl font-semibold",
@@ -139,18 +213,41 @@ templ NavigationDrawer(title string, currentPath string) {
 		}
 	}
 	<div class="space-y-2 flex flex-col">
-		// @NavigationItem("/", "Home", icon.House(), currentPath == "/")
 		@NavigationItem("/watched", "Watched", icon.Film(), currentPath == "/watched")
 		@NavigationItem("/stats", "Stats", icon.ChartBarBig(), currentPath == "/stats")
+		// lists section
+		<div class="mt-8 space-y-4 flex flex-col">
+			@separator.Separator()
+			<p class="text-center">
+				Your Lists
+			</p>
+			for _, list := range lists {
+				{{ path := "/lists/" + strconv.FormatInt(list.ID, 10) }}
+				@NavigationItem(path, list.Name, icon.List(), currentPath == path)
+			}
+			@modal.Trigger(modal.TriggerProps{
+				For: "add-list-modal",
+			}) {
+				@button.Button(button.Props{
+					Variant: button.VariantGhost,
+					Class:   "w-full justify-start",
+				}) {
+					<div class="flex items-center gap-2">
+						@icon.Plus()
+						<span>Create New List</span>
+					</div>
+				}
+			}
+		</div>
 	</div>
 }
 
-templ DrawerDefault(title, currentPath string) {
+templ DrawerDefault(title, currentPath string, lists []models.ListEntry) {
 	@drawer.Content(drawer.ContentProps{
 		Position: drawer.PositionLeft,
 		ID:       "default-drawer",
 	}) {
-		@NavigationDrawer(title, currentPath)
+		@NavigationDrawer(title, currentPath, lists)
 	}
 }
 
@@ -181,6 +278,8 @@ templ Scripts() {
 	@ThemeScript()
 	@drawer.Script()
 	@input.Script()
+	@modal.Script()
+	@toast.Script()
 }
 
 templ ThemeScript() {

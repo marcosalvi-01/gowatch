@@ -9,12 +9,13 @@ import (
 	"strconv"
 )
 
-templ SearchPage(query string, results []models.Movie) {
+templ SearchPage(query string, results []models.Movie, lists []models.ListEntry) {
 	@page.Page(page.Props{
 		Title:         "Gowatch",
 		Name:          "Search Results",
 		CurrentPath:   "/search",
 		SearchContent: query,
+		Lists:         lists,
 	}) {
 		<div class="w-full">
 			if len(results) > 0 {

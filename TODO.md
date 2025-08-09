@@ -1,0 +1,2 @@
+- menu in the list to delete it or rename it
+- list page

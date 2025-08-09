@@ -33,7 +33,11 @@ func NewWatchedService(db db.DB, tmdb *MovieService) *WatchedService {
 func (s *WatchedService) AddWatched(ctx context.Context, movieID int64, date time.Time, inTheaters bool) error {
 	s.log.Debug("adding watched movie", "movieID", movieID, "date", date, "inTheaters", inTheaters)
 
-	err := s.db.InsertWatched(ctx, movieID, date, inTheaters)
+	err := s.db.InsertWatched(ctx, db.InsertWatched{
+		MovieID:    movieID,
+		Date:       date,
+		InTheaters: inTheaters,
+	})
 	if err != nil {
 		s.log.Error("failed to insert watched entry", "movieID", movieID, "error", err)
 		return fmt.Errorf("failed to record watched entry: %w", err)

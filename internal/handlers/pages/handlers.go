@@ -17,12 +17,18 @@ var log = logging.Get("pages")
 type Handlers struct {
 	tmdbService    *services.MovieService
 	watchedService *services.WatchedService
+	listService    *services.ListService
 }
 
-func NewHandlers(tmdbService *services.MovieService, watchedService *services.WatchedService) *Handlers {
+func NewHandlers(
+	tmdbService *services.MovieService,
+	watchedService *services.WatchedService,
+	listService *services.ListService,
+) *Handlers {
 	return &Handlers{
 		tmdbService:    tmdbService,
 		watchedService: watchedService,
+		listService:    listService,
 	}
 }
 
@@ -51,8 +57,15 @@ func (h *Handlers) WatchedPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	listEntries, err := h.listService.GetAllLists(r.Context())
+	if err != nil {
+		log.Error("failed to retrieve list entries", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
 	log.Info("successfully retrieved watched movies", "count", len(movies))
-	templ.Handler(ui.WatchedPage(movies)).ServeHTTP(w, r)
+	templ.Handler(ui.WatchedPage(movies, listEntries)).ServeHTTP(w, r)
 }
 
 func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +90,14 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	templ.Handler(ui.MoviePage(*movie, rec)).ServeHTTP(w, r)
+	listEntries, err := h.listService.GetAllLists(r.Context())
+	if err != nil {
+		log.Error("failed to retrieve list entries", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	templ.Handler(ui.MoviePage(*movie, rec, listEntries)).ServeHTTP(w, r)
 }
 
 func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
@@ -90,5 +110,12 @@ func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	templ.Handler(ui.SearchPage(query, results)).ServeHTTP(w, r)
+	listEntries, err := h.listService.GetAllLists(r.Context())
+	if err != nil {
+		log.Error("failed to retrieve list entries", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	templ.Handler(ui.SearchPage(query, results, listEntries)).ServeHTTP(w, r)
 }

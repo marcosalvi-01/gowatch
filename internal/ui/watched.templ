@@ -9,11 +9,11 @@ import (
 	"strconv"
 )
 
-templ WatchedPage(days []models.WatchedMoviesInDay) {
+templ WatchedPage(days []models.WatchedMoviesInDay, lists []models.ListEntry) {
 	@page.Page(page.Props{
-		Title: "Gowatch",
-		// Name:        "Watched Movies",
+		Title:       "Gowatch",
 		CurrentPath: "/watched",
+		Lists:       lists,
 	}) {
 		<div class="flex flex-row justify-between">
 			<p class="text-xl mb-4">Watched Movies</p>
