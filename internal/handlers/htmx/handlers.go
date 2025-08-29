@@ -120,6 +120,8 @@ func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
 		successMessage = fmt.Sprintf("Movie marked as watched on %s", watchedDate.Format("Jan 2, 2006"))
 	}
 
+	w.Header().Add("HX-Trigger", "newWatched")
+
 	toast.Toast(toast.Props{
 		Title:         "Movie Added Successfully",
 		Description:   successMessage,
@@ -178,6 +180,7 @@ func (h *Handlers) CreateList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// trigger the newList event to update the list of lists in the sidebar
 	w.Header().Add("HX-Trigger", "newList")
 
 	toast.Toast(toast.Props{

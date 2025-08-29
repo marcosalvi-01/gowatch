@@ -24,6 +24,7 @@ type Props struct {
 	Name          string
 	CurrentPath   string
 	SearchContent string
+	WatchedCount  int
 	Lists         []models.ListEntry
 }
 
@@ -41,15 +42,15 @@ templ Page(props Props, extraHead ...templ.Component) {
 			}
 			@Favicons()
 		</head>
-		<body class="bg-background overflow-hidden">
+		<body class="bg-background">
 			@sidebar.Layout(sidebar.LayoutProps{
-				Class: "w-full",
+				Class: "w-full h-screen",
 			}) {
-				@Sidebar(props.Title, props.CurrentPath, props.Lists, false)
-				@sidebar.Inset(sidebar.InsetProps{}) {
+				@Sidebar(props.Title, props.CurrentPath, props.Lists, false, props.WatchedCount)
+				@sidebar.Inset() {
 					<div id="toast"></div>
 					// Header
-					<div class="flex items-center gap-2 p-2 flex-shrink-0">
+					<div class="flex items-center gap-2 p-2 flex-shrink-0 sticky z-10 top-0 border-b-1 bg-background">
 						<div class="md:hidden">
 							@sidebar.Trigger()
 						</div>
@@ -57,7 +58,7 @@ templ Page(props Props, extraHead ...templ.Component) {
 						@ThemeSwitcher()
 					</div>
 					// Main content
-					<div class="flex-1 overflow-auto p-4 border-t-1">
+					<div class="flex-1 p-4">
 						if props.Name != "" {
 							<h1 class="text-xl mb-4">{ props.Name }</h1>
 						}
@@ -74,35 +75,30 @@ templ Page(props Props, extraHead ...templ.Component) {
 									Create New List
 								}
 								@modal.Body() {
-									<div class="space-y-4">
-										<div class="space-y-2">
-											@form.Item() {
-												@form.Label(form.LabelProps{
-													For: "add-list-name-input",
-												}) {
-													Give a name to the list
-												}
-												@input.Input(input.Props{
-													ID:          "add-list-input",
-													Required:    true,
-													Placeholder: "A cool name",
-													Name:        "title",
-												})
-											}
-											@form.Label(form.LabelProps{
-												For: "add-list-description-input",
-											}) {
-												Give the list a description
-											}
-											@textarea.Textarea(textarea.Props{
-												ID:          "add-list-description-input",
-												Placeholder: "A list of funny movies",
-												Required:    false,
-												Name:        "description",
-											})
-											<input type="hidden" name="currentPath" value={ props.CurrentPath }/>
-										</div>
-									</div>
+									@form.Item() {
+										@form.Label(form.LabelProps{
+											For: "add-list-name-input",
+										}) {
+											Give a name to the list
+										}
+										@input.Input(input.Props{
+											ID:          "add-list-input",
+											Required:    true,
+											Placeholder: "A cool name",
+											Name:        "title",
+										})
+									}
+									@form.Label(form.LabelProps{
+										For: "add-list-description-input",
+									}) {
+										Give the list a description
+									}
+									@textarea.Textarea(textarea.Props{
+										ID:          "add-list-description-input",
+										Placeholder: "A list of funny movies",
+										Required:    false,
+										Name:        "description",
+									})
 								}
 								@modal.Footer() {
 									<div class="flex justify-end gap-3">
@@ -173,7 +169,7 @@ templ SearchBar(searchContent string) {
 	</div>
 }
 
-templ Sidebar(title string, currentPath string, lists []models.ListEntry, collapsed bool) {
+templ Sidebar(title string, currentPath string, lists []models.ListEntry, collapsed bool, watchedCount int) {
 	@sidebar.Sidebar(sidebar.Props{
 		Class:       "bg-background border-r-1",
 		Collapsible: sidebar.CollapsibleIcon,
@@ -211,7 +207,9 @@ templ Sidebar(title string, currentPath string, lists []models.ListEntry, collap
 							<span>Watched</span>
 							@sidebar.MenuBadge() {
 								// TODO watched movie count
-								3
+								<span>
+									{ watchedCount }
+								</span>
 							}
 						}
 					}
