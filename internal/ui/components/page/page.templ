@@ -12,6 +12,7 @@ import (
 	"gowatch/internal/ui/components/icon"
 	"gowatch/internal/ui/components/input"
 	"gowatch/internal/ui/components/modal"
+	"gowatch/internal/ui/components/popover"
 	"gowatch/internal/ui/components/sheet"
 	"gowatch/internal/ui/components/sidebar"
 	"gowatch/internal/ui/components/textarea"
@@ -31,6 +32,7 @@ templ Page(props Props, extraHead ...templ.Component) {
 	<html lang="en">
 		<head>
 			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ props.Title }</title>
 			<link rel="stylesheet" href="/static/css/output.css"/>
 			@Scripts()
@@ -47,8 +49,8 @@ templ Page(props Props, extraHead ...templ.Component) {
 				@sidebar.Inset(sidebar.InsetProps{}) {
 					<div id="toast"></div>
 					// Header
-					<div class="flex items-center p-2 flex-shrink-0">
-						<div class="md:hidden mr-2">
+					<div class="flex items-center gap-2 p-2 flex-shrink-0">
+						<div class="md:hidden">
 							@sidebar.Trigger()
 						</div>
 						@SearchBar(props.SearchContent)
@@ -351,14 +353,18 @@ templ Scripts() {
 	  });
 	</script>
 	@ThemeScript()
-	@drawer.Script()
-	@input.Script()
-	@modal.Script()
 	@toast.Script()
+	@dropdown.Script()
+	// for the sidebar
 	@sidebar.Script()
 	@sheet.Script()
-	@dropdown.Script()
+	@popover.Script()
+	// for the list of lists in the sidebar
 	@collapsible.Script()
+	// for the new list modal
+	@modal.Script()
+	// for the search bar
+	@input.Script()
 }
 
 templ ThemeScript() {
