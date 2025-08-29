@@ -30,6 +30,7 @@ func NewHandlers(watchedService *services.WatchedService, listService *services.
 func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Post("/movies/watched", h.AddWatchedMovie)
 	r.Post("/lists/create", h.CreateList)
+	r.Get("/lists", h.GetAllLists)
 }
 
 func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
@@ -133,21 +134,6 @@ func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) CreateList(w http.ResponseWriter, r *http.Request) {
 	title := r.FormValue("title")
 	description := r.FormValue("description")
-	currentPath := r.FormValue("currentPath")
-	// sidebarCookie, err := r.Cookie("sidebar_state")
-	// if err != nil {
-	// 	log.Error("missing list title")
-	// 	toast.Toast(toast.Props{
-	// 		Title:         "Missing Title",
-	// 		Description:   "Please provide a title for your list.",
-	// 		Variant:       toast.VariantError,
-	// 		Position:      toast.PositionTopRight,
-	// 		Duration:      4000,
-	// 		ShowIndicator: true,
-	// 		Icon:          true,
-	// 	}).Render(r.Context(), w)
-	// 	return
-	// }
 
 	if title == "" {
 		log.Error("missing list title")
@@ -192,33 +178,34 @@ func (h *Handlers) CreateList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// toast.Toast(toast.Props{
-	// 	Title:         "List Created Successfully",
-	// 	Description:   fmt.Sprintf("List \"%s\" has been created.", title),
-	// 	Variant:       toast.VariantSuccess,
-	// 	Position:      toast.PositionTopRight,
-	// 	Duration:      3000,
-	// 	ShowIndicator: true,
-	// 	Icon:          true,
-	// }).Render(r.Context(), w)
+	w.Header().Add("HX-Trigger", "newList")
 
+	toast.Toast(toast.Props{
+		Title:         "List Created Successfully",
+		Description:   fmt.Sprintf("List \"%s\" has been created.", title),
+		Variant:       toast.VariantSuccess,
+		Position:      toast.PositionTopRight,
+		Duration:      3000,
+		ShowIndicator: true,
+		Icon:          true,
+	}).Render(r.Context(), w)
+}
+
+func (h *Handlers) GetAllLists(w http.ResponseWriter, r *http.Request) {
 	lists, err := h.listService.GetAllLists(r.Context())
 	if err != nil {
-		log.Error("description too long", "length", len(description))
+		log.Error("failed to get all lists", "error", err)
 		toast.Toast(toast.Props{
-			Title:         "Description Too Long",
-			Description:   "Please keep the description under 500 characters.",
+			Title:         "Unexpected Error",
+			Description:   "An unexpected error occurred, please try again.",
 			Variant:       toast.VariantError,
 			Position:      toast.PositionTopRight,
-			Duration:      4000,
+			Duration:      5000,
 			ShowIndicator: true,
 			Icon:          true,
 		}).Render(r.Context(), w)
 		return
 	}
 
-	log.Debug("fetched all lists", "lists", lists)
-
-	// collapsed := sidebarCookie != nil && sidebarCookie.Value == "false"
-	page.Sidebar("Gowatch", currentPath, lists, false).Render(r.Context(), w)
+	page.SidebarListsList("", lists).Render(r.Context(), w)
 }

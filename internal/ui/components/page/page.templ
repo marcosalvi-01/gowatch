@@ -43,9 +43,7 @@ templ Page(props Props, extraHead ...templ.Component) {
 			@sidebar.Layout(sidebar.LayoutProps{
 				Class: "w-full",
 			}) {
-				<div id="sidebar">
-					@Sidebar(props.Title, props.CurrentPath, props.Lists, false)
-				</div>
+				@Sidebar(props.Title, props.CurrentPath, props.Lists, false)
 				@sidebar.Inset(sidebar.InsetProps{}) {
 					<div id="toast"></div>
 					// Header
@@ -68,7 +66,7 @@ templ Page(props Props, extraHead ...templ.Component) {
 						}) {
 							<form
 								hx-post="/htmx/lists/create"
-								hx-target="#sidebar"
+								hx-target="#toast"
 							>
 								@modal.Header() {
 									Create New List
@@ -238,16 +236,9 @@ templ Sidebar(title string, currentPath string, lists []models.ListEntry, collap
 							}
 							@collapsible.Content() {
 								@sidebar.MenuSub() {
-									for _, list := range lists {
-										@sidebar.MenuSubItem() {
-											@sidebar.MenuSubButton(sidebar.MenuSubButtonProps{
-												Href:     "/list/" + fmt.Sprintf("%d", list.ID),
-												IsActive: currentPath == "/list/"+fmt.Sprintf("%d", list.ID),
-											}) {
-												<span>{ list.Name }</span>
-											}
-										}
-									}
+									<ul hx-get="/htmx/lists" hx-trigger="newList from:body">
+										@SidebarListsList(currentPath, lists)
+									</ul>
 									@sidebar.MenuSubItem() {
 										@modal.Trigger(modal.TriggerProps{
 											For: "add-list-modal",
@@ -317,6 +308,19 @@ templ Sidebar(title string, currentPath string, lists []models.ListEntry, collap
 						}
 					}
 				}
+			}
+		}
+	}
+}
+
+templ SidebarListsList(currentPath string, lists []models.ListEntry) {
+	for _, list := range lists {
+		@sidebar.MenuSubItem() {
+			@sidebar.MenuSubButton(sidebar.MenuSubButtonProps{
+				Href:     "/list/" + fmt.Sprintf("%d", list.ID),
+				IsActive: currentPath == "/list/"+fmt.Sprintf("%d", list.ID),
+			}) {
+				<span>{ list.Name }</span>
 			}
 		}
 	}
