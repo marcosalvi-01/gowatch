@@ -183,7 +183,7 @@ func Page(props Props, extraHead ...templ.Component) templ.Component {
 						}()
 					}
 					ctx = templ.InitializeContext(ctx)
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<form hx-post=\"/htmx/lists/create\" hx-target=\"#toast\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<form hx-post=\"/htmx/lists/create\" hx-target=\"#toast\" hx-on::after-request=\"this.reset()\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -660,7 +660,7 @@ func Sidebar(title string, currentPath string, lists []models.ListEntry, collaps
 					var templ_7745c5c3_Var24 string
 					templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/page/page.templ`, Line: 184, Col: 11}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/page/page.templ`, Line: 185, Col: 11}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 					if templ_7745c5c3_Err != nil {
@@ -816,14 +816,14 @@ func Sidebar(title string, currentPath string, lists []models.ListEntry, collaps
 										}()
 									}
 									ctx = templ.InitializeContext(ctx)
-									templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, " <span>")
+									templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<span>")
 									if templ_7745c5c3_Err != nil {
 										return templ_7745c5c3_Err
 									}
 									var templ_7745c5c3_Var33 string
 									templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(watchedCount)
 									if templ_7745c5c3_Err != nil {
-										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/page/page.templ`, Line: 211, Col: 23}
+										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/page/page.templ`, Line: 216, Col: 23}
 									}
 									_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 									if templ_7745c5c3_Err != nil {
@@ -835,7 +835,12 @@ func Sidebar(title string, currentPath string, lists []models.ListEntry, collaps
 									}
 									return nil
 								})
-								templ_7745c5c3_Err = sidebar.MenuBadge().Render(templ.WithChildren(ctx, templ_7745c5c3_Var32), templ_7745c5c3_Buffer)
+								templ_7745c5c3_Err = sidebar.MenuBadge(sidebar.MenuBadgeProps{
+									Attributes: templ.Attributes{
+										"hx-trigger": "newWatched from:body",
+										"hx-get":     "/htmx/watchedCount",
+									},
+								}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var32), templ_7745c5c3_Buffer)
 								if templ_7745c5c3_Err != nil {
 									return templ_7745c5c3_Err
 								}
@@ -1061,7 +1066,7 @@ func Sidebar(title string, currentPath string, lists []models.ListEntry, collaps
 													if templ_7745c5c3_Err != nil {
 														return templ_7745c5c3_Err
 													}
-													templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, " New List")
+													templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, " Create New List")
 													if templ_7745c5c3_Err != nil {
 														return templ_7745c5c3_Err
 													}
@@ -1509,7 +1514,7 @@ func SidebarListsList(currentPath string, lists []models.ListEntry) templ.Compon
 					var templ_7745c5c3_Var60 string
 					templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.JoinStringErrs(list.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/page/page.templ`, Line: 323, Col: 21}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/page/page.templ`, Line: 328, Col: 21}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var60))
 					if templ_7745c5c3_Err != nil {

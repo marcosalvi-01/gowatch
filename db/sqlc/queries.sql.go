@@ -329,6 +329,20 @@ func (q *Queries) GetPerson(ctx context.Context, id int64) (Person, error) {
 	return i, err
 }
 
+const getWatchedCount = `-- name: GetWatchedCount :one
+SELECT
+    COUNT(*) AS count
+FROM
+    watched
+`
+
+func (q *Queries) GetWatchedCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getWatchedCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getWatchedJoinMovie = `-- name: GetWatchedJoinMovie :many
 SELECT
     movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline,

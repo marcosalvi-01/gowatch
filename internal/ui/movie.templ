@@ -15,7 +15,6 @@ import (
 	"gowatch/internal/ui/components/icon"
 	"gowatch/internal/ui/components/modal"
 	"gowatch/internal/ui/components/page"
-	"gowatch/internal/ui/components/popover"
 	"gowatch/internal/ui/components/separator"
 	"gowatch/internal/ui/components/table"
 	"slices"
@@ -24,14 +23,14 @@ import (
 	"time"
 )
 
-templ MoviePage(movie models.MovieDetails, watchRecords models.WatchedMovieRecords, lists []models.ListEntry) {
+templ MoviePage(movie models.MovieDetails, watchRecords models.WatchedMovieRecords, lists []models.ListEntry, watchedCount int) {
 	@page.Page(page.Props{
-		Title:       "Gowatch",
-		CurrentPath: "/movie",
-		Lists:       lists,
+		Title:        "Gowatch",
+		CurrentPath:  "/movie",
+		Lists:        lists,
+		WatchedCount: watchedCount,
 	},
 		datepicker.Script(),
-		popover.Script(),
 		calendar.Script(),
 	) {
 		@movieHero(movie)
@@ -442,7 +441,14 @@ templ profileImage(profilePath, name string) {
 			})
 		} else {
 			@avatar.Fallback() {
-				{ avatar.Initials(name) }
+				{{
+					split := strings.Split(name, " ")
+					initials := string(split[0][0])
+					if len(split) >= 2 {
+						initials += string(split[1][0])
+					}
+				}}
+				{ initials }
 			}
 		}
 	}

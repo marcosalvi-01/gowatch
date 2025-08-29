@@ -202,3 +202,9 @@ SELECT
     *
 FROM
     list;
+
+-- name: GetWatchedCount :one
+SELECT
+    COUNT(*) AS count
+FROM
+    watched;

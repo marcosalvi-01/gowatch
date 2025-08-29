@@ -426,3 +426,12 @@ func (d *SqliteDB) GetAllLists(ctx context.Context) ([]InsertList, error) {
 	log.Info("successfully retrieved all lists", "count", len(lists))
 	return lists, nil
 }
+
+func (d *SqliteDB) GetWatchedCount(ctx context.Context) (int, error) {
+	count, err := d.queries.GetWatchedCount(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get watched movie count: %w", err)
+	}
+
+	return int(count), nil
+}

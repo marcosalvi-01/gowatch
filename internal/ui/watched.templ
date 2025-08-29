@@ -10,21 +10,24 @@ import (
 )
 
 templ WatchedPage(days []models.WatchedMoviesInDay, lists []models.ListEntry) {
+	{{
+		watchedCount := 0
+		for _, day := range days {
+			watchedCount += len(day.Movies)
+		}
+	}}
 	@page.Page(page.Props{
-		Title:       "Gowatch",
-		CurrentPath: "/watched",
-		Lists:       lists,
+		Title:        "Gowatch",
+		CurrentPath:  "/watched",
+		Lists:        lists,
+		WatchedCount: watchedCount,
 	}) {
 		<div class="flex flex-row justify-between">
 			<p class="text-xl mb-4">Watched Movies</p>
-			<p class="text-xl mb-4">
-				{{
-				watchedCount := 0
-				for _, day := range days {
-					watchedCount += len(day.Movies)
-				}
-				}}
-				{ watchedCount }
+			<p class="text-xl mb-4" hx-trigger="newWatched from:body" hx-get="/htmx/watchedCount">
+				<span>
+					{ watchedCount }
+				</span>
 			</p>
 		</div>
 		<div class="flex flex-wrap gap-x-6 gap-y-4">

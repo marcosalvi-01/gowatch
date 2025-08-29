@@ -43,8 +43,13 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Get("/search", h.SearchPage)
 	r.Get("/watched", h.WatchedPage)
 	r.Get("/movie/{id}", h.MoviePage)
+	r.Get("/home", h.HomePage)
 
 	log.Debug("registered routes", "routes", []string{"/", "/stats", "/search", "/watched", "/movie/{id}"})
+}
+
+func (h *Handlers) HomePage(w http.ResponseWriter, r *http.Request) {
+	templ.Handler(ui.HomePage()).ServeHTTP(w, r)
 }
 
 func (h *Handlers) WatchedPage(w http.ResponseWriter, r *http.Request) {
@@ -97,7 +102,14 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	templ.Handler(ui.MoviePage(*movie, rec, listEntries)).ServeHTTP(w, r)
+	watchedCount, err := h.watchedService.GetWatchedCount(r.Context())
+	if err != nil {
+		log.Error("failed to retrieve watched count", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	templ.Handler(ui.MoviePage(*movie, rec, listEntries, watchedCount)).ServeHTTP(w, r)
 }
 
 func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {

@@ -1,4 +1,4 @@
-// templui component checkbox - version: v0.85.0 installed by templui v0.85.0
+// templui component checkbox - version: v0.94.0 installed by templui v0.94.0
 package checkbox
 
 import (
@@ -15,6 +15,7 @@ type Props struct {
 	Disabled   bool
 	Required   bool
 	Checked    bool
+	Form       string
 	Icon       templ.Component
 }
 
@@ -23,7 +24,7 @@ templ Checkbox(props ...Props) {
 	if len(props) > 0 {
 		{{ p = props[0] }}
 	}
-	<div class="relative flex items-center">
+	<div class="relative inline-flex items-center">
 		<input
 			checked?={ p.Checked }
 			disabled?={ p.Disabled }
@@ -36,34 +37,33 @@ templ Checkbox(props ...Props) {
 			}
 			if p.Value != "" {
 				value={ p.Value }
+			} else {
+				value="on"
+			}
+			if p.Form != "" {
+				form={ p.Form }
 			}
 			type="checkbox"
 			class={
 				utils.TwMerge(
-					"relative size-4 overflow-hidden peer",
-					"before:absolute before:inset-0 before:content['']",
-					"appearance-none rounded-sm border-2 border-primary bg-background",
-					"cursor-pointer transition-colors",
-					"checked:before:bg-primary",
+					"peer size-4 shrink-0 rounded-[4px] border border-input shadow-xs",
+					"focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring",
 					"disabled:cursor-not-allowed disabled:opacity-50",
+					"checked:bg-primary checked:text-primary-foreground checked:border-primary",
+					"appearance-none cursor-pointer transition-shadow",
+					"relative",
 					p.Class,
 				),
 			}
 			{ p.Attributes... }
 		/>
 		<div
-			class={
-				utils.TwMerge(
-					"absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
-					"size-3 text-primary-foreground pointer-events-none opacity-0",
-					"peer-checked:opacity-100",
-				),
-			}
+			class="absolute left-0 top-0 h-4 w-4 pointer-events-none flex items-center justify-center text-primary-foreground opacity-0 peer-checked:opacity-100"
 		>
 			if p.Icon != nil {
 				@p.Icon
 			} else {
-				@icon.Check(icon.Props{Size: 12})
+				@icon.Check(icon.Props{Size: 14})
 			}
 		</div>
 	</div>

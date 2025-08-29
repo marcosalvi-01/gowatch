@@ -31,6 +31,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Post("/movies/watched", h.AddWatchedMovie)
 	r.Post("/lists/create", h.CreateList)
 	r.Get("/lists", h.GetAllLists)
+	r.Get("/watchedCount", h.GetWatchedCount)
 }
 
 func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
@@ -200,7 +201,7 @@ func (h *Handlers) GetAllLists(w http.ResponseWriter, r *http.Request) {
 		log.Error("failed to get all lists", "error", err)
 		toast.Toast(toast.Props{
 			Title:         "Unexpected Error",
-			Description:   "An unexpected error occurred, please try again.",
+			Description:   "An unexpected error occurred",
 			Variant:       toast.VariantError,
 			Position:      toast.PositionTopRight,
 			Duration:      5000,
@@ -211,4 +212,23 @@ func (h *Handlers) GetAllLists(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page.SidebarListsList("", lists).Render(r.Context(), w)
+}
+
+func (h *Handlers) GetWatchedCount(w http.ResponseWriter, r *http.Request) {
+	count, err := h.watchedService.GetWatchedCount(r.Context())
+	if err != nil {
+		log.Error("failed to get watched movie count", "error", err)
+		toast.Toast(toast.Props{
+			Title:         "Unexpected Error",
+			Description:   "An unexpected error occurred",
+			Variant:       toast.VariantError,
+			Position:      toast.PositionTopRight,
+			Duration:      5000,
+			ShowIndicator: true,
+			Icon:          true,
+		}).Render(r.Context(), w)
+		return
+	}
+	watchedCount := "<span>" + strconv.Itoa(count) + "</span>"
+	w.Write([]byte(watchedCount))
 }

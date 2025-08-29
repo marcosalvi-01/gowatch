@@ -1,4 +1,4 @@
-// templui component modal - version: v0.85.0 installed by templui v0.85.0
+// templui component modal - version: v0.94.0 installed by templui v0.94.0
 package modal
 
 import "gowatch/internal/ui/utils"
@@ -188,5 +188,5 @@ templ Footer(props ...FooterProps) {
 }
 
 templ Script() {
-	<script defer src="/static/js/modal.min.js"></script>
+	<script defer nonce={ templ.GetNonce(ctx) } src="/static/js/modal.min.js"></script>
 }

@@ -1,10 +1,9 @@
-// templui component avatar - version: v0.85.0 installed by templui v0.85.0
+// templui component avatar - version: v0.94.0 installed by templui v0.94.0
 package avatar
 
 import (
 	"fmt"
 	"gowatch/internal/ui/utils"
-	"strings"
 )
 
 type Size string
@@ -18,8 +17,8 @@ const (
 
 const (
 	GroupSpacingSm GroupSpacing = "sm"
-	GroupSpacingMd GroupSpacing = "medium"
-	GroupSpacingLg GroupSpacing = "large"
+	GroupSpacingMd GroupSpacing = "md"
+	GroupSpacingLg GroupSpacing = "lg"
 )
 
 type Props struct {
@@ -63,12 +62,24 @@ templ Avatar(props ...Props) {
 		}
 		class={
 			utils.TwMerge(
-				"inline-flex items-center justify-center",
-				SizeClasses(p.Size),
+				"inline-flex shrink-0 items-center justify-center overflow-hidden",
+				// Default size (md) - will be overridden if Size prop is set or Class contains size utilities
+				"size-12 text-base",
+				// Size variants with data attributes
+				"data-[tui-avatar-size=sm]:size-8 data-[tui-avatar-size=sm]:text-xs",
+				"data-[tui-avatar-size=md]:size-12 data-[tui-avatar-size=md]:text-base",
+				"data-[tui-avatar-size=lg]:size-16 data-[tui-avatar-size=lg]:text-xl",
 				"rounded-full bg-muted",
-				utils.If(p.InGroup, "ring-2 ring-background"),
+				// In-group state with data attributes
+				"data-[tui-avatar-in-group=true]:ring-2 data-[tui-avatar-in-group=true]:ring-background",
 				p.Class,
 			),
+		}
+		if p.Size != "" {
+			data-tui-avatar-size={ string(p.Size) }
+		}
+		if p.InGroup {
+			data-tui-avatar-in-group="true"
 		}
 		{ p.Attributes... }
 	>
@@ -89,11 +100,11 @@ templ Image(props ...ImageProps) {
 		if p.Src != "" {
 			src={ p.Src }
 		}
-		alt={ avatarAlt(p) }
+		alt={ p.Alt }
 		class={
 			utils.TwMerge(
 				"w-full h-full",
-				"rounded-full object-cover",
+				"object-cover",
 				p.Class,
 			),
 		}
@@ -128,17 +139,25 @@ templ Group(props ...GroupProps) {
 	if len(props) > 0 {
 		{{ p = props[0] }}
 	}
+	// Set default spacing if not provided
+	if p.Spacing == "" {
+		{{ p.Spacing = GroupSpacingMd }}
+	}
 	<div
 		if p.ID != "" {
 			id={ p.ID }
 		}
 		class={
 			utils.TwMerge(
-				"flex items-center -space-x-3",
-				groupSpacingClasses(p.Spacing),
+				"flex items-center",
+				// Spacing with data attributes
+				"data-[tui-avatar-spacing=sm]:-space-x-1",
+				"data-[tui-avatar-spacing=md]:-space-x-2",
+				"data-[tui-avatar-spacing=lg]:-space-x-4",
 				p.Class,
 			),
 		}
+		data-tui-avatar-spacing={ string(p.Spacing) }
 		{ p.Attributes... }
 	>
 		{ children... }
@@ -157,10 +176,18 @@ templ GroupOverflow(count int, props ...Props) {
 		class={
 			utils.TwMerge(
 				"inline-flex items-center justify-center",
-				SizeClasses(p.Size),
+				// Default size (md)
+				"w-12 h-12 text-base",
+				// Size variants with data attributes
+				"data-[tui-avatar-size=sm]:w-8 data-[tui-avatar-size=sm]:h-8 data-[tui-avatar-size=sm]:text-xs",
+				"data-[tui-avatar-size=md]:w-12 data-[tui-avatar-size=md]:h-12 data-[tui-avatar-size=md]:text-base",
+				"data-[tui-avatar-size=lg]:w-16 data-[tui-avatar-size=lg]:h-16 data-[tui-avatar-size=lg]:text-xl",
 				"rounded-full bg-muted ring-2 ring-background",
 				p.Class,
 			),
+		}
+		if p.Size != "" {
+			data-tui-avatar-size={ string(p.Size) }
 		}
 		{ p.Attributes... }
 	>
@@ -168,58 +195,6 @@ templ GroupOverflow(count int, props ...Props) {
 	</div>
 }
 
-func SizeClasses(size Size) string {
-	switch size {
-	case SizeSm:
-		return "w-8 h-8 text-xs"
-	case SizeLg:
-		return "w-16 h-16 text-xl"
-	default: // SizeMd
-		return "w-12 h-12 text-base"
-	}
-}
-
-func Initials(name string) string {
-	parts := strings.Fields(name)
-	initials := ""
-	for i, part := range parts {
-		if i > 1 {
-			break
-		}
-		if len(part) > 0 {
-			initials += string([]rune(part)[0])
-		}
-	}
-	return strings.ToUpper(initials)
-}
-
-func groupSpacingClasses(spacing GroupSpacing) string {
-	switch spacing {
-	case GroupSpacingSm:
-		return "-space-x-1"
-	case GroupSpacingLg:
-		return "-space-x-4"
-	default: // GroupSpacingMd
-		return "-space-x-2"
-	}
-}
-
-func avatarAlt(p ImageProps) string {
-	if p.Alt != "" {
-		return p.Alt
-	}
-
-	if p.ID != "" {
-		return fmt.Sprintf("Avatar of %s", p.ID)
-	}
-
-	if p.Src != "" {
-		return "User avatar"
-	}
-
-	return ""
-}
-
 templ Script() {
-	<script defer src="/static/js/avatar.min.js"></script>
+	<script defer nonce={ templ.GetNonce(ctx) } src="/static/js/avatar.min.js"></script>
 }

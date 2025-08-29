@@ -1,4 +1,4 @@
-// templui component input - version: v0.85.0 installed by templui v0.85.0
+// templui component input - version: v0.94.0 installed by templui v0.94.0
 package input
 
 import (
@@ -18,8 +18,12 @@ const (
 	TypeURL      Type = "url"
 	TypeSearch   Type = "search"
 	TypeDate     Type = "date"
+	TypeDateTime Type = "datetime-local"
 	TypeTime     Type = "time"
 	TypeFile     Type = "file"
+	TypeColor    Type = "color"
+	TypeWeek	 Type = "week"
+	TypeMonth	 Type = "month"
 )
 
 type Props struct {
@@ -28,6 +32,7 @@ type Props struct {
 	Attributes       templ.Attributes
 	Name             string
 	Type             Type
+	Form             string
 	Placeholder      string
 	Value            string
 	Disabled         bool
@@ -64,6 +69,9 @@ templ Input(props ...Props) {
 			}
 			if p.Type == TypeFile && p.FileAccept != "" {
 				accept={ p.FileAccept }
+			}
+			if p.Form != "" {
+				form={ p.Form }
 			}
 			disabled?={ p.Disabled }
 			readonly?={ p.Readonly }
@@ -119,5 +127,5 @@ templ Input(props ...Props) {
 }
 
 templ Script() {
-	<script defer src="/static/js/input.min.js"></script>
+	<script defer nonce={ templ.GetNonce(ctx) } src="/static/js/input.min.js"></script>
 }

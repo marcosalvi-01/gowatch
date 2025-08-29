@@ -16,6 +16,7 @@ type DB interface {
 	InsertWatched(ctx context.Context, watched InsertWatched) error
 	GetWatchedJoinMovie(ctx context.Context) ([]models.WatchedMovie, error)
 	GetWatchedJoinMovieByID(ctx context.Context, movieID int64) ([]models.WatchedMovie, error)
+	GetWatchedCount(ctx context.Context) (int, error)
 
 	InsertList(ctx context.Context, list InsertList) error
 	GetList(ctx context.Context, id int64) (*models.List, error)

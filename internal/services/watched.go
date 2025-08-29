@@ -169,3 +169,12 @@ func (s *WatchedService) GetWatchedMovieRecordsByID(ctx context.Context, movieID
 
 	return rec, nil
 }
+
+func (s *WatchedService) GetWatchedCount(ctx context.Context) (int, error) {
+	count, err := s.db.GetWatchedCount(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get watched count from db: %w", err)
+	}
+
+	return count, nil
+}

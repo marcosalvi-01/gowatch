@@ -55,7 +55,7 @@ func SearchPage(query string, results []models.Movie, lists []models.ListEntry) 
 				return templ_7745c5c3_Err
 			}
 			if len(results) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div class=\"p-2 md:p-4 rounded-lg space-y-4\"><div class=\"flex flex-wrap gap-4 md:gap-6 w-full\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div class=\"p-2 md:p-4 rounded-lg space-y-4\"><div class=\"flex flex-wrap gap-4 md:gap-6 w-full justify-evenly\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
