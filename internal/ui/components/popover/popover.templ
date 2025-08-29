@@ -1,4 +1,4 @@
-// templui component popover - version: v0.85.0 installed by templui v0.85.0
+// templui component popover - version: v0.94.0 installed by templui v0.94.0
 package popover
 
 import (
@@ -115,11 +115,18 @@ templ Content(props ...ContentProps) {
 			{ children... }
 		</div>
 		if p.ShowArrow {
-			<div data-tui-popover-arrow class="absolute h-2.5 w-2.5 rotate-45 bg-background border"></div>
+			<div 
+				data-tui-popover-arrow 
+				class="absolute h-2.5 w-2.5 rotate-45 bg-popover border border-border
+					data-[tui-popover-placement^=top]:-bottom-[5px] data-[tui-popover-placement^=top]:border-t-transparent data-[tui-popover-placement^=top]:border-l-transparent
+					data-[tui-popover-placement^=bottom]:-top-[5px] data-[tui-popover-placement^=bottom]:border-b-transparent data-[tui-popover-placement^=bottom]:border-r-transparent
+					data-[tui-popover-placement^=left]:-right-[5px] data-[tui-popover-placement^=left]:border-l-transparent data-[tui-popover-placement^=left]:border-b-transparent
+					data-[tui-popover-placement^=right]:-left-[5px] data-[tui-popover-placement^=right]:border-r-transparent data-[tui-popover-placement^=right]:border-t-transparent"
+			></div>
 		}
 	</div>
 }
 
 templ Script() {
-	<script defer src="/static/js/popover.min.js"></script>
+	<script defer nonce={ templ.GetNonce(ctx) } src="/static/js/popover.min.js"></script>
 }

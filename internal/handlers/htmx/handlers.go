@@ -1,9 +1,9 @@
 package htmx
 
-
 import (
 	"fmt"
 	"gowatch/internal/services"
+	"gowatch/internal/ui/components/page"
 	"gowatch/internal/ui/components/toast"
 	"gowatch/logging"
 	"net/http"
@@ -133,6 +133,21 @@ func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) CreateList(w http.ResponseWriter, r *http.Request) {
 	title := r.FormValue("title")
 	description := r.FormValue("description")
+	currentPath := r.FormValue("currentPath")
+	// sidebarCookie, err := r.Cookie("sidebar_state")
+	// if err != nil {
+	// 	log.Error("missing list title")
+	// 	toast.Toast(toast.Props{
+	// 		Title:         "Missing Title",
+	// 		Description:   "Please provide a title for your list.",
+	// 		Variant:       toast.VariantError,
+	// 		Position:      toast.PositionTopRight,
+	// 		Duration:      4000,
+	// 		ShowIndicator: true,
+	// 		Icon:          true,
+	// 	}).Render(r.Context(), w)
+	// 	return
+	// }
 
 	if title == "" {
 		log.Error("missing list title")
@@ -177,13 +192,33 @@ func (h *Handlers) CreateList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	toast.Toast(toast.Props{
-		Title:         "List Created Successfully",
-		Description:   fmt.Sprintf("List \"%s\" has been created.", title),
-		Variant:       toast.VariantSuccess,
-		Position:      toast.PositionTopRight,
-		Duration:      3000,
-		ShowIndicator: true,
-		Icon:          true,
-	}).Render(r.Context(), w)
+	// toast.Toast(toast.Props{
+	// 	Title:         "List Created Successfully",
+	// 	Description:   fmt.Sprintf("List \"%s\" has been created.", title),
+	// 	Variant:       toast.VariantSuccess,
+	// 	Position:      toast.PositionTopRight,
+	// 	Duration:      3000,
+	// 	ShowIndicator: true,
+	// 	Icon:          true,
+	// }).Render(r.Context(), w)
+
+	lists, err := h.listService.GetAllLists(r.Context())
+	if err != nil {
+		log.Error("description too long", "length", len(description))
+		toast.Toast(toast.Props{
+			Title:         "Description Too Long",
+			Description:   "Please keep the description under 500 characters.",
+			Variant:       toast.VariantError,
+			Position:      toast.PositionTopRight,
+			Duration:      4000,
+			ShowIndicator: true,
+			Icon:          true,
+		}).Render(r.Context(), w)
+		return
+	}
+
+	log.Debug("fetched all lists", "lists", lists)
+
+	// collapsed := sidebarCookie != nil && sidebarCookie.Value == "false"
+	page.Sidebar("Gowatch", currentPath, lists, false).Render(r.Context(), w)
 }

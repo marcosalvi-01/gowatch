@@ -1,17 +1,21 @@
 package page
 
 import (
+	"fmt"
 	"gowatch/internal/models"
+	"gowatch/internal/ui/components/avatar"
 	"gowatch/internal/ui/components/button"
+	"gowatch/internal/ui/components/collapsible"
 	"gowatch/internal/ui/components/drawer"
+	"gowatch/internal/ui/components/dropdown"
 	"gowatch/internal/ui/components/form"
 	"gowatch/internal/ui/components/icon"
 	"gowatch/internal/ui/components/input"
 	"gowatch/internal/ui/components/modal"
-	"gowatch/internal/ui/components/separator"
+	"gowatch/internal/ui/components/sheet"
+	"gowatch/internal/ui/components/sidebar"
 	"gowatch/internal/ui/components/textarea"
 	"gowatch/internal/ui/components/toast"
-	"strconv"
 )
 
 type Props struct {
@@ -27,7 +31,6 @@ templ Page(props Props, extraHead ...templ.Component) {
 	<html lang="en">
 		<head>
 			<meta charset="utf-8"/>
-			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ props.Title }</title>
 			<link rel="stylesheet" href="/static/css/output.css"/>
 			@Scripts()
@@ -36,121 +39,115 @@ templ Page(props Props, extraHead ...templ.Component) {
 			}
 			@Favicons()
 		</head>
-		<body class="bg-background flex flex-col md:flex-row h-screen overflow-hidden">
-			// Navigation Drawer only shown on desktop
-			<div class="hidden md:flex md:w-64 md:flex-shrink-0 md:flex-col p-4 border-r-1">
-				@NavigationDrawer(props.Title, props.CurrentPath, props.Lists)
-			</div>
-			@DrawerDefault(props.Title, props.CurrentPath, props.Lists)
-			// Main content area with fixed header and scrollable content
-			<div class="flex-1 flex flex-col min-w-0 h-full md:h-auto">
-				// Header 
-				<div id="toast"></div>
-				<div class="flex items-center justify-between p-4 border-b flex-shrink-0">
-					<div class="flex items-center w-full">
-						// Mobile Navigation Drawer trigger
-						@drawer.Trigger(drawer.TriggerProps{
-							For:   "default-drawer",
-							Class: "md:hidden mr-3",
-						}) {
-							@button.Button(button.Props{
-								Variant: button.VariantOutline,
-							}) {
-								@icon.Menu()
-							}
-						}
+		<body class="bg-background overflow-hidden">
+			@sidebar.Layout(sidebar.LayoutProps{
+				Class: "w-full",
+			}) {
+				<div id="sidebar">
+					@Sidebar(props.Title, props.CurrentPath, props.Lists, false)
+				</div>
+				@sidebar.Inset(sidebar.InsetProps{}) {
+					<div id="toast"></div>
+					// Header
+					<div class="flex items-center p-2 flex-shrink-0">
+						<div class="md:hidden mr-2">
+							@sidebar.Trigger()
+						</div>
 						@SearchBar(props.SearchContent)
+						@ThemeSwitcher()
 					</div>
-					<div class="items-center">
-						@button.Button(button.Props{
-							Variant: button.VariantGhost,
-							Size:    button.SizeIcon,
-							Attributes: templ.Attributes{
-								"onclick":    "toggleTheme()",
-								"aria-label": "Toggle theme",
-							},
+					// Main content
+					<div class="flex-1 overflow-auto p-4 border-t-1">
+						if props.Name != "" {
+							<h1 class="text-xl mb-4">{ props.Name }</h1>
+						}
+						{ children... }
+						@modal.Modal(modal.Props{
+							ID:    "add-list-modal",
+							Class: "max-w-md",
 						}) {
-							@icon.Moon(icon.Props{Class: "dark:hidden"})
-							@icon.Sun(icon.Props{Class: "hidden dark:inline-block"})
+							<form
+								hx-post="/htmx/lists/create"
+								hx-target="#sidebar"
+							>
+								@modal.Header() {
+									Create New List
+								}
+								@modal.Body() {
+									<div class="space-y-4">
+										<div class="space-y-2">
+											@form.Item() {
+												@form.Label(form.LabelProps{
+													For: "add-list-name-input",
+												}) {
+													Give a name to the list
+												}
+												@input.Input(input.Props{
+													ID:          "add-list-input",
+													Required:    true,
+													Placeholder: "A cool name",
+													Name:        "title",
+												})
+											}
+											@form.Label(form.LabelProps{
+												For: "add-list-description-input",
+											}) {
+												Give the list a description
+											}
+											@textarea.Textarea(textarea.Props{
+												ID:          "add-list-description-input",
+												Placeholder: "A list of funny movies",
+												Required:    false,
+												Name:        "description",
+											})
+											<input type="hidden" name="currentPath" value={ props.CurrentPath }/>
+										</div>
+									</div>
+								}
+								@modal.Footer() {
+									<div class="flex justify-end gap-3">
+										@modal.Close(modal.CloseProps{
+											For: "add-list-modal",
+										}) {
+											@button.Button(button.Props{
+												Variant: button.VariantOutline,
+											}) {
+												Cancel
+											}
+										}
+										@modal.Close(modal.CloseProps{
+											For: "add-list-modal",
+										}) {
+											@button.Button(button.Props{
+												Variant: button.VariantDefault,
+												Type:    button.TypeSubmit,
+											}) {
+												Create List
+											}
+										}
+									</div>
+								}
+							</form>
 						}
 					</div>
-				</div>
-				// Scrollable Main content area
-				<div class="flex-1 overflow-auto p-4">
-					if props.Name != "" {
-						<h1 class="text-xl mb-4">{ props.Name }</h1>
-					}
-					{ children... }
-					@modal.Modal(modal.Props{
-						ID:    "add-list-modal",
-						Class: "max-w-md",
-					}) {
-						<form
-							hx-post="/htmx/lists/create"
-							hx-target="#toast"
-						>
-							@modal.Header() {
-								Create New List
-							}
-							@modal.Body() {
-								<div class="space-y-4">
-									<div class="space-y-2">
-										@form.Item() {
-											@form.Label(form.LabelProps{
-												For: "add-list-name-input",
-											}) {
-												Give a name to the list
-											}
-											@input.Input(input.Props{
-												ID:          "add-list-input",
-												Required:    true,
-												Placeholder: "A cool name",
-												Name:        "title",
-											})
-										}
-										@form.Label(form.LabelProps{
-											For: "add-list-description-input",
-										}) {
-											Give the list a description
-										}
-										@textarea.Textarea(textarea.Props{
-											ID:          "add-list-description-input",
-											Placeholder: "A list of funny movies",
-											Required:    false,
-											Name:        "description",
-										})
-									</div>
-								</div>
-							}
-							@modal.Footer() {
-								<div class="flex justify-end gap-3">
-									@modal.Close(modal.CloseProps{
-										For: "add-list-modal",
-									}) {
-										@button.Button(button.Props{
-											Variant: button.VariantOutline,
-										}) {
-											Cancel
-										}
-									}
-									@modal.Close(modal.CloseProps{
-										For: "add-list-modal",
-									}) {
-										@button.Button(button.Props{
-											Variant: button.VariantDefault,
-											Type:    button.TypeSubmit,
-										}) {
-											Create List
-										}
-									}
-								</div>
-							}
-						</form>
-					}
-				</div>
-			</div>
+				}
+			}
 		</body>
 	</html>
+}
+
+templ ThemeSwitcher() {
+	@button.Button(button.Props{
+		Variant: button.VariantGhost,
+		Size:    button.SizeIcon,
+		Attributes: templ.Attributes{
+			"onclick":    "toggleTheme()",
+			"aria-label": "Toggle theme",
+		},
+	}) {
+		@icon.Moon(icon.Props{Class: "dark:hidden"})
+		@icon.Sun(icon.Props{Class: "hidden dark:inline-block"})
+	}
 }
 
 templ SearchBar(searchContent string) {
@@ -176,84 +173,158 @@ templ SearchBar(searchContent string) {
 	</div>
 }
 
-// Navigation item helper template
-templ NavigationItem(href, label string, iconComponent templ.Component, isActive bool) {
-	if isActive {
-		@button.Button(button.Props{
-			Variant: button.VariantDefault,
-			Href:    href,
-			Class:   "justify-start",
-		}) {
-			<div class="flex items-center gap-2">
-				@iconComponent
-				<span>{ label }</span>
-			</div>
-		}
-	} else {
-		@button.Button(button.Props{
-			Variant: button.VariantGhost,
-			Href:    href,
-			Class:   "justify-start",
-		}) {
-			<div class="flex items-center gap-2">
-				@iconComponent
-				<span>{ label }</span>
-			</div>
-		}
-	}
-}
-
-templ NavigationDrawer(title string, currentPath string, lists []models.ListEntry) {
-	@drawer.Header() {
-		@drawer.Title(drawer.TitleProps{
-			Class: "flex items-center gap-2 text-2xl font-semibold",
-		}) {
-			<img src="/static/favicon.svg" alt="App Logo" class="w-20 h-20"/>
-			{ title }
-		}
-	}
-	<div class="space-y-2 flex flex-col">
-		@NavigationItem("/watched", "Watched", icon.Film(), currentPath == "/watched")
-		@NavigationItem("/stats", "Stats", icon.ChartBarBig(), currentPath == "/stats")
-		// lists section
-		<div class="mt-8 space-y-4 flex flex-col">
-			@separator.Separator()
-			<p class="text-center">
-				Your Lists
-			</p>
-			for _, list := range lists {
-				{{ path := "/lists/" + strconv.FormatInt(list.ID, 10) }}
-				@NavigationItem(path, list.Name, icon.List(), currentPath == path)
-			}
-			@modal.Trigger(modal.TriggerProps{
-				For: "add-list-modal",
+templ Sidebar(title string, currentPath string, lists []models.ListEntry, collapsed bool) {
+	@sidebar.Sidebar(sidebar.Props{
+		Class:       "bg-background border-r-1",
+		Collapsible: sidebar.CollapsibleIcon,
+		Variant:     sidebar.VariantInset,
+		Collapsed:   collapsed,
+	}) {
+		@sidebar.Header() {
+			@drawer.Title(drawer.TitleProps{
+				Class: "flex items-center gap-2 text-2xl font-semibold",
 			}) {
-				@button.Button(button.Props{
-					Variant: button.VariantGhost,
-					Class:   "w-full justify-start",
-				}) {
-					<div class="flex items-center gap-2">
-						@icon.Plus()
-						<span>Create New List</span>
-					</div>
+				<img src="/static/favicon.svg" alt="App Logo" class="w-20 h-20"/>
+				{ title }
+			}
+		}
+		@sidebar.Content() {
+			@sidebar.Group() {
+				@sidebar.Menu() {
+					@sidebar.MenuItem() {
+						@sidebar.MenuButton(sidebar.MenuButtonProps{
+							Href:     "/home",
+							Tooltip:  "Home",
+							IsActive: currentPath == "/home",
+						}) {
+							@icon.House(icon.Props{Class: "size-4"})
+							<span>Home</span>
+						}
+					}
+					@sidebar.MenuItem() {
+						@sidebar.MenuButton(sidebar.MenuButtonProps{
+							Href:     "/watched",
+							Tooltip:  "Watched",
+							IsActive: currentPath == "/watched",
+						}) {
+							@icon.Film(icon.Props{Class: "size-4"})
+							<span>Watched</span>
+							@sidebar.MenuBadge() {
+								// TODO watched movie count
+								3
+							}
+						}
+					}
 				}
 			}
-		</div>
-	</div>
-}
-
-templ DrawerDefault(title, currentPath string, lists []models.ListEntry) {
-	@drawer.Content(drawer.ContentProps{
-		Position: drawer.PositionLeft,
-		ID:       "default-drawer",
-	}) {
-		@NavigationDrawer(title, currentPath, lists)
+			@sidebar.Separator()
+			@sidebar.Group() {
+				@sidebar.Menu() {
+					@sidebar.MenuItem() {
+						@collapsible.Collapsible(collapsible.Props{
+							Open:  true,
+							Class: "group/collapsible w-full",
+						}) {
+							@collapsible.Trigger() {
+								@sidebar.MenuButton(sidebar.MenuButtonProps{
+									Tooltip: "Lists",
+								}) {
+									@icon.List(icon.Props{Class: "size-4"})
+									<span>Lists</span>
+									@icon.ChevronRight(icon.Props{
+										Class: "ml-auto size-4 transition-transform group-data-[tui-collapsible-state=open]/collapsible:rotate-90",
+									})
+								}
+							}
+							@collapsible.Content() {
+								@sidebar.MenuSub() {
+									for _, list := range lists {
+										@sidebar.MenuSubItem() {
+											@sidebar.MenuSubButton(sidebar.MenuSubButtonProps{
+												Href:     "/list/" + fmt.Sprintf("%d", list.ID),
+												IsActive: currentPath == "/list/"+fmt.Sprintf("%d", list.ID),
+											}) {
+												<span>{ list.Name }</span>
+											}
+										}
+									}
+									@sidebar.MenuSubItem() {
+										@modal.Trigger(modal.TriggerProps{
+											For: "add-list-modal",
+										}) {
+											@sidebar.MenuSubButton() {
+												@icon.Plus(icon.Props{
+													Size: 18,
+												})
+												New List
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		@sidebar.Footer() {
+			@sidebar.Menu() {
+				@sidebar.MenuItem() {
+					@dropdown.Dropdown() {
+						@dropdown.Trigger() {
+							@sidebar.MenuButton(sidebar.MenuButtonProps{
+								Size: sidebar.MenuButtonSizeLg,
+							}) {
+								@avatar.Avatar(avatar.Props{Class: "size-8 rounded-lg"}) {
+									@avatar.Image(avatar.ImageProps{
+										Src: "https://avatars.githubusercontent.com/u/26936893?v=4",
+									})
+								}
+								<div class="grid flex-1 text-left text-sm leading-tight">
+									<span class="truncate font-medium">John Doe</span>
+									<span class="truncate text-xs">john@example.com</span>
+								</div>
+								@icon.ChevronsUpDown(icon.Props{Class: "ml-auto size-4"})
+							}
+						}
+						@dropdown.Content(dropdown.ContentProps{
+							Width:     "w-56",
+							Placement: dropdown.PlacementTopStart,
+						}) {
+							@dropdown.Label() {
+								John Doe
+							}
+							@dropdown.Separator()
+							@dropdown.Item() {
+								<span class="flex items-center">
+									@icon.User(icon.Props{Size: 16, Class: "mr-2"})
+									Profile
+								</span>
+							}
+							@dropdown.Item() {
+								<span class="flex items-center">
+									@icon.Settings(icon.Props{Size: 16, Class: "mr-2"})
+									Settings
+								</span>
+							}
+							@dropdown.Separator()
+							@dropdown.Item() {
+								<span class="flex items-center">
+									@icon.LogOut(icon.Props{Size: 16, Class: "mr-2"})
+									Log out
+								</span>
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 }
 
 // scripts.templ
 templ Scripts() {
-	<script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+	<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js" integrity="sha384-Akqfrbj/HpNVo8k11SXBb6TlBWmXXlYQrCSqEWmyKJe+hDm3Z/B2WVG4smwBkRVm" crossorigin="anonymous"></script>
 	<script>
 	  document.addEventListener("DOMContentLoaded", () => {
 		// Re-initialize templUI components after HTMX swaps
@@ -280,6 +351,10 @@ templ Scripts() {
 	@input.Script()
 	@modal.Script()
 	@toast.Script()
+	@sidebar.Script()
+	@sheet.Script()
+	@dropdown.Script()
+	@collapsible.Script()
 }
 
 templ ThemeScript() {
