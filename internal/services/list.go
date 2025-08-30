@@ -7,6 +7,7 @@ import (
 	"gowatch/internal/models"
 	"gowatch/logging"
 	"log/slog"
+	"time"
 )
 
 // ListService handles user's custom movie lists
@@ -62,5 +63,20 @@ func (s *ListService) CreateList(ctx context.Context, name, description string) 
 	}
 
 	s.log.Info("successfully created new list", "name", name)
+	return nil
+}
+
+func (s *ListService) AddMovieToList(ctx context.Context, listID int64, movieID int64, note *string) error {
+	err := s.db.AddMovieToList(ctx, db.InsertMovieList{
+		MovieID:   movieID,
+		ListID:    listID,
+		DateAdded: time.Now(),
+		Position:  nil,
+		Note:      note,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to add movie '%d' to list '%d': %w", movieID, listID, err)
+	}
+
 	return nil
 }

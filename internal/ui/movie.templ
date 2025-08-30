@@ -13,10 +13,13 @@ import (
 	"gowatch/internal/ui/components/datepicker"
 	"gowatch/internal/ui/components/form"
 	"gowatch/internal/ui/components/icon"
+	"gowatch/internal/ui/components/label"
 	"gowatch/internal/ui/components/modal"
 	"gowatch/internal/ui/components/page"
+	"gowatch/internal/ui/components/radio"
 	"gowatch/internal/ui/components/separator"
 	"gowatch/internal/ui/components/table"
+	"gowatch/internal/ui/components/textarea"
 	"slices"
 	"strconv"
 	"strings"
@@ -33,23 +36,23 @@ templ MoviePage(movie models.MovieDetails, watchRecords models.WatchedMovieRecor
 		datepicker.Script(),
 		calendar.Script(),
 	) {
-		@movieHero(movie)
+		@movieHero(movie, lists)
 		@movieContent(movie, watchRecords)
 	}
 }
 
-templ movieHero(movie models.MovieDetails) {
+templ movieHero(movie models.MovieDetails, lists []models.ListEntry) {
 	<div class="relative -m-4 mb-6">
 		if movie.Movie.BackdropPath != "" {
-			@backdropHero(movie)
+			@backdropHero(movie, lists)
 		} else {
-			@fallbackHero(movie)
+			@fallbackHero(movie, lists)
 		}
 		@separator.Separator()
 	</div>
 }
 
-templ backdropHero(movie models.MovieDetails) {
+templ backdropHero(movie models.MovieDetails, lists []models.ListEntry) {
 	<div class="relative w-full h-[40vh] min-h-[350px] max-h-[500px] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] overflow-hidden">
 		<!-- Background Image -->
 		<img
@@ -65,25 +68,25 @@ templ backdropHero(movie models.MovieDetails) {
 		<div class="absolute inset-0 flex items-center">
 			<div class="w-full p-4 sm:p-6 md:p-8 lg:p-10">
 				<div class="max-w-6xl mx-auto w-full">
-					@heroContent(movie, true)
+					@heroContent(movie, true, lists)
 				</div>
 			</div>
 		</div>
 	</div>
 }
 
-templ fallbackHero(movie models.MovieDetails) {
+templ fallbackHero(movie models.MovieDetails, lists []models.ListEntry) {
 	<div class="p-4 sm:p-6 md:p-8 lg:p-10 bg-muted/20">
 		<div class="max-w-6xl mx-auto">
-			@heroContent(movie, false)
+			@heroContent(movie, false, lists)
 		</div>
 	</div>
 }
 
-templ heroContent(movie models.MovieDetails, isDark bool) {
+templ heroContent(movie models.MovieDetails, isDark bool, lists []models.ListEntry) {
 	<div class="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start">
 		@posterSection(movie, isDark)
-		@movieInfo(movie, isDark)
+		@movieInfo(movie, isDark, lists)
 	</div>
 }
 
@@ -103,7 +106,7 @@ templ posterSection(movie models.MovieDetails, isDark bool) {
 	}
 }
 
-templ movieInfo(movie models.MovieDetails, isDark bool) {
+templ movieInfo(movie models.MovieDetails, isDark bool, lists []models.ListEntry) {
 	<div class="flex-1 min-w-0 space-y-3 sm:space-y-4">
 		<!-- Title -->
 		<div>
@@ -167,12 +170,12 @@ templ movieInfo(movie models.MovieDetails, isDark bool) {
 		}
 		<!-- Action Buttons -->
 		<div class="pt-2 sm:pt-4">
-			@actionButtons(movie.Movie.ID)
+			@actionButtons(movie.Movie.ID, lists)
 		</div>
 	</div>
 }
 
-templ actionButtons(movieID int64) {
+templ actionButtons(movieID int64, lists []models.ListEntry) {
 	<div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
 		@modal.Trigger(modal.TriggerProps{
 			For: "default-modal-watched",
@@ -256,13 +259,109 @@ templ actionButtons(movieID int64) {
 				}
 			</form>
 		}
-		@button.Button(button.Props{
-			Variant: "outline",
-			Size:    "default",
-			Class:   "w-full sm:w-auto flex-shrink-0",
+		// add to list modal form
+		@modal.Trigger(modal.TriggerProps{
+			For: "default-modal-list",
 		}) {
-			@icon.Plus()
-			Add to Watchlist
+			@button.Button(button.Props{
+				Variant: "outline",
+				Size:    "default",
+				Class:   "w-full sm:w-auto flex-shrink-0",
+			}) {
+				@icon.Plus()
+				Add to List
+			}
+		}
+		@modal.Modal(modal.Props{
+			ID:               "default-modal-list",
+			Class:            "max-w-md",
+			DisableClickAway: true,
+		}) {
+			<form
+				hx-post="/htmx/list/add"
+				hx-target="#toast"
+			>
+				<input type="hidden" name="movie_id" value={ movieID }/>
+				@modal.Header() {
+					Add to List
+				}
+				@modal.Body() {
+					<div class="space-y-4">
+						<div class="space-y-2">
+							@form.Label(form.LabelProps{
+								For: "list-picker-form",
+							}) {
+								Select a list
+							}
+						</div>
+						<div class="max-h-64 overflow-y-auto pr-2 -mr-2">
+							<div class="flex flex-col gap-3">
+								for _, list := range lists {
+									@label.Label(label.Props{
+										For:   "list-" + strconv.Itoa(int(list.ID)),
+										Class: "block cursor-pointer",
+									}) {
+										@card.Card(card.Props{
+											Class: "hover:border-primary/50 has-[:checked]:ring-1 has-[:checked]:ring-primary has-[:checked]:border-primary transition-all",
+										}) {
+											@card.Content(card.ContentProps{
+												Class: "p-3 flex items-start gap-3",
+											}) {
+												@radio.Radio(radio.Props{
+													ID:    "list-" + strconv.Itoa(int(list.ID)),
+													Name:  "selected_list",
+													Value: strconv.Itoa(int(list.ID)),
+												})
+												<div class="grid gap-1.5">
+													<p class="text-sm leading-none font-medium">
+														{ list.Name }
+													</p>
+												</div>
+											}
+										}
+									}
+								}
+							</div>
+						</div>
+						<div class="space-y-2">
+							@form.Label(form.LabelProps{
+								For: "movie-note",
+							}) {
+								Add a note (optional)
+							}
+							@textarea.Textarea(textarea.Props{
+								ID:          "movie-note",
+								Name:        "note",
+								Rows:        3,
+								Placeholder: "Why did you add this movie to your list? Any thoughts or reminders...",
+							})
+						</div>
+					</div>
+				}
+				@modal.Footer() {
+					<div class="flex justify-end gap-3">
+						@modal.Close(modal.CloseProps{
+							For: "default-modal-list",
+						}) {
+							@button.Button(button.Props{
+								Variant: button.VariantOutline,
+							}) {
+								Cancel
+							}
+						}
+						@modal.Close(modal.CloseProps{
+							For: "default-modal-watched",
+						}) {
+							@button.Button(button.Props{
+								Variant: button.VariantDefault,
+								Type:    button.TypeSubmit,
+							}) {
+								Add to List
+							}
+						}
+					</div>
+				}
+			</form>
 		}
 	</div>
 }

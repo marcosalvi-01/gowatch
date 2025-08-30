@@ -32,6 +32,7 @@ type InsertList struct {
 
 type InsertMovieList struct {
 	MovieID   int64
+	ListID    int64
 	DateAdded time.Time
 	Position  *int64
 	Note      *string

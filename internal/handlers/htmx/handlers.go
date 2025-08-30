@@ -8,6 +8,7 @@ import (
 	"gowatch/logging"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -32,6 +33,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Post("/lists/create", h.CreateList)
 	r.Get("/lists", h.GetAllLists)
 	r.Get("/watchedCount", h.GetWatchedCount)
+	r.Post("/list/add", h.AddMovieToList)
 }
 
 func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
@@ -231,4 +233,87 @@ func (h *Handlers) GetWatchedCount(w http.ResponseWriter, r *http.Request) {
 	}
 	watchedCount := "<span>" + strconv.Itoa(count) + "</span>"
 	w.Write([]byte(watchedCount))
+}
+
+func (h *Handlers) AddMovieToList(w http.ResponseWriter, r *http.Request) {
+	listIDStr := r.FormValue("selected_list")
+	movieIDStr := r.FormValue("movie_id")
+	note := r.FormValue("note")
+
+	log.Debug("adding movie to list", "listID", listIDStr, "movieID", movieIDStr, "note", note)
+
+	listID, err := strconv.ParseInt(listIDStr, 10, 64)
+	if err != nil {
+		log.Error("invalid list ID", "listID", listIDStr, "error", err)
+		toast.Toast(toast.Props{
+			Title:         "Invalid List",
+			Description:   "Please select a valid list",
+			Variant:       toast.VariantError,
+			Position:      toast.PositionTopRight,
+			Duration:      5000,
+			ShowIndicator: true,
+			Icon:          true,
+		}).Render(r.Context(), w)
+		return
+	}
+
+	movieID, err := strconv.ParseInt(movieIDStr, 10, 64)
+	if err != nil {
+		log.Error("invalid movie ID", "movieID", movieIDStr, "error", err)
+		toast.Toast(toast.Props{
+			Title:         "Invalid Movie",
+			Description:   "Movie not found",
+			Variant:       toast.VariantError,
+			Position:      toast.PositionTopRight,
+			Duration:      5000,
+			ShowIndicator: true,
+			Icon:          true,
+		}).Render(r.Context(), w)
+		return
+	}
+
+	var notePtr *string
+	if strings.TrimSpace(note) != "" {
+		notePtr = &note
+	}
+
+	err = h.listService.AddMovieToList(r.Context(), listID, movieID, notePtr)
+	if err != nil {
+		log.Error("failed to add movie to list", "listID", listID, "movieID", movieID, "error", err)
+
+		// TODO: use appropriate error types
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			toast.Toast(toast.Props{
+				Title:         "Movie Already in List",
+				Description:   "This movie is already in this list",
+				Variant:       toast.VariantWarning,
+				Position:      toast.PositionTopRight,
+				Duration:      4000,
+				ShowIndicator: true,
+				Icon:          true,
+			}).Render(r.Context(), w)
+			return
+		}
+
+		toast.Toast(toast.Props{
+			Title:         "Failed to Add Movie",
+			Description:   "An unexpected error occurred while adding the movie to your list",
+			Variant:       toast.VariantError,
+			Position:      toast.PositionTopRight,
+			Duration:      5000,
+			ShowIndicator: true,
+			Icon:          true,
+		}).Render(r.Context(), w)
+		return
+	}
+
+	toast.Toast(toast.Props{
+		Title:         "Added to List",
+		Description:   "Movie has been added to the list",
+		Variant:       toast.VariantSuccess,
+		Position:      toast.PositionTopRight,
+		Duration:      3000,
+		ShowIndicator: true,
+		Icon:          true,
+	}).Render(r.Context(), w)
 }

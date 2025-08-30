@@ -392,6 +392,7 @@ func (d *SqliteDB) AddMovieToList(ctx context.Context, insertMovieList InsertMov
 
 	err := d.queries.AddMovieToList(ctx, sqlc.AddMovieToListParams{
 		MovieID:   insertMovieList.MovieID,
+		ListID:    insertMovieList.ListID,
 		DateAdded: insertMovieList.DateAdded.String(),
 		Position:  insertMovieList.Position,
 		Note:      insertMovieList.Note,
