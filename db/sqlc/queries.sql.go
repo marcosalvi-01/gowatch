@@ -42,6 +42,36 @@ func (q *Queries) AddMovieToList(ctx context.Context, arg AddMovieToListParams) 
 	return err
 }
 
+const deleteListByID = `-- name: DeleteListByID :exec
+DELETE FROM
+    list
+WHERE
+    id = ?
+`
+
+func (q *Queries) DeleteListByID(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteListByID, id)
+	return err
+}
+
+const deleteMovieFromList = `-- name: DeleteMovieFromList :exec
+DELETE FROM
+    list_movie
+WHERE
+    list_id = ?
+    AND movie_id = ?
+`
+
+type DeleteMovieFromListParams struct {
+	ListID  int64
+	MovieID int64
+}
+
+func (q *Queries) DeleteMovieFromList(ctx context.Context, arg DeleteMovieFromListParams) error {
+	_, err := q.db.ExecContext(ctx, deleteMovieFromList, arg.ListID, arg.MovieID)
+	return err
+}
+
 const getAllLists = `-- name: GetAllLists :many
 SELECT
     id, name, creation_date, description
@@ -152,6 +182,27 @@ func (q *Queries) GetCrewByMovieID(ctx context.Context, movieID int64) ([]Crew, 
 		return nil, err
 	}
 	return items, nil
+}
+
+const getListByID = `-- name: GetListByID :one
+SELECT
+    id, name, creation_date, description
+FROM
+    list
+WHERE
+    id = ?
+`
+
+func (q *Queries) GetListByID(ctx context.Context, id int64) (List, error) {
+	row := q.db.QueryRowContext(ctx, getListByID, id)
+	var i List
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreationDate,
+		&i.Description,
+	)
+	return i, err
 }
 
 const getListJoinMovieByID = `-- name: GetListJoinMovieByID :many

@@ -1,2 +1,3 @@
-- menu in the list to delete it or rename it
-- list page
+- update the add to list button after creating a list
+- add section in a movie details to see in which lists it already is
+- support people in the search

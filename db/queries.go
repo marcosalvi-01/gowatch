@@ -314,7 +314,7 @@ func (d *SqliteDB) InsertList(ctx context.Context, list InsertList) error {
 
 	err := d.queries.InsertList(ctx, sqlc.InsertListParams{
 		Name:         list.Name,
-		CreationDate: time.Now().String(),
+		CreationDate: time.Now().Format("2006-01-02 15:04:05.999999999 -0700 MST"),
 		Description:  list.Description,
 	})
 	if err != nil {
@@ -344,8 +344,28 @@ func (d *SqliteDB) GetList(ctx context.Context, id int64) (*models.List, error) 
 		return nil, fmt.Errorf("failed to fetch list with ID %d: %w", id, err)
 	}
 	if len(results) == 0 {
-		log.Debug("no list found for given ID", "listID", id)
-		return nil, nil
+		log.Debug("list has no movies associated to it", "listID", id)
+		// try to search for the list without joining in case it is empty
+		list, err := qtx.GetListByID(ctx, id)
+		if err != nil {
+			// no list with that id exists, return an error
+			return nil, fmt.Errorf("TODO: %w", err)
+		}
+
+		// this list exists but it is empty, return it anyway
+		creationDate, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", list.CreationDate)
+		if err != nil {
+			log.Error("failed to parse list creation_date", "listID", id, "error", err)
+			return nil, fmt.Errorf("failed to parse creation_date for list %d: %w", id, err)
+		}
+
+		return &models.List{
+			ID:           list.ID,
+			Name:         list.Name,
+			CreationDate: creationDate,
+			Description:  list.Description,
+			Movies:       []models.MovieItem{},
+		}, nil
 	}
 
 	list := results[0].List
@@ -393,7 +413,7 @@ func (d *SqliteDB) AddMovieToList(ctx context.Context, insertMovieList InsertMov
 	err := d.queries.AddMovieToList(ctx, sqlc.AddMovieToListParams{
 		MovieID:   insertMovieList.MovieID,
 		ListID:    insertMovieList.ListID,
-		DateAdded: insertMovieList.DateAdded.String(),
+		DateAdded: insertMovieList.DateAdded.Format("2006-01-02 15:04:05.999999999 -0700 MST"),
 		Position:  insertMovieList.Position,
 		Note:      insertMovieList.Note,
 	})
@@ -435,4 +455,25 @@ func (d *SqliteDB) GetWatchedCount(ctx context.Context) (int, error) {
 	}
 
 	return int(count), nil
+}
+
+func (d *SqliteDB) DeleteListByID(ctx context.Context, id int64) error {
+	err := d.queries.DeleteListByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete list with id '%d' in db: %w", id, err)
+	}
+
+	return nil
+}
+
+func (d *SqliteDB) DeleteMovieFromList(ctx context.Context, listID, movieID int64) error {
+	err := d.queries.DeleteMovieFromList(ctx, sqlc.DeleteMovieFromListParams{
+		ListID:  listID,
+		MovieID: movieID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete movie '%d' from list '%d' in db: %w", movieID, listID, err)
+	}
+
+	return nil
 }

@@ -43,6 +43,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Get("/search", h.SearchPage)
 	r.Get("/watched", h.WatchedPage)
 	r.Get("/movie/{id}", h.MoviePage)
+	r.Get("/list/{id}", h.ListPage)
 	r.Get("/home", h.HomePage)
 
 	log.Debug("registered routes", "routes", []string{"/", "/stats", "/search", "/watched", "/movie/{id}"})
@@ -130,4 +131,38 @@ func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	templ.Handler(ui.SearchPage(query, results, listEntries)).ServeHTTP(w, r)
+}
+
+func (h *Handlers) ListPage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	paramID := chi.URLParam(r, "id")
+
+	id, err := strconv.ParseInt(paramID, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid movie ID", http.StatusBadRequest)
+		return
+	}
+
+	list, err := h.listService.GetListDetails(ctx, id)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	log.Debug("fetched list details", "list", list, "listID", id)
+
+	listEntries, err := h.listService.GetAllLists(r.Context())
+	if err != nil {
+		log.Error("failed to retrieve list entries", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	watchedCount, err := h.watchedService.GetWatchedCount(r.Context())
+	if err != nil {
+		log.Error("failed to retrieve watched count", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	templ.Handler(ui.ListPage(list, listEntries, watchedCount)).ServeHTTP(w, r)
 }

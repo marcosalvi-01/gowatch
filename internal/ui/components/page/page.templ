@@ -68,7 +68,7 @@ templ Page(props Props, extraHead ...templ.Component) {
 							Class: "max-w-md",
 						}) {
 							<form
-								hx-post="/htmx/lists/create"
+								hx-post="/htmx/lists"
 								hx-target="#toast"
 								hx-on::after-request="this.reset()"
 							>
@@ -209,7 +209,7 @@ templ Sidebar(title string, currentPath string, lists []models.ListEntry, collap
 							@sidebar.MenuBadge(sidebar.MenuBadgeProps{
 								Attributes: templ.Attributes{
 									"hx-trigger": "newWatched from:body",
-									"hx-get":     "/htmx/watchedCount",
+									"hx-get":     "/htmx/movies/watched/count",
 								},
 							}) {
 								<span>
@@ -241,7 +241,7 @@ templ Sidebar(title string, currentPath string, lists []models.ListEntry, collap
 							}
 							@collapsible.Content() {
 								@sidebar.MenuSub() {
-									<ul hx-get="/htmx/lists" hx-trigger="newList from:body">
+									<ul hx-get="/htmx/lists" hx-trigger="refreshLists from:body">
 										@SidebarListsList(currentPath, lists)
 									</ul>
 									@sidebar.MenuSubItem() {

@@ -22,6 +22,8 @@ type DB interface {
 	GetList(ctx context.Context, id int64) (*models.List, error)
 	GetAllLists(ctx context.Context) ([]InsertList, error)
 	AddMovieToList(ctx context.Context, insertMovieList InsertMovieList) error
+	DeleteListByID(ctx context.Context, id int64) error
+	DeleteMovieFromList(ctx context.Context, listID, movieID int64) error
 }
 
 type InsertList struct {

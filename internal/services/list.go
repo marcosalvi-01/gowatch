@@ -80,3 +80,33 @@ func (s *ListService) AddMovieToList(ctx context.Context, listID int64, movieID 
 
 	return nil
 }
+
+func (s *ListService) GetListDetails(ctx context.Context, listID int64) (*models.List, error) {
+	list, err := s.db.GetList(ctx, listID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get list with id '%d' from db: %w", listID, err)
+	}
+	s.log.Debug("fetched list details", "list", list)
+
+	return list, nil
+}
+
+func (s *ListService) DeleteList(ctx context.Context, id int64) error {
+	err := s.db.DeleteListByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete list from db: %w", err)
+	}
+	s.log.Debug("deleted list from db", "listID", id)
+
+	return nil
+}
+
+func (s *ListService) DeleteMovieFromList(ctx context.Context, listID, movieID int64) error {
+	err := s.db.DeleteMovieFromList(ctx, listID, movieID)
+	if err != nil {
+		return fmt.Errorf("failed to delete movie for list from db: %w", err)
+	}
+	s.log.Debug("deleted movie for list from db", "listID", listID, "movieID", movieID)
+
+	return nil
+}

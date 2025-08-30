@@ -208,3 +208,24 @@ SELECT
     COUNT(*) AS count
 FROM
     watched;
+
+-- name: GetListByID :one
+SELECT
+    *
+FROM
+    list
+WHERE
+    id = ?;
+
+-- name: DeleteListByID :exec
+DELETE FROM
+    list
+WHERE
+    id = ?;
+
+-- name: DeleteMovieFromList :exec
+DELETE FROM
+    list_movie
+WHERE
+    list_id = ?
+    AND movie_id = ?;

@@ -183,7 +183,7 @@ func Page(props Props, extraHead ...templ.Component) templ.Component {
 						}()
 					}
 					ctx = templ.InitializeContext(ctx)
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<form hx-post=\"/htmx/lists/create\" hx-target=\"#toast\" hx-on::after-request=\"this.reset()\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<form hx-post=\"/htmx/lists\" hx-target=\"#toast\" hx-on::after-request=\"this.reset()\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -838,7 +838,7 @@ func Sidebar(title string, currentPath string, lists []models.ListEntry, collaps
 								templ_7745c5c3_Err = sidebar.MenuBadge(sidebar.MenuBadgeProps{
 									Attributes: templ.Attributes{
 										"hx-trigger": "newWatched from:body",
-										"hx-get":     "/htmx/watchedCount",
+										"hx-get":     "/htmx/movies/watched/count",
 									},
 								}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var32), templ_7745c5c3_Buffer)
 								if templ_7745c5c3_Err != nil {
@@ -1012,7 +1012,7 @@ func Sidebar(title string, currentPath string, lists []models.ListEntry, collaps
 											}()
 										}
 										ctx = templ.InitializeContext(ctx)
-										templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "<ul hx-get=\"/htmx/lists\" hx-trigger=\"newList from:body\">")
+										templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "<ul hx-get=\"/htmx/lists\" hx-trigger=\"refreshLists from:body\">")
 										if templ_7745c5c3_Err != nil {
 											return templ_7745c5c3_Err
 										}

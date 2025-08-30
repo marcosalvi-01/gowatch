@@ -1,0 +1,384 @@
+package ui
+
+import (
+	"fmt"
+	"gowatch/internal/models"
+	"gowatch/internal/ui/components/badge"
+	"gowatch/internal/ui/components/button"
+	"gowatch/internal/ui/components/icon"
+	"gowatch/internal/ui/components/modal"
+	"gowatch/internal/ui/components/moviecard"
+	"gowatch/internal/ui/components/page"
+	"gowatch/internal/ui/components/separator"
+	"strconv"
+	"time"
+)
+
+templ ListPage(list *models.List, lists []models.ListEntry, watchedCount int) {
+	if list == nil {
+		An unexpected error occurred
+	} else {
+		@page.Page(page.Props{
+			Title:        "Gowatch",
+			CurrentPath:  "/list/" + strconv.FormatInt(list.ID, 10),
+			Lists:        lists,
+			WatchedCount: watchedCount,
+		}) {
+			<span
+				hx-get={ "/htmx/lists/items?list_id=" + strconv.FormatInt(list.ID, 10) }
+				hx-trigger="refreshListContents from:body"
+			>
+				@ListDetails(list)
+			</span>
+		}
+	}
+}
+
+templ ListDetails(list *models.List) {
+	@listHeader(list)
+	@separator.Separator()
+	@listContent(list)
+}
+
+templ listHeader(list *models.List) {
+	<div class="space-y-4 mb-8">
+		<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+			<div class="space-y-2">
+				<h1 class="text-2xl sm:text-3xl font-bold">{ list.Name }</h1>
+				if list.Description != nil && *list.Description != "" {
+					<p class="text-muted-foreground text-sm sm:text-base max-w-2xl">
+						{ *list.Description }
+					</p>
+				}
+			</div>
+			<div class="flex flex-col sm:flex-row gap-3">
+				@listActions(list)
+			</div>
+		</div>
+		@listStats(list)
+	</div>
+}
+
+templ listStats(list *models.List) {
+	<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+		@listStat("Movies", fmt.Sprintf("%d", len(list.Movies)))
+		@listStat("Created", list.CreationDate.Format("Jan 2006"))
+		if len(list.Movies) > 0 {
+			@listStat("Latest Added", getLatestAddedDate(list.Movies).Format("Jan 2006"))
+			@listStat("Avg Rating", fmt.Sprintf("%.1f", getAverageRating(list.Movies)))
+		}
+	</div>
+}
+
+templ listStat(label, value string) {
+	<div class="text-center sm:text-left">
+		<div class="text-xl font-bold text-primary">{ value }</div>
+		<div class="text-xs text-muted-foreground">{ label }</div>
+	</div>
+}
+
+templ listActions(list *models.List) {
+	@modal.Trigger(modal.TriggerProps{
+		For: "delete-list-modal",
+	}) {
+		@button.Button(button.Props{
+			Variant: "outline",
+			Size:    "sm",
+			Class:   "w-full sm:w-auto text-destructive border-destructive hover:bg-destructive",
+		}) {
+			@icon.Trash(icon.Props{Size: 16})
+			Delete List
+		}
+	}
+	@deleteListModal(list)
+}
+
+templ deleteListModal(list *models.List) {
+	@modal.Modal(modal.Props{
+		ID:               "delete-list-modal",
+		Class:            "max-w-md",
+		DisableClickAway: true,
+	}) {
+		<form
+			hx-delete="/htmx/lists"
+		>
+			<input type="hidden" name="list_id" value={ strconv.FormatInt(list.ID, 10) }/>
+			@modal.Header() {
+				Delete List
+			}
+			@modal.Body() {
+				<div class="space-y-4">
+					<p class="text-sm text-muted-foreground">
+						Are you sure you want to delete <strong>{ list.Name }</strong>? This action cannot be undone.
+					</p>
+					if len(list.Movies) > 0 {
+						<div class="p-3 bg-destructive/10 rounded-lg">
+							<p class="text-sm text-destructive">
+								This list contains { fmt.Sprintf("%d", len(list.Movies)) } movie(s) that will be removed from the list.
+							</p>
+						</div>
+					}
+				</div>
+			}
+			@modal.Footer() {
+				<div class="flex justify-end gap-3">
+					@modal.Close(modal.CloseProps{
+						For: "delete-list-modal",
+					}) {
+						@button.Button(button.Props{
+							Variant: "outline",
+							Type:    "button",
+						}) {
+							Cancel
+						}
+					}
+					@modal.Close(modal.CloseProps{
+						For: "delete-list-modal",
+					}) {
+						@button.Button(button.Props{
+							Variant: "destructive",
+							Type:    "submit",
+						}) {
+							Delete List
+						}
+					}
+				</div>
+			}
+		</form>
+	}
+}
+
+templ listContent(list *models.List) {
+	if len(list.Movies) == 0 {
+		@emptyListState()
+	} else {
+		@movieGrid(list)
+	}
+}
+
+templ emptyListState() {
+	<div class="text-center py-24">
+		<div class="flex items-center justify-center mb-4">
+			@icon.Film(icon.Props{
+				Size: 32,
+			})
+		</div>
+		<h3 class="text-lg font-medium mb-2">No movies in this list yet</h3>
+		<p class="text-muted-foreground mb-6 max-w-sm mx-auto">
+			Start building your list by adding movies you want to watch or remember.
+		</p>
+	</div>
+}
+
+templ movieGrid(list *models.List) {
+	<div
+		class="space-y-6 pt-4"
+	>
+		<h2 class="text-xl font-semibold">Movies</h2>
+		<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+			for _, movie := range list.Movies {
+				@movieListItem(list.ID, movie)
+			}
+		</div>
+	</div>
+}
+
+templ movieListItem(listID int64, movie models.MovieItem) {
+	<div class="relative group">
+		{{
+		moviecardProps := moviecard.Props{
+			Title:      movie.MovieDetails.Movie.Title,
+			Href:       "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+			PosterPath: movie.MovieDetails.Movie.PosterPath,
+			Hoverable:  true,
+		}
+		if movie.Note != nil && *movie.Note != "" {
+			moviecardProps.TopHoverComponent = MovieCardNoteHover(*movie.Note)
+		}
+		}}
+		@moviecard.MovieCard(moviecardProps) {
+			<div class="space-y-1">
+				<h3 class="text-xs sm:text-sm font-bold leading-tight line-clamp-2">
+					{ movie.MovieDetails.Movie.Title }
+				</h3>
+				<div class="flex items-center justify-between text-xs">
+					<div class="flex items-center text-muted-foreground">
+						@icon.Calendar(icon.Props{Size: 12})
+						<span class="ml-1">{ movie.MovieDetails.Movie.ReleaseDate.Format("2006") }</span>
+					</div>
+					if movie.MovieDetails.Movie.VoteAverage > 0 {
+						<div class="flex items-center">
+							@icon.Star(icon.Props{
+								Size:   12,
+								Fill:   "orange",
+								Stroke: "orange",
+							})
+							<span class="ml-1">{ fmt.Sprintf("%.1f", movie.MovieDetails.Movie.VoteAverage) }</span>
+						</div>
+					}
+				</div>
+				<div class="flex flex-wrap gap-1">
+					for i, genre := range movie.MovieDetails.Genres {
+						if i < 2 {
+							@badge.Badge(badge.Props{
+								Variant: "secondary",
+								Class:   "text-xs px-1 py-0",
+							}) {
+								{ genre.Name }
+							}
+						}
+					}
+				</div>
+				<div class="text-xs text-muted-foreground">
+					Added { formatTimeAgoShort(movie.DateAdded) }
+				</div>
+			</div>
+		}
+		// Three-dot menu button
+		<div class="absolute top-1 right-5 transition-opacity">
+			@modal.Trigger(modal.TriggerProps{
+				For: "movie-menu-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+			}) {
+				@button.Button(button.Props{
+					Variant: button.VariantGhost,
+					Class:   "h-6 w-6 p-0 bg-background/80",
+				}) {
+					@icon.Trash(icon.Props{Size: 12})
+				}
+			}
+		</div>
+		@confirmRemoveMovieModal(listID, movie)
+	</div>
+}
+
+templ confirmRemoveMovieModal(listID int64, movie models.MovieItem) {
+	@modal.Modal(modal.Props{
+		ID:               "movie-menu-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+		Class:            "max-w-md",
+		DisableClickAway: true,
+	}) {
+		<form
+			hx-delete="/htmx/lists/items"
+			hx-target="#toast"
+		>
+			<input type="hidden" name="movie_id" value={ strconv.FormatInt(movie.MovieDetails.Movie.ID, 10) }/>
+			<input type="hidden" name="list_id" value={ strconv.FormatInt(listID, 10) }/>
+			@modal.Header() {
+				Remove Movie
+			}
+			@modal.Body() {
+				<div class="space-y-4">
+					<p class="text-sm text-muted-foreground">
+						Are you sure you want to remove <strong>{ movie.MovieDetails.Movie.Title }</strong> from this list?
+					</p>
+				</div>
+			}
+			@modal.Footer() {
+				<div class="flex justify-end gap-3">
+					@modal.Close(modal.CloseProps{
+						For: "movie-menu-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+					}) {
+						@button.Button(button.Props{
+							Variant: button.VariantOutline,
+							Type:    button.TypeButton,
+						}) {
+							Cancel
+						}
+					}
+					@modal.Close(modal.CloseProps{
+						For: "movie-menu-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+					}) {
+						@button.Button(button.Props{
+							Variant: button.VariantDestructive,
+							Type:    button.TypeSubmit,
+						}) {
+							Remove from List
+						}
+					}
+				</div>
+			}
+		</form>
+	}
+}
+
+templ MovieCardNoteHover(note string) {
+	<div class="flex items-start gap-2 text-sm text-white">
+		@icon.FileText(icon.Props{
+			Size:  18,
+			Color: "white",
+		})
+		<div class="space-y-1">
+			<p class="font-medium">Your Note:</p>
+			<p class="text-xs leading-relaxed max-w-xs">{ note }</p>
+		</div>
+	</div>
+}
+
+// Helper functions remain the same
+func getLatestAddedDate(movies []models.MovieItem) time.Time {
+	if len(movies) == 0 {
+		return time.Time{}
+	}
+
+	latest := movies[0].DateAdded
+	for _, movie := range movies[1:] {
+		if movie.DateAdded.After(latest) {
+			latest = movie.DateAdded
+		}
+	}
+	return latest
+}
+
+func getAverageRating(movies []models.MovieItem) float32 {
+	if len(movies) == 0 {
+		return 0
+	}
+
+	var total float32 = 0.0
+	count := 0
+	for _, movie := range movies {
+		if movie.MovieDetails.Movie.VoteAverage > 0 {
+			total += movie.MovieDetails.Movie.VoteAverage
+			count++
+		}
+	}
+
+	if count == 0 {
+		return 0
+	}
+	return total / float32(count)
+}
+
+func formatTimeAgoShort(t time.Time) string {
+	now := time.Now()
+	diff := now.Sub(t)
+
+	switch {
+	case diff < 24*time.Hour:
+		return "today"
+	case diff < 7*24*time.Hour:
+		days := int(diff.Hours() / 24)
+		if days == 1 {
+			return "1 day ago"
+		}
+		return fmt.Sprintf("%d days ago", days)
+	case diff < 30*24*time.Hour:
+		weeks := int(diff.Hours() / (24 * 7))
+		if weeks == 1 {
+			return "1 week ago"
+		}
+		return fmt.Sprintf("%d weeks ago", weeks)
+	case diff < 365*24*time.Hour:
+		months := int(diff.Hours() / (24 * 30))
+		if months == 1 {
+			return "1 month ago"
+		}
+		return fmt.Sprintf("%d months ago", months)
+	default:
+		years := int(diff.Hours() / (24 * 365))
+		if years == 1 {
+			return "1 year ago"
+		}
+		return fmt.Sprintf("%d years ago", years)
+	}
+}
