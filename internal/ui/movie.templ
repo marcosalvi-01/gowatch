@@ -50,7 +50,7 @@ templ movieHero(movie models.MovieDetails) {
 }
 
 templ backdropHero(movie models.MovieDetails) {
-	<div class="relative w-full h-[50vh] min-h-[400px] max-h-[600px] sm:h-[60vh] md:h-[70vh] lg:h-[75vh] overflow-hidden">
+	<div class="relative w-full h-[40vh] min-h-[350px] max-h-[500px] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] overflow-hidden">
 		<!-- Background Image -->
 		<img
 			src={ "https://image.tmdb.org/t/p/w1280" + movie.Movie.BackdropPath }
@@ -61,10 +61,12 @@ templ backdropHero(movie models.MovieDetails) {
 		<div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent"></div>
 		<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent"></div>
 		<div class="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-black/20 sm:from-black/60 sm:via-transparent sm:to-black/20"></div>
-		<!-- Content Container -->
-		<div class="absolute inset-0 flex flex-col justify-end">
-			<div class="p-4 sm:p-6 md:p-8 lg:p-10">
-				@heroContent(movie, true)
+		<!-- Content Container - Now uses flex items-center for better centering -->
+		<div class="absolute inset-0 flex items-center">
+			<div class="w-full p-4 sm:p-6 md:p-8 lg:p-10">
+				<div class="max-w-6xl mx-auto w-full">
+					@heroContent(movie, true)
+				</div>
 			</div>
 		</div>
 	</div>
@@ -72,19 +74,16 @@ templ backdropHero(movie models.MovieDetails) {
 
 templ fallbackHero(movie models.MovieDetails) {
 	<div class="p-4 sm:p-6 md:p-8 lg:p-10 bg-muted/20">
-		@heroContent(movie, false)
+		<div class="max-w-6xl mx-auto">
+			@heroContent(movie, false)
+		</div>
 	</div>
 }
 
 templ heroContent(movie models.MovieDetails, isDark bool) {
-	<div class="max-w-7xl mx-auto w-full">
-		<div class="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start">
-			@posterSection(movie, isDark)
-			@movieInfo(movie, isDark)
-		</div>
-		<div class="mt-6 sm:mt-8">
-			@overviewSection(movie.Movie.Overview, isDark)
-		</div>
+	<div class="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start">
+		@posterSection(movie, isDark)
+		@movieInfo(movie, isDark)
 	</div>
 }
 
@@ -178,7 +177,9 @@ templ actionButtons(movieID int64) {
 		@modal.Trigger(modal.TriggerProps{
 			For: "default-modal-watched",
 		}) {
-			@button.Button() {
+			@button.Button(button.Props{
+				Class: "w-full sm:w-auto flex-shrink-0",
+			}) {
 				@icon.Check()
 				Mark as Watched
 			}
@@ -258,6 +259,7 @@ templ actionButtons(movieID int64) {
 		@button.Button(button.Props{
 			Variant: "outline",
 			Size:    "default",
+			Class:   "w-full sm:w-auto flex-shrink-0",
 		}) {
 			@icon.Plus()
 			Add to Watchlist
@@ -267,6 +269,7 @@ templ actionButtons(movieID int64) {
 
 templ movieContent(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) {
 	<div class="space-y-8">
+		@overviewSection(movie.Movie.Overview)
 		@genresSection(movie.Genres)
 		if len(watchRecords.Records) > 0 {
 			@userActivitySection(watchRecords.Records)
@@ -277,25 +280,11 @@ templ movieContent(movie models.MovieDetails, watchRecords models.WatchedMovieRe
 	</div>
 }
 
-templ overviewSection(overview string, isDark bool) {
+templ overviewSection(overview string) {
 	if overview != "" {
-		<div class="max-w-4xl">
-			<h2
-				class={
-					"text-lg sm:text-xl font-semibold mb-3 sm:mb-4",
-					templ.KV("text-white drop-shadow-lg", isDark),
-					templ.KV("text-foreground", !isDark),
-				}
-			>
-				Overview
-			</h2>
-			<p
-				class={
-					"text-sm sm:text-base leading-relaxed",
-					templ.KV("text-white/90 drop-shadow-sm", isDark),
-					templ.KV("text-muted-foreground", !isDark),
-				}
-			>
+		<div>
+			<h2 class="text-xl font-semibold mb-4">Overview</h2>
+			<p class="text-sm sm:text-base leading-relaxed text-muted-foreground max-w-4xl">
 				{ overview }
 			</p>
 		</div>
@@ -458,8 +447,8 @@ templ crewSection(crew []models.Crew) {
 	<div>
 		<h2 class="text-xl font-semibold mb-4">Key Crew</h2>
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-			for _, member := range crew {
-				if isKeyCrew(member.Job) && member.Job != "Director" {
+			for _, member := range sortCrewByImportance(crew) {
+				if isKeyCrew(member.Job) {
 					@crewMemberItem(member)
 				}
 			}
@@ -644,7 +633,17 @@ func formatTimeAgo(t time.Time) string {
 }
 
 func isKeyCrew(job string) bool {
-	keyJobs := []string{"Director", "Producer", "Executive Producer", "Screenplay", "Writer"}
+	keyJobs := []string{
+		"Director",
+		"Producer",
+		"Executive Producer",
+		"Screenplay",
+		"Writer",
+		"Cinematography",
+		"Music",
+		"Editor",
+		"Production Designer",
+	}
 	for _, keyJob := range keyJobs {
 		if job == keyJob {
 			return true
@@ -653,11 +652,46 @@ func isKeyCrew(job string) bool {
 	return false
 }
 
-func formatCrew(crew []models.Crew) []models.Crew {
-	slices.SortFunc(crew, func(a, b models.Crew) int {
+func sortCrewByImportance(crew []models.Crew) []models.Crew {
+	importanceOrder := map[string]int{
+		"Director":            1,
+		"Producer":            2,
+		"Executive Producer":  3,
+		"Screenplay":          4,
+		"Writer":              5,
+		"Cinematography":      6,
+		"Music":               7,
+		"Editor":              8,
+		"Production Designer": 9,
+	}
+
+	var keyCrew []models.Crew
+	for _, member := range crew {
+		if isKeyCrew(member.Job) {
+			keyCrew = append(keyCrew, member)
+		}
+	}
+
+	slices.SortFunc(keyCrew, func(a, b models.Crew) int {
+		orderA := importanceOrder[a.Job]
+		orderB := importanceOrder[b.Job]
+
+		// If both have defined order, sort by importance
+		if orderA != 0 && orderB != 0 {
+			return cmp.Compare(orderA, orderB)
+		}
+		// If only one has defined order, prioritize it
+		if orderA != 0 {
+			return -1
+		}
+		if orderB != 0 {
+			return 1
+		}
+		// If neither has defined order, sort alphabetically
 		return cmp.Compare(a.Job, b.Job)
 	})
-	return crew
+
+	return keyCrew
 }
 
 func getDirector(crew []models.Crew) string {

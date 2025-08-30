@@ -30,16 +30,16 @@ templ WatchedPage(days []models.WatchedMoviesInDay, lists []models.ListEntry) {
 				</span>
 			</p>
 		</div>
-		<div class="flex flex-wrap gap-x-6 gap-y-4">
+		<div class="flex flex-wrap gap-2 sm:gap-4">
 			for _, day := range days {
 				<section
 					class="flex-shrink-0 p-2 md:p-4 rounded-lg space-y-2 border-2"
-					style={ "background: hsla(" + fmt.Sprint(day.Date.YearDay()*137%360) + ",100%,80%,0.3); border-color: hsla(" + fmt.Sprint(day.Date.YearDay()*137%360) + ",100%,80%,0.2); filter: drop-shadow(0mm 0mm 5mm hsla(" + fmt.Sprint(day.Date.YearDay()*137%360) + ",100%,50%,0.7));" }
+					style={ "background: hsla(" + fmt.Sprint(day.Date.YearDay()*137%360) + ",100%,80%,0.3); border-color: hsla(" + fmt.Sprint(day.Date.YearDay()*137%360) + ",100%,80%,0.3); filter: drop-shadow(0mm 0mm 4mm hsla(" + fmt.Sprint(day.Date.YearDay()*137%360) + ",100%,50%,0.7));" }
 				>
 					<h2 class="text-md font-medium tracking-wide text-black">
 						{ day.Date.Format("Mon 02 Jan 2006") }
 					</h2>
-					<div class="flex flex-wrap gap-6 w-full">
+					<div class="flex flex-wrap gap-6 w-full justify-evenly">
 						for _, movie := range day.Movies {
 							<div class="relative">
 								{{
