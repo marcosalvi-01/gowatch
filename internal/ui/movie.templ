@@ -180,9 +180,7 @@ templ actionButtons(movieID int64, lists []models.ListEntry) {
 		@modal.Trigger(modal.TriggerProps{
 			For: "default-modal-watched",
 		}) {
-			@button.Button(button.Props{
-				Class: "w-full sm:w-auto flex-shrink-0",
-			}) {
+			@button.Button() {
 				@icon.Check()
 				Mark as Watched
 			}
@@ -266,8 +264,6 @@ templ actionButtons(movieID int64, lists []models.ListEntry) {
 		}) {
 			@button.Button(button.Props{
 				Variant: "outline",
-				Size:    "default",
-				Class:   "w-full sm:w-auto flex-shrink-0",
 			}) {
 				@icon.Plus()
 				Add to List

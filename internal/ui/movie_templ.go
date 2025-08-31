@@ -636,9 +636,7 @@ func actionButtons(movieID int64, lists []models.ListEntry) templ.Component {
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = button.Button(button.Props{
-				Class: "w-full sm:w-auto flex-shrink-0",
-			}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var29), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = button.Button().Render(templ.WithChildren(ctx, templ_7745c5c3_Var29), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -669,7 +667,7 @@ func actionButtons(movieID int64, lists []models.ListEntry) templ.Component {
 			var templ_7745c5c3_Var31 string
 			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(movieID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 201, Col: 56}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 199, Col: 56}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 			if templ_7745c5c3_Err != nil {
@@ -963,8 +961,6 @@ func actionButtons(movieID int64, lists []models.ListEntry) templ.Component {
 			})
 			templ_7745c5c3_Err = button.Button(button.Props{
 				Variant: "outline",
-				Size:    "default",
-				Class:   "w-full sm:w-auto flex-shrink-0",
 			}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var42), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -1139,7 +1135,7 @@ func actionButtons(movieID int64, lists []models.ListEntry) templ.Component {
 				var templ_7745c5c3_Var49 string
 				templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(movieID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 321, Col: 57}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 317, Col: 57}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
 				if templ_7745c5c3_Err != nil {
@@ -1267,7 +1263,7 @@ func actionButtons(movieID int64, lists []models.ListEntry) templ.Component {
 									var templ_7745c5c3_Var56 string
 									templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(list.Name)
 									if templ_7745c5c3_Err != nil {
-										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 354, Col: 26}
+										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 350, Col: 26}
 									}
 									_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 									if templ_7745c5c3_Err != nil {
@@ -1575,7 +1571,7 @@ func overviewSection(overview string) templ.Component {
 			var templ_7745c5c3_Var65 string
 			templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.JoinStringErrs(overview)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 425, Col: 14}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 421, Col: 14}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var65))
 			if templ_7745c5c3_Err != nil {
@@ -1632,7 +1628,7 @@ func genresSection(genres []models.Genre) templ.Component {
 					var templ_7745c5c3_Var68 string
 					templ_7745c5c3_Var68, templ_7745c5c3_Err = templ.JoinStringErrs(genre.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 438, Col: 18}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 434, Col: 18}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var68))
 					if templ_7745c5c3_Err != nil {
@@ -1756,7 +1752,7 @@ func detailsSection(movie models.MovieDetails) templ.Component {
 						var templ_7745c5c3_Var75 string
 						templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.JoinStringErrs(movie.Movie.ReleaseDate.Format("January 2, 2006"))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 456, Col: 57}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 452, Col: 57}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var75))
 						if templ_7745c5c3_Err != nil {
@@ -1831,7 +1827,7 @@ func detailsSection(movie models.MovieDetails) templ.Component {
 						var templ_7745c5c3_Var79 string
 						templ_7745c5c3_Var79, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d minutes", movie.Runtime))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 464, Col: 48}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 460, Col: 48}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var79))
 						if templ_7745c5c3_Err != nil {
@@ -1906,7 +1902,7 @@ func detailsSection(movie models.MovieDetails) templ.Component {
 						var templ_7745c5c3_Var83 string
 						templ_7745c5c3_Var83, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f/10 (%s votes)", movie.Movie.VoteAverage, formatNumber(movie.Movie.VoteCount)))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 472, Col: 103}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 468, Col: 103}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var83))
 						if templ_7745c5c3_Err != nil {
@@ -1981,7 +1977,7 @@ func detailsSection(movie models.MovieDetails) templ.Component {
 						var templ_7745c5c3_Var87 string
 						templ_7745c5c3_Var87, templ_7745c5c3_Err = templ.JoinStringErrs(movie.Movie.OriginalLanguage)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 480, Col: 36}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 476, Col: 36}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var87))
 						if templ_7745c5c3_Err != nil {
@@ -2057,7 +2053,7 @@ func detailsSection(movie models.MovieDetails) templ.Component {
 							var templ_7745c5c3_Var91 string
 							templ_7745c5c3_Var91, templ_7745c5c3_Err = templ.JoinStringErrs(formatMoney(movie.Budget))
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 489, Col: 34}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 485, Col: 34}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var91))
 							if templ_7745c5c3_Err != nil {
@@ -2134,7 +2130,7 @@ func detailsSection(movie models.MovieDetails) templ.Component {
 							var templ_7745c5c3_Var95 string
 							templ_7745c5c3_Var95, templ_7745c5c3_Err = templ.JoinStringErrs(formatMoney(movie.Revenue))
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 499, Col: 35}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 495, Col: 35}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var95))
 							if templ_7745c5c3_Err != nil {
@@ -2210,7 +2206,7 @@ func detailsSection(movie models.MovieDetails) templ.Component {
 						var templ_7745c5c3_Var99 string
 						templ_7745c5c3_Var99, templ_7745c5c3_Err = templ.JoinStringErrs(movie.Status)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 508, Col: 20}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 504, Col: 20}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var99))
 						if templ_7745c5c3_Err != nil {
@@ -2290,7 +2286,7 @@ func detailsSection(movie models.MovieDetails) templ.Component {
 							var templ_7745c5c3_Var103 templ.SafeURL
 							templ_7745c5c3_Var103, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("https://www.imdb.com/title/" + movie.IMDbID))
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 517, Col: 72}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 513, Col: 72}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var103))
 							if templ_7745c5c3_Err != nil {
@@ -2424,7 +2420,7 @@ func castMemberCard(cast models.Cast) templ.Component {
 			var templ_7745c5c3_Var107 templ.SafeURL
 			templ_7745c5c3_Var107, templ_7745c5c3_Err = templ.JoinURLErrs("https://www.themoviedb.org/person/" + strconv.Itoa(int(cast.Person.ID)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 550, Col: 82}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 546, Col: 82}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var107))
 			if templ_7745c5c3_Err != nil {
@@ -2445,7 +2441,7 @@ func castMemberCard(cast models.Cast) templ.Component {
 			var templ_7745c5c3_Var108 string
 			templ_7745c5c3_Var108, templ_7745c5c3_Err = templ.JoinStringErrs(cast.Person.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 555, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 551, Col: 62}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var108))
 			if templ_7745c5c3_Err != nil {
@@ -2458,7 +2454,7 @@ func castMemberCard(cast models.Cast) templ.Component {
 			var templ_7745c5c3_Var109 string
 			templ_7745c5c3_Var109, templ_7745c5c3_Err = templ.JoinStringErrs(cast.Character)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 556, Col: 70}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 552, Col: 70}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var109))
 			if templ_7745c5c3_Err != nil {
@@ -2542,7 +2538,7 @@ func profileImage(profilePath, name string) templ.Component {
 					var templ_7745c5c3_Var113 string
 					templ_7745c5c3_Var113, templ_7745c5c3_Err = templ.JoinStringErrs(initials)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 577, Col: 14}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 573, Col: 14}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var113))
 					if templ_7745c5c3_Err != nil {
@@ -2634,7 +2630,7 @@ func crewMemberItem(crew models.Crew) templ.Component {
 		var templ_7745c5c3_Var116 string
 		templ_7745c5c3_Var116, templ_7745c5c3_Err = templ.JoinStringErrs(crew.Job)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 598, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 594, Col: 66}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var116))
 		if templ_7745c5c3_Err != nil {
@@ -2647,7 +2643,7 @@ func crewMemberItem(crew models.Crew) templ.Component {
 		var templ_7745c5c3_Var117 string
 		templ_7745c5c3_Var117, templ_7745c5c3_Err = templ.JoinStringErrs(crew.Person.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 599, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 595, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var117))
 		if templ_7745c5c3_Err != nil {
@@ -2785,7 +2781,7 @@ func activityStat(label, value string) templ.Component {
 		var templ_7745c5c3_Var121 string
 		templ_7745c5c3_Var121, templ_7745c5c3_Err = templ.JoinStringErrs(value)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 627, Col: 54}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 623, Col: 54}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var121))
 		if templ_7745c5c3_Err != nil {
@@ -2798,7 +2794,7 @@ func activityStat(label, value string) templ.Component {
 		var templ_7745c5c3_Var122 string
 		templ_7745c5c3_Var122, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 628, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 624, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var122))
 		if templ_7745c5c3_Err != nil {
@@ -2902,7 +2898,7 @@ func watchHistoryItem(record models.WatchedMovieRecord) templ.Component {
 		var templ_7745c5c3_Var125 string
 		templ_7745c5c3_Var125, templ_7745c5c3_Err = templ.JoinStringErrs(record.Date.Format("January 2, 2006"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 655, Col: 86}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 651, Col: 86}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var125))
 		if templ_7745c5c3_Err != nil {
@@ -2915,7 +2911,7 @@ func watchHistoryItem(record models.WatchedMovieRecord) templ.Component {
 		var templ_7745c5c3_Var126 string
 		templ_7745c5c3_Var126, templ_7745c5c3_Err = templ.JoinStringErrs(formatTimeAgo(record.Date))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 659, Col: 31}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 655, Col: 31}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var126))
 		if templ_7745c5c3_Err != nil {
