@@ -95,9 +95,8 @@ templ listActions(list *models.List) {
 
 templ deleteListModal(list *models.List) {
 	@modal.Modal(modal.Props{
-		ID:               "delete-list-modal",
-		Class:            "max-w-md",
-		DisableClickAway: true,
+		ID:    "delete-list-modal",
+		Class: "max-w-md",
 	}) {
 		<form
 			hx-delete="/htmx/lists"
@@ -250,9 +249,8 @@ templ movieListItem(listID int64, movie models.MovieItem) {
 
 templ confirmRemoveMovieModal(listID int64, movie models.MovieItem) {
 	@modal.Modal(modal.Props{
-		ID:               "movie-menu-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
-		Class:            "max-w-md",
-		DisableClickAway: true,
+		ID:    "movie-menu-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+		Class: "max-w-md",
 	}) {
 		<form
 			hx-delete="/htmx/lists/items"

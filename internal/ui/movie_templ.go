@@ -669,7 +669,7 @@ func actionButtons(movieID int64, lists []models.ListEntry) templ.Component {
 			var templ_7745c5c3_Var31 string
 			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(movieID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 200, Col: 56}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/movie.templ`, Line: 201, Col: 56}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 			if templ_7745c5c3_Err != nil {
@@ -919,8 +919,9 @@ func actionButtons(movieID int64, lists []models.ListEntry) templ.Component {
 			return nil
 		})
 		templ_7745c5c3_Err = modal.Modal(modal.Props{
-			ID:               "default-modal-watched",
-			Class:            "max-w-md",
+			ID:    "default-modal-watched",
+			Class: "max-w-md",
+			// needed because the datepicker doesn't work well in a modal. Last check 2025-08-31
 			DisableClickAway: true,
 		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var30), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
@@ -1472,9 +1473,8 @@ func actionButtons(movieID int64, lists []models.ListEntry) templ.Component {
 			return nil
 		})
 		templ_7745c5c3_Err = modal.Modal(modal.Props{
-			ID:               "default-modal-list",
-			Class:            "max-w-md",
-			DisableClickAway: true,
+			ID:    "default-modal-list",
+			Class: "max-w-md",
 		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var43), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

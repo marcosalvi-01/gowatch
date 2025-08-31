@@ -188,8 +188,9 @@ templ actionButtons(movieID int64, lists []models.ListEntry) {
 			}
 		}
 		@modal.Modal(modal.Props{
-			ID:               "default-modal-watched",
-			Class:            "max-w-md",
+			ID:    "default-modal-watched",
+			Class: "max-w-md",
+			// needed because the datepicker doesn't work well in a modal. Last check 2025-08-31
 			DisableClickAway: true,
 		}) {
 			<form
@@ -273,9 +274,8 @@ templ actionButtons(movieID int64, lists []models.ListEntry) {
 			}
 		}
 		@modal.Modal(modal.Props{
-			ID:               "default-modal-list",
-			Class:            "max-w-md",
-			DisableClickAway: true,
+			ID:    "default-modal-list",
+			Class: "max-w-md",
 		}) {
 			if len(lists) == 0 {
 				@modal.Header() {
