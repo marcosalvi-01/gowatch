@@ -1224,7 +1224,7 @@ func Sidebar(title string, currentPath string, lists []models.ListEntry, collaps
 										}
 										ctx = templ.InitializeContext(ctx)
 										templ_7745c5c3_Err = avatar.Image(avatar.ImageProps{
-											Src: "https://avatars.githubusercontent.com/u/26936893?v=4",
+											Src: "/static/favicon.svg",
 										}).Render(ctx, templ_7745c5c3_Buffer)
 										if templ_7745c5c3_Err != nil {
 											return templ_7745c5c3_Err
