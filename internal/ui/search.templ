@@ -20,7 +20,7 @@ templ SearchPage(query string, results []models.Movie, lists []models.ListEntry)
 		<div class="w-full">
 			if len(results) > 0 {
 				<div class="p-2 md:p-4 rounded-lg space-y-4">
-					<div class="flex flex-wrap gap-4 md:gap-6 w-full justify-evenly">
+					<div class="flex flex-wrap gap-4 md:gap-6 w-full">
 						for _, movie := range results {
 							@moviecard.MovieCard(moviecard.Props{
 								Title:      movie.Title,
