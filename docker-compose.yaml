@@ -1,0 +1,10 @@
+services:
+  gowatch:
+    # image: ghcr.io/marcosalvi-01/gowatch:latest
+    image: gowatch
+    ports:
+      - "8080:8080"
+    env_file: .env
+    # volumes:
+    #   - /etc/gowatch/data:/data # mount this to a volume for persisting the database between restarts
+    restart: unless-stopped

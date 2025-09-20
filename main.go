@@ -16,7 +16,7 @@ import (
 type Config struct {
 	Port             string        `env:"PORT" envDefault:"8080"`
 	Timeout          time.Duration `env:"REQUEST_TIMEOUT" envDefault:"30s"`
-	DBPath           string        `env:"DB_PATH" envDefault:"./"`
+	DBPath           string        `env:"DB_PATH" envDefault:"/var/lib/gowatch"`
 	DBName           string        `env:"DB_NAME" envDefault:"db.db"`
 	TMDBAPIKey       string        `env:"TMDB_API_KEY"`
 	TMDBPosterPrefix string        `env:"TMDB_POSTER_PREFIX" envDefault:"https://image.tmdb.org/t/p/w500"`

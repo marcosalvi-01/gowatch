@@ -58,7 +58,7 @@ templ Page(props Props, extraHead ...templ.Component) {
 						@ThemeSwitcher()
 					</div>
 					// Main content
-					<div class="flex-1 p-4">
+					<div class="flex-1 p-4 overflow-auto">
 						if props.Name != "" {
 							<h1 class="text-xl mb-4">{ props.Name }</h1>
 						}
