@@ -54,7 +54,7 @@ func (h *Handlers) renderSuccessToast(w http.ResponseWriter, r *http.Request, ti
 		Title:         title,
 		Description:   description,
 		Variant:       toast.VariantSuccess,
-		Position:      toast.PositionTopRight,
+		Position:      toast.PositionBottomCenter,
 		Duration:      duration,
 		ShowIndicator: true,
 		Icon:          true,

@@ -1,7 +1,6 @@
 # bugs:
 
 - update the add to list button after creating a list
-- the top header (with the search) disappears if scrolling too much
 - don't save the movie in the db if the status is not released by at least some time
 
 # feats:

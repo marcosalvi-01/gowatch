@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"gowatch/internal/models"
-	"gowatch/internal/ui/components/badge"
 	"gowatch/internal/ui/components/button"
 	"gowatch/internal/ui/components/icon"
 	"gowatch/internal/ui/components/modal"
@@ -82,9 +81,8 @@ templ listActions(list *models.List) {
 		For: "delete-list-modal",
 	}) {
 		@button.Button(button.Props{
-			Variant: "outline",
-			Size:    "sm",
-			Class:   "w-full sm:w-auto text-destructive border-destructive hover:bg-destructive",
+			Variant: button.VariantDestructive,
+			Size:    button.SizeSm,
 		}) {
 			@icon.Trash(icon.Props{Size: 16})
 			Delete List
@@ -125,7 +123,7 @@ templ deleteListModal(list *models.List) {
 						For: "delete-list-modal",
 					}) {
 						@button.Button(button.Props{
-							Variant: "outline",
+							Variant: button.VariantOutline,
 							Type:    "button",
 						}) {
 							Cancel
@@ -135,7 +133,7 @@ templ deleteListModal(list *models.List) {
 						For: "delete-list-modal",
 					}) {
 						@button.Button(button.Props{
-							Variant: "destructive",
+							Variant: button.VariantDestructive,
 							Type:    "submit",
 						}) {
 							Delete List
@@ -214,18 +212,6 @@ templ movieListItem(listID int64, movie models.MovieItem) {
 						</div>
 					}
 				</div>
-				<div class="flex flex-wrap gap-1">
-					for i, genre := range movie.MovieDetails.Genres {
-						if i < 2 {
-							@badge.Badge(badge.Props{
-								Variant: "secondary",
-								Class:   "text-xs px-1 py-0",
-							}) {
-								{ genre.Name }
-							}
-						}
-					}
-				</div>
 				<div class="text-xs text-muted-foreground">
 					Added { formatTimeAgoShort(movie.DateAdded) }
 				</div>
@@ -236,8 +222,8 @@ templ movieListItem(listID int64, movie models.MovieItem) {
 				For: "movie-menu-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
 			}) {
 				@button.Button(button.Props{
-					Variant: button.VariantGhost,
-					Class:   "h-6 w-6 p-0 bg-background/80",
+					Variant: button.VariantDestructive,
+					Class:   "h-6 w-6 p-0",
 				}) {
 					@icon.Trash(icon.Props{Size: 12})
 				}
