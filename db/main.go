@@ -1,17 +1,16 @@
-// Package db provides database operations for the gowatch application.
-// It manages SQLite database connections, migrations, and provides type-safe
-// query operations with automatic conversion between sqlc generated types
-// and application models.
 package db
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"fmt"
 	"gowatch/db/sqlc"
 	"gowatch/logging"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
@@ -21,11 +20,6 @@ var log = logging.Get("database")
 
 //go:embed migrations/*.sql
 var embedMigrations embed.FS
-
-func init() {
-	goose.SetBaseFS(embedMigrations)
-	goose.SetDialect("sqlite")
-}
 
 // SqliteDB wraps database connection and queries
 type SqliteDB struct {
@@ -66,7 +60,7 @@ func NewSqliteDB(dbPath, dbName string) (*SqliteDB, error) {
 
 	log.Debug("DB connection opened", "dbFile", dbFile)
 
-	if err := runMigrations(db); err != nil {
+	if err := runMigrations(db, dbPath, dbName); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -101,14 +95,85 @@ func createDatabaseFileIfNotExists(dbFile string) error {
 	return nil
 }
 
-// runMigrations executes database migrations
-func runMigrations(db *sql.DB) error {
-	if err := goose.Up(db, "migrations"); err != nil {
+// runMigrations executes database migrations with automatic backup if needed
+func runMigrations(db *sql.DB, dbPath, dbName string) error {
+	ctx := context.Background()
+
+	// Create a sub-filesystem pointing to the migrations directory
+	migrationsFS, err := fs.Sub(embedMigrations, "migrations")
+	if err != nil {
+		log.Error("Failed to create migrations sub-filesystem", "error", err)
+		return fmt.Errorf("failed to create migrations filesystem: %w", err)
+	}
+
+	provider, err := goose.NewProvider(goose.DialectSQLite3, db, migrationsFS)
+	if err != nil {
+		log.Error("Failed to create goose provider", "error", err)
+		return fmt.Errorf("failed to create migration provider: %w", err)
+	}
+
+	hasPending, err := provider.HasPending(ctx)
+	if err != nil {
+		log.Error("Failed to check for pending migrations", "error", err)
+		return fmt.Errorf("failed to check for pending migrations: %w", err)
+	}
+
+	if !hasPending {
+		log.Debug("No pending migrations")
+		return nil
+	}
+
+	current, target, err := provider.GetVersions(ctx)
+	if err != nil {
+		log.Error("Failed to get migration versions", "error", err)
+		return fmt.Errorf("failed to get migration versions: %w", err)
+	}
+
+	log.Info("Pending migrations detected, creating backup", "currentVersion", current, "targetVersion", target)
+
+	if current > 0 {
+		log.Info("Creating backup before migration")
+		if _, err := backupDatabase(dbPath, dbName, current, target); err != nil {
+			log.Warn("Failed to create backup, continuing anyway", "error", err)
+		}
+	} else {
+		log.Debug("Skipping backup for initial database setup")
+	}
+
+	results, err := provider.Up(ctx)
+	if err != nil {
 		log.Error("Failed to execute migrations", "error", err)
 		return fmt.Errorf("failed to execute database migrations: %w", err)
 	}
-	log.Debug("Migrations executed successfully")
+
+	log.Info("Migrations applied successfully", "from", current, "to", target, "applied", len(results))
+
 	return nil
+}
+
+// backupDatabase creates a backup of the database file
+func backupDatabase(dbPath, dbName string, currentVersion, targetVersion int64) (string, error) {
+	sourceFile := filepath.Join(dbPath, dbName)
+
+	timestamp := time.Now().Format("20060102_150405")
+	backupName := fmt.Sprintf("%s.backup_%s_v%d_to_v%d", dbName, timestamp, currentVersion, targetVersion)
+	backupFile := filepath.Join(dbPath, backupName)
+
+	log.Info("Creating database backup", "source", sourceFile, "backup", backupFile)
+
+	data, err := os.ReadFile(sourceFile)
+	if err != nil {
+		log.Error("Failed to read database file for backup", "file", sourceFile, "error", err)
+		return "", fmt.Errorf("failed to read database file: %w", err)
+	}
+
+	if err := os.WriteFile(backupFile, data, 0644); err != nil {
+		log.Error("Failed to write backup file", "file", backupFile, "error", err)
+		return "", fmt.Errorf("failed to write backup file: %w", err)
+	}
+
+	log.Info("Database backup created successfully", "backup", backupFile)
+	return backupFile, nil
 }
 
 // Close closes the database connection
