@@ -15,6 +15,7 @@ type Cast struct {
 	CreditID  string
 	Character string
 	CastOrder int64
+	UpdatedAt *time.Time
 }
 
 type Crew struct {
@@ -23,16 +24,19 @@ type Crew struct {
 	CreditID   string
 	Job        string
 	Department string
+	UpdatedAt  *time.Time
 }
 
 type Genre struct {
-	ID   int64
-	Name string
+	ID        int64
+	Name      string
+	UpdatedAt *time.Time
 }
 
 type GenreMovie struct {
-	MovieID int64
-	GenreID int64
+	MovieID   int64
+	GenreID   int64
+	UpdatedAt *time.Time
 }
 
 type List struct {
@@ -69,6 +73,7 @@ type Movie struct {
 	Runtime          int64
 	Status           string
 	Tagline          string
+	UpdatedAt        *time.Time
 }
 
 type Person struct {
@@ -80,6 +85,7 @@ type Person struct {
 	Popularity         float64
 	Gender             int64
 	Adult              bool
+	UpdatedAt          *time.Time
 }
 
 type Watched struct {

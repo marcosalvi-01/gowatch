@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-// InsertMovie adds a new movie to the database
-func (d *SqliteDB) InsertMovie(ctx context.Context, movie *models.MovieDetails) error {
+// UpsertMovie adds a new movie to the database
+func (d *SqliteDB) UpsertMovie(ctx context.Context, movie *models.MovieDetails) error {
 	log.Debug("inserting movie into database", "movieID", movie.Movie.ID, "title", movie.Movie.Title)
 
 	tx, err := d.db.Begin()
@@ -21,7 +21,7 @@ func (d *SqliteDB) InsertMovie(ctx context.Context, movie *models.MovieDetails) 
 
 	qtx := d.queries.WithTx(tx)
 
-	err = qtx.InsertMovie(ctx, sqlc.InsertMovieParams{
+	err = qtx.UpsertMovie(ctx, sqlc.UpsertMovieParams{
 		ID:               movie.Movie.ID,
 		Title:            movie.Movie.Title,
 		OriginalTitle:    movie.Movie.OriginalTitle,
@@ -49,7 +49,7 @@ func (d *SqliteDB) InsertMovie(ctx context.Context, movie *models.MovieDetails) 
 	log.Debug("inserted movie record, processing genres", "movieID", movie.Movie.ID, "genreCount", len(movie.Genres))
 
 	for _, genre := range movie.Genres {
-		err := qtx.InsertGenre(ctx, sqlc.InsertGenreParams{
+		err := qtx.UpsertGenre(ctx, sqlc.UpsertGenreParams{
 			ID:   genre.ID,
 			Name: genre.Name,
 		})
@@ -58,7 +58,7 @@ func (d *SqliteDB) InsertMovie(ctx context.Context, movie *models.MovieDetails) 
 			return fmt.Errorf("failed to insert genre %d: %w", genre.ID, err)
 		}
 
-		err = qtx.InsertGenreMovie(ctx, sqlc.InsertGenreMovieParams{
+		err = qtx.UpsertGenreMovie(ctx, sqlc.UpsertGenreMovieParams{
 			MovieID: movie.Movie.ID,
 			GenreID: genre.ID,
 		})
@@ -71,7 +71,7 @@ func (d *SqliteDB) InsertMovie(ctx context.Context, movie *models.MovieDetails) 
 	log.Debug("processed genres, inserting cast", "movieID", movie.Movie.ID, "castCount", len(movie.Credits.Cast))
 
 	for _, cast := range movie.Credits.Cast {
-		err := qtx.InsertCast(ctx, sqlc.InsertCastParams{
+		err := qtx.UpsertCast(ctx, sqlc.UpsertCastParams{
 			MovieID:   cast.MovieID,
 			PersonID:  cast.PersonID,
 			CastID:    cast.CastID,
@@ -84,7 +84,7 @@ func (d *SqliteDB) InsertMovie(ctx context.Context, movie *models.MovieDetails) 
 			return fmt.Errorf("failed to insert cast record: %w", err)
 		}
 
-		err = qtx.InsertPerson(ctx, sqlc.InsertPersonParams{
+		err = qtx.UpsertPerson(ctx, sqlc.UpsertPersonParams{
 			ID:                 cast.Person.ID,
 			Name:               cast.Person.Name,
 			OriginalName:       cast.Person.OriginalName,
@@ -103,7 +103,7 @@ func (d *SqliteDB) InsertMovie(ctx context.Context, movie *models.MovieDetails) 
 	log.Debug("processed cast, inserting crew", "movieID", movie.Movie.ID, "crewCount", len(movie.Credits.Crew))
 
 	for _, crew := range movie.Credits.Crew {
-		err := qtx.InsertCrew(ctx, sqlc.InsertCrewParams{
+		err := qtx.UpsertCrew(ctx, sqlc.UpsertCrewParams{
 			MovieID:    crew.MovieID,
 			PersonID:   crew.PersonID,
 			CreditID:   crew.CreditID,
@@ -115,7 +115,7 @@ func (d *SqliteDB) InsertMovie(ctx context.Context, movie *models.MovieDetails) 
 			return fmt.Errorf("failed to insert crew record: %w", err)
 		}
 
-		err = qtx.InsertPerson(ctx, sqlc.InsertPersonParams{
+		err = qtx.UpsertPerson(ctx, sqlc.UpsertPersonParams{
 			ID:                 crew.Person.ID,
 			Name:               crew.Person.Name,
 			OriginalName:       crew.Person.OriginalName,
@@ -259,8 +259,20 @@ func (d *SqliteDB) GetMovieDetailsByID(ctx context.Context, id int64) (*models.M
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	log.Info("successfully retrieved complete movie details", "movieID", id, "title", movie.Movie.Title,
-		"genreCount", len(movie.Genres), "castCount", len(movie.Credits.Cast), "crewCount", len(movie.Credits.Crew))
+	log.Info(
+		"successfully retrieved complete movie details",
+		"movieID",
+		id,
+		"title",
+		movie.Movie.Title,
+		"genreCount",
+		len(movie.Genres),
+		"castCount",
+		len(movie.Credits.Cast),
+		"crewCount",
+		len(movie.Credits.Crew),
+		"updatedAt", movie.Movie.UpdatedAt,
+	)
 	return &movie, nil
 }
 

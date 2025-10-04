@@ -11,7 +11,7 @@ type DB interface {
 	Health() error
 
 	GetMovieDetailsByID(ctx context.Context, id int64) (*models.MovieDetails, error)
-	InsertMovie(ctx context.Context, movie *models.MovieDetails) error
+	UpsertMovie(ctx context.Context, movie *models.MovieDetails) error
 
 	InsertWatched(ctx context.Context, watched InsertWatched) error
 	GetWatchedJoinMovie(ctx context.Context) ([]models.WatchedMovie, error)

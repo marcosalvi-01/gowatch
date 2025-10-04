@@ -58,6 +58,8 @@ type Movie struct {
 	Popularity       float32
 	VoteCount        int64
 	VoteAverage      float32
+
+	UpdatedAt time.Time
 }
 
 // MovieDetails is a more detailed movie with all the info necessary for a detailed view of it (e.g. when clicking on a movie after a search)

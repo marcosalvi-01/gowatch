@@ -109,7 +109,7 @@ func (q *Queries) GetAllLists(ctx context.Context) ([]List, error) {
 
 const getCastByMovieID = `-- name: GetCastByMovieID :many
 SELECT
-    movie_id, person_id, cast_id, credit_id, character, cast_order
+    movie_id, person_id, cast_id, credit_id, character, cast_order, updated_at
 FROM
     cast
 WHERE
@@ -132,6 +132,7 @@ func (q *Queries) GetCastByMovieID(ctx context.Context, movieID int64) ([]Cast, 
 			&i.CreditID,
 			&i.Character,
 			&i.CastOrder,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -148,7 +149,7 @@ func (q *Queries) GetCastByMovieID(ctx context.Context, movieID int64) ([]Cast, 
 
 const getCrewByMovieID = `-- name: GetCrewByMovieID :many
 SELECT
-    movie_id, person_id, credit_id, job, department
+    movie_id, person_id, credit_id, job, department, updated_at
 FROM
     crew
 WHERE
@@ -170,6 +171,7 @@ func (q *Queries) GetCrewByMovieID(ctx context.Context, movieID int64) ([]Crew, 
 			&i.CreditID,
 			&i.Job,
 			&i.Department,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -207,7 +209,7 @@ func (q *Queries) GetListByID(ctx context.Context, id int64) (List, error) {
 
 const getListJoinMovieByID = `-- name: GetListJoinMovieByID :many
 SELECT
-    movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline,
+    movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
     list_movie.movie_id, list_movie.list_id, list_movie.date_added, list_movie.position, list_movie.note,
     list.id, list.name, list.creation_date, list.description
 FROM
@@ -252,6 +254,7 @@ func (q *Queries) GetListJoinMovieByID(ctx context.Context, id int64) ([]GetList
 			&i.Movie.Runtime,
 			&i.Movie.Status,
 			&i.Movie.Tagline,
+			&i.Movie.UpdatedAt,
 			&i.ListMovie.MovieID,
 			&i.ListMovie.ListID,
 			&i.ListMovie.DateAdded,
@@ -277,7 +280,7 @@ func (q *Queries) GetListJoinMovieByID(ctx context.Context, id int64) ([]GetList
 
 const getMovieByID = `-- name: GetMovieByID :one
 SELECT
-    id, title, original_title, original_language, overview, release_date, poster_path, backdrop_path, popularity, vote_count, vote_average, budget, homepage, imdb_id, revenue, runtime, status, tagline
+    id, title, original_title, original_language, overview, release_date, poster_path, backdrop_path, popularity, vote_count, vote_average, budget, homepage, imdb_id, revenue, runtime, status, tagline, updated_at
 FROM
     movie
 WHERE
@@ -306,13 +309,14 @@ func (q *Queries) GetMovieByID(ctx context.Context, id int64) (Movie, error) {
 		&i.Runtime,
 		&i.Status,
 		&i.Tagline,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getMovieGenre = `-- name: GetMovieGenre :many
 SELECT
-    id, name, movie_id, genre_id
+    id, name, genre.updated_at, movie_id, genre_id, genre_movie.updated_at
 FROM
     genre
     JOIN genre_movie ON genre.id = genre_movie.genre_id
@@ -321,10 +325,12 @@ WHERE
 `
 
 type GetMovieGenreRow struct {
-	ID      int64
-	Name    string
-	MovieID int64
-	GenreID int64
+	ID          int64
+	Name        string
+	UpdatedAt   *time.Time
+	MovieID     int64
+	GenreID     int64
+	UpdatedAt_2 *time.Time
 }
 
 func (q *Queries) GetMovieGenre(ctx context.Context, movieID int64) ([]GetMovieGenreRow, error) {
@@ -339,8 +345,10 @@ func (q *Queries) GetMovieGenre(ctx context.Context, movieID int64) ([]GetMovieG
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.UpdatedAt,
 			&i.MovieID,
 			&i.GenreID,
+			&i.UpdatedAt_2,
 		); err != nil {
 			return nil, err
 		}
@@ -357,7 +365,7 @@ func (q *Queries) GetMovieGenre(ctx context.Context, movieID int64) ([]GetMovieG
 
 const getPerson = `-- name: GetPerson :one
 SELECT
-    id, name, original_name, profile_path, known_for_department, popularity, gender, adult
+    id, name, original_name, profile_path, known_for_department, popularity, gender, adult, updated_at
 FROM
     person
 WHERE
@@ -376,6 +384,7 @@ func (q *Queries) GetPerson(ctx context.Context, id int64) (Person, error) {
 		&i.Popularity,
 		&i.Gender,
 		&i.Adult,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -396,7 +405,7 @@ func (q *Queries) GetWatchedCount(ctx context.Context) (int64, error) {
 
 const getWatchedJoinMovie = `-- name: GetWatchedJoinMovie :many
 SELECT
-    movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline,
+    movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
     watched.movie_id, watched.watched_date, watched.watched_in_theater
 FROM
     watched
@@ -436,6 +445,7 @@ func (q *Queries) GetWatchedJoinMovie(ctx context.Context) ([]GetWatchedJoinMovi
 			&i.Movie.Runtime,
 			&i.Movie.Status,
 			&i.Movie.Tagline,
+			&i.Movie.UpdatedAt,
 			&i.Watched.MovieID,
 			&i.Watched.WatchedDate,
 			&i.Watched.WatchedInTheater,
@@ -455,7 +465,7 @@ func (q *Queries) GetWatchedJoinMovie(ctx context.Context) ([]GetWatchedJoinMovi
 
 const getWatchedJoinMovieByID = `-- name: GetWatchedJoinMovieByID :many
 SELECT
-    movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline,
+    movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
     watched.movie_id, watched.watched_date, watched.watched_in_theater
 FROM
     watched
@@ -499,6 +509,7 @@ func (q *Queries) GetWatchedJoinMovieByID(ctx context.Context, movieID int64) ([
 			&i.Movie.Runtime,
 			&i.Movie.Status,
 			&i.Movie.Tagline,
+			&i.Movie.UpdatedAt,
 			&i.Watched.MovieID,
 			&i.Watched.WatchedDate,
 			&i.Watched.WatchedInTheater,
@@ -514,107 +525,6 @@ func (q *Queries) GetWatchedJoinMovieByID(ctx context.Context, movieID int64) ([
 		return nil, err
 	}
 	return items, nil
-}
-
-const insertCast = `-- name: InsertCast :exec
-INSERT
-    OR IGNORE INTO cast (
-        movie_id,
-        person_id,
-        cast_id,
-        credit_id,
-        character,
-        cast_order
-    )
-VALUES
-    (?, ?, ?, ?, ?, ?)
-`
-
-type InsertCastParams struct {
-	MovieID   int64
-	PersonID  int64
-	CastID    int64
-	CreditID  string
-	Character string
-	CastOrder int64
-}
-
-func (q *Queries) InsertCast(ctx context.Context, arg InsertCastParams) error {
-	_, err := q.db.ExecContext(ctx, insertCast,
-		arg.MovieID,
-		arg.PersonID,
-		arg.CastID,
-		arg.CreditID,
-		arg.Character,
-		arg.CastOrder,
-	)
-	return err
-}
-
-const insertCrew = `-- name: InsertCrew :exec
-INSERT
-    OR IGNORE INTO crew (
-        movie_id,
-        person_id,
-        credit_id,
-        job,
-        department
-    )
-VALUES
-    (?, ?, ?, ?, ?)
-`
-
-type InsertCrewParams struct {
-	MovieID    int64
-	PersonID   int64
-	CreditID   string
-	Job        string
-	Department string
-}
-
-func (q *Queries) InsertCrew(ctx context.Context, arg InsertCrewParams) error {
-	_, err := q.db.ExecContext(ctx, insertCrew,
-		arg.MovieID,
-		arg.PersonID,
-		arg.CreditID,
-		arg.Job,
-		arg.Department,
-	)
-	return err
-}
-
-const insertGenre = `-- name: InsertGenre :exec
-INSERT
-    OR IGNORE INTO genre (id, name)
-VALUES
-    (?, ?)
-`
-
-type InsertGenreParams struct {
-	ID   int64
-	Name string
-}
-
-func (q *Queries) InsertGenre(ctx context.Context, arg InsertGenreParams) error {
-	_, err := q.db.ExecContext(ctx, insertGenre, arg.ID, arg.Name)
-	return err
-}
-
-const insertGenreMovie = `-- name: InsertGenreMovie :exec
-INSERT
-    OR IGNORE INTO genre_movie (movie_id, genre_id)
-VALUES
-    (?, ?)
-`
-
-type InsertGenreMovieParams struct {
-	MovieID int64
-	GenreID int64
-}
-
-func (q *Queries) InsertGenreMovie(ctx context.Context, arg InsertGenreMovieParams) error {
-	_, err := q.db.ExecContext(ctx, insertGenreMovie, arg.MovieID, arg.GenreID)
-	return err
 }
 
 const insertList = `-- name: InsertList :exec
@@ -639,9 +549,152 @@ func (q *Queries) InsertList(ctx context.Context, arg InsertListParams) error {
 	return err
 }
 
-const insertMovie = `-- name: InsertMovie :exec
-INSERT
-    OR IGNORE INTO movie (
+const insertWatched = `-- name: InsertWatched :one
+INSERT INTO
+    watched (movie_id, watched_date, watched_in_theater)
+VALUES
+    (?, ?, ?)
+RETURNING
+    movie_id, watched_date, watched_in_theater
+`
+
+type InsertWatchedParams struct {
+	MovieID          int64
+	WatchedDate      time.Time
+	WatchedInTheater bool
+}
+
+func (q *Queries) InsertWatched(ctx context.Context, arg InsertWatchedParams) (Watched, error) {
+	row := q.db.QueryRowContext(ctx, insertWatched, arg.MovieID, arg.WatchedDate, arg.WatchedInTheater)
+	var i Watched
+	err := row.Scan(&i.MovieID, &i.WatchedDate, &i.WatchedInTheater)
+	return i, err
+}
+
+const upsertCast = `-- name: UpsertCast :exec
+INSERT INTO
+    cast (
+        movie_id,
+        person_id,
+        cast_id,
+        credit_id,
+        character,
+        cast_order,
+        updated_at
+    )
+VALUES
+    (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(movie_id, person_id, cast_id) DO
+UPDATE
+SET
+    credit_id = excluded.credit_id,
+    character = excluded.character,
+    cast_order = excluded.cast_order,
+    updated_at = CURRENT_TIMESTAMP
+`
+
+type UpsertCastParams struct {
+	MovieID   int64
+	PersonID  int64
+	CastID    int64
+	CreditID  string
+	Character string
+	CastOrder int64
+}
+
+func (q *Queries) UpsertCast(ctx context.Context, arg UpsertCastParams) error {
+	_, err := q.db.ExecContext(ctx, upsertCast,
+		arg.MovieID,
+		arg.PersonID,
+		arg.CastID,
+		arg.CreditID,
+		arg.Character,
+		arg.CastOrder,
+	)
+	return err
+}
+
+const upsertCrew = `-- name: UpsertCrew :exec
+INSERT INTO
+    crew (
+        movie_id,
+        person_id,
+        credit_id,
+        job,
+        department,
+        updated_at
+    )
+VALUES
+    (?, ?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(movie_id, person_id, credit_id) DO
+UPDATE
+SET
+    job = excluded.job,
+    department = excluded.department,
+    updated_at = CURRENT_TIMESTAMP
+`
+
+type UpsertCrewParams struct {
+	MovieID    int64
+	PersonID   int64
+	CreditID   string
+	Job        string
+	Department string
+}
+
+func (q *Queries) UpsertCrew(ctx context.Context, arg UpsertCrewParams) error {
+	_, err := q.db.ExecContext(ctx, upsertCrew,
+		arg.MovieID,
+		arg.PersonID,
+		arg.CreditID,
+		arg.Job,
+		arg.Department,
+	)
+	return err
+}
+
+const upsertGenre = `-- name: UpsertGenre :exec
+INSERT INTO
+    genre (id, name, updated_at)
+VALUES
+    (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(id) DO
+UPDATE
+SET
+    name = excluded.name,
+    updated_at = CURRENT_TIMESTAMP
+`
+
+type UpsertGenreParams struct {
+	ID   int64
+	Name string
+}
+
+func (q *Queries) UpsertGenre(ctx context.Context, arg UpsertGenreParams) error {
+	_, err := q.db.ExecContext(ctx, upsertGenre, arg.ID, arg.Name)
+	return err
+}
+
+const upsertGenreMovie = `-- name: UpsertGenreMovie :exec
+INSERT INTO
+    genre_movie (movie_id, genre_id, updated_at)
+VALUES
+    (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(movie_id, genre_id) DO
+UPDATE
+SET
+    updated_at = CURRENT_TIMESTAMP
+`
+
+type UpsertGenreMovieParams struct {
+	MovieID int64
+	GenreID int64
+}
+
+func (q *Queries) UpsertGenreMovie(ctx context.Context, arg UpsertGenreMovieParams) error {
+	_, err := q.db.ExecContext(ctx, upsertGenreMovie, arg.MovieID, arg.GenreID)
+	return err
+}
+
+const upsertMovie = `-- name: UpsertMovie :exec
+INSERT INTO
+    movie (
         id,
         title,
         original_title,
@@ -659,7 +712,8 @@ INSERT
         revenue,
         runtime,
         STATUS,
-        tagline
+        tagline,
+        updated_at
     )
 VALUES
     (
@@ -680,11 +734,32 @@ VALUES
         ?,
         ?,
         ?,
-        ?
-    )
+        ?,
+        CURRENT_TIMESTAMP
+    ) ON CONFLICT(id) DO
+UPDATE
+SET
+    title = excluded.title,
+    original_title = excluded.original_title,
+    original_language = excluded.original_language,
+    overview = excluded.overview,
+    release_date = excluded.release_date,
+    poster_path = excluded.poster_path,
+    backdrop_path = excluded.backdrop_path,
+    popularity = excluded.popularity,
+    vote_count = excluded.vote_count,
+    vote_average = excluded.vote_average,
+    budget = excluded.budget,
+    homepage = excluded.homepage,
+    imdb_id = excluded.imdb_id,
+    revenue = excluded.revenue,
+    runtime = excluded.runtime,
+    STATUS = excluded.STATUS,
+    tagline = excluded.tagline,
+    updated_at = CURRENT_TIMESTAMP
 `
 
-type InsertMovieParams struct {
+type UpsertMovieParams struct {
 	ID               int64
 	Title            string
 	OriginalTitle    string
@@ -705,8 +780,8 @@ type InsertMovieParams struct {
 	Tagline          string
 }
 
-func (q *Queries) InsertMovie(ctx context.Context, arg InsertMovieParams) error {
-	_, err := q.db.ExecContext(ctx, insertMovie,
+func (q *Queries) UpsertMovie(ctx context.Context, arg UpsertMovieParams) error {
+	_, err := q.db.ExecContext(ctx, upsertMovie,
 		arg.ID,
 		arg.Title,
 		arg.OriginalTitle,
@@ -729,9 +804,9 @@ func (q *Queries) InsertMovie(ctx context.Context, arg InsertMovieParams) error 
 	return err
 }
 
-const insertPerson = `-- name: InsertPerson :exec
-INSERT
-    OR IGNORE INTO person (
+const upsertPerson = `-- name: UpsertPerson :exec
+INSERT INTO
+    person (
         id,
         name,
         original_name,
@@ -739,13 +814,24 @@ INSERT
         known_for_department,
         popularity,
         gender,
-        adult
+        adult,
+        updated_at
     )
 VALUES
-    (?, ?, ?, ?, ?, ?, ?, ?)
+    (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(id) DO
+UPDATE
+SET
+    name = excluded.name,
+    original_name = excluded.original_name,
+    profile_path = excluded.profile_path,
+    known_for_department = excluded.known_for_department,
+    popularity = excluded.popularity,
+    gender = excluded.gender,
+    adult = excluded.adult,
+    updated_at = CURRENT_TIMESTAMP
 `
 
-type InsertPersonParams struct {
+type UpsertPersonParams struct {
 	ID                 int64
 	Name               string
 	OriginalName       string
@@ -756,8 +842,8 @@ type InsertPersonParams struct {
 	Adult              bool
 }
 
-func (q *Queries) InsertPerson(ctx context.Context, arg InsertPersonParams) error {
-	_, err := q.db.ExecContext(ctx, insertPerson,
+func (q *Queries) UpsertPerson(ctx context.Context, arg UpsertPersonParams) error {
+	_, err := q.db.ExecContext(ctx, upsertPerson,
 		arg.ID,
 		arg.Name,
 		arg.OriginalName,
@@ -768,26 +854,4 @@ func (q *Queries) InsertPerson(ctx context.Context, arg InsertPersonParams) erro
 		arg.Adult,
 	)
 	return err
-}
-
-const insertWatched = `-- name: InsertWatched :one
-INSERT INTO
-    watched (movie_id, watched_date, watched_in_theater)
-VALUES
-    (?, ?, ?)
-RETURNING
-    movie_id, watched_date, watched_in_theater
-`
-
-type InsertWatchedParams struct {
-	MovieID          int64
-	WatchedDate      time.Time
-	WatchedInTheater bool
-}
-
-func (q *Queries) InsertWatched(ctx context.Context, arg InsertWatchedParams) (Watched, error) {
-	row := q.db.QueryRowContext(ctx, insertWatched, arg.MovieID, arg.WatchedDate, arg.WatchedInTheater)
-	var i Watched
-	err := row.Scan(&i.MovieID, &i.WatchedDate, &i.WatchedInTheater)
-	return i, err
 }

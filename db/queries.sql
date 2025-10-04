@@ -1,6 +1,6 @@
--- name: InsertMovie :exec
-INSERT
-    OR IGNORE INTO movie (
+-- name: UpsertMovie :exec
+INSERT INTO
+    movie (
         id,
         title,
         original_title,
@@ -18,7 +18,8 @@ INSERT
         revenue,
         runtime,
         STATUS,
-        tagline
+        tagline,
+        updated_at
     )
 VALUES
     (
@@ -39,20 +40,48 @@ VALUES
         ?,
         ?,
         ?,
-        ?
-    );
+        ?,
+        CURRENT_TIMESTAMP
+    ) ON CONFLICT(id) DO
+UPDATE
+SET
+    title = excluded.title,
+    original_title = excluded.original_title,
+    original_language = excluded.original_language,
+    overview = excluded.overview,
+    release_date = excluded.release_date,
+    poster_path = excluded.poster_path,
+    backdrop_path = excluded.backdrop_path,
+    popularity = excluded.popularity,
+    vote_count = excluded.vote_count,
+    vote_average = excluded.vote_average,
+    budget = excluded.budget,
+    homepage = excluded.homepage,
+    imdb_id = excluded.imdb_id,
+    revenue = excluded.revenue,
+    runtime = excluded.runtime,
+    STATUS = excluded.STATUS,
+    tagline = excluded.tagline,
+    updated_at = CURRENT_TIMESTAMP;
 
--- name: InsertGenre :exec
-INSERT
-    OR IGNORE INTO genre (id, name)
+-- name: UpsertGenre :exec
+INSERT INTO
+    genre (id, name, updated_at)
 VALUES
-    (?, ?);
+    (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(id) DO
+UPDATE
+SET
+    name = excluded.name,
+    updated_at = CURRENT_TIMESTAMP;
 
--- name: InsertGenreMovie :exec
-INSERT
-    OR IGNORE INTO genre_movie (movie_id, genre_id)
+-- name: UpsertGenreMovie :exec
+INSERT INTO
+    genre_movie (movie_id, genre_id, updated_at)
 VALUES
-    (?, ?);
+    (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(movie_id, genre_id) DO
+UPDATE
+SET
+    updated_at = CURRENT_TIMESTAMP;
 
 -- name: InsertWatched :one
 INSERT INTO
@@ -78,9 +107,9 @@ FROM
     watched
     JOIN movie ON watched.movie_id = movie.id;
 
--- name: InsertPerson :exec
-INSERT
-    OR IGNORE INTO person (
+-- name: UpsertPerson :exec
+INSERT INTO
+    person (
         id,
         name,
         original_name,
@@ -88,35 +117,59 @@ INSERT
         known_for_department,
         popularity,
         gender,
-        adult
+        adult,
+        updated_at
     )
 VALUES
-    (?, ?, ?, ?, ?, ?, ?, ?);
+    (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(id) DO
+UPDATE
+SET
+    name = excluded.name,
+    original_name = excluded.original_name,
+    profile_path = excluded.profile_path,
+    known_for_department = excluded.known_for_department,
+    popularity = excluded.popularity,
+    gender = excluded.gender,
+    adult = excluded.adult,
+    updated_at = CURRENT_TIMESTAMP;
 
--- name: InsertCast :exec
-INSERT
-    OR IGNORE INTO cast (
+-- name: UpsertCast :exec
+INSERT INTO
+    cast (
         movie_id,
         person_id,
         cast_id,
         credit_id,
         character,
-        cast_order
+        cast_order,
+        updated_at
     )
 VALUES
-    (?, ?, ?, ?, ?, ?);
+    (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(movie_id, person_id, cast_id) DO
+UPDATE
+SET
+    credit_id = excluded.credit_id,
+    character = excluded.character,
+    cast_order = excluded.cast_order,
+    updated_at = CURRENT_TIMESTAMP;
 
--- name: InsertCrew :exec
-INSERT
-    OR IGNORE INTO crew (
+-- name: UpsertCrew :exec
+INSERT INTO
+    crew (
         movie_id,
         person_id,
         credit_id,
         job,
-        department
+        department,
+        updated_at
     )
 VALUES
-    (?, ?, ?, ?, ?);
+    (?, ?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(movie_id, person_id, credit_id) DO
+UPDATE
+SET
+    job = excluded.job,
+    department = excluded.department,
+    updated_at = CURRENT_TIMESTAMP;
 
 -- name: GetPerson :one
 SELECT

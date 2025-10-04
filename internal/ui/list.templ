@@ -182,13 +182,11 @@ templ movieListItem(listID int64, movie models.MovieItem) {
 	<div class="relative group">
 		{{
 		moviecardProps := moviecard.Props{
-			Title:      movie.MovieDetails.Movie.Title,
-			Href:       "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
-			PosterPath: movie.MovieDetails.Movie.PosterPath,
-			Hoverable:  true,
-		}
-		if movie.Note != nil && *movie.Note != "" {
-			moviecardProps.TopHoverComponent = MovieCardNoteHover(*movie.Note)
+			Title:             movie.MovieDetails.Movie.Title,
+			Href:              "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+			PosterPath:        movie.MovieDetails.Movie.PosterPath,
+			Hoverable:         true,
+			TopHoverComponent: movieCardTopHover(movie),
 		}
 		}}
 		@moviecard.MovieCard(moviecardProps) {
@@ -217,18 +215,6 @@ templ movieListItem(listID int64, movie models.MovieItem) {
 				</div>
 			</div>
 		}
-		<div class="absolute top-1 right-1 transition-opacity">
-			@modal.Trigger(modal.TriggerProps{
-				For: "movie-menu-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
-			}) {
-				@button.Button(button.Props{
-					Variant: button.VariantDestructive,
-					Class:   "h-6 w-6 p-0",
-				}) {
-					@icon.Trash(icon.Props{Size: 12})
-				}
-			}
-		</div>
 		@confirmRemoveMovieModal(listID, movie)
 	</div>
 }
@@ -282,16 +268,30 @@ templ confirmRemoveMovieModal(listID int64, movie models.MovieItem) {
 	}
 }
 
-templ MovieCardNoteHover(note string) {
-	<div class="flex items-start gap-2 text-sm text-white">
-		@icon.FileText(icon.Props{
-			Size:  18,
-			Color: "white",
-		})
-		<div class="space-y-1">
-			<p class="font-medium">Your Note:</p>
-			<p class="text-xs leading-relaxed max-w-xs">{ note }</p>
+templ movieCardTopHover(movie models.MovieItem) {
+	<div class="flex items-start gap-2 justify-between">
+		<div class="flex flex-col min-h-[20px]">
+			if movie.Note != nil && *movie.Note != "" {
+				<p class="text-sm">Note:</p>
+				<p class="text-xs leading-relaxed max-w-xs">{ *movie.Note }</p>
+			} else {
+				<p class="text-sm text-gray-300 italic">No note set</p>
+			}
 		</div>
+		@modal.Trigger(modal.TriggerProps{
+			For:   "movie-menu-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+			Class: "",
+		}) {
+			@button.Button(button.Props{
+				Variant: button.VariantDestructive,
+				Class:   "h-6 w-6 shrink-0",
+				Attributes: templ.Attributes{
+					"onclick": "event.preventDefault()",
+				},
+			}) {
+				@icon.Trash(icon.Props{Size: 12})
+			}
+		}
 	</div>
 }
 

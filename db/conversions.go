@@ -20,6 +20,7 @@ func toModelsMovieDetails(movie sqlc.Movie) models.MovieDetails {
 			Popularity:       float32(movie.Popularity),
 			VoteCount:        movie.VoteCount,
 			VoteAverage:      float32(movie.VoteAverage),
+			UpdatedAt:        *movie.UpdatedAt,
 		},
 		Budget:   movie.Budget,
 		Homepage: movie.Homepage,

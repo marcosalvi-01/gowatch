@@ -20,6 +20,7 @@ type Config struct {
 	DBName           string        `env:"DB_NAME" envDefault:"db.db"`
 	TMDBAPIKey       string        `env:"TMDB_API_KEY"`
 	TMDBPosterPrefix string        `env:"TMDB_POSTER_PREFIX" envDefault:"https://image.tmdb.org/t/p/w500"`
+	CacheTTL         time.Duration `env:"CACHE_TTL" envDefault:"168h"`
 }
 
 func main() {
@@ -41,7 +42,7 @@ func main() {
 		panic(err)
 	}
 
-	movieService := services.NewMovieService(db, tmdb)
+	movieService := services.NewMovieService(db, tmdb, cfg.CacheTTL)
 	watchedService := services.NewWatchedService(db, movieService)
 	listService := services.NewListService(db, movieService)
 

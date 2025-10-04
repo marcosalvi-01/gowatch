@@ -15,17 +15,19 @@ import (
 )
 
 type MovieService struct {
-	client *tmdb.Client
-	db     db.DB
-	log    *slog.Logger
+	client   *tmdb.Client
+	db       db.DB
+	log      *slog.Logger
+	cacheTTL time.Duration
 }
 
-func NewMovieService(db db.DB, client *tmdb.Client) *MovieService {
+func NewMovieService(db db.DB, client *tmdb.Client, cacheTTL time.Duration) *MovieService {
 	log := logging.Get("movie service")
 	return &MovieService{
-		client: client,
-		db:     db,
-		log:    log,
+		client:   client,
+		db:       db,
+		log:      log,
+		cacheTTL: cacheTTL,
 	}
 }
 
@@ -74,14 +76,13 @@ func (s *MovieService) GetMovieDetails(ctx context.Context, id int64) (*models.M
 	s.log.Debug("getting movie details", "movieID", id)
 
 	movie, err := s.db.GetMovieDetailsByID(ctx, id)
-	if err == nil {
+	if err == nil && time.Since(movie.Movie.UpdatedAt) <= s.cacheTTL {
 		s.log.Debug("found movie details in database cache", "movieID", id)
 		return movie, nil
 	}
 
-	if !errors.Is(err, sql.ErrNoRows) {
-		s.log.Error("failed to get movie details from database", "movieID", id, "error", err)
-		return nil, fmt.Errorf("failed to get movie details from db: %w", err)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		s.log.Error("failed to get movie details from database. Fetching from TMDB", "movieID", id, "error", err)
 	}
 
 	s.log.Debug("movie not found in cache, fetching from TMDB", "movieID", id)
@@ -110,7 +111,7 @@ func (s *MovieService) GetMovieDetails(ctx context.Context, id int64) (*models.M
 
 	movie.Credits = credits
 
-	err = s.db.InsertMovie(ctx, movie)
+	err = s.db.UpsertMovie(ctx, movie)
 	if err != nil {
 		s.log.Error("failed to save movie to database", "movieID", id, "error", err)
 		return nil, fmt.Errorf("failed to save movie in db: %w", err)
