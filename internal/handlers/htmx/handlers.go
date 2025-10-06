@@ -3,9 +3,6 @@ package htmx
 import (
 	"fmt"
 	"gowatch/internal/services"
-	"gowatch/internal/ui"
-	"gowatch/internal/ui/components/page"
-	"gowatch/internal/ui/components/toast"
 	"gowatch/logging"
 	"net/http"
 	"strconv"
@@ -34,15 +31,15 @@ func (h *Handlers) renderErrorToast(w http.ResponseWriter, r *http.Request, titl
 		duration = 3000
 	}
 
-	toast.Toast(toast.Props{
-		Title:         title,
-		Description:   description,
-		Variant:       toast.VariantError,
-		Position:      toast.PositionTopRight,
-		Duration:      duration,
-		ShowIndicator: true,
-		Icon:          true,
-	}).Render(r.Context(), w)
+	// toast.Toast(toast.Props{
+	// 	Title:         title,
+	// 	Description:   description,
+	// 	Variant:       toast.VariantError,
+	// 	Position:      toast.PositionTopRight,
+	// 	Duration:      duration,
+	// 	ShowIndicator: true,
+	// 	Icon:          true,
+	// }).Render(r.Context(), w)
 }
 
 func (h *Handlers) renderSuccessToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
@@ -50,15 +47,15 @@ func (h *Handlers) renderSuccessToast(w http.ResponseWriter, r *http.Request, ti
 		duration = 2000
 	}
 
-	toast.Toast(toast.Props{
-		Title:         title,
-		Description:   description,
-		Variant:       toast.VariantSuccess,
-		Position:      toast.PositionBottomCenter,
-		Duration:      duration,
-		ShowIndicator: true,
-		Icon:          true,
-	}).Render(r.Context(), w)
+	// toast.Toast(toast.Props{
+	// 	Title:         title,
+	// 	Description:   description,
+	// 	Variant:       toast.VariantSuccess,
+	// 	Position:      toast.PositionBottomCenter,
+	// 	Duration:      duration,
+	// 	ShowIndicator: true,
+	// 	Icon:          true,
+	// }).Render(r.Context(), w)
 }
 
 func (h *Handlers) renderWarningToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
@@ -66,15 +63,15 @@ func (h *Handlers) renderWarningToast(w http.ResponseWriter, r *http.Request, ti
 		duration = 4000
 	}
 
-	toast.Toast(toast.Props{
-		Title:         title,
-		Description:   description,
-		Variant:       toast.VariantWarning,
-		Position:      toast.PositionTopRight,
-		Duration:      duration,
-		ShowIndicator: true,
-		Icon:          true,
-	}).Render(r.Context(), w)
+	// toast.Toast(toast.Props{
+	// 	Title:         title,
+	// 	Description:   description,
+	// 	Variant:       toast.VariantWarning,
+	// 	Position:      toast.PositionTopRight,
+	// 	Duration:      duration,
+	// 	ShowIndicator: true,
+	// 	Icon:          true,
+	// }).Render(r.Context(), w)
 }
 
 func (h *Handlers) RegisterRoutes(r chi.Router) {
@@ -164,14 +161,15 @@ func (h *Handlers) CreateList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) GetAllLists(w http.ResponseWriter, r *http.Request) {
-	lists, err := h.listService.GetAllLists(r.Context())
-	if err != nil {
-		log.Error("failed to get all lists", "error", err)
-		h.renderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred", 0)
-		return
-	}
+	// lists, err := h.listService.GetAllLists(r.Context())
+	// if err != nil {
+	// 	log.Error("failed to get all lists", "error", err)
+	// 	h.renderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred", 0)
+	// 	return
+	// }
+	return
 
-	page.SidebarListsList("", lists).Render(r.Context(), w)
+	// page.SidebarListsList("", lists).Render(r.Context(), w)
 }
 
 func (h *Handlers) GetWatchedCount(w http.ResponseWriter, r *http.Request) {
@@ -287,19 +285,19 @@ func (h *Handlers) GetListDetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	listID, err := strconv.ParseInt(listIDStr, 10, 64)
-	if err != nil {
-		log.Error("invalid list ID", "listID", listIDStr, "error", err)
-		h.renderErrorToast(w, r, "Invalid List", "Please select a valid list", 0)
-		return
-	}
+	// listID, err := strconv.ParseInt(listIDStr, 10, 64)
+	// if err != nil {
+	// 	log.Error("invalid list ID", "listID", listIDStr, "error", err)
+	// 	h.renderErrorToast(w, r, "Invalid List", "Please select a valid list", 0)
+	// 	return
+	// }
 
-	list, err := h.listService.GetListDetails(r.Context(), listID)
-	if err != nil {
-		log.Error("failed to fetch list details from db", "listID", listID, "error", err)
-		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
-		return
-	}
+	// list, err := h.listService.GetListDetails(r.Context(), listID)
+	// if err != nil {
+	// 	log.Error("failed to fetch list details from db", "listID", listID, "error", err)
+	// 	h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
+	// 	return
+	// }
 
-	ui.ListDetails(list).Render(r.Context(), w)
+	// ui.ListDetails(list).Render(r.Context(), w)
 }

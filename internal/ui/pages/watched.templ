@@ -1,0 +1,12 @@
+package pages
+
+import (
+	"gowatch/internal/models"
+	"gowatch/internal/ui/fragments"
+)
+
+templ Watched(days []models.WatchedMoviesInDay) {
+	@Layout("watched") {
+		@fragments.Watched(false, days)
+	}
+}

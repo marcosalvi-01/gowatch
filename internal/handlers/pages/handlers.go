@@ -3,10 +3,10 @@ package pages
 
 import (
 	"gowatch/internal/services"
-	"gowatch/internal/ui"
+	"gowatch/internal/ui/fragments"
+	"gowatch/internal/ui/pages"
 	"gowatch/logging"
 	"net/http"
-	"strconv"
 
 	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
@@ -35,27 +35,27 @@ func NewHandlers(
 func (h *Handlers) RegisterRoutes(r chi.Router) {
 	log.Info("registering page routes")
 
-	// r.Handle("/", templ.Handler(ui.HomePage()))
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/watched", http.StatusFound) // 302 redirect
-	})
-	r.Handle("/stats", templ.Handler(ui.StatsPage()))
-	r.Get("/search", h.SearchPage)
+	r.Get("/", h.HomePage)
 	r.Get("/watched", h.WatchedPage)
-	r.Get("/movie/{id}", h.MoviePage)
-	r.Get("/list/{id}", h.ListPage)
 	r.Get("/home", h.HomePage)
 
-	log.Debug("registered routes", "routes", []string{"/", "/stats", "/search", "/watched", "/movie/{id}"})
+	// r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	// 	http.Redirect(w, r, "/watched", http.StatusFound) // 302 redirect
+	// })
+	// r.Get("/search", h.SearchPage)
+	// r.Get("/movie/{id}", h.MoviePage)
+	// r.Get("/list/{id}", h.ListPage)
 }
 
 func (h *Handlers) HomePage(w http.ResponseWriter, r *http.Request) {
-	templ.Handler(ui.HomePage()).ServeHTTP(w, r)
+	if r.Header.Get("HX-Request") == "true" {
+		fragments.Home(true).Render(r.Context(), w)
+	} else {
+		templ.Handler(pages.Home()).ServeHTTP(w, r)
+	}
 }
 
 func (h *Handlers) WatchedPage(w http.ResponseWriter, r *http.Request) {
-	log.Debug("handling watched page request", "method", r.Method, "url", r.URL.Path)
-
 	movies, err := h.watchedService.GetAllWatchedMoviesInDay(r.Context())
 	if err != nil {
 		log.Error("failed to retrieve watched movies", "error", err)
@@ -63,106 +63,102 @@ func (h *Handlers) WatchedPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	listEntries, err := h.listService.GetAllLists(r.Context())
-	if err != nil {
-		log.Error("failed to retrieve list entries", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
+	if r.Header.Get("HX-Request") == "true" {
+		fragments.Watched(true, movies).Render(r.Context(), w)
+	} else {
+		templ.Handler(pages.Watched(movies)).ServeHTTP(w, r)
 	}
-
-	log.Info("successfully retrieved watched movies", "count", len(movies))
-	templ.Handler(ui.WatchedPage(movies, listEntries)).ServeHTTP(w, r)
 }
 
 func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	paramID := chi.URLParam(r, "id")
-
-	id, err := strconv.ParseInt(paramID, 10, 64)
-	if err != nil {
-		http.Error(w, "Invalid movie ID", http.StatusBadRequest)
-		return
-	}
-
-	movie, err := h.tmdbService.GetMovieDetails(ctx, id)
-	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	rec, err := h.watchedService.GetWatchedMovieRecordsByID(ctx, id)
-	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	listEntries, err := h.listService.GetAllLists(r.Context())
-	if err != nil {
-		log.Error("failed to retrieve list entries", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	watchedCount, err := h.watchedService.GetWatchedCount(r.Context())
-	if err != nil {
-		log.Error("failed to retrieve watched count", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	templ.Handler(ui.MoviePage(*movie, rec, listEntries, watchedCount)).ServeHTTP(w, r)
+	// ctx := r.Context()
+	// paramID := chi.URLParam(r, "id")
+	//
+	// id, err := strconv.ParseInt(paramID, 10, 64)
+	// if err != nil {
+	// 	http.Error(w, "Invalid movie ID", http.StatusBadRequest)
+	// 	return
+	// }
+	//
+	// movie, err := h.tmdbService.GetMovieDetails(ctx, id)
+	// if err != nil {
+	// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
+	// 	return
+	// }
+	//
+	// rec, err := h.watchedService.GetWatchedMovieRecordsByID(ctx, id)
+	// if err != nil {
+	// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
+	// 	return
+	// }
+	//
+	// listEntries, err := h.listService.GetAllLists(r.Context())
+	// if err != nil {
+	// 	log.Error("failed to retrieve list entries", "error", err)
+	// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
+	// 	return
+	// }
+	//
+	// watchedCount, err := h.watchedService.GetWatchedCount(r.Context())
+	// if err != nil {
+	// 	log.Error("failed to retrieve watched count", "error", err)
+	// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
+	// 	return
+	// }
+	//
+	// templ.Handler(ui.MoviePage(*movie, rec, listEntries, watchedCount)).ServeHTTP(w, r)
 }
 
 func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query().Get("q")
-
-	results, err := h.tmdbService.SearchMovies(query)
-	if err != nil {
-		log.Error("failed to search for movie", "query", query, "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	listEntries, err := h.listService.GetAllLists(r.Context())
-	if err != nil {
-		log.Error("failed to retrieve list entries", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	templ.Handler(ui.SearchPage(query, results, listEntries)).ServeHTTP(w, r)
+	// query := r.URL.Query().Get("q")
+	//
+	// results, err := h.tmdbService.SearchMovies(query)
+	// if err != nil {
+	// 	log.Error("failed to search for movie", "query", query, "error", err)
+	// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
+	// 	return
+	// }
+	//
+	// listEntries, err := h.listService.GetAllLists(r.Context())
+	// if err != nil {
+	// 	log.Error("failed to retrieve list entries", "error", err)
+	// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
+	// 	return
+	// }
+	//
+	// templ.Handler(ui.SearchPage(query, results, listEntries)).ServeHTTP(w, r)
 }
 
 func (h *Handlers) ListPage(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	paramID := chi.URLParam(r, "id")
-
-	id, err := strconv.ParseInt(paramID, 10, 64)
-	if err != nil {
-		http.Error(w, "Invalid movie ID", http.StatusBadRequest)
-		return
-	}
-
-	list, err := h.listService.GetListDetails(ctx, id)
-	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-	log.Debug("fetched list details", "list", list, "listID", id)
-
-	listEntries, err := h.listService.GetAllLists(r.Context())
-	if err != nil {
-		log.Error("failed to retrieve list entries", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	watchedCount, err := h.watchedService.GetWatchedCount(r.Context())
-	if err != nil {
-		log.Error("failed to retrieve watched count", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	templ.Handler(ui.ListPage(list, listEntries, watchedCount)).ServeHTTP(w, r)
+	// ctx := r.Context()
+	// paramID := chi.URLParam(r, "id")
+	//
+	// id, err := strconv.ParseInt(paramID, 10, 64)
+	// if err != nil {
+	// 	http.Error(w, "Invalid movie ID", http.StatusBadRequest)
+	// 	return
+	// }
+	//
+	// list, err := h.listService.GetListDetails(ctx, id)
+	// if err != nil {
+	// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
+	// 	return
+	// }
+	// log.Debug("fetched list details", "list", list, "listID", id)
+	//
+	// listEntries, err := h.listService.GetAllLists(r.Context())
+	// if err != nil {
+	// 	log.Error("failed to retrieve list entries", "error", err)
+	// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
+	// 	return
+	// }
+	//
+	// watchedCount, err := h.watchedService.GetWatchedCount(r.Context())
+	// if err != nil {
+	// 	log.Error("failed to retrieve watched count", "error", err)
+	// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
+	// 	return
+	// }
+	//
+	// templ.Handler(ui.ListPage(list, listEntries, watchedCount)).ServeHTTP(w, r)
 }

@@ -9,9 +9,9 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"gowatch/internal/ui/components/aspectratio"
-	"gowatch/internal/ui/components/card"
-	"gowatch/internal/ui/components/icon"
+	"gowatch/internal/ui/templui/aspectratio"
+	"gowatch/internal/ui/templui/card"
+	"gowatch/internal/ui/templui/icon"
 )
 
 const tmdbBase = "https://image.tmdb.org/t/p/w500"
