@@ -67,7 +67,7 @@ func Layout(currentPage string) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div id=\"sidebar-content\" hx-get=\"/htmx/sidebar\" hx-target=\"this\" hx-swap=\"innerHTML\" hx-trigger=\"load\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, " <div id=\"sidebar-content\" hx-get=\"/htmx/sidebar\" hx-target=\"this\" hx-swap=\"innerHTML\" hx-trigger=\"load\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -109,7 +109,7 @@ func Layout(currentPage string) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</div> <div id=\"page-container\" class=\"flex-1 p-4 overflow-auto\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</div> <div id=\"main-content\" class=\"flex-1 p-4 overflow-auto\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

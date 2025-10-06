@@ -6,17 +6,14 @@ import (
 	"gowatch/internal/ui/templui/skeleton"
 )
 
+// Sidebar is the sidebar for the application. It manages state of the page using a script.
+// Each menu item should make an htmx request to swap the main-content.
 templ Sidebar(currentPage string, collapsed bool, watchedCount int) {
 	@sidebar.Sidebar(sidebar.Props{
 		ID:        "sidebar",
 		Collapsed: collapsed,
 	}) {
-		@sidebar.Header(sidebar.HeaderProps{
-			Class: "flex flex-row items-center text-lg font-semibold leading-none tracking-tight gap-8",
-		}) {
-			<img src="/static/favicon.svg" alt="App Logo" class="w-20 h-20"/>
-			Gowatch
-		}
+		@header()
 		@sidebar.Content() {
 			@sidebar.Group() {
 				@sidebar.Menu() {
@@ -26,12 +23,11 @@ templ Sidebar(currentPage string, collapsed bool, watchedCount int) {
 							Tooltip:  "Home",
 							IsActive: currentPage == "home",
 							Attributes: templ.Attributes{
-								"data-page":            "home",
-								"hx-get":               "/home",
-								"hx-target":            "#page-container",
-								"hx-swap":              "innerHTML",
-								"hx-push-url":          "true",
-								"hx-on::after-request": "htmx.trigger('body', 'refreshSidebar')",
+								"data-page":   "home",
+								"hx-get":      "/home",
+								"hx-target":   "#main-content",
+								"hx-swap":     "innerHTML",
+								"hx-push-url": "true",
 							},
 						}) {
 							@icon.House(icon.Props{Class: "size-4"})
@@ -42,12 +38,11 @@ templ Sidebar(currentPage string, collapsed bool, watchedCount int) {
 						@sidebar.MenuButton(sidebar.MenuButtonProps{
 							Tooltip: "Watched",
 							Attributes: templ.Attributes{
-								"data-page":            "watched",
-								"hx-get":               "/watched",
-								"hx-target":            "#page-container",
-								"hx-swap":              "innerHTML",
-								"hx-push-url":          "true",
-								"hx-on::after-request": "htmx.trigger('body', 'refreshSidebar')",
+								"data-page":   "watched",
+								"hx-get":      "/watched",
+								"hx-target":   "#main-content",
+								"hx-swap":     "innerHTML",
+								"hx-push-url": "true",
 							},
 							IsActive: currentPage == "watched",
 						}) {
@@ -64,18 +59,21 @@ templ Sidebar(currentPage string, collapsed bool, watchedCount int) {
 	}
 }
 
+templ header() {
+	@sidebar.Header(sidebar.HeaderProps{
+		Class: "flex flex-row items-center text-lg font-semibold leading-none tracking-tight gap-8",
+	}) {
+		<img src="/static/favicon.svg" alt="App Logo" class="w-20 h-20"/>
+		Gowatch
+	}
+}
+
+// SidebarLoading is just a sidebar without anything inside to show a loading state
 templ SidebarLoading(collapsed bool) {
 	@sidebar.Sidebar(sidebar.Props{
 		Collapsed: collapsed,
 	}) {
-		@sidebar.Header(sidebar.HeaderProps{
-			Class: "flex flex-row items-center text-lg font-semibold leading-none tracking-tight gap-8",
-		}) {
-			@skeleton.Skeleton(skeleton.Props{Class: "w-20 h-20 rounded"})
-			if !collapsed {
-				@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-24"})
-			}
-		}
+		@header()
 		@sidebar.Content() {
 			@sidebar.Group() {
 				@sidebar.Menu() {
