@@ -8,6 +8,7 @@ import (
 
 templ Sidebar(currentPage string, collapsed bool, watchedCount int) {
 	@sidebar.Sidebar(sidebar.Props{
+		ID:        "sidebar",
 		Collapsed: collapsed,
 	}) {
 		@sidebar.Header(sidebar.HeaderProps{

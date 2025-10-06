@@ -33,7 +33,9 @@ templ Layout(currentPage string) {
 					// Header
 					<div class="flex items-center gap-2 p-2 flex-shrink-0 sticky z-10 top-0 border-b-1 bg-background">
 						<div class="md:hidden">
-							@templSidebar.Trigger()
+							@templSidebar.Trigger(templSidebar.TriggerProps{
+								Target: "sidebar",
+							})
 						</div>
 						// @SearchBar(props.SearchContent)
 						@ThemeSwitcher()
