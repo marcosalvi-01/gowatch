@@ -273,7 +273,7 @@ func cardContent(props Props) templ.Component {
 			return nil
 		})
 		templ_7745c5c3_Err = card.Card(card.Props{
-			Class: "w-[120px] md:w-[180px] border-0 drop-shadow-2xl shadow-2xl group",
+			Class: "w-[120px] md:w-[160px] border-0 drop-shadow-2xl shadow-2xl group",
 		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var6), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

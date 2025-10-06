@@ -1,14 +1,5 @@
 package fragments
 
-import "gowatch/internal/ui/components/sidebar"
-
-templ Home(renderSidebar bool) {
-	if renderSidebar {
-		<div id="sidebar-content" hx-swap-oob="true">
-			@sidebar.Sidebar("home", false)
-		</div>
-	}
-	<div>
-		Home example
-	</div>
+templ Home() {
+	Home example
 }

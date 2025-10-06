@@ -46,7 +46,7 @@ func Watched(days []models.WatchedMoviesInDay) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = fragments.Watched(false, days).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = fragments.Watched(days).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

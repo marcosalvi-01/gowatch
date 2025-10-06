@@ -25,8 +25,8 @@ templ Layout(currentPage string) {
 			@templSidebar.Layout(templSidebar.LayoutProps{
 				Class: "w-full h-screen",
 			}) {
-				<div id="sidebar-content">
-					@sidebar.Sidebar(currentPage, false)
+				<div id="sidebar-content" hx-get="/htmx/sidebar" hx-target="this" hx-swap="innerHTML" hx-trigger="load">
+					@sidebar.SidebarLoading(false)
 				</div>
 				@templSidebar.Inset() {
 					<div id="toast"></div>
@@ -83,7 +83,23 @@ templ Scripts() {
 			});
 		  }
 		});
-	  });
+
+		// Update sidebar active state on navigation
+		document.body.addEventListener("htmx:afterRequest", (e) => {
+		  // Check if this element has data-page attribute
+		  const page = e.detail.elt.getAttribute("data-page");
+		  if (page) {
+			// Find all menu buttons with data-page
+			document.querySelectorAll("[data-tui-sidebar=menu-button][data-page]").forEach(btn => {
+			  // Remove active state
+			  btn.removeAttribute("data-tui-sidebar-active");
+			});
+			
+			// Add active state to clicked button
+			e.detail.elt.setAttribute("data-tui-sidebar-active", "true");
+		  }
+		});
+	});
 	</script>
 	@ThemeScript()
 	// for the sidebar

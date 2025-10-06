@@ -3,8 +3,10 @@ package htmx
 import (
 	"fmt"
 	"gowatch/internal/services"
+	"gowatch/internal/ui/components/sidebar"
 	"gowatch/logging"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -75,18 +77,44 @@ func (h *Handlers) renderWarningToast(w http.ResponseWriter, r *http.Request, ti
 }
 
 func (h *Handlers) RegisterRoutes(r chi.Router) {
-	r.Post("/movies/watched", h.AddWatchedMovie)
-	r.Get("/movies/watched/count", h.GetWatchedCount)
+	// r.Post("/movies/watched", h.AddWatchedMovie)
+	//
+	// r.Get("/lists", h.GetAllLists)
+	// r.Post("/lists", h.CreateList)
+	// // r.Get("/lists/{id}", h.GetList)
+	// r.Delete("/lists", h.DeleteList)
+	// // r.Put("/lists/{id}", h.UpdateList)
+	//
+	// r.Post("/lists/items", h.AddMovieToList)
+	// r.Get("/lists/items", h.GetListDetails)
+	// r.Delete("/lists/items", h.DeleteMovieFromList)
 
-	r.Get("/lists", h.GetAllLists)
-	r.Post("/lists", h.CreateList)
-	// r.Get("/lists/{id}", h.GetList)
-	r.Delete("/lists", h.DeleteList)
-	// r.Put("/lists/{id}", h.UpdateList)
+	r.Get("/sidebar", h.GetSidebar)
+}
 
-	r.Post("/lists/items", h.AddMovieToList)
-	r.Get("/lists/items", h.GetListDetails)
-	r.Delete("/lists/items", h.DeleteMovieFromList)
+func (h *Handlers) GetSidebar(w http.ResponseWriter, r *http.Request) {
+	currentURL := r.Header.Get("HX-Current-URL")
+	if r.Header.Get("HX-Current-URL") == "" {
+		http.Error(w, "HX-Current-URL not set", http.StatusBadRequest)
+		return
+	}
+	location := getFirstPathElement(currentURL)
+
+	log.Debug("getting sidebar", "location", location)
+
+	cookie, err := r.Cookie("sidebar_state")
+	if err != nil {
+		log.Warn("Cookie sidebar_state not set")
+	}
+	collapsed := cookie != nil && cookie.Value == "false"
+
+	count, err := h.watchedService.GetWatchedCount(r.Context())
+	if err != nil {
+		http.Error(w, "TODO", http.StatusBadRequest)
+		return
+	}
+
+	sidebar.Sidebar(location, collapsed, count).Render(r.Context(), w)
 }
 
 func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
@@ -170,17 +198,6 @@ func (h *Handlers) GetAllLists(w http.ResponseWriter, r *http.Request) {
 	return
 
 	// page.SidebarListsList("", lists).Render(r.Context(), w)
-}
-
-func (h *Handlers) GetWatchedCount(w http.ResponseWriter, r *http.Request) {
-	count, err := h.watchedService.GetWatchedCount(r.Context())
-	if err != nil {
-		log.Error("failed to get watched movie count", "error", err)
-		h.renderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred", 0)
-		return
-	}
-	watchedCount := "<span>" + strconv.Itoa(count) + "</span>"
-	w.Write([]byte(watchedCount))
 }
 
 func (h *Handlers) AddMovieToList(w http.ResponseWriter, r *http.Request) {
@@ -300,4 +317,20 @@ func (h *Handlers) GetListDetails(w http.ResponseWriter, r *http.Request) {
 	// }
 
 	// ui.ListDetails(list).Render(r.Context(), w)
+}
+
+func getFirstPathElement(urlStr string) string {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return ""
+	}
+
+	// Remove leading slash and split
+	path := strings.TrimPrefix(u.Path, "/")
+	parts := strings.Split(path, "/")
+
+	if len(parts) > 0 && parts[0] != "" {
+		return parts[0]
+	}
+	return ""
 }

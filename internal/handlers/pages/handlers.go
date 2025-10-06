@@ -49,7 +49,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 
 func (h *Handlers) HomePage(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("HX-Request") == "true" {
-		fragments.Home(true).Render(r.Context(), w)
+		fragments.Home().Render(r.Context(), w)
 	} else {
 		templ.Handler(pages.Home()).ServeHTTP(w, r)
 	}
@@ -64,7 +64,8 @@ func (h *Handlers) WatchedPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Header.Get("HX-Request") == "true" {
-		fragments.Watched(true, movies).Render(r.Context(), w)
+		w.Header().Add("HX-Trigger", "refreshSidebar")
+		fragments.Watched(movies).Render(r.Context(), w)
 	} else {
 		templ.Handler(pages.Watched(movies)).ServeHTTP(w, r)
 	}

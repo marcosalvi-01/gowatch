@@ -67,11 +67,11 @@ func Layout(currentPage string) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div id=\"sidebar-content\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div id=\"sidebar-content\" hx-get=\"/htmx/sidebar\" hx-target=\"this\" hx-swap=\"innerHTML\" hx-trigger=\"load\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = sidebar.Sidebar(currentPage, false).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = sidebar.SidebarLoading(false).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -224,7 +224,7 @@ func Scripts() templ.Component {
 			templ_7745c5c3_Var6 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<script src=\"https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js\" integrity=\"sha384-Akqfrbj/HpNVo8k11SXBb6TlBWmXXlYQrCSqEWmyKJe+hDm3Z/B2WVG4smwBkRVm\" crossorigin=\"anonymous\"></script><script>\n\t  document.addEventListener(\"DOMContentLoaded\", () => {\n\t\t// Re-initialize templUI components after HTMX swaps\n\t\tdocument.body.addEventListener(\"htmx:afterSwap\", (e) => {\n\t\t  if (window.templUI) {\n\t\t\tObject.values(window.templUI).forEach(comp => {\n\t\t\t  comp.init?.(e.detail.elt);\n\t\t\t});\n\t\t  }\n\t\t});\n\n\t\t// Re-initialize components after out-of-band swaps\n\t\tdocument.body.addEventListener(\"htmx:oobAfterSwap\", (e) => {\n\t\t  if (window.templUI) {\n\t\t\tObject.values(window.templUI).forEach(comp => {\n\t\t\t  comp.init?.(e.detail.target);\n\t\t\t});\n\t\t  }\n\t\t});\n\t  });\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<script src=\"https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js\" integrity=\"sha384-Akqfrbj/HpNVo8k11SXBb6TlBWmXXlYQrCSqEWmyKJe+hDm3Z/B2WVG4smwBkRVm\" crossorigin=\"anonymous\"></script><script>\n\t  document.addEventListener(\"DOMContentLoaded\", () => {\n\t\t// Re-initialize templUI components after HTMX swaps\n\t\tdocument.body.addEventListener(\"htmx:afterSwap\", (e) => {\n\t\t  if (window.templUI) {\n\t\t\tObject.values(window.templUI).forEach(comp => {\n\t\t\t  comp.init?.(e.detail.elt);\n\t\t\t});\n\t\t  }\n\t\t});\n\n\t\t// Re-initialize components after out-of-band swaps\n\t\tdocument.body.addEventListener(\"htmx:oobAfterSwap\", (e) => {\n\t\t  if (window.templUI) {\n\t\t\tObject.values(window.templUI).forEach(comp => {\n\t\t\t  comp.init?.(e.detail.target);\n\t\t\t});\n\t\t  }\n\t\t});\n\n\t\t// Update sidebar active state on navigation\n\t\tdocument.body.addEventListener(\"htmx:afterRequest\", (e) => {\n\t\t  // Check if this element has data-page attribute\n\t\t  const page = e.detail.elt.getAttribute(\"data-page\");\n\t\t  if (page) {\n\t\t\t// Find all menu buttons with data-page\n\t\t\tdocument.querySelectorAll(\"[data-tui-sidebar=menu-button][data-page]\").forEach(btn => {\n\t\t\t  // Remove active state\n\t\t\t  btn.removeAttribute(\"data-tui-sidebar-active\");\n\t\t\t});\n\t\t\t\n\t\t\t// Add active state to clicked button\n\t\t\te.detail.elt.setAttribute(\"data-tui-sidebar-active\", \"true\");\n\t\t  }\n\t\t});\n\t});\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

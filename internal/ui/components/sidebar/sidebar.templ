@@ -3,9 +3,10 @@ package sidebar
 import (
 	"gowatch/internal/ui/templui/icon"
 	"gowatch/internal/ui/templui/sidebar"
+	"gowatch/internal/ui/templui/skeleton"
 )
 
-templ Sidebar(currentPage string, collapsed bool) {
+templ Sidebar(currentPage string, collapsed bool, watchedCount int) {
 	@sidebar.Sidebar(sidebar.Props{
 		Collapsed: collapsed,
 	}) {
@@ -20,13 +21,16 @@ templ Sidebar(currentPage string, collapsed bool) {
 				@sidebar.Menu() {
 					@sidebar.MenuItem() {
 						@sidebar.MenuButton(sidebar.MenuButtonProps{
+							ID:       "test",
 							Tooltip:  "Home",
 							IsActive: currentPage == "home",
 							Attributes: templ.Attributes{
-								"hx-get":      "/home",
-								"hx-target":   "#page-container",
-								"hx-swap":     "innerHTML",
-								"hx-push-url": "true",
+								"data-page":            "home",
+								"hx-get":               "/home",
+								"hx-target":            "#page-container",
+								"hx-swap":              "innerHTML",
+								"hx-push-url":          "true",
+								"hx-on::after-request": "htmx.trigger('body', 'refreshSidebar')",
 							},
 						}) {
 							@icon.House(icon.Props{Class: "size-4"})
@@ -37,25 +41,63 @@ templ Sidebar(currentPage string, collapsed bool) {
 						@sidebar.MenuButton(sidebar.MenuButtonProps{
 							Tooltip: "Watched",
 							Attributes: templ.Attributes{
-								"hx-get":      "/watched",
-								"hx-target":   "#page-container",
-								"hx-swap":     "innerHTML",
-								"hx-push-url": "true",
+								"data-page":            "watched",
+								"hx-get":               "/watched",
+								"hx-target":            "#page-container",
+								"hx-swap":              "innerHTML",
+								"hx-push-url":          "true",
+								"hx-on::after-request": "htmx.trigger('body', 'refreshSidebar')",
 							},
 							IsActive: currentPage == "watched",
 						}) {
 							@icon.Film(icon.Props{Class: "size-4"})
 							<span>Watched</span>
-							@sidebar.MenuBadge(sidebar.MenuBadgeProps{
-								Attributes: templ.Attributes{
-									"hx-trigger":  "load",
-									"hx-get":      "/htmx/movies/watched/count",
-									"hx-swap":     "innerHTML",
-									"hx-target":   "this",
-									"hx-push-url": "false",
-								},
-							})
+							@sidebar.MenuBadge() {
+								{ watchedCount }
+							}
 						}
+					}
+				}
+			}
+		}
+	}
+}
+
+templ SidebarLoading(collapsed bool) {
+	@sidebar.Sidebar(sidebar.Props{
+		Collapsed: collapsed,
+	}) {
+		@sidebar.Header(sidebar.HeaderProps{
+			Class: "flex flex-row items-center text-lg font-semibold leading-none tracking-tight gap-8",
+		}) {
+			@skeleton.Skeleton(skeleton.Props{Class: "w-20 h-20 rounded"})
+			if !collapsed {
+				@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-24"})
+			}
+		}
+		@sidebar.Content() {
+			@sidebar.Group() {
+				@sidebar.Menu() {
+					// Home menu item skeleton
+					@sidebar.MenuItem() {
+						<div class="flex items-center gap-2 px-3 py-2">
+							@skeleton.Skeleton(skeleton.Props{Class: "size-4"})
+							if !collapsed {
+								@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-16"})
+							}
+						</div>
+					}
+					// Watched menu item skeleton
+					@sidebar.MenuItem() {
+						<div class="flex items-center gap-2 px-3 py-2">
+							@skeleton.Skeleton(skeleton.Props{Class: "size-4"})
+							if !collapsed {
+								<div class="flex items-center justify-between flex-1 gap-2">
+									@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-20"})
+									@skeleton.Skeleton(skeleton.Props{Class: "h-5 w-6 rounded-full"})
+								</div>
+							}
+						</div>
 					}
 				}
 			}
