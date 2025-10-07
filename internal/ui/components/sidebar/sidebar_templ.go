@@ -132,11 +132,12 @@ func Sidebar(currentPage string, collapsed bool, watchedCount int) templ.Compone
 								Tooltip:  "Home",
 								IsActive: currentPage == "home",
 								Attributes: templ.Attributes{
-									"data-page":   "home",
-									"hx-get":      "/home",
-									"hx-target":   "#main-content",
-									"hx-swap":     "innerHTML",
-									"hx-push-url": "true",
+									"data-page":    "home",
+									"hx-get":       "/home",
+									"hx-target":    "#main-content",
+									"hx-swap":      "innerHTML",
+									"hx-push-url":  "true",
+									"hx-indicator": "#main-content-loading",
 								},
 							}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var7), templ_7745c5c3_Buffer)
 							if templ_7745c5c3_Err != nil {
@@ -199,7 +200,7 @@ func Sidebar(currentPage string, collapsed bool, watchedCount int) templ.Compone
 									var templ_7745c5c3_Var11 string
 									templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(watchedCount)
 									if templ_7745c5c3_Err != nil {
-										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 52, Col: 22}
+										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 54, Col: 22}
 									}
 									_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 									if templ_7745c5c3_Err != nil {
@@ -216,11 +217,12 @@ func Sidebar(currentPage string, collapsed bool, watchedCount int) templ.Compone
 							templ_7745c5c3_Err = sidebar.MenuButton(sidebar.MenuButtonProps{
 								Tooltip: "Watched",
 								Attributes: templ.Attributes{
-									"data-page":   "watched",
-									"hx-get":      "/watched",
-									"hx-target":   "#main-content",
-									"hx-swap":     "innerHTML",
-									"hx-push-url": "true",
+									"data-page":    "watched",
+									"hx-get":       "/watched",
+									"hx-target":    "#main-content",
+									"hx-swap":      "innerHTML",
+									"hx-push-url":  "true",
+									"hx-indicator": "#main-content-loading",
 								},
 								IsActive: currentPage == "watched",
 							}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var9), templ_7745c5c3_Buffer)

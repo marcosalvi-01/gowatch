@@ -23,11 +23,12 @@ templ Sidebar(currentPage string, collapsed bool, watchedCount int) {
 							Tooltip:  "Home",
 							IsActive: currentPage == "home",
 							Attributes: templ.Attributes{
-								"data-page":   "home",
-								"hx-get":      "/home",
-								"hx-target":   "#main-content",
-								"hx-swap":     "innerHTML",
-								"hx-push-url": "true",
+								"data-page":    "home",
+								"hx-get":       "/home",
+								"hx-target":    "#main-content",
+								"hx-swap":      "innerHTML",
+								"hx-push-url":  "true",
+								"hx-indicator": "#main-content-loading",
 							},
 						}) {
 							@icon.House(icon.Props{Class: "size-4"})
@@ -38,11 +39,12 @@ templ Sidebar(currentPage string, collapsed bool, watchedCount int) {
 						@sidebar.MenuButton(sidebar.MenuButtonProps{
 							Tooltip: "Watched",
 							Attributes: templ.Attributes{
-								"data-page":   "watched",
-								"hx-get":      "/watched",
-								"hx-target":   "#main-content",
-								"hx-swap":     "innerHTML",
-								"hx-push-url": "true",
+								"data-page":    "watched",
+								"hx-get":       "/watched",
+								"hx-target":    "#main-content",
+								"hx-swap":      "innerHTML",
+								"hx-push-url":  "true",
+								"hx-indicator": "#main-content-loading",
 							},
 							IsActive: currentPage == "watched",
 						}) {

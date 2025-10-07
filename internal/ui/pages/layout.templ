@@ -42,13 +42,42 @@ templ Layout(currentPage string) {
 						@ThemeSwitcher()
 					</div>
 					// Main content
-					<div id="main-content" class="flex-1 p-4 overflow-auto">
-						{ children... }
+					<div class="relative flex flex-1 flex-col overflow-auto">
+						@mainContentLoading()
+						<div id="main-content" class="p-4">
+							{ children... }
+						</div>
 					</div>
 				}
 			}
 		</body>
 	</html>
+}
+
+templ mainContentLoading() {
+	<div id="main-content-loading" class="htmx-indicator absolute inset-0 bg-background/95 backdrop-blur-sm z-10">
+		<div class="flex flex-col justify-center items-center h-full p-8">
+			<div class="w-full max-w-3xl space-y-6">
+				// Page title
+				<div class="space-y-2">
+					@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-48 rounded-lg"})
+					@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-64 rounded-md"})
+				</div>
+				// Main content blocks
+				<div class="space-y-4 pt-4">
+					@skeleton.Skeleton(skeleton.Props{Class: "h-24 w-full rounded-lg"})
+					@skeleton.Skeleton(skeleton.Props{Class: "h-24 w-full rounded-lg"})
+					@skeleton.Skeleton(skeleton.Props{Class: "h-24 w-full rounded-lg"})
+					@skeleton.Skeleton(skeleton.Props{Class: "h-24 w-full rounded-lg"})
+				</div>
+				// Bottom action area
+				<div class="flex justify-between items-center pt-6">
+					@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-24 rounded-md"})
+					@skeleton.Skeleton(skeleton.Props{Class: "h-10 w-28 rounded-lg"})
+				</div>
+			</div>
+		</div>
+	</div>
 }
 
 templ ThemeSwitcher() {
