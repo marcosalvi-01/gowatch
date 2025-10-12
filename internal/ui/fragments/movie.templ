@@ -1,0 +1,674 @@
+package fragments
+
+import (
+	"cmp"
+	"fmt"
+	"gowatch/internal/models"
+	"gowatch/internal/ui/templui/avatar"
+	"gowatch/internal/ui/templui/badge"
+	"gowatch/internal/ui/templui/button"
+	"gowatch/internal/ui/templui/card"
+	"gowatch/internal/ui/templui/checkbox"
+	"gowatch/internal/ui/templui/datepicker"
+	"gowatch/internal/ui/templui/dialog"
+	"gowatch/internal/ui/templui/form"
+	"gowatch/internal/ui/templui/icon"
+	"gowatch/internal/ui/templui/separator"
+	"gowatch/internal/ui/templui/table"
+	"slices"
+	"strconv"
+	"strings"
+	"time"
+)
+
+templ Movie(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) {
+	@movieHero(movie)
+	@movieContent(movie, watchRecords)
+}
+
+templ movieHero(movie models.MovieDetails) {
+	<div class="relative -m-4 mb-6">
+		if movie.Movie.BackdropPath != "" {
+			@backdropHero(movie)
+		} else {
+			@fallbackHero(movie)
+		}
+		@separator.Separator()
+	</div>
+}
+
+templ backdropHero(movie models.MovieDetails) {
+	<div class="relative w-full h-[40vh] min-h-[350px] max-h-[500px] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] overflow-hidden">
+		<!-- Background Image -->
+		<img
+			src={ "https://image.tmdb.org/t/p/w1280" + movie.Movie.BackdropPath }
+			alt={ movie.Movie.Title + " backdrop" }
+			class="absolute inset-0 w-full h-full object-cover object-top"
+		/>
+		<!-- Gradient Overlays -->
+		<div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent"></div>
+		<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent"></div>
+		<div class="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-black/20 sm:from-black/60 sm:via-transparent sm:to-black/20"></div>
+		<!-- Content Container - Now uses flex items-center for better centering -->
+		<div class="absolute inset-0 flex items-center">
+			<div class="w-full p-4 sm:p-6 md:p-8 lg:p-10">
+				<div class="max-w-6xl mx-auto w-full">
+					@heroContent(movie, true)
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+templ fallbackHero(movie models.MovieDetails) {
+	<div class="p-4 sm:p-6 md:p-8 lg:p-10 bg-muted/20">
+		<div class="max-w-6xl mx-auto">
+			@heroContent(movie, false)
+		</div>
+	</div>
+}
+
+templ heroContent(movie models.MovieDetails, isDark bool) {
+	<div class="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start">
+		@posterSection(movie, isDark)
+		@movieInfo(movie, isDark)
+	</div>
+}
+
+templ posterSection(movie models.MovieDetails, isDark bool) {
+	if movie.Movie.PosterPath != "" {
+		<div class="hidden lg:block flex-shrink-0">
+			<div class="w-32 md:w-40 lg:w-48 xl:w-52">
+				<div class="aspect-[2/3] rounded-lg overflow-hidden shadow-lg">
+					<img
+						src={ "https://image.tmdb.org/t/p/w500" + movie.Movie.PosterPath }
+						alt={ movie.Movie.Title + " poster" }
+						class="w-full h-full object-cover"
+					/>
+				</div>
+			</div>
+		</div>
+	}
+}
+
+templ movieInfo(movie models.MovieDetails, isDark bool) {
+	<div class="flex-1 min-w-0 space-y-3 sm:space-y-4">
+		<!-- Title -->
+		<div>
+			<h1
+				class={
+					"text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold leading-tight",
+					templ.KV("text-white drop-shadow-2xl", isDark),
+					templ.KV("text-foreground", !isDark),
+				}
+			>
+				{ movie.Movie.Title }
+			</h1>
+		</div>
+		<!-- Year and Director -->
+		<div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+			<p
+				class={
+					"text-base sm:text-lg md:text-xl font-medium",
+					templ.KV("text-white/90 drop-shadow-lg", isDark),
+					templ.KV("text-muted-foreground", !isDark),
+				}
+			>
+				{ movie.Movie.ReleaseDate.Format("2006") }
+			</p>
+			if director := getDirector(movie.Credits.Crew); director != "" {
+				<div class="flex items-center gap-2">
+					<span
+						class={
+							"hidden sm:block text-sm",
+							templ.KV("text-white/60", isDark),
+							templ.KV("text-muted-foreground", !isDark),
+						}
+					>
+						•
+					</span>
+					<p
+						class={
+							"text-sm sm:text-base font-medium",
+							templ.KV("text-white/90 drop-shadow-lg", isDark),
+							templ.KV("text-foreground", !isDark),
+						}
+					>
+						Directed by { director }
+					</p>
+				</div>
+			}
+		</div>
+		<!-- Tagline -->
+		if movie.Tagline != "" {
+			<div class="max-w-2xl">
+				<p
+					class={
+						"text-sm sm:text-base md:text-lg italic",
+						templ.KV("text-white/85 drop-shadow-md", isDark),
+						templ.KV("text-muted-foreground", !isDark),
+					}
+				>
+					"{ movie.Tagline }"
+				</p>
+			</div>
+		}
+		<!-- Action Buttons -->
+		<div class="pt-2 sm:pt-4">
+			@actionButtons(movie.Movie.ID)
+		</div>
+	</div>
+}
+
+templ actionButtons(movieID int64) {
+	<form
+		hx-post="/htmx/movies/watched"
+		hx-target="#toast"
+		hx-include="[name='watched_date']"
+	>
+		<input type="hidden" name="movie_id" value={ movieID }/>
+		@dialog.Dialog(dialog.Props{
+			ID: "default-dialog-watched",
+		}) {
+			@dialog.Trigger() {
+				@button.Button() {
+					@icon.Check()
+					Mark as Watched
+				}
+			}
+			@dialog.Content(dialog.ContentProps{
+				Class: "max-w-md",
+			}) {
+				@dialog.Header() {
+					@dialog.Title() {
+						Mark as Watched
+					}
+					@dialog.Description() {
+						Mark this movie as watched by adding it to the Watched List. Click save when you're done.
+					}
+				}
+				<div class="space-y-4">
+					<div class="space-y-2">
+						@form.Label(form.LabelProps{
+							For: "date-picker-form",
+						}) {
+							When did you watch this movie?
+						}
+						@datepicker.DatePicker(datepicker.Props{
+							ID:       "date-picker-form",
+							Name:     "watched_date",
+							HasError: false,
+							Value:    time.Now(),
+						})
+					</div>
+					<div class="flex items-start space-x-3">
+						@checkbox.Checkbox(checkbox.Props{
+							ID:    "theater-checkbox",
+							Name:  "watched_at_theater",
+							Value: "theater",
+						})
+						@form.Label(form.LabelProps{
+							For:   "theater-checkbox",
+							Class: "cursor-pointer",
+						}) {
+							<div class="space-y-1">
+								<div class="text-sm font-medium">Watched at theater</div>
+								<div class="text-xs text-muted-foreground">Check if you saw this in a cinema</div>
+							</div>
+						}
+					</div>
+				</div>
+				@dialog.Footer() {
+					@dialog.Close() {
+						@button.Button(button.Props{
+							Variant: button.VariantOutline,
+						}) {
+							Cancel
+						}
+					}
+					@dialog.Close() {
+						@button.Button(button.Props{
+							Type: button.TypeSubmit,
+						}) {
+							Add to Watched
+						}
+					}
+				}
+			}
+		}
+	</form>
+}
+
+templ movieContent(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) {
+	<div class="space-y-8">
+		@overviewSection(movie.Movie.Overview)
+		@genresSection(movie.Genres)
+		if len(watchRecords.Records) > 0 {
+			@userActivitySection(watchRecords.Records)
+		}
+		@detailsSection(movie)
+		@castSection(movie.Credits.Cast)
+		@crewSection(movie.Credits.Crew)
+	</div>
+}
+
+templ overviewSection(overview string) {
+	if overview != "" {
+		<div>
+			<h2 class="text-xl font-semibold mb-4">Overview</h2>
+			<p class="text-sm sm:text-base leading-relaxed text-muted-foreground max-w-4xl">
+				{ overview }
+			</p>
+		</div>
+	}
+}
+
+templ genresSection(genres []models.Genre) {
+	if len(genres) > 0 {
+		<div>
+			<h3 class="text-lg font-medium mb-3">Genres</h3>
+			<div class="flex flex-wrap gap-2">
+				for _, genre := range genres {
+					@badge.Badge(badge.Props{Variant: "primary"}) {
+						{ genre.Name }
+					}
+				}
+			</div>
+		</div>
+	}
+}
+
+templ detailsSection(movie models.MovieDetails) {
+	<div>
+		<h2 class="text-xl font-semibold mb-4">Details</h2>
+		@table.Table() {
+			@table.Body() {
+				@table.Row() {
+					@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
+						Release Date
+					}
+					@table.Cell() {
+						{ movie.Movie.ReleaseDate.Format("January 2, 2006") }
+					}
+				}
+				@table.Row() {
+					@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
+						Runtime
+					}
+					@table.Cell() {
+						{ fmt.Sprintf("%d minutes", movie.Runtime) }
+					}
+				}
+				@table.Row() {
+					@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
+						Rating
+					}
+					@table.Cell() {
+						{ fmt.Sprintf("%.1f/10 (%s votes)", movie.Movie.VoteAverage, formatNumber(movie.Movie.VoteCount)) }
+					}
+				}
+				@table.Row() {
+					@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
+						Original Language
+					}
+					@table.Cell() {
+						{ movie.Movie.OriginalLanguage }
+					}
+				}
+				if movie.Budget > 0 {
+					@table.Row() {
+						@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
+							Budget
+						}
+						@table.Cell() {
+							{ formatMoney(movie.Budget) }
+						}
+					}
+				}
+				if movie.Revenue > 0 {
+					@table.Row() {
+						@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
+							Revenue
+						}
+						@table.Cell() {
+							{ formatMoney(movie.Revenue) }
+						}
+					}
+				}
+				@table.Row() {
+					@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
+						Status
+					}
+					@table.Cell() {
+						{ movie.Status }
+					}
+				}
+				if movie.IMDbID != "" {
+					@table.Row() {
+						@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
+							IMDB
+						}
+						@table.Cell() {
+							<a href={ templ.URL("https://www.imdb.com/title/" + movie.IMDbID) } target="_blank" class="text-primary hover:underline flex items-center gap-1">
+								View on IMDB
+								@icon.ExternalLink(icon.Props{Size: 14})
+							</a>
+						}
+					}
+				}
+			}
+		}
+	</div>
+}
+
+templ castSection(cast []models.Cast) {
+	if len(cast) > 0 {
+		<div>
+			<h2 class="text-xl font-semibold mb-4">Cast</h2>
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+				for i, member := range sortCast(cast) {
+					if i < 9 {
+						@castMemberCard(member)
+					}
+				}
+			</div>
+		</div>
+	}
+}
+
+templ castMemberCard(cast models.Cast) {
+	@card.Card(card.Props{
+		Class: "hover:bg-white/20 transition-colors duration-300",
+	}) {
+		<a
+			class="flex items-center space-x-3 p-2"
+			href={ "https://www.themoviedb.org/person/" + strconv.Itoa(int(cast.Person.ID)) }
+			target="_blank"
+		>
+			@profileImage(cast.Person.ProfilePath, cast.Person.Name)
+			<div class="flex-1 min-w-0">
+				<p class="text-sm font-medium truncate">{ cast.Person.Name }</p>
+				<p class="text-xs text-muted-foreground truncate">{ cast.Character }</p>
+			</div>
+		</a>
+	}
+}
+
+templ profileImage(profilePath, name string) {
+	@avatar.Avatar() {
+		@avatar.Image(avatar.ImageProps{
+			Src:   "https://image.tmdb.org/t/p/w185" + profilePath,
+			Class: "object-cover",
+		})
+		@avatar.Fallback() {
+			{{
+				split := strings.Split(name, " ")
+				initials := string(split[0][0])
+				if len(split) >= 2 {
+					initials += string(split[1][0])
+				}
+			}}
+			{ initials }
+		}
+	}
+}
+
+templ crewSection(crew []models.Crew) {
+	<div>
+		<h2 class="text-xl font-semibold mb-4">Key Crew</h2>
+		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+			for _, member := range sortCrewByImportance(crew) {
+				if isKeyCrew(member.Job) {
+					@crewMemberItem(member)
+				}
+			}
+		</div>
+	</div>
+}
+
+templ crewMemberItem(crew models.Crew) {
+	<div class="space-y-1">
+		<dt class="text-sm font-medium text-muted-foreground">{ crew.Job }</dt>
+		<dd class="text-sm font-medium">{ crew.Person.Name }</dd>
+	</div>
+}
+
+templ userActivitySection(watchRecords []models.WatchedMovieRecord) {
+	<div class="border-1 rounded-lg p-3">
+		<h2 class="text-xl font-semibold mb-4">Your Activity</h2>
+		<div class="space-y-6">
+			@activityStats(watchRecords)
+			@separator.Separator()
+			@watchHistory(watchRecords)
+		</div>
+	</div>
+}
+
+templ activityStats(records []models.WatchedMovieRecord) {
+	<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+		@activityStat("Times Watched", fmt.Sprintf("%d", len(records)))
+		@activityStat("In Theater", fmt.Sprintf("%d", countTheaterWatches(records)))
+		@activityStat("At Home", fmt.Sprintf("%d", len(records)-countTheaterWatches(records)))
+		if len(records) > 0 {
+			@activityStat("Last Watched", getLastWatchDate(records).Format("Jan 2006"))
+		}
+	</div>
+}
+
+templ activityStat(label, value string) {
+	<div class="text-center">
+		<div class="text-2xl font-bold text-primary">{ value }</div>
+		<div class="text-xs text-muted-foreground">{ label }</div>
+	</div>
+}
+
+templ watchHistory(records []models.WatchedMovieRecord) {
+	<div>
+		<h3 class="text-sm font-medium mb-3">Watch History</h3>
+		<div class="space-y-2 max-h-48 overflow-y-auto">
+			for _, record := range sortWatchRecordsDesc(records) {
+				@watchHistoryItem(record)
+			}
+		</div>
+	</div>
+}
+
+templ watchHistoryItem(record models.WatchedMovieRecord) {
+	<div class="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
+		<div class="flex items-center space-x-3">
+			@watchLocationIcon(record.InTheaters)
+			<div>
+				<div class="text-sm font-medium">
+					if record.InTheaters {
+						Theater
+					} else {
+						Home
+					}
+				</div>
+				<div class="text-xs text-muted-foreground">{ record.Date.Format("January 2, 2006") }</div>
+			</div>
+		</div>
+		<div class="text-xs text-muted-foreground">
+			{ formatTimeAgo(record.Date) }
+		</div>
+	</div>
+}
+
+templ watchLocationIcon(inTheaters bool) {
+	<div class="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center">
+		if inTheaters {
+			@icon.Popcorn(icon.Props{
+				Size: 18,
+			})
+		} else {
+			@icon.House(icon.Props{
+				Size: 18,
+			})
+		}
+	</div>
+}
+
+// Helper functions
+func formatMoney(amount int64) string {
+	if amount == 0 {
+		return "N/A"
+	}
+	switch {
+	case amount >= 1000000000:
+		return fmt.Sprintf("$%.1fB", float64(amount)/1000000000)
+	case amount >= 1000000:
+		return fmt.Sprintf("$%.1fM", float64(amount)/1000000)
+	case amount >= 1000:
+		return fmt.Sprintf("$%.1fK", float64(amount)/1000)
+	default:
+		return "$" + strconv.FormatInt(amount, 10)
+	}
+}
+
+func formatNumber(num int64) string {
+	str := strconv.FormatInt(num, 10)
+	n := len(str)
+	if n <= 3 {
+		return str
+	}
+
+	var result strings.Builder
+	for i, digit := range str {
+		if i > 0 && (n-i)%3 == 0 {
+			result.WriteString(",")
+		}
+		result.WriteRune(digit)
+	}
+	return result.String()
+}
+
+func countTheaterWatches(records []models.WatchedMovieRecord) int {
+	count := 0
+	for _, record := range records {
+		if record.InTheaters {
+			count++
+		}
+	}
+	return count
+}
+
+func getLastWatchDate(records []models.WatchedMovieRecord) time.Time {
+	if len(records) == 0 {
+		return time.Time{}
+	}
+
+	latest := records[0].Date
+	for _, record := range records[1:] {
+		if record.Date.After(latest) {
+			latest = record.Date
+		}
+	}
+	return latest
+}
+
+func sortCast(cast []models.Cast) []models.Cast {
+	slices.SortFunc(cast, func(a, b models.Cast) int {
+		return cmp.Compare(a.CastOrder, b.CastOrder)
+	})
+	return cast
+}
+
+func sortWatchRecordsDesc(records []models.WatchedMovieRecord) []models.WatchedMovieRecord {
+	slices.SortFunc(records, func(a, b models.WatchedMovieRecord) int {
+		return b.Date.Compare(a.Date)
+	})
+	return records
+}
+
+func formatTimeAgo(t time.Time) string {
+	now := time.Now()
+	diff := now.Sub(t)
+
+	switch {
+	case diff < time.Hour:
+		if minutes := int(diff.Minutes()); minutes < 1 {
+			return "Just now"
+		} else {
+			return fmt.Sprintf("%dm ago", minutes)
+		}
+	case diff < 24*time.Hour:
+		return fmt.Sprintf("%dh ago", int(diff.Hours()))
+	case diff < 30*24*time.Hour:
+		return fmt.Sprintf("%dd ago", int(diff.Hours()/24))
+	case diff < 365*24*time.Hour:
+		return fmt.Sprintf("%dmo ago", int(diff.Hours()/(24*30)))
+	default:
+		return fmt.Sprintf("%dy ago", int(diff.Hours()/(24*365)))
+	}
+}
+
+func isKeyCrew(job string) bool {
+	keyJobs := []string{
+		"Director",
+		"Producer",
+		"Executive Producer",
+		"Screenplay",
+		"Writer",
+		"Cinematography",
+		"Music",
+		"Editor",
+		"Production Designer",
+	}
+	for _, keyJob := range keyJobs {
+		if job == keyJob {
+			return true
+		}
+	}
+	return false
+}
+
+func sortCrewByImportance(crew []models.Crew) []models.Crew {
+	importanceOrder := map[string]int{
+		"Director":            1,
+		"Producer":            2,
+		"Executive Producer":  3,
+		"Screenplay":          4,
+		"Writer":              5,
+		"Cinematography":      6,
+		"Music":               7,
+		"Editor":              8,
+		"Production Designer": 9,
+	}
+
+	var keyCrew []models.Crew
+	for _, member := range crew {
+		if isKeyCrew(member.Job) {
+			keyCrew = append(keyCrew, member)
+		}
+	}
+
+	slices.SortFunc(keyCrew, func(a, b models.Crew) int {
+		orderA := importanceOrder[a.Job]
+		orderB := importanceOrder[b.Job]
+
+		// If both have defined order, sort by importance
+		if orderA != 0 && orderB != 0 {
+			return cmp.Compare(orderA, orderB)
+		}
+		// If only one has defined order, prioritize it
+		if orderA != 0 {
+			return -1
+		}
+		if orderB != 0 {
+			return 1
+		}
+		// If neither has defined order, sort alphabetically
+		return cmp.Compare(a.Job, b.Job)
+	})
+
+	return keyCrew
+}
+
+func getDirector(crew []models.Crew) string {
+	for _, member := range crew {
+		if member.Job == "Director" {
+			return member.Person.Name
+		}
+	}
+	return ""
+}

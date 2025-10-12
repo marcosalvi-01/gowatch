@@ -7,6 +7,7 @@ import (
 	"gowatch/internal/ui/pages"
 	"gowatch/logging"
 	"net/http"
+	"strconv"
 
 	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
@@ -38,6 +39,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Get("/", h.HomePage)
 	r.Get("/watched", h.WatchedPage)
 	r.Get("/home", h.HomePage)
+	r.Get("/movie/{id}", h.MoviePage)
 
 	// r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 	// 	http.Redirect(w, r, "/watched", http.StatusFound) // 302 redirect
@@ -72,42 +74,32 @@ func (h *Handlers) WatchedPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
-	// ctx := r.Context()
-	// paramID := chi.URLParam(r, "id")
-	//
-	// id, err := strconv.ParseInt(paramID, 10, 64)
-	// if err != nil {
-	// 	http.Error(w, "Invalid movie ID", http.StatusBadRequest)
-	// 	return
-	// }
-	//
-	// movie, err := h.tmdbService.GetMovieDetails(ctx, id)
-	// if err != nil {
-	// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
-	// 	return
-	// }
-	//
-	// rec, err := h.watchedService.GetWatchedMovieRecordsByID(ctx, id)
-	// if err != nil {
-	// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
-	// 	return
-	// }
-	//
-	// listEntries, err := h.listService.GetAllLists(r.Context())
-	// if err != nil {
-	// 	log.Error("failed to retrieve list entries", "error", err)
-	// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
-	// 	return
-	// }
-	//
-	// watchedCount, err := h.watchedService.GetWatchedCount(r.Context())
-	// if err != nil {
-	// 	log.Error("failed to retrieve watched count", "error", err)
-	// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
-	// 	return
-	// }
-	//
-	// templ.Handler(ui.MoviePage(*movie, rec, listEntries, watchedCount)).ServeHTTP(w, r)
+	ctx := r.Context()
+	paramID := chi.URLParam(r, "id")
+
+	id, err := strconv.ParseInt(paramID, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid movie ID", http.StatusBadRequest)
+		return
+	}
+
+	movie, err := h.tmdbService.GetMovieDetails(ctx, id)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	rec, err := h.watchedService.GetWatchedMovieRecordsByID(ctx, id)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if r.Header.Get("HX-Request") == "true" {
+		fragments.Movie(*movie, rec).Render(r.Context(), w)
+	} else {
+		templ.Handler(pages.Movie(*movie, rec)).ServeHTTP(w, r)
+	}
 }
 
 func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {

@@ -10,12 +10,16 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"gowatch/internal/ui/components/sidebar"
+	"gowatch/internal/ui/templui/avatar"
 	"gowatch/internal/ui/templui/button"
+	"gowatch/internal/ui/templui/calendar"
+	"gowatch/internal/ui/templui/datepicker"
 	"gowatch/internal/ui/templui/dialog"
 	"gowatch/internal/ui/templui/icon"
 	"gowatch/internal/ui/templui/popover"
 	templSidebar "gowatch/internal/ui/templui/sidebar"
 	"gowatch/internal/ui/templui/skeleton"
+	"gowatch/internal/ui/templui/toast"
 )
 
 func Layout(currentPage string) templ.Component {
@@ -109,7 +113,7 @@ func Layout(currentPage string) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</div> <div class=\"relative flex flex-1 flex-col overflow-auto\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</div> <div id=\"main-scroll-container\" class=\"relative flex flex-1 flex-col overflow-auto\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -172,7 +176,7 @@ func mainContentLoading() templ.Component {
 			templ_7745c5c3_Var4 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<div id=\"main-content-loading\" class=\"htmx-indicator absolute inset-0 bg-background/95 backdrop-blur-sm z-10\"><div class=\"flex flex-col justify-center items-center h-full p-8\"><div class=\"w-full max-w-3xl space-y-6\"><div class=\"space-y-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<div id=\"main-content-loading\" class=\"htmx-indicator absolute inset-0 bg-background/95 backdrop-blur-sm z-10 pointer-events-none\"><div class=\"flex flex-col justify-center items-center h-full p-8\"><div class=\"w-full max-w-3xl space-y-6\"><div class=\"space-y-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -307,7 +311,7 @@ func Scripts() templ.Component {
 			templ_7745c5c3_Var7 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<script src=\"https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js\" integrity=\"sha384-Akqfrbj/HpNVo8k11SXBb6TlBWmXXlYQrCSqEWmyKJe+hDm3Z/B2WVG4smwBkRVm\" crossorigin=\"anonymous\"></script><script>\n\t  document.addEventListener(\"DOMContentLoaded\", () => {\n\t\t// Re-initialize templUI components after HTMX swaps\n\t\tdocument.body.addEventListener(\"htmx:afterSwap\", (e) => {\n\t\t  if (window.templUI) {\n\t\t\tObject.values(window.templUI).forEach(comp => {\n\t\t\t  comp.init?.(e.detail.elt);\n\t\t\t});\n\t\t  }\n\t\t});\n\n\t\t// Re-initialize components after out-of-band swaps\n\t\tdocument.body.addEventListener(\"htmx:oobAfterSwap\", (e) => {\n\t\t  if (window.templUI) {\n\t\t\tObject.values(window.templUI).forEach(comp => {\n\t\t\t  comp.init?.(e.detail.target);\n\t\t\t});\n\t\t  }\n\t\t});\n\n\t\t// Update sidebar active state on navigation\n\t\tdocument.body.addEventListener(\"htmx:afterRequest\", (e) => {\n\t\t  // Check if this element has data-page attribute\n\t\t  const page = e.detail.elt.getAttribute(\"data-page\");\n\t\t  if (page) {\n\t\t\t// Find all menu buttons with data-page\n\t\t\tdocument.querySelectorAll(\"[data-tui-sidebar=menu-button][data-page]\").forEach(btn => {\n\t\t\t  // Remove active state\n\t\t\t  btn.removeAttribute(\"data-tui-sidebar-active\");\n\t\t\t});\n\t\t\t\n\t\t\t// Add active state to clicked button\n\t\t\te.detail.elt.setAttribute(\"data-tui-sidebar-active\", \"true\");\n\t\t  }\n\t\t});\n\t});\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<script src=\"https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js\" integrity=\"sha384-Akqfrbj/HpNVo8k11SXBb6TlBWmXXlYQrCSqEWmyKJe+hDm3Z/B2WVG4smwBkRVm\" crossorigin=\"anonymous\"></script><script>\n\t  document.addEventListener(\"DOMContentLoaded\", () => {\n\t\t// Re-initialize templUI components after HTMX swaps\n\t\tdocument.body.addEventListener(\"htmx:afterSwap\", (e) => {\n\t\t  if (window.templUI) {\n\t\t\tObject.values(window.templUI).forEach(comp => {\n\t\t\t  comp.init?.(e.detail.elt);\n\t\t\t});\n\t\t  }\n\t\t});\n\n\t\t// Re-initialize components after out-of-band swaps\n\t\tdocument.body.addEventListener(\"htmx:oobAfterSwap\", (e) => {\n\t\t  if (window.templUI) {\n\t\t\tObject.values(window.templUI).forEach(comp => {\n\t\t\t  comp.init?.(e.detail.target);\n\t\t\t});\n\t\t  }\n\t\t});\n\n\t\t// Update sidebar active state on navigation\n\t\tdocument.body.addEventListener(\"htmx:beforeRequest\", (e) => {\n\t\t  // Check if this element has data-page attribute\n\t\t  const page = e.detail.elt.getAttribute(\"data-page\");\n\t\t  if (page) {\n\t\t\t// Find all menu buttons with data-page\n\t\t\tdocument.querySelectorAll(\"[data-tui-sidebar=menu-button][data-page]\").forEach(btn => {\n\t\t\t  // Remove active state\n\t\t\t  btn.removeAttribute(\"data-tui-sidebar-active\");\n\t\t\t});\n\t\t\t\n\t\t\t// Add active state to clicked button\n\t\t\te.detail.elt.setAttribute(\"data-tui-sidebar-active\", \"true\");\n\t\t  }\n\t\t});\n\t});\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -324,6 +328,26 @@ func Scripts() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = dialog.Script().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = avatar.Script().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = dialog.Script().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = datepicker.Script().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = calendar.Script().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = toast.Script().Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

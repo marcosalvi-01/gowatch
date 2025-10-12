@@ -18,11 +18,11 @@ type Props struct {
 
 templ MovieCard(props Props) {
 	if props.Href != "" {
-		<a class="cursor-pointer" href={ props.Href }>
+		<div hx-get={ props.Href } hx-target="#main-content" hx-push-url="true" data-page="movie" hx-swap="scroll:#main-scroll-container:top">
 			@cardContent(props) {
 				{ children... }
 			}
-		</a>
+		</div>
 	} else {
 		@cardContent(props) {
 			{ children... }
