@@ -299,7 +299,7 @@ func header() templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<img src=\"/static/favicon.svg\" alt=\"App Logo\" class=\"w-20 h-20\"> Gowatch")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<img src=\"/static/favicon.svg\" alt=\"Gowatch\" class=\"w-20 h-20\"> Gowatch")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

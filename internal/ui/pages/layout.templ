@@ -8,6 +8,7 @@ import (
 	"gowatch/internal/ui/templui/datepicker"
 	"gowatch/internal/ui/templui/dialog"
 	"gowatch/internal/ui/templui/icon"
+	"gowatch/internal/ui/templui/input"
 	"gowatch/internal/ui/templui/popover"
 	templSidebar "gowatch/internal/ui/templui/sidebar"
 	"gowatch/internal/ui/templui/skeleton"
@@ -30,7 +31,7 @@ templ Layout(currentPage string) {
 				Class: "w-full h-screen",
 			}) {
 				// by default show a loading version, when loading get the real sidebar content
-				<div id="sidebar-content" hx-get="/htmx/sidebar" hx-target="this" hx-swap="innerHTML" hx-trigger="load">
+				<div id="sidebar-content" hx-get="/htmx/sidebar" hx-target="this" hx-swap="innerHTML" hx-trigger="refreshSidebar from:body, load">
 					@sidebar.SidebarLoading(false)
 				</div>
 				@templSidebar.Inset() {
@@ -42,7 +43,7 @@ templ Layout(currentPage string) {
 								Target: "sidebar",
 							})
 						</div>
-						// @SearchBar(props.SearchContent)
+						@SearchBar("")
 						@ThemeSwitcher()
 					</div>
 					// Main content
@@ -59,7 +60,7 @@ templ Layout(currentPage string) {
 }
 
 templ mainContentLoading() {
-	<div id="main-content-loading" class="htmx-indicator absolute inset-0 bg-background/95 backdrop-blur-sm z-10 pointer-events-none">
+	<div id="main-content-loading" class="htmx-indicator absolute inset-0 bg-background z-10 pointer-events-none">
 		<div class="flex flex-col justify-center items-center h-full p-8">
 			<div class="w-full max-w-3xl space-y-6">
 				// Page title
@@ -196,5 +197,29 @@ templ skeletonDashboard() {
 			@skeleton.Skeleton(skeleton.Props{Class: "h-5 w-1/3 mb-6"})
 			@skeleton.Skeleton(skeleton.Props{Class: "h-[240px] w-full rounded-md"})
 		</div>
+	</div>
+}
+
+templ SearchBar(searchContent string) {
+	<div class="relative flex items-center w-full">
+		@icon.Search(icon.Props{
+			Class: "absolute left-3 text-muted-foreground",
+			Size:  20,
+		})
+		@input.Input(input.Props{
+			Type:        input.TypeSearch,
+			Placeholder: "Search Movies...",
+			Class:       "pl-10",
+			Value:       searchContent,
+			Name:        "q",
+			Attributes: templ.Attributes{
+				"hx-get":       "/search",
+				"hx-trigger":   "keyup[key=='Enter']",
+				"hx-target":    "#main-content",
+				"hx-push-url":  "true",
+				"hx-include":   "this",
+				"hx-indicator": "#main-content-loading",
+			},
+		})
 	</div>
 }

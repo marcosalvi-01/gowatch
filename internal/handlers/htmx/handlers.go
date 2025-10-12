@@ -109,7 +109,7 @@ func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
 
 	successMessage := fmt.Sprintf("Movie marked as watched on %s", watchedDate.Format("Jan 2, 2006"))
 
-	w.Header().Add("HX-Trigger", "newWatched")
+	w.Header().Add("HX-Trigger", "refreshSidebar")
 	h.renderSuccessToast(w, r, "Movie Added Successfully", successMessage, 0)
 }
 

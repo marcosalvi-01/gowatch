@@ -39,6 +39,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Get("/", h.HomePage)
 	r.Get("/watched", h.WatchedPage)
 	r.Get("/home", h.HomePage)
+	r.Get("/search", h.SearchPage)
 	r.Get("/movie/{id}", h.MoviePage)
 
 	// r.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -103,23 +104,21 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
-	// query := r.URL.Query().Get("q")
-	//
-	// results, err := h.tmdbService.SearchMovies(query)
-	// if err != nil {
-	// 	log.Error("failed to search for movie", "query", query, "error", err)
-	// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
-	// 	return
-	// }
-	//
-	// listEntries, err := h.listService.GetAllLists(r.Context())
-	// if err != nil {
-	// 	log.Error("failed to retrieve list entries", "error", err)
-	// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
-	// 	return
-	// }
-	//
-	// templ.Handler(ui.SearchPage(query, results, listEntries)).ServeHTTP(w, r)
+	query := r.URL.Query().Get("q")
+
+	results, err := h.tmdbService.SearchMovies(query)
+	if err != nil {
+		log.Error("failed to search for movie", "query", query, "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if r.Header.Get("HX-Request") == "true" {
+		w.Header().Add("HX-Trigger", "refreshSidebar")
+		fragments.Search("", results).Render(r.Context(), w)
+	} else {
+		templ.Handler(pages.Search(results)).ServeHTTP(w, r)
+	}
 }
 
 func (h *Handlers) ListPage(w http.ResponseWriter, r *http.Request) {

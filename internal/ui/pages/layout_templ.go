@@ -16,6 +16,7 @@ import (
 	"gowatch/internal/ui/templui/datepicker"
 	"gowatch/internal/ui/templui/dialog"
 	"gowatch/internal/ui/templui/icon"
+	"gowatch/internal/ui/templui/input"
 	"gowatch/internal/ui/templui/popover"
 	templSidebar "gowatch/internal/ui/templui/sidebar"
 	"gowatch/internal/ui/templui/skeleton"
@@ -71,7 +72,7 @@ func Layout(currentPage string) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, " <div id=\"sidebar-content\" hx-get=\"/htmx/sidebar\" hx-target=\"this\" hx-swap=\"innerHTML\" hx-trigger=\"load\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, " <div id=\"sidebar-content\" hx-get=\"/htmx/sidebar\" hx-target=\"this\" hx-swap=\"innerHTML\" hx-trigger=\"refreshSidebar from:body, load\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -106,6 +107,10 @@ func Layout(currentPage string) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</div>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = SearchBar("").Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -176,7 +181,7 @@ func mainContentLoading() templ.Component {
 			templ_7745c5c3_Var4 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<div id=\"main-content-loading\" class=\"htmx-indicator absolute inset-0 bg-background/95 backdrop-blur-sm z-10 pointer-events-none\"><div class=\"flex flex-col justify-center items-center h-full p-8\"><div class=\"w-full max-w-3xl space-y-6\"><div class=\"space-y-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<div id=\"main-content-loading\" class=\"htmx-indicator absolute inset-0 bg-background z-10 pointer-events-none\"><div class=\"flex flex-col justify-center items-center h-full p-8\"><div class=\"w-full max-w-3xl space-y-6\"><div class=\"space-y-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -481,6 +486,64 @@ func skeletonDashboard() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</div></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func SearchBar(searchContent string) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var11 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var11 == nil {
+			templ_7745c5c3_Var11 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<div class=\"relative flex items-center w-full\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = icon.Search(icon.Props{
+			Class: "absolute left-3 text-muted-foreground",
+			Size:  20,
+		}).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = input.Input(input.Props{
+			Type:        input.TypeSearch,
+			Placeholder: "Search Movies...",
+			Class:       "pl-10",
+			Value:       searchContent,
+			Name:        "q",
+			Attributes: templ.Attributes{
+				"hx-get":       "/search",
+				"hx-trigger":   "keyup[key=='Enter']",
+				"hx-target":    "#main-content",
+				"hx-push-url":  "true",
+				"hx-include":   "this",
+				"hx-indicator": "#main-content-loading",
+			},
+		}).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "</div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -1,0 +1,12 @@
+package pages
+
+import (
+	"gowatch/internal/models"
+	"gowatch/internal/ui/fragments"
+)
+
+templ Search(results []models.Movie) {
+	@Layout("movie") {
+		@fragments.Search("", results)
+	}
+}
