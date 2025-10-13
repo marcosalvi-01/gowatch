@@ -1,6 +1,6 @@
 # bugs:
 
-- update the add to list button after creating a list
+- sometimes if the connection is slow switching the page using the menu on the left doesn't select the correct page
 
 # feats:
 
@@ -12,4 +12,3 @@
 # optimizations:
 
 - the watched call takes around 120 ms for 1200 movies, use pagination?
-- do not do a full reload but just load the page contents with htmx

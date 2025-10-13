@@ -165,6 +165,7 @@ templ actionButtons(movieID int64) {
 		hx-post="/htmx/movies/watched"
 		hx-target="#toast"
 		hx-include="[name='watched_date']"
+		hx-on::after-request="this.reset()"
 	>
 		<input type="hidden" name="movie_id" value={ movieID }/>
 		@dialog.Dialog(dialog.Props{

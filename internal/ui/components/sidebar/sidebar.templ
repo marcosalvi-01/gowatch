@@ -1,61 +1,228 @@
 package sidebar
 
 import (
+	"fmt"
+	"gowatch/internal/models"
+	"gowatch/internal/ui.old/components/textarea"
+	"gowatch/internal/ui/templui/button"
+	"gowatch/internal/ui/templui/collapsible"
+	"gowatch/internal/ui/templui/dialog"
+	"gowatch/internal/ui/templui/form"
 	"gowatch/internal/ui/templui/icon"
+	"gowatch/internal/ui/templui/input"
 	"gowatch/internal/ui/templui/sidebar"
 	"gowatch/internal/ui/templui/skeleton"
 )
 
+type Props struct {
+	CurrentPage  string
+	Collapsed    bool
+	WatchedCount int
+	Lists        []models.ListEntry
+}
+
 // Sidebar is the sidebar for the application. It manages state of the page using a script.
 // Each menu item should make an htmx request to swap the main-content.
-templ Sidebar(currentPage string, collapsed bool, watchedCount int) {
+templ Sidebar(props Props) {
 	@sidebar.Sidebar(sidebar.Props{
 		ID:        "sidebar",
-		Collapsed: collapsed,
+		Collapsed: props.Collapsed,
 	}) {
+		// Dialog must be at top level for proper portal rendering
+		@createListDialog()
 		@header()
 		@sidebar.Content() {
 			@sidebar.Group() {
 				@sidebar.Menu() {
-					@sidebar.MenuItem() {
-						@sidebar.MenuButton(sidebar.MenuButtonProps{
-							ID:       "test",
-							Tooltip:  "Home",
-							IsActive: currentPage == "home",
-							Attributes: templ.Attributes{
-								"data-page":    "home",
-								"hx-get":       "/home",
-								"hx-target":    "#main-content",
-								"hx-swap":      "innerHTML",
-								"hx-push-url":  "true",
-								"hx-indicator": "#main-content-loading",
-							},
-						}) {
-							@icon.House(icon.Props{Class: "size-4"})
-							<span>Home</span>
-						}
-					}
-					@sidebar.MenuItem() {
-						@sidebar.MenuButton(sidebar.MenuButtonProps{
-							Tooltip: "Watched",
-							Attributes: templ.Attributes{
-								"data-page":    "watched",
-								"hx-get":       "/watched",
-								"hx-target":    "#main-content",
-								"hx-swap":      "innerHTML",
-								"hx-push-url":  "true",
-								"hx-indicator": "#main-content-loading",
-							},
-							IsActive: currentPage == "watched",
-						}) {
-							@icon.Film(icon.Props{Class: "size-4"})
-							<span>Watched</span>
-							@sidebar.MenuBadge() {
-								{ watchedCount }
-							}
+					@homeMenuItem(props.CurrentPage)
+					@watchedMenuItem(props.CurrentPage, props.WatchedCount)
+					@sidebar.Separator()
+					@listsSection(props.Lists, props.CurrentPage)
+				}
+			}
+		}
+	}
+}
+
+templ homeMenuItem(currentPage string) {
+	@sidebar.MenuItem() {
+		@sidebar.MenuButton(sidebar.MenuButtonProps{
+			ID:       "test",
+			Tooltip:  "Home",
+			IsActive: currentPage == "home",
+			Attributes: templ.Attributes{
+				"data-page":    "home",
+				"hx-get":       "/home",
+				"hx-target":    "#main-content",
+				"hx-swap":      "innerHTML",
+				"hx-push-url":  "true",
+				"hx-indicator": "#main-content-loading",
+			},
+		}) {
+			@icon.House(icon.Props{Class: "size-4"})
+			<span>Home</span>
+		}
+	}
+}
+
+templ watchedMenuItem(currentPage string, watchedCount int) {
+	@sidebar.MenuItem() {
+		@sidebar.MenuButton(sidebar.MenuButtonProps{
+			Tooltip: "Watched",
+			Attributes: templ.Attributes{
+				"data-page":    "watched",
+				"hx-get":       "/watched",
+				"hx-target":    "#main-content",
+				"hx-swap":      "innerHTML",
+				"hx-push-url":  "true",
+				"hx-indicator": "#main-content-loading",
+			},
+			IsActive: currentPage == "watched",
+		}) {
+			@icon.Film(icon.Props{Class: "size-4"})
+			<span>Watched</span>
+			@sidebar.MenuBadge() {
+				{ watchedCount }
+			}
+		}
+	}
+}
+
+templ listsSection(lists []models.ListEntry, currentPage string) {
+	@sidebar.Group() {
+		@sidebar.Menu() {
+			@sidebar.MenuItem() {
+				@collapsible.Collapsible(collapsible.Props{
+					Open:  true,
+					Class: "group/collapsible w-full",
+				}) {
+					@listsCollapsibleTrigger()
+					@collapsible.Content() {
+						@sidebar.MenuSub() {
+							@listItems(lists, currentPage)
+							@createListTriggerButton()
 						}
 					}
 				}
+			}
+		}
+	}
+}
+
+templ listsCollapsibleTrigger() {
+	@collapsible.Trigger() {
+		@sidebar.MenuButton(sidebar.MenuButtonProps{
+			Tooltip: "Lists",
+		}) {
+			@icon.List(icon.Props{Class: "size-4"})
+			<span>Lists</span>
+			@icon.ChevronRight(icon.Props{
+				Class: "ml-auto size-4 transition-transform group-data-[tui-collapsible-state=open]/collapsible:rotate-90",
+			})
+		}
+	}
+}
+
+templ listItems(lists []models.ListEntry, currentPage string) {
+	<ul hx-get="/htmx/lists" hx-trigger="refreshLists from:body">
+		for _, list := range lists {
+			@sidebar.MenuSubItem() {
+				@sidebar.MenuSubButton(sidebar.MenuSubButtonProps{
+					Href:     "/list/" + fmt.Sprintf("%d", list.ID),
+					IsActive: currentPage == "/list/"+fmt.Sprintf("%d", list.ID),
+				}) {
+					<span>{ list.Name }</span>
+				}
+			}
+		}
+	</ul>
+}
+
+templ createListTriggerButton() {
+	@sidebar.MenuSubItem() {
+		@dialog.Trigger(dialog.TriggerProps{
+			For: "add-to-list-dialog",
+		}) {
+			@sidebar.MenuSubButton() {
+				@icon.Plus(icon.Props{Size: 18})
+				Create New List
+			}
+		}
+	}
+}
+
+templ createListDialog() {
+	@dialog.Dialog(dialog.Props{
+		ID: "add-to-list-dialog",
+	}) {
+		<form
+			hx-post="/htmx/lists"
+			hx-target="#toast"
+			hx-on::after-request="this.reset()"
+		>
+			@dialog.Content(dialog.ContentProps{
+				Class: "max-w-md",
+			}) {
+				@dialog.Header() {
+					@dialog.Title() {
+						Create New List
+					}
+					@dialog.Description() {
+						Create a new list to keep track of movies.
+					}
+				}
+				@createListFormFields()
+				@createListDialogFooter()
+			}
+		</form>
+	}
+}
+
+templ createListFormFields() {
+	<div class="space-y-4">
+		<div class="space-y-2">
+			@form.Item() {
+				@form.Label(form.LabelProps{
+					For: "add-list-name-input",
+				}) {
+					Give a name to the list
+				}
+				@input.Input(input.Props{
+					ID:          "add-list-input",
+					Required:    true,
+					Placeholder: "A cool name",
+					Name:        "title",
+				})
+			}
+			@form.Label(form.LabelProps{
+				For: "add-list-description-input",
+			}) {
+				Give the list a description
+			}
+			@textarea.Textarea(textarea.Props{
+				ID:          "add-list-description-input",
+				Placeholder: "A list of funny movies",
+				Required:    false,
+				Name:        "description",
+			})
+		</div>
+	</div>
+}
+
+templ createListDialogFooter() {
+	@dialog.Footer() {
+		@dialog.Close() {
+			@button.Button(button.Props{
+				Variant: button.VariantOutline,
+			}) {
+				Cancel
+			}
+		}
+		@dialog.Close() {
+			@button.Button(button.Props{
+				Type: button.TypeSubmit,
+			}) {
+				Create List
 			}
 		}
 	}
@@ -79,29 +246,35 @@ templ SidebarLoading(collapsed bool) {
 		@sidebar.Content() {
 			@sidebar.Group() {
 				@sidebar.Menu() {
-					// Home menu item skeleton
-					@sidebar.MenuItem() {
-						<div class="flex items-center gap-2 px-3 py-2">
-							@skeleton.Skeleton(skeleton.Props{Class: "size-4"})
-							if !collapsed {
-								@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-16"})
-							}
-						</div>
-					}
-					// Watched menu item skeleton
-					@sidebar.MenuItem() {
-						<div class="flex items-center gap-2 px-3 py-2">
-							@skeleton.Skeleton(skeleton.Props{Class: "size-4"})
-							if !collapsed {
-								<div class="flex items-center justify-between flex-1 gap-2">
-									@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-20"})
-									@skeleton.Skeleton(skeleton.Props{Class: "h-5 w-6 rounded-full"})
-								</div>
-							}
-						</div>
-					}
+					@homeSkeletonItem(collapsed)
+					@watchedSkeletonItem(collapsed)
 				}
 			}
 		}
+	}
+}
+
+templ homeSkeletonItem(collapsed bool) {
+	@sidebar.MenuItem() {
+		<div class="flex items-center gap-2 px-3 py-2">
+			@skeleton.Skeleton(skeleton.Props{Class: "size-4"})
+			if !collapsed {
+				@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-16"})
+			}
+		</div>
+	}
+}
+
+templ watchedSkeletonItem(collapsed bool) {
+	@sidebar.MenuItem() {
+		<div class="flex items-center gap-2 px-3 py-2">
+			@skeleton.Skeleton(skeleton.Props{Class: "size-4"})
+			if !collapsed {
+				<div class="flex items-center justify-between flex-1 gap-2">
+					@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-20"})
+					@skeleton.Skeleton(skeleton.Props{Class: "h-5 w-6 rounded-full"})
+				</div>
+			}
+		</div>
 	}
 }

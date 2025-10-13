@@ -30,9 +30,9 @@ func NewHandlers(watchedService *services.WatchedService, listService *services.
 
 func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Post("/movies/watched", h.AddWatchedMovie)
+	r.Post("/lists", h.CreateList)
 
 	// r.Get("/lists", h.GetAllLists)
-	// r.Post("/lists", h.CreateList)
 	// // r.Get("/lists/{id}", h.GetList)
 	// r.Delete("/lists", h.DeleteList)
 	// // r.Put("/lists/{id}", h.UpdateList)
@@ -62,11 +62,21 @@ func (h *Handlers) GetSidebar(w http.ResponseWriter, r *http.Request) {
 
 	count, err := h.watchedService.GetWatchedCount(r.Context())
 	if err != nil {
-		http.Error(w, "TODO", http.StatusBadRequest)
+		http.Error(w, "TODO", http.StatusInternalServerError)
 		return
 	}
 
-	sidebar.Sidebar(location, collapsed, count).Render(r.Context(), w)
+	lists, err := h.listService.GetAllLists(r.Context())
+	if err != nil {
+		http.Error(w, "TODO", http.StatusInternalServerError)
+	}
+
+	sidebar.Sidebar(sidebar.Props{
+		CurrentPage:  currentURL,
+		Collapsed:    collapsed,
+		WatchedCount: count,
+		Lists:        lists,
+	}).Render(r.Context(), w)
 }
 
 func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
@@ -136,7 +146,7 @@ func (h *Handlers) CreateList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Add("HX-Trigger", "refreshLists")
+	w.Header().Add("HX-Trigger", "refreshSidebar")
 	h.renderSuccessToast(w, r, "List Created Successfully", fmt.Sprintf("List \"%s\" has been created.", title), 0)
 }
 
