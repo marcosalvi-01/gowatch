@@ -15,6 +15,7 @@ import (
 	"gowatch/internal/ui/templui/icon"
 	"gowatch/internal/ui/templui/separator"
 	"gowatch/internal/ui/templui/table"
+	"gowatch/internal/ui/templui/textarea"
 	"slices"
 	"strconv"
 	"strings"
@@ -154,90 +155,159 @@ templ movieInfo(movie models.MovieDetails, isDark bool) {
 			</div>
 		}
 		<!-- Action Buttons -->
-		<div class="pt-2 sm:pt-4">
-			@actionButtons(movie.Movie.ID)
-		</div>
+		@actionButtons(movie.Movie.ID)
 	</div>
 }
 
 templ actionButtons(movieID int64) {
-	<form
-		hx-post="/htmx/movies/watched"
-		hx-target="#toast"
-		hx-include="[name='watched_date']"
-		hx-on::after-request="this.reset()"
-	>
-		<input type="hidden" name="movie_id" value={ movieID }/>
-		@dialog.Dialog(dialog.Props{
-			ID: "default-dialog-watched",
-		}) {
-			@dialog.Trigger() {
-				@button.Button() {
-					@icon.Check()
-					Mark as Watched
-				}
-			}
-			@dialog.Content(dialog.ContentProps{
-				Class: "max-w-md",
+	<div class="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 sm:pt-4">
+		<form
+			hx-post="/htmx/movies/watched"
+			hx-target="#toast"
+			hx-include="[name='watched_date']"
+			hx-on::after-request="this.reset()"
+		>
+			<input type="hidden" name="movie_id" value={ movieID }/>
+			@dialog.Dialog(dialog.Props{
+				ID: "default-dialog-watched",
 			}) {
-				@dialog.Header() {
-					@dialog.Title() {
+				@dialog.Trigger() {
+					@button.Button() {
+						@icon.Check()
 						Mark as Watched
 					}
-					@dialog.Description() {
-						Mark this movie as watched by adding it to the Watched List. Click save when you're done.
-					}
 				}
-				<div class="space-y-4">
-					<div class="space-y-2">
-						@form.Label(form.LabelProps{
-							For: "date-picker-form",
-						}) {
-							When did you watch this movie?
+				@dialog.Content(dialog.ContentProps{
+					Class: "max-w-md",
+				}) {
+					@dialog.Header() {
+						@dialog.Title() {
+							Mark as Watched
 						}
-						@datepicker.DatePicker(datepicker.Props{
-							ID:       "date-picker-form",
-							Name:     "watched_date",
-							HasError: false,
-							Value:    time.Now(),
-						})
-					</div>
-					<div class="flex items-start space-x-3">
-						@checkbox.Checkbox(checkbox.Props{
-							ID:    "theater-checkbox",
-							Name:  "watched_at_theater",
-							Value: "theater",
-						})
-						@form.Label(form.LabelProps{
-							For:   "theater-checkbox",
-							Class: "cursor-pointer",
-						}) {
-							<div class="space-y-1">
-								<div class="text-sm font-medium">Watched at theater</div>
-								<div class="text-xs text-muted-foreground">Check if you saw this in a cinema</div>
-							</div>
-						}
-					</div>
-				</div>
-				@dialog.Footer() {
-					@dialog.Close() {
-						@button.Button(button.Props{
-							Variant: button.VariantOutline,
-						}) {
-							Cancel
+						@dialog.Description() {
+							Mark this movie as watched by adding it to the Watched List. Click save when you're done.
 						}
 					}
-					@dialog.Close() {
-						@button.Button(button.Props{
-							Type: button.TypeSubmit,
-						}) {
-							Add to Watched
+					<div class="space-y-4">
+						<div class="space-y-2">
+							@form.Label(form.LabelProps{
+								For: "date-picker-form",
+							}) {
+								When did you watch this movie?
+							}
+							@datepicker.DatePicker(datepicker.Props{
+								ID:       "date-picker-form",
+								Name:     "watched_date",
+								HasError: false,
+								Value:    time.Now(),
+							})
+						</div>
+						<div class="flex items-start space-x-3">
+							@checkbox.Checkbox(checkbox.Props{
+								ID:    "theater-checkbox",
+								Name:  "watched_at_theater",
+								Value: "theater",
+							})
+							@form.Label(form.LabelProps{
+								For:   "theater-checkbox",
+								Class: "cursor-pointer",
+							}) {
+								<div class="space-y-1">
+									<div class="text-sm font-medium">Watched at theater</div>
+									<div class="text-xs text-muted-foreground">Check if you saw this in a cinema</div>
+								</div>
+							}
+						</div>
+					</div>
+					@dialog.Footer() {
+						@dialog.Close() {
+							@button.Button(button.Props{
+								Variant: button.VariantOutline,
+							}) {
+								Cancel
+							}
+						}
+						@dialog.Close() {
+							@button.Button(button.Props{
+								Type: button.TypeSubmit,
+							}) {
+								Add to Watched
+							}
 						}
 					}
 				}
 			}
-		}
-	</form>
+		</form>
+		// TODO add hx-indicator for loading state?
+		<form
+			hx-post="/htmx/lists/items"
+			hx-target="#toast"
+			hx-on::after-request="this.reset()"
+		>
+			<input type="hidden" name="movie_id" value={ movieID }/>
+			@dialog.Dialog(dialog.Props{
+				ID: "add-movie-to-list-dialog",
+			}) {
+				@dialog.Trigger() {
+					@button.Button(button.Props{
+						Variant: button.VariantOutline,
+					}) {
+						@icon.Plus()
+						Add to List
+					}
+				}
+				@dialog.Content(dialog.ContentProps{
+					Class: "max-w-md",
+				}) {
+					@dialog.Header() {
+						@dialog.Title() {
+							Add this Movie to a List
+						}
+						@dialog.Description() {
+							Add this movie to a list to keep track of it in a specific way.
+						}
+					}
+					<div class="space-y-4">
+						<div
+							hx-get="/htmx/lists/add-movie-dialog"
+							hx-trigger="load, refreshLists from:body"
+							hx-swap="innerHTML"
+							hx-target="this"
+						></div>
+						<div class="space-y-2">
+							@form.Label(form.LabelProps{
+								For: "movie-note",
+							}) {
+								Add a note (optional)
+							}
+							@textarea.Textarea(textarea.Props{
+								ID:          "movie-note",
+								Name:        "note",
+								Rows:        3,
+								Placeholder: "Why did you add this movie to your list? Any thoughts or reminders...",
+							})
+						</div>
+					</div>
+					@dialog.Footer() {
+						@dialog.Close() {
+							@button.Button(button.Props{
+								Variant: button.VariantOutline,
+							}) {
+								Cancel
+							}
+						}
+						@dialog.Close() {
+							@button.Button(button.Props{
+								Type: button.TypeSubmit,
+							}) {
+								Add to List
+							}
+						}
+					}
+				}
+			}
+		</form>
+	</div>
 }
 
 templ movieContent(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) {

@@ -1,0 +1,39 @@
+package addtolistdialog
+
+import (
+	"gowatch/internal/models"
+	"gowatch/internal/ui/templui/card"
+	"gowatch/internal/ui/templui/label"
+	"gowatch/internal/ui/templui/radio"
+	"strconv"
+)
+
+templ AddToListDialog(lists []models.ListEntry) {
+	<div class="flex flex-col gap-3">
+		for _, list := range lists {
+			@label.Label(label.Props{
+				For:   "list-" + strconv.Itoa(int(list.ID)),
+				Class: "block cursor-pointer",
+			}) {
+				@card.Card(card.Props{
+					Class: "hover:border-primary/50 has-[:checked]:ring-1 has-[:checked]:ring-primary has-[:checked]:border-primary transition-all",
+				}) {
+					@card.Content(card.ContentProps{
+						Class: "p-3 flex items-start gap-3",
+					}) {
+						@radio.Radio(radio.Props{
+							ID:    "list-" + strconv.Itoa(int(list.ID)),
+							Name:  "selected_list",
+							Value: strconv.Itoa(int(list.ID)),
+						})
+						<div class="grid gap-1.5">
+							<p class="text-sm leading-none font-medium">
+								{ list.Name }
+							</p>
+						</div>
+					}
+				}
+			}
+		}
+	</div>
+}

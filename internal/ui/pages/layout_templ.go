@@ -21,6 +21,7 @@ import (
 	"gowatch/internal/ui/templui/popover"
 	templSidebar "gowatch/internal/ui/templui/sidebar"
 	"gowatch/internal/ui/templui/skeleton"
+	"gowatch/internal/ui/templui/textarea"
 	"gowatch/internal/ui/templui/toast"
 )
 
@@ -362,6 +363,10 @@ func Scripts() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = collapsible.Script().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = textarea.Script().Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

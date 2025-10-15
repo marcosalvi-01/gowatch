@@ -13,6 +13,7 @@ import (
 	"gowatch/internal/ui/templui/popover"
 	templSidebar "gowatch/internal/ui/templui/sidebar"
 	"gowatch/internal/ui/templui/skeleton"
+	"gowatch/internal/ui/templui/textarea"
 	"gowatch/internal/ui/templui/toast"
 )
 
@@ -135,6 +136,7 @@ templ Scripts() {
 	@calendar.Script()
 	@toast.Script()
 	@collapsible.Script()
+	@textarea.Script()
 }
 
 templ SidebarNavigationScript() {

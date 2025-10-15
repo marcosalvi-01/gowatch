@@ -3,6 +3,7 @@ package htmx
 import (
 	"fmt"
 	"gowatch/internal/services"
+	"gowatch/internal/ui/components/addtolistdialog"
 	"gowatch/internal/ui/components/sidebar"
 	"gowatch/logging"
 	"net/http"
@@ -32,16 +33,25 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Post("/movies/watched", h.AddWatchedMovie)
 	r.Post("/lists", h.CreateList)
 
-	// r.Get("/lists", h.GetAllLists)
-	// // r.Get("/lists/{id}", h.GetList)
+	// r.Get("/lists/{id}", h.GetList)
 	// r.Delete("/lists", h.DeleteList)
 	// // r.Put("/lists/{id}", h.UpdateList)
-	//
-	// r.Post("/lists/items", h.AddMovieToList)
+	r.Post("/lists/items", h.AddMovieToList)
 	// r.Get("/lists/items", h.GetListDetails)
 	// r.Delete("/lists/items", h.DeleteMovieFromList)
 
 	r.Get("/sidebar", h.GetSidebar)
+	r.Get("/lists/add-movie-dialog", h.RenderAddToListDialogContent)
+}
+
+func (h *Handlers) RenderAddToListDialogContent(w http.ResponseWriter, r *http.Request) {
+	lists, err := h.listService.GetAllLists(r.Context())
+	if err != nil {
+		http.Error(w, "TODO", http.StatusInternalServerError)
+		return
+	}
+
+	addtolistdialog.AddToListDialog(lists).Render(r.Context(), w)
 }
 
 func (h *Handlers) GetSidebar(w http.ResponseWriter, r *http.Request) {
@@ -146,20 +156,8 @@ func (h *Handlers) CreateList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Add("HX-Trigger", "refreshSidebar")
+	w.Header().Add("HX-Trigger", "refreshLists, refreshSidebar")
 	h.renderSuccessToast(w, r, "List Created Successfully", fmt.Sprintf("List \"%s\" has been created.", title), 0)
-}
-
-func (h *Handlers) GetAllLists(w http.ResponseWriter, r *http.Request) {
-	// lists, err := h.listService.GetAllLists(r.Context())
-	// if err != nil {
-	// 	log.Error("failed to get all lists", "error", err)
-	// 	h.renderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred", 0)
-	// 	return
-	// }
-	return
-
-	// page.SidebarListsList("", lists).Render(r.Context(), w)
 }
 
 func (h *Handlers) AddMovieToList(w http.ResponseWriter, r *http.Request) {
