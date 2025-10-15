@@ -24,12 +24,12 @@ type Props struct {
 // Sidebar is the sidebar for the application. It manages state of the page using a script.
 // Each menu item should make an htmx request to swap the main-content.
 templ Sidebar(props Props) {
+	// Dialog must be at top level for proper portal rendering
+	@createListDialog()
 	@sidebar.Sidebar(sidebar.Props{
 		ID:        "sidebar",
 		Collapsed: props.Collapsed,
 	}) {
-		// Dialog must be at top level for proper portal rendering
-		@createListDialog()
 		@header()
 		@sidebar.Content() {
 			@sidebar.Group() {

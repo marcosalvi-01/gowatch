@@ -121,24 +121,9 @@ templ Scripts() {
 			});
 		  }
 		});
-
-		// Update sidebar active state on navigation
-		document.body.addEventListener("htmx:beforeRequest", (e) => {
-		  // Check if this element has data-page attribute
-		  const page = e.detail.elt.getAttribute("data-page");
-		  if (page) {
-			// Find all menu buttons with data-page
-			document.querySelectorAll("[data-tui-sidebar=menu-button][data-page]").forEach(btn => {
-			  // Remove active state
-			  btn.removeAttribute("data-tui-sidebar-active");
-			});
-			
-			// Add active state to clicked button
-			e.detail.elt.setAttribute("data-tui-sidebar-active", "true");
-		  }
-		});
 	});
 	</script>
+	@SidebarNavigationScript()
 	@ThemeScript()
 	// for the sidebar
 	@templSidebar.Script()
@@ -150,13 +135,116 @@ templ Scripts() {
 	@calendar.Script()
 	@toast.Script()
 	@collapsible.Script()
-	// @dropdown.Script()
-	// // for the list of lists in the sidebar
-	// @collapsible.Script()
-	// // for the new list modal
-	// @modal.Script()
-	// // for the search bar
-	// @input.Script()
+}
+
+templ SidebarNavigationScript() {
+	<script>
+	// Sidebar Navigation Active State Handler
+	document.addEventListener("DOMContentLoaded", () => {
+	  // Function to update active state based on current URL
+	  function updateSidebarActiveState(url = window.location.pathname) {
+		// Find all menu buttons with data-page attribute
+		const menuButtons = document.querySelectorAll("[data-tui-sidebar=menu-button][data-page]");
+		const subButtons = document.querySelectorAll("[data-tui-sidebar=menu-sub-button]");
+		
+		// Remove active state from all buttons
+		menuButtons.forEach(btn => {
+		  btn.removeAttribute("data-tui-sidebar-active");
+		});
+		subButtons.forEach(btn => {
+		  btn.removeAttribute("data-tui-sidebar-active");
+		});
+		
+		// Find and activate the matching button
+		let activated = false;
+		
+		// First, try exact match for sub-buttons (list items)
+		subButtons.forEach(btn => {
+		  const href = btn.getAttribute("href");
+		  if (href && href === url) {
+			btn.setAttribute("data-tui-sidebar-active", "true");
+			activated = true;
+		  }
+		});
+		
+		// If no sub-button matched, try main menu buttons
+		if (!activated) {
+		  menuButtons.forEach(btn => {
+			const page = btn.getAttribute("data-page");
+			
+			// Handle different matching strategies
+			if (page === url || 
+				url === `/${page}` || 
+				(page && url.startsWith(`/${page}/`))) {
+			  btn.setAttribute("data-tui-sidebar-active", "true");
+			  activated = true;
+			}
+		  });
+		}
+		
+		// If still no match and not root, try path segments
+		if (!activated && url !== "/") {
+		  const pathSegments = url.split("/").filter(Boolean);
+		  if (pathSegments.length > 0) {
+			const firstSegment = pathSegments[0];
+			menuButtons.forEach(btn => {
+			  const page = btn.getAttribute("data-page");
+			  if (page === firstSegment) {
+				btn.setAttribute("data-tui-sidebar-active", "true");
+			  }
+			});
+		  }
+		}
+	  }
+	  
+	  // Set initial active state on page load
+	  updateSidebarActiveState();
+	  
+	  // Update active state after HTMX navigation completes
+	  document.body.addEventListener("htmx:afterSwap", (e) => {
+		// Only update if the swap was for main content
+		if (e.detail.target && 
+			(e.detail.target.id === "main-content" || 
+			 e.detail.target.closest("#main-content"))) {
+		  // Use the URL from the request or current location
+		  const newUrl = e.detail.pathInfo?.requestPath || window.location.pathname;
+		  updateSidebarActiveState(newUrl);
+		}
+	  });
+	  
+	  // Handle browser back/forward navigation
+	  window.addEventListener("popstate", () => {
+		updateSidebarActiveState();
+	  });
+	  
+	  // Handle direct clicks for immediate visual feedback
+	  document.body.addEventListener("click", (e) => {
+		const menuButton = e.target.closest("[data-tui-sidebar=menu-button][data-page]");
+		const subButton = e.target.closest("[data-tui-sidebar=menu-sub-button]");
+		
+		if (menuButton || subButton) {
+		  let targetUrl;
+		  if (menuButton) {
+			const page = menuButton.getAttribute("data-page");
+			targetUrl = `/${page}`;
+		  } else if (subButton) {
+			targetUrl = subButton.getAttribute("href");
+		  }
+		  
+		  if (targetUrl) {
+			updateSidebarActiveState(targetUrl);
+		  }
+		}
+	  });
+	  
+	  // Re-apply active state after sidebar content refresh
+	  document.body.addEventListener("htmx:afterSwap", (e) => {
+		if (e.detail.target && e.detail.target.id === "sidebar-content") {
+		  updateSidebarActiveState();
+		}
+	  });
+	});
+	</script>
 }
 
 templ ThemeScript() {

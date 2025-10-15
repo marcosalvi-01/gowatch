@@ -317,7 +317,11 @@ func Scripts() templ.Component {
 			templ_7745c5c3_Var7 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<script src=\"https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js\" integrity=\"sha384-Akqfrbj/HpNVo8k11SXBb6TlBWmXXlYQrCSqEWmyKJe+hDm3Z/B2WVG4smwBkRVm\" crossorigin=\"anonymous\"></script><script>\n\t  document.addEventListener(\"DOMContentLoaded\", () => {\n\t\t// Re-initialize templUI components after HTMX swaps\n\t\tdocument.body.addEventListener(\"htmx:afterSwap\", (e) => {\n\t\t  if (window.templUI) {\n\t\t\tObject.values(window.templUI).forEach(comp => {\n\t\t\t  comp.init?.(e.detail.elt);\n\t\t\t});\n\t\t  }\n\t\t});\n\n\t\t// Re-initialize components after out-of-band swaps\n\t\tdocument.body.addEventListener(\"htmx:oobAfterSwap\", (e) => {\n\t\t  if (window.templUI) {\n\t\t\tObject.values(window.templUI).forEach(comp => {\n\t\t\t  comp.init?.(e.detail.target);\n\t\t\t});\n\t\t  }\n\t\t});\n\n\t\t// Update sidebar active state on navigation\n\t\tdocument.body.addEventListener(\"htmx:beforeRequest\", (e) => {\n\t\t  // Check if this element has data-page attribute\n\t\t  const page = e.detail.elt.getAttribute(\"data-page\");\n\t\t  if (page) {\n\t\t\t// Find all menu buttons with data-page\n\t\t\tdocument.querySelectorAll(\"[data-tui-sidebar=menu-button][data-page]\").forEach(btn => {\n\t\t\t  // Remove active state\n\t\t\t  btn.removeAttribute(\"data-tui-sidebar-active\");\n\t\t\t});\n\t\t\t\n\t\t\t// Add active state to clicked button\n\t\t\te.detail.elt.setAttribute(\"data-tui-sidebar-active\", \"true\");\n\t\t  }\n\t\t});\n\t});\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<script src=\"https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js\" integrity=\"sha384-Akqfrbj/HpNVo8k11SXBb6TlBWmXXlYQrCSqEWmyKJe+hDm3Z/B2WVG4smwBkRVm\" crossorigin=\"anonymous\"></script><script>\n\t  document.addEventListener(\"DOMContentLoaded\", () => {\n\t\t// Re-initialize templUI components after HTMX swaps\n\t\tdocument.body.addEventListener(\"htmx:afterSwap\", (e) => {\n\t\t  if (window.templUI) {\n\t\t\tObject.values(window.templUI).forEach(comp => {\n\t\t\t  comp.init?.(e.detail.elt);\n\t\t\t});\n\t\t  }\n\t\t});\n\n\t\t// Re-initialize components after out-of-band swaps\n\t\tdocument.body.addEventListener(\"htmx:oobAfterSwap\", (e) => {\n\t\t  if (window.templUI) {\n\t\t\tObject.values(window.templUI).forEach(comp => {\n\t\t\t  comp.init?.(e.detail.target);\n\t\t\t});\n\t\t  }\n\t\t});\n\t});\n\t</script>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = SidebarNavigationScript().Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -365,7 +369,7 @@ func Scripts() templ.Component {
 	})
 }
 
-func ThemeScript() templ.Component {
+func SidebarNavigationScript() templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -386,7 +390,36 @@ func ThemeScript() templ.Component {
 			templ_7745c5c3_Var8 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<script>\n\t(() => {\n\t  const root = document.documentElement;\n\t  const saved = localStorage.getItem('theme');\n\t  const shouldBeDark = saved ? saved === 'dark' : true;\n\t  if (shouldBeDark) {\n\t    root.classList.add('dark');\n\t  }\n\t  window.toggleTheme = () => {\n\t    const isDark = root.classList.toggle('dark');\n\t    localStorage.setItem('theme', isDark ? 'dark' : 'light');\n\t  };\n\t})();\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<script>\n\t// Sidebar Navigation Active State Handler\n\tdocument.addEventListener(\"DOMContentLoaded\", () => {\n\t  // Function to update active state based on current URL\n\t  function updateSidebarActiveState(url = window.location.pathname) {\n\t\t// Find all menu buttons with data-page attribute\n\t\tconst menuButtons = document.querySelectorAll(\"[data-tui-sidebar=menu-button][data-page]\");\n\t\tconst subButtons = document.querySelectorAll(\"[data-tui-sidebar=menu-sub-button]\");\n\t\t\n\t\t// Remove active state from all buttons\n\t\tmenuButtons.forEach(btn => {\n\t\t  btn.removeAttribute(\"data-tui-sidebar-active\");\n\t\t});\n\t\tsubButtons.forEach(btn => {\n\t\t  btn.removeAttribute(\"data-tui-sidebar-active\");\n\t\t});\n\t\t\n\t\t// Find and activate the matching button\n\t\tlet activated = false;\n\t\t\n\t\t// First, try exact match for sub-buttons (list items)\n\t\tsubButtons.forEach(btn => {\n\t\t  const href = btn.getAttribute(\"href\");\n\t\t  if (href && href === url) {\n\t\t\tbtn.setAttribute(\"data-tui-sidebar-active\", \"true\");\n\t\t\tactivated = true;\n\t\t  }\n\t\t});\n\t\t\n\t\t// If no sub-button matched, try main menu buttons\n\t\tif (!activated) {\n\t\t  menuButtons.forEach(btn => {\n\t\t\tconst page = btn.getAttribute(\"data-page\");\n\t\t\t\n\t\t\t// Handle different matching strategies\n\t\t\tif (page === url || \n\t\t\t\turl === `/${page}` || \n\t\t\t\t(page && url.startsWith(`/${page}/`))) {\n\t\t\t  btn.setAttribute(\"data-tui-sidebar-active\", \"true\");\n\t\t\t  activated = true;\n\t\t\t}\n\t\t  });\n\t\t}\n\t\t\n\t\t// If still no match and not root, try path segments\n\t\tif (!activated && url !== \"/\") {\n\t\t  const pathSegments = url.split(\"/\").filter(Boolean);\n\t\t  if (pathSegments.length > 0) {\n\t\t\tconst firstSegment = pathSegments[0];\n\t\t\tmenuButtons.forEach(btn => {\n\t\t\t  const page = btn.getAttribute(\"data-page\");\n\t\t\t  if (page === firstSegment) {\n\t\t\t\tbtn.setAttribute(\"data-tui-sidebar-active\", \"true\");\n\t\t\t  }\n\t\t\t});\n\t\t  }\n\t\t}\n\t  }\n\t  \n\t  // Set initial active state on page load\n\t  updateSidebarActiveState();\n\t  \n\t  // Update active state after HTMX navigation completes\n\t  document.body.addEventListener(\"htmx:afterSwap\", (e) => {\n\t\t// Only update if the swap was for main content\n\t\tif (e.detail.target && \n\t\t\t(e.detail.target.id === \"main-content\" || \n\t\t\t e.detail.target.closest(\"#main-content\"))) {\n\t\t  // Use the URL from the request or current location\n\t\t  const newUrl = e.detail.pathInfo?.requestPath || window.location.pathname;\n\t\t  updateSidebarActiveState(newUrl);\n\t\t}\n\t  });\n\t  \n\t  // Handle browser back/forward navigation\n\t  window.addEventListener(\"popstate\", () => {\n\t\tupdateSidebarActiveState();\n\t  });\n\t  \n\t  // Handle direct clicks for immediate visual feedback\n\t  document.body.addEventListener(\"click\", (e) => {\n\t\tconst menuButton = e.target.closest(\"[data-tui-sidebar=menu-button][data-page]\");\n\t\tconst subButton = e.target.closest(\"[data-tui-sidebar=menu-sub-button]\");\n\t\t\n\t\tif (menuButton || subButton) {\n\t\t  let targetUrl;\n\t\t  if (menuButton) {\n\t\t\tconst page = menuButton.getAttribute(\"data-page\");\n\t\t\ttargetUrl = `/${page}`;\n\t\t  } else if (subButton) {\n\t\t\ttargetUrl = subButton.getAttribute(\"href\");\n\t\t  }\n\t\t  \n\t\t  if (targetUrl) {\n\t\t\tupdateSidebarActiveState(targetUrl);\n\t\t  }\n\t\t}\n\t  });\n\t  \n\t  // Re-apply active state after sidebar content refresh\n\t  document.body.addEventListener(\"htmx:afterSwap\", (e) => {\n\t\tif (e.detail.target && e.detail.target.id === \"sidebar-content\") {\n\t\t  updateSidebarActiveState();\n\t\t}\n\t  });\n\t});\n\t</script>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func ThemeScript() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var9 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var9 == nil {
+			templ_7745c5c3_Var9 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<script>\n\t(() => {\n\t  const root = document.documentElement;\n\t  const saved = localStorage.getItem('theme');\n\t  const shouldBeDark = saved ? saved === 'dark' : true;\n\t  if (shouldBeDark) {\n\t    root.classList.add('dark');\n\t  }\n\t  window.toggleTheme = () => {\n\t    const isDark = root.classList.toggle('dark');\n\t    localStorage.setItem('theme', isDark ? 'dark' : 'light');\n\t  };\n\t})();\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -410,12 +443,12 @@ func Favicons() templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var9 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var9 == nil {
-			templ_7745c5c3_Var9 = templ.NopComponent
+		templ_7745c5c3_Var10 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var10 == nil {
+			templ_7745c5c3_Var10 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<link rel=\"icon\" type=\"image/svg+xml\" href=\"/static/favicon.svg\"><meta name=\"theme-color\" content=\"#ffffff\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<link rel=\"icon\" type=\"image/svg+xml\" href=\"/static/favicon.svg\"><meta name=\"theme-color\" content=\"#ffffff\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -439,17 +472,17 @@ func skeletonDashboard() templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var10 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var10 == nil {
-			templ_7745c5c3_Var10 = templ.NopComponent
+		templ_7745c5c3_Var11 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var11 == nil {
+			templ_7745c5c3_Var11 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<div><div class=\"grid gap-6 md:grid-cols-3\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<div><div class=\"grid gap-6 md:grid-cols-3\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		for i := 0; i < 3; i++ {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<div class=\"p-4\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"p-4\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -461,7 +494,7 @@ func skeletonDashboard() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"flex items-center gap-2\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<div class=\"flex items-center gap-2\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -473,12 +506,12 @@ func skeletonDashboard() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</div><div class=\"mt-4 p-4\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</div><div class=\"mt-4 p-4\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -490,7 +523,7 @@ func skeletonDashboard() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "</div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -514,12 +547,12 @@ func SearchBar(searchContent string) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var11 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var11 == nil {
-			templ_7745c5c3_Var11 = templ.NopComponent
+		templ_7745c5c3_Var12 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var12 == nil {
+			templ_7745c5c3_Var12 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<div class=\"relative flex items-center w-full\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<div class=\"relative flex items-center w-full\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -548,7 +581,7 @@ func SearchBar(searchContent string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "</div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
