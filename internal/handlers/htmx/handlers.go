@@ -47,7 +47,8 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 func (h *Handlers) RenderAddToListDialogContent(w http.ResponseWriter, r *http.Request) {
 	lists, err := h.listService.GetAllLists(r.Context())
 	if err != nil {
-		http.Error(w, "TODO", http.StatusInternalServerError)
+		log.Error("failed to get all lists for dialog", "error", err)
+		h.renderErrorToast(w, r, "Failed to Load Lists", "An unexpected error occurred while fetching your lists.", 0)
 		return
 	}
 
@@ -72,13 +73,16 @@ func (h *Handlers) GetSidebar(w http.ResponseWriter, r *http.Request) {
 
 	count, err := h.watchedService.GetWatchedCount(r.Context())
 	if err != nil {
-		http.Error(w, "TODO", http.StatusInternalServerError)
+		log.Error("failed to get watched count for sidebar", "error", err)
+		h.renderErrorToast(w, r, "Sidebar Error", "Could not load watched count.", 0)
 		return
 	}
 
 	lists, err := h.listService.GetAllLists(r.Context())
 	if err != nil {
-		http.Error(w, "TODO", http.StatusInternalServerError)
+		log.Error("failed to get all lists for sidebar", "error", err)
+		h.renderErrorToast(w, r, "Sidebar Error", "Could not load lists.", 0)
+		return
 	}
 
 	sidebar.Sidebar(sidebar.Props{

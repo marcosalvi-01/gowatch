@@ -361,7 +361,7 @@ func (d *SqliteDB) GetList(ctx context.Context, id int64) (*models.List, error) 
 		list, err := qtx.GetListByID(ctx, id)
 		if err != nil {
 			// no list with that id exists, return an error
-			return nil, fmt.Errorf("TODO: %w", err)
+			return nil, fmt.Errorf("failed to get list by ID %d: %w", id, err)
 		}
 
 		// this list exists but it is empty, return it anyway
