@@ -230,7 +230,7 @@ func cardContent(props Props) templ.Component {
 				}
 				if props.Hoverable {
 					if props.TopHoverComponent != nil {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<div class=\"absolute inset-x-0 top-0 -translate-y-full group-hover:translate-y-0 bg-black/80 p-2 md:p-3 text-white duration-300 ease-out\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<div class=\"absolute inset-x-0 top-0 -translate-y-full group-hover:translate-y-0 bg-black/80 p-2 md:p-3 text-white duration-300 ease-out\" onclick=\"const htmxEl = event.target.closest('[hx-get]'); if (htmxEl) { htmxEl.addEventListener('htmx:beforeOnLoad', function(e) { e.preventDefault(); }, { once: true }); }\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}

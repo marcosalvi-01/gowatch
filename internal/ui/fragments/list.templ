@@ -1,0 +1,345 @@
+package fragments
+
+import (
+	"fmt"
+	"gowatch/internal/models"
+	"gowatch/internal/ui/components/moviecard"
+	"gowatch/internal/ui/templui/button"
+	"gowatch/internal/ui/templui/dialog"
+	"gowatch/internal/ui/templui/icon"
+	"gowatch/internal/ui/templui/separator"
+	"strconv"
+	"time"
+)
+
+templ List(list *models.List) {
+	@ListDetails(list)
+}
+
+templ ListDetails(list *models.List) {
+	@listHeader(list)
+	@separator.Separator()
+	@listContent(list)
+}
+
+templ listHeader(list *models.List) {
+	<div class="space-y-4 mb-8">
+		<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+			<div class="space-y-2">
+				<h1 class="text-2xl sm:text-3xl font-bold">{ list.Name }</h1>
+				if list.Description != nil && *list.Description != "" {
+					<p class="text-muted-foreground text-sm sm:text-base max-w-2xl">
+						{ *list.Description }
+					</p>
+				}
+			</div>
+			<div class="flex flex-col sm:flex-row gap-3">
+				@listActions(list)
+			</div>
+		</div>
+		@listStats(list)
+	</div>
+}
+
+templ listStats(list *models.List) {
+	<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+		@listStat("Movies", fmt.Sprintf("%d", len(list.Movies)))
+		@listStat("Created", list.CreationDate.Format("Jan 2006"))
+		if len(list.Movies) > 0 {
+			@listStat("Latest Added", getLatestAddedDate(list.Movies).Format("Jan 2006"))
+			@listStat("Avg Rating", fmt.Sprintf("%.1f", getAverageRating(list.Movies)))
+		}
+	</div>
+}
+
+templ listStat(label, value string) {
+	<div class="text-center sm:text-left">
+		<div class="text-xl font-bold text-primary">{ value }</div>
+		<div class="text-xs text-muted-foreground">{ label }</div>
+	</div>
+}
+
+templ listActions(list *models.List) {
+	@deleteListDialog(list)
+}
+
+templ deleteListDialog(list *models.List) {
+	<form
+		hx-delete="/htmx/lists"
+		hx-target="#toast"
+	>
+		<input type="hidden" name="list_id" value={ strconv.FormatInt(list.ID, 10) }/>
+		@dialog.Dialog(dialog.Props{
+			ID: "delete-list-dialog",
+		}) {
+			@dialog.Trigger(dialog.TriggerProps{
+				For: "delete-list-dialog",
+			}) {
+				@button.Button(button.Props{
+					Variant: button.VariantDestructive,
+					Size:    button.SizeSm,
+				}) {
+					@icon.Trash(icon.Props{Size: 16})
+					Delete List
+				}
+			}
+			@dialog.Content(dialog.ContentProps{
+				Class: "max-w-md",
+			}) {
+				@dialog.Header() {
+					@dialog.Title() {
+						Delete List
+					}
+					@dialog.Description() {
+						Are you sure you want to delete <strong>{ list.Name }</strong>? This action cannot be undone.
+					}
+				}
+				<div class="space-y-4">
+					if len(list.Movies) > 0 {
+						<div class="p-3 bg-destructive/10 rounded-lg">
+							<p class="text-sm text-destructive">
+								This list contains { fmt.Sprintf("%d", len(list.Movies)) } movie(s) that will be removed from the list.
+							</p>
+						</div>
+					}
+				</div>
+				@dialog.Footer() {
+					@dialog.Close(dialog.CloseProps{
+						For: "delete-list-dialog",
+					}) {
+						@button.Button(button.Props{
+							Variant: button.VariantOutline,
+							Type:    button.TypeButton,
+						}) {
+							Cancel
+						}
+					}
+					@dialog.Close(dialog.CloseProps{
+						For: "delete-list-dialog",
+					}) {
+						@button.Button(button.Props{
+							Variant: button.VariantDestructive,
+							Type:    button.TypeSubmit,
+						}) {
+							Delete List
+						}
+					}
+				}
+			}
+		}
+	</form>
+}
+
+templ listContent(list *models.List) {
+	if len(list.Movies) == 0 {
+		@emptyListState()
+	} else {
+		@movieGrid(list)
+	}
+}
+
+templ emptyListState() {
+	<div class="text-center py-24">
+		<div class="flex items-center justify-center mb-4">
+			@icon.Film(icon.Props{
+				Size: 32,
+			})
+		</div>
+		<h3 class="text-lg font-medium mb-2">No movies in this list yet</h3>
+		<p class="text-muted-foreground mb-6 max-w-sm mx-auto">
+			Start building your list by adding movies you want to watch or remember.
+		</p>
+	</div>
+}
+
+templ movieGrid(list *models.List) {
+	<div class="space-y-6 pt-4">
+		<h2 class="text-xl font-semibold">Movies</h2>
+		<div class="flex flex-wrap gap-4 md:gap-6 w-full">
+			for _, movie := range list.Movies {
+				@movieListItem(list.ID, movie)
+			}
+		</div>
+	</div>
+}
+
+templ movieListItem(listID int64, movie models.MovieItem) {
+	<div class="relative group">
+		{{
+		moviecardProps := moviecard.Props{
+			Title:             movie.MovieDetails.Movie.Title,
+			Href:              "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+			PosterPath:        movie.MovieDetails.Movie.PosterPath,
+			Hoverable:         true,
+			TopHoverComponent: movieCardTopHoverList(movie),
+		}
+		}}
+		@moviecard.MovieCard(moviecardProps) {
+			<div class="space-y-1">
+				<h3 class="text-xs sm:text-sm font-bold leading-tight line-clamp-2">
+					{ movie.MovieDetails.Movie.Title }
+				</h3>
+				<div class="flex items-center justify-between text-xs">
+					<div class="flex items-center text-muted-foreground">
+						@icon.Calendar(icon.Props{Size: 12})
+						<span class="ml-1">{ movie.MovieDetails.Movie.ReleaseDate.Format("2006") }</span>
+					</div>
+					if movie.MovieDetails.Movie.VoteAverage > 0 {
+						<div class="flex items-center">
+							@icon.Star(icon.Props{
+								Size:   12,
+								Fill:   "orange",
+								Stroke: "orange",
+							})
+							<span class="ml-1">{ fmt.Sprintf("%.1f", movie.MovieDetails.Movie.VoteAverage) }</span>
+						</div>
+					}
+				</div>
+				<div class="text-xs text-muted-foreground">
+					Added { formatTimeAgoShort(movie.DateAdded) }
+				</div>
+			</div>
+		}
+		@confirmRemoveMovieDialog(listID, movie)
+	</div>
+}
+
+templ confirmRemoveMovieDialog(listID int64, movie models.MovieItem) {
+	<form
+		hx-delete="/htmx/lists/items"
+		hx-target="#toast"
+	>
+		<input type="hidden" name="movie_id" value={ strconv.FormatInt(movie.MovieDetails.Movie.ID, 10) }/>
+		<input type="hidden" name="list_id" value={ strconv.FormatInt(listID, 10) }/>
+		@dialog.Dialog(dialog.Props{
+			ID: "movie-menu-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+		}) {
+			@dialog.Content(dialog.ContentProps{
+				Class: "max-w-md",
+			}) {
+				@dialog.Header() {
+					@dialog.Title() {
+						Remove Movie
+					}
+					@dialog.Description() {
+						Are you sure you want to remove <strong>{ movie.MovieDetails.Movie.Title }</strong> from this list?
+					}
+				}
+				@dialog.Footer() {
+					@dialog.Close(dialog.CloseProps{
+						For: "movie-menu-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+					}) {
+						@button.Button(button.Props{
+							Variant: button.VariantOutline,
+							Type:    button.TypeButton,
+						}) {
+							Cancel
+						}
+					}
+					@dialog.Close(dialog.CloseProps{
+						For: "movie-menu-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+					}) {
+						@button.Button(button.Props{
+							Variant: button.VariantDestructive,
+							Type:    button.TypeSubmit,
+						}) {
+							Remove from List
+						}
+					}
+				}
+			}
+		}
+	</form>
+}
+
+templ movieCardTopHoverList(movie models.MovieItem) {
+	<div class="flex items-start gap-2 justify-between">
+		<div class="flex flex-col min-h-[20px]">
+			if movie.Note != nil && *movie.Note != "" {
+				<p class="text-sm">Note:</p>
+				<p class="text-xs leading-relaxed max-w-xs">{ *movie.Note }</p>
+			} else {
+				<p class="text-sm text-gray-300 italic">No note set</p>
+			}
+		</div>
+		@dialog.Trigger(dialog.TriggerProps{
+			For: "movie-menu-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+		}) {
+			@button.Button(button.Props{
+				Variant: button.VariantDestructive,
+				Class:   "h-6 w-6 shrink-0",
+			}) {
+				@icon.Trash(icon.Props{Size: 12})
+			}
+		}
+	</div>
+}
+
+// Helper functions remain the same
+func getLatestAddedDate(movies []models.MovieItem) time.Time {
+	if len(movies) == 0 {
+		return time.Time{}
+	}
+
+	latest := movies[0].DateAdded
+	for _, movie := range movies[1:] {
+		if movie.DateAdded.After(latest) {
+			latest = movie.DateAdded
+		}
+	}
+	return latest
+}
+
+func getAverageRating(movies []models.MovieItem) float32 {
+	if len(movies) == 0 {
+		return 0
+	}
+
+	var total float32 = 0.0
+	count := 0
+	for _, movie := range movies {
+		if movie.MovieDetails.Movie.VoteAverage > 0 {
+			total += movie.MovieDetails.Movie.VoteAverage
+			count++
+		}
+	}
+
+	if count == 0 {
+		return 0
+	}
+	return total / float32(count)
+}
+
+func formatTimeAgoShort(t time.Time) string {
+	now := time.Now()
+	diff := now.Sub(t)
+
+	switch {
+	case diff < 24*time.Hour:
+		return "today"
+	case diff < 7*24*time.Hour:
+		days := int(diff.Hours() / 24)
+		if days == 1 {
+			return "1 day ago"
+		}
+		return fmt.Sprintf("%d days ago", days)
+	case diff < 30*24*time.Hour:
+		weeks := int(diff.Hours() / (24 * 7))
+		if weeks == 1 {
+			return "1 week ago"
+		}
+		return fmt.Sprintf("%d weeks ago", weeks)
+	case diff < 365*24*time.Hour:
+		months := int(diff.Hours() / (24 * 30))
+		if months == 1 {
+			return "1 month ago"
+		}
+		return fmt.Sprintf("%d months ago", months)
+	default:
+		years := int(diff.Hours() / (24 * 365))
+		if years == 1 {
+			return "1 year ago"
+		}
+		return fmt.Sprintf("%d years ago", years)
+	}
+}

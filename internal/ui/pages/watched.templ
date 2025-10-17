@@ -6,7 +6,7 @@ import (
 )
 
 templ Watched(days []models.WatchedMoviesInDay) {
-	@Layout("watched") {
+	@Layout() {
 		@fragments.Watched(days)
 	}
 }

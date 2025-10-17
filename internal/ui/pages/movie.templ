@@ -6,7 +6,7 @@ import (
 )
 
 templ Movie(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) {
-	@Layout("movie") {
+	@Layout() {
 		@fragments.Movie(movie, watchRecords)
 	}
 }

@@ -1,0 +1,10 @@
+package pages
+
+import "gowatch/internal/ui/fragments"
+import "gowatch/internal/models"
+
+templ List(list *models.List) {
+	@Layout() {
+		@fragments.List(list)
+	}
+}

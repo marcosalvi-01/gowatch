@@ -6,7 +6,7 @@ import (
 )
 
 templ Search(results []models.Movie) {
-	@Layout("movie") {
+	@Layout() {
 		@fragments.Search("", results)
 	}
 }

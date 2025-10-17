@@ -47,11 +47,10 @@ templ Sidebar(props Props) {
 templ homeMenuItem(currentPage string) {
 	@sidebar.MenuItem() {
 		@sidebar.MenuButton(sidebar.MenuButtonProps{
-			ID:       "test",
 			Tooltip:  "Home",
 			IsActive: currentPage == "home",
 			Attributes: templ.Attributes{
-				"data-page":    "home",
+				"data-nav-url": "/home",
 				"hx-get":       "/home",
 				"hx-target":    "#main-content",
 				"hx-swap":      "innerHTML",
@@ -70,7 +69,7 @@ templ watchedMenuItem(currentPage string, watchedCount int) {
 		@sidebar.MenuButton(sidebar.MenuButtonProps{
 			Tooltip: "Watched",
 			Attributes: templ.Attributes{
-				"data-page":    "watched",
+				"data-nav-url": "/watched",
 				"hx-get":       "/watched",
 				"hx-target":    "#main-content",
 				"hx-swap":      "innerHTML",
@@ -128,8 +127,15 @@ templ listItems(lists []models.ListEntry, currentPage string) {
 		for _, list := range lists {
 			@sidebar.MenuSubItem() {
 				@sidebar.MenuSubButton(sidebar.MenuSubButtonProps{
-					Href:     "/list/" + fmt.Sprintf("%d", list.ID),
-					IsActive: currentPage == "/list/"+fmt.Sprintf("%d", list.ID),
+					IsActive: currentPage == fmt.Sprintf("list_%d", list.ID),
+					Attributes: templ.Attributes{
+						"data-nav-url": fmt.Sprintf("/list/%d", list.ID),
+						"hx-get":       fmt.Sprintf("/list/%d", list.ID),
+						"hx-target":    "#main-content",
+						"hx-swap":      "innerHTML",
+						"hx-push-url":  "true",
+						"hx-indicator": "#main-content-loading",
+					},
 				}) {
 					<span>{ list.Name }</span>
 				}

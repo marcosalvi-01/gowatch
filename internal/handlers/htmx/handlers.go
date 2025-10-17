@@ -32,9 +32,9 @@ func NewHandlers(watchedService *services.WatchedService, listService *services.
 func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Post("/movies/watched", h.AddWatchedMovie)
 	r.Post("/lists", h.CreateList)
+	r.Delete("/lists", h.DeleteList)
 
 	// r.Get("/lists/{id}", h.GetList)
-	// r.Delete("/lists", h.DeleteList)
 	// // r.Put("/lists/{id}", h.UpdateList)
 	r.Post("/lists/items", h.AddMovieToList)
 	// r.Get("/lists/items", h.GetListDetails)

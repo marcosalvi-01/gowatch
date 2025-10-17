@@ -227,11 +227,10 @@ func homeMenuItem(currentPage string) templ.Component {
 				return nil
 			})
 			templ_7745c5c3_Err = sidebar.MenuButton(sidebar.MenuButtonProps{
-				ID:       "test",
 				Tooltip:  "Home",
 				IsActive: currentPage == "home",
 				Attributes: templ.Attributes{
-					"data-page":    "home",
+					"data-nav-url": "/home",
 					"hx-get":       "/home",
 					"hx-target":    "#main-content",
 					"hx-swap":      "innerHTML",
@@ -320,7 +319,7 @@ func watchedMenuItem(currentPage string, watchedCount int) templ.Component {
 					var templ_7745c5c3_Var13 string
 					templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(watchedCount)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 85, Col: 18}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 84, Col: 18}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 					if templ_7745c5c3_Err != nil {
@@ -337,7 +336,7 @@ func watchedMenuItem(currentPage string, watchedCount int) templ.Component {
 			templ_7745c5c3_Err = sidebar.MenuButton(sidebar.MenuButtonProps{
 				Tooltip: "Watched",
 				Attributes: templ.Attributes{
-					"data-page":    "watched",
+					"data-nav-url": "/watched",
 					"hx-get":       "/watched",
 					"hx-target":    "#main-content",
 					"hx-swap":      "innerHTML",
@@ -649,7 +648,7 @@ func listItems(lists []models.ListEntry, currentPage string) templ.Component {
 					var templ_7745c5c3_Var27 string
 					templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(list.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 134, Col: 22}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 140, Col: 22}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 					if templ_7745c5c3_Err != nil {
@@ -662,8 +661,15 @@ func listItems(lists []models.ListEntry, currentPage string) templ.Component {
 					return nil
 				})
 				templ_7745c5c3_Err = sidebar.MenuSubButton(sidebar.MenuSubButtonProps{
-					Href:     "/list/" + fmt.Sprintf("%d", list.ID),
-					IsActive: currentPage == "/list/"+fmt.Sprintf("%d", list.ID),
+					IsActive: currentPage == fmt.Sprintf("list_%d", list.ID),
+					Attributes: templ.Attributes{
+						"data-nav-url": fmt.Sprintf("/list/%d", list.ID),
+						"hx-get":       fmt.Sprintf("/list/%d", list.ID),
+						"hx-target":    "#main-content",
+						"hx-swap":      "innerHTML",
+						"hx-push-url":  "true",
+						"hx-indicator": "#main-content-loading",
+					},
 				}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var26), templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
