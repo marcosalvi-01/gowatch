@@ -11,6 +11,7 @@ func (h *Handlers) renderErrorToast(w http.ResponseWriter, r *http.Request, titl
 	}
 
 	toast.Toast(toast.Props{
+		ID:            "toast",
 		Title:         title,
 		Description:   description,
 		Variant:       toast.VariantError,
@@ -27,6 +28,7 @@ func (h *Handlers) renderSuccessToast(w http.ResponseWriter, r *http.Request, ti
 	}
 
 	toast.Toast(toast.Props{
+		ID:            "toast",
 		Title:         title,
 		Description:   description,
 		Variant:       toast.VariantSuccess,
@@ -43,6 +45,7 @@ func (h *Handlers) renderWarningToast(w http.ResponseWriter, r *http.Request, ti
 	}
 
 	toast.Toast(toast.Props{
+		ID:            "toast",
 		Title:         title,
 		Description:   description,
 		Variant:       toast.VariantWarning,

@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"gowatch/internal/services"
 	"gowatch/internal/ui/components/addtolistdialog"
+	"gowatch/internal/ui/components/oobwrapper"
 	"gowatch/internal/ui/components/sidebar"
+	"gowatch/internal/ui/fragments"
 	"gowatch/logging"
 	"net/http"
 	"net/url"
@@ -12,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -38,7 +41,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	// // r.Put("/lists/{id}", h.UpdateList)
 	r.Post("/lists/items", h.AddMovieToList)
 	// r.Get("/lists/items", h.GetListDetails)
-	// r.Delete("/lists/items", h.DeleteMovieFromList)
+	r.Delete("/lists/items", h.DeleteMovieFromList)
 
 	r.Get("/sidebar", h.GetSidebar)
 	r.Get("/lists/add-movie-dialog", h.RenderAddToListDialogContent)
@@ -222,10 +225,14 @@ func (h *Handlers) DeleteList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO when the home is done this should redirect to there
-	w.Header().Add("HX-Redirect", "/watched")
+	// add the headers before rendering the components
+	w.Header().Set("HX-Push-Url", "/home")
+	w.Header().Add("HX-Trigger", "refreshSidebar")
 
-	// no success toast since it wouldn't be shown after the redirect
+	ctxHome := templ.WithChildren(r.Context(), fragments.Home())
+	oobwrapper.OOBWrapper("innerHTML:#main-content").Render(ctxHome, w)
+
+	h.renderSuccessToast(w, r, "List Deleted Successfully", "The list has been deleted.", 2000)
 }
 
 func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {
@@ -253,7 +260,15 @@ func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Add("HX-Trigger", "refreshListContents")
+	list, err := h.listService.GetListDetails(r.Context(), listID)
+	if err != nil {
+		log.Error("failed to get list details after delete", "listID", listID, "error", err)
+		h.renderErrorToast(w, r, "Failed to Refresh List", "An unexpected error occurred while refreshing the list", 0)
+		return
+	}
+
+	ctx := templ.WithChildren(r.Context(), fragments.List(list))
+	oobwrapper.OOBWrapper("innerHTML:#main-content").Render(ctx, w)
 
 	h.renderSuccessToast(w, r, "Removed from List", "Movie has been removed from the list", 0)
 }

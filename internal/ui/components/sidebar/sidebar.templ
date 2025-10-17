@@ -123,25 +123,23 @@ templ listsCollapsibleTrigger() {
 }
 
 templ listItems(lists []models.ListEntry, currentPage string) {
-	<ul hx-get="/htmx/lists" hx-trigger="refreshLists from:body">
-		for _, list := range lists {
-			@sidebar.MenuSubItem() {
-				@sidebar.MenuSubButton(sidebar.MenuSubButtonProps{
-					IsActive: currentPage == fmt.Sprintf("list_%d", list.ID),
-					Attributes: templ.Attributes{
-						"data-nav-url": fmt.Sprintf("/list/%d", list.ID),
-						"hx-get":       fmt.Sprintf("/list/%d", list.ID),
-						"hx-target":    "#main-content",
-						"hx-swap":      "innerHTML",
-						"hx-push-url":  "true",
-						"hx-indicator": "#main-content-loading",
-					},
-				}) {
-					<span>{ list.Name }</span>
-				}
+	for _, list := range lists {
+		@sidebar.MenuSubItem() {
+			@sidebar.MenuSubButton(sidebar.MenuSubButtonProps{
+				IsActive: currentPage == fmt.Sprintf("list_%d", list.ID),
+				Attributes: templ.Attributes{
+					"data-nav-url": fmt.Sprintf("/list/%d", list.ID),
+					"hx-get":       fmt.Sprintf("/list/%d", list.ID),
+					"hx-target":    "#main-content",
+					"hx-swap":      "innerHTML",
+					"hx-push-url":  "true",
+					"hx-indicator": "#main-content-loading",
+				},
+			}) {
+				<span>{ list.Name }</span>
 			}
 		}
-	</ul>
+	}
 }
 
 templ createListTriggerButton() {
