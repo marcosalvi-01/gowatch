@@ -1,12 +1,90 @@
 package pages
 
 import (
+	"fmt"
 	"gowatch/internal/models"
-	"gowatch/internal/ui/fragments"
+	"gowatch/internal/ui/components/moviecard"
+	"gowatch/internal/ui/templui/icon"
+	"strconv"
 )
 
 templ Watched(days []models.WatchedMoviesInDay) {
 	@Layout() {
-		@fragments.Watched(days)
+		@templ.Fragment("content") {
+			{{
+				watchedCount := 0
+				for _, day := range days {
+					watchedCount += len(day.Movies)
+				}
+			}}
+			<div class="flex flex-row justify-between">
+				<p class="text-xl mb-4">Watched Movies</p>
+				<p class="text-xl mb-4" hx-trigger="newWatched from:body" hx-get="/htmx/watchedCount">
+					<span>
+						{ watchedCount }
+					</span>
+				</p>
+			</div>
+			<div class="flex flex-wrap gap-2 sm:gap-4">
+				for _, day := range days {
+					<section
+						class="p-2 md:p-4 rounded-lg space-y-2 border-2"
+						style={ "background: hsla(" + fmt.Sprint(day.Date.YearDay()*137%360) + ",100%,80%,0.3); border-color: hsla(" + fmt.Sprint(day.Date.YearDay()*137%360) + ",100%,80%,0.3); filter: drop-shadow(0mm 0mm 4mm hsla(" + fmt.Sprint(day.Date.YearDay()*137%360) + ",100%,50%,0.7));" }
+					>
+						<h2 class="text-md font-medium tracking-wide text-black">
+							{ day.Date.Format("Mon 02 Jan 2006") }
+						</h2>
+						<div class="flex justify-center">
+							<div class="flex flex-wrap gap-4">
+								for _, movie := range day.Movies {
+									{{
+											moviecardProps := moviecard.Props{
+												Title:      movie.MovieDetails.Movie.Title,
+												Href:       "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+												PosterPath: movie.MovieDetails.Movie.PosterPath,
+												Hoverable:  true,
+											}
+											if movie.InTheaters {
+												moviecardProps.TopHoverComponent = movieCardTopHover(movie.InTheaters)
+											}
+									}}
+									@moviecard.MovieCard(moviecardProps) {
+										<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight">{ movie.MovieDetails.Movie.Title }</h3>
+										<div class="flex items-center justify-between">
+											<div class="flex items-center">
+												@icon.Calendar(icon.Props{Size: 12})
+												<p class="ml-2 text-xs opacity-90">{ movie.MovieDetails.Movie.ReleaseDate.Format("2006") }</p>
+											</div>
+											if movie.MovieDetails.Movie.VoteAverage > 0 {
+												<div class="flex items-center">
+													@icon.Star(icon.Props{
+														Size:   12,
+														Fill:   "orange",
+														Stroke: "orange",
+													})
+													<span class="ml-1 text-xs">{ fmt.Sprintf("%.1f", movie.MovieDetails.Movie.VoteAverage) }</span>
+												</div>
+											}
+										</div>
+									}
+								}
+							</div>
+						</div>
+					</section>
+				}
+			</div>
+		}
 	}
+}
+
+templ movieCardTopHover(inTheater bool) {
+	<div class="flex items-center gap-3 text-sm text-white">
+		if inTheater {
+			@icon.Popcorn(icon.Props{
+				Size:  14,
+				Color: "white",
+			})
+			In Theater
+		}
+	</div>
 }

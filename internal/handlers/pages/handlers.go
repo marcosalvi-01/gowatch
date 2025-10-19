@@ -3,7 +3,6 @@ package pages
 
 import (
 	"gowatch/internal/services"
-	"gowatch/internal/ui/fragments"
 	"gowatch/internal/ui/pages"
 	"gowatch/logging"
 	"net/http"
@@ -55,7 +54,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 
 func (h *Handlers) HomePage(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("HX-Request") == "true" {
-		fragments.Home().Render(r.Context(), w)
+		templ.Handler(pages.Home(), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
 		templ.Handler(pages.Home()).ServeHTTP(w, r)
 	}
@@ -70,7 +69,7 @@ func (h *Handlers) WatchedPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Header.Get("HX-Request") == "true" {
-		fragments.Watched(movies).Render(r.Context(), w)
+		templ.Handler(pages.Watched(movies), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
 		templ.Handler(pages.Watched(movies)).ServeHTTP(w, r)
 	}
@@ -99,7 +98,7 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Header.Get("HX-Request") == "true" {
-		fragments.Movie(*movie, rec).Render(r.Context(), w)
+		templ.Handler(pages.Movie(*movie, rec), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
 		templ.Handler(pages.Movie(*movie, rec)).ServeHTTP(w, r)
 	}
@@ -117,9 +116,9 @@ func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
 
 	if r.Header.Get("HX-Request") == "true" {
 		w.Header().Add("HX-Trigger", "refreshSidebar")
-		fragments.Search("", results).Render(r.Context(), w)
+		templ.Handler(pages.Search("", results), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
-		templ.Handler(pages.Search(results)).ServeHTTP(w, r)
+		templ.Handler(pages.Search("", results)).ServeHTTP(w, r)
 	}
 }
 
@@ -141,7 +140,7 @@ func (h *Handlers) ListPage(w http.ResponseWriter, r *http.Request) {
 	log.Debug("fetched list details", "list", list, "listID", id)
 
 	if r.Header.Get("HX-Request") == "true" {
-		fragments.List(list).Render(r.Context(), w)
+		templ.Handler(pages.List(list), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
 		templ.Handler(pages.List(list)).ServeHTTP(w, r)
 	}

@@ -1,12 +1,13 @@
 package htmx
 
 import (
+	"bytes"
 	"fmt"
 	"gowatch/internal/services"
 	"gowatch/internal/ui/components/addtolistdialog"
 	"gowatch/internal/ui/components/oobwrapper"
 	"gowatch/internal/ui/components/sidebar"
-	"gowatch/internal/ui/fragments"
+	"gowatch/internal/ui/pages"
 	"gowatch/logging"
 	"net/http"
 	"net/url"
@@ -229,8 +230,15 @@ func (h *Handlers) DeleteList(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("HX-Push-Url", "/home")
 	w.Header().Add("HX-Trigger", "refreshSidebar")
 
-	ctxHome := templ.WithChildren(r.Context(), fragments.Home())
-	oobwrapper.OOBWrapper("innerHTML:#main-content").Render(ctxHome, w)
+	var buf bytes.Buffer
+	err = templ.RenderFragments(r.Context(), &buf, pages.Home(), "content")
+	if err != nil {
+		log.Error("failed to render home fragment", "error", err)
+		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
+		return
+	}
+	ctx := templ.WithChildren(r.Context(), templ.Raw(buf.String()))
+	oobwrapper.OOBWrapper("innerHTML:#main-content").Render(ctx, w)
 
 	h.renderSuccessToast(w, r, "List Deleted Successfully", "The list has been deleted.", 2000)
 }
@@ -267,7 +275,14 @@ func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := templ.WithChildren(r.Context(), fragments.List(list))
+	var buf bytes.Buffer
+	err = templ.RenderFragments(r.Context(), &buf, pages.List(list), "content")
+	if err != nil {
+		log.Error("failed to render list fragment", "error", err)
+		h.renderErrorToast(w, r, "Failed to Refresh List", "An unexpected error occurred while refreshing the list", 0)
+		return
+	}
+	ctx := templ.WithChildren(r.Context(), templ.Raw(buf.String()))
 	oobwrapper.OOBWrapper("innerHTML:#main-content").Render(ctx, w)
 
 	h.renderSuccessToast(w, r, "Removed from List", "Movie has been removed from the list", 0)
