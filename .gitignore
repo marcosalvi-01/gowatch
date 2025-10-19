@@ -6,3 +6,4 @@ db.db
 /data
 .sqlc-generated
 test.http
+gowatch

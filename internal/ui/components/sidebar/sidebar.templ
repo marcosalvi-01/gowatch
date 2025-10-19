@@ -3,7 +3,7 @@ package sidebar
 import (
 	"fmt"
 	"gowatch/internal/models"
-	"gowatch/internal/ui.old/components/textarea"
+	"gowatch/internal/ui/templui/badge"
 	"gowatch/internal/ui/templui/button"
 	"gowatch/internal/ui/templui/collapsible"
 	"gowatch/internal/ui/templui/dialog"
@@ -12,12 +12,13 @@ import (
 	"gowatch/internal/ui/templui/input"
 	"gowatch/internal/ui/templui/sidebar"
 	"gowatch/internal/ui/templui/skeleton"
+	"gowatch/internal/ui/templui/textarea"
 )
 
 type Props struct {
 	CurrentPage  string
 	Collapsed    bool
-	WatchedCount int
+	WatchedCount int64
 	Lists        []models.ListEntry
 }
 
@@ -36,6 +37,7 @@ templ Sidebar(props Props) {
 				@sidebar.Menu() {
 					@homeMenuItem(props.CurrentPage)
 					@watchedMenuItem(props.CurrentPage, props.WatchedCount)
+					@statsMenuItem(props.CurrentPage)
 					@sidebar.Separator()
 					@listsSection(props.Lists, props.CurrentPage)
 				}
@@ -65,10 +67,11 @@ templ homeMenuItem(currentPage string) {
 	}
 }
 
-templ watchedMenuItem(currentPage string, watchedCount int) {
+templ watchedMenuItem(currentPage string, watchedCount int64) {
 	@sidebar.MenuItem() {
 		@sidebar.MenuButton(sidebar.MenuButtonProps{
-			Tooltip: "Watched",
+			Tooltip:  "Watched Movies",
+			IsActive: currentPage == "watched",
 			Attributes: templ.Attributes{
 				"data-nav-url": "/watched",
 				"hx-get":       "/watched",
@@ -77,14 +80,39 @@ templ watchedMenuItem(currentPage string, watchedCount int) {
 				"hx-push-url":  "true",
 				"hx-indicator": "#main-content-loading",
 			},
-			Class:    "cursor-pointer",
-			IsActive: currentPage == "watched",
+			Class: "cursor-pointer",
 		}) {
-			@icon.Film(icon.Props{Class: "size-4"})
+			@icon.CheckLine(icon.Props{Class: "size-4"})
 			<span>Watched</span>
-			@sidebar.MenuBadge() {
-				{ watchedCount }
+			if watchedCount > 0 {
+				@badge.Badge(badge.Props{
+					Variant: badge.VariantSecondary,
+					Class:   "ml-auto",
+				}) {
+					{ fmt.Sprintf("%d", watchedCount) }
+				}
 			}
+		}
+	}
+}
+
+templ statsMenuItem(currentPage string) {
+	@sidebar.MenuItem() {
+		@sidebar.MenuButton(sidebar.MenuButtonProps{
+			Tooltip:  "Statistics",
+			IsActive: currentPage == "stats",
+			Attributes: templ.Attributes{
+				"data-nav-url": "/stats",
+				"hx-get":       "/stats",
+				"hx-target":    "#main-content",
+				"hx-swap":      "innerHTML",
+				"hx-push-url":  "true",
+				"hx-indicator": "#main-content-loading",
+			},
+			Class: "cursor-pointer",
+		}) {
+			@icon.ChartBar(icon.Props{Class: "size-4"})
+			<span>Stats</span>
 		}
 	}
 }
@@ -114,7 +142,7 @@ templ listsCollapsibleTrigger() {
 	@collapsible.Trigger() {
 		@sidebar.MenuButton(sidebar.MenuButtonProps{
 			Tooltip: "Lists",
-			Class: "cursor-pointer",
+			Class:   "cursor-pointer",
 		}) {
 			@icon.List(icon.Props{Class: "size-4"})
 			<span>Lists</span>

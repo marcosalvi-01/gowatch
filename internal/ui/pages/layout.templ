@@ -1,11 +1,12 @@
 package pages
 
 import (
-	"gowatch/internal/ui.old/components/collapsible"
 	"gowatch/internal/ui/components/sidebar"
 	"gowatch/internal/ui/templui/avatar"
 	"gowatch/internal/ui/templui/button"
 	"gowatch/internal/ui/templui/calendar"
+	"gowatch/internal/ui/templui/chart"
+	"gowatch/internal/ui/templui/collapsible"
 	"gowatch/internal/ui/templui/datepicker"
 	"gowatch/internal/ui/templui/dialog"
 	"gowatch/internal/ui/templui/icon"
@@ -137,6 +138,7 @@ templ Scripts() {
 	@toast.Script()
 	@collapsible.Script()
 	@textarea.Script()
+	@chart.Script()
 }
 
 templ SidebarNavigationScript() {

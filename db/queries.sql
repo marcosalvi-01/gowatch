@@ -282,3 +282,96 @@ DELETE FROM
 WHERE
     list_id = ?
     AND movie_id = ?;
+
+-- name: GetWatchedPerMonthLastYear :many
+SELECT
+    watched_date
+FROM
+    watched
+WHERE
+    watched_date >= date('now', 'start of month', '-12 months') AND watched_date < date('now', 'start of month')
+ORDER BY
+    watched_date;
+
+-- name: GetWatchedPerYear :many
+SELECT
+    watched_date
+FROM
+    watched
+ORDER BY
+    watched_date;
+
+-- name: GetWatchedByGenre :many
+SELECT
+    genre.name,
+    COUNT(*) AS count
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+    JOIN genre_movie ON movie.id = genre_movie.movie_id
+    JOIN genre ON genre_movie.genre_id = genre.id
+GROUP BY
+    genre.id,
+    genre.name
+ORDER BY
+    count DESC
+LIMIT 10;
+
+-- name: GetTheaterVsHomeCount :many
+SELECT
+    watched_in_theater,
+    COUNT(*) AS count
+FROM
+    watched
+GROUP BY
+    watched_in_theater;
+
+-- name: GetMostWatchedMovies :many
+SELECT
+    movie.title,
+    movie.id,
+    movie.poster_path,
+    COUNT(*) AS watch_count
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+GROUP BY
+    movie.id,
+    movie.title,
+    movie.poster_path
+ORDER BY
+    watch_count DESC
+LIMIT 10;
+
+-- name: GetMostWatchedDay :many
+SELECT
+    watched_date
+FROM
+    watched;
+
+-- name: GetMostWatchedActors :many
+SELECT
+    person.name,
+    person.id,
+    person.profile_path,
+    COUNT(DISTINCT watched.movie_id) AS movie_count
+FROM
+    watched
+    JOIN "cast" ON watched.movie_id = "cast".movie_id
+    JOIN person ON "cast".person_id = person.id
+GROUP BY
+    person.id,
+    person.name,
+    person.profile_path
+ORDER BY
+    movie_count DESC
+LIMIT 10;
+
+-- name: GetWatchedDateRange :one
+SELECT
+    MIN(watched_date) AS min_date,
+    MAX(watched_date) AS max_date
+FROM
+    watched
+WHERE
+    watched_date IS NOT NULL;

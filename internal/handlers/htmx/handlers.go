@@ -95,6 +95,8 @@ func (h *Handlers) GetSidebar(w http.ResponseWriter, r *http.Request) {
 		WatchedCount: count,
 		Lists:        lists,
 	}).Render(r.Context(), w)
+
+	log.Debug("rendered sidebar", "location", location, "watchedCount", count, "listCount", len(lists))
 }
 
 func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {

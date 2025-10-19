@@ -2,9 +2,12 @@ package db
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"gowatch/db/sqlc"
 	"gowatch/internal/models"
+	"sort"
 	"time"
 )
 
@@ -460,13 +463,13 @@ func (d *SqliteDB) GetAllLists(ctx context.Context) ([]InsertList, error) {
 	return lists, nil
 }
 
-func (d *SqliteDB) GetWatchedCount(ctx context.Context) (int, error) {
+func (d *SqliteDB) GetWatchedCount(ctx context.Context) (int64, error) {
 	count, err := d.queries.GetWatchedCount(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get watched movie count: %w", err)
 	}
 
-	return int(count), nil
+	return count, nil
 }
 
 func (d *SqliteDB) DeleteListByID(ctx context.Context, id int64) error {
@@ -488,4 +491,152 @@ func (d *SqliteDB) DeleteMovieFromList(ctx context.Context, listID, movieID int6
 	}
 
 	return nil
+}
+
+func (d *SqliteDB) GetWatchedPerMonthLastYear(ctx context.Context) ([]models.PeriodCount, error) {
+	data, err := d.queries.GetWatchedPerMonthLastYear(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get monthly data: %w", err)
+	}
+	counts := make(map[string]int64)
+	for _, t := range data {
+		period := t.Format("2006-01")
+		counts[period]++
+	}
+	result := make([]models.PeriodCount, 0, len(counts))
+	for period, count := range counts {
+		result = append(result, models.PeriodCount{Period: period, Count: count})
+	}
+	// Sort by period
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Period < result[j].Period
+	})
+	return result, nil
+}
+
+func (d *SqliteDB) GetWatchedPerYear(ctx context.Context) ([]models.PeriodCount, error) {
+	data, err := d.queries.GetWatchedPerYear(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get yearly data: %w", err)
+	}
+	counts := make(map[string]int64)
+	for _, t := range data {
+		period := t.Format("2006")
+		counts[period]++
+	}
+	result := make([]models.PeriodCount, 0, len(counts))
+	for period, count := range counts {
+		result = append(result, models.PeriodCount{Period: period, Count: count})
+	}
+	// Sort by period
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Period < result[j].Period
+	})
+	return result, nil
+}
+
+func (d *SqliteDB) GetWatchedByGenre(ctx context.Context) ([]models.GenreCount, error) {
+	data, err := d.queries.GetWatchedByGenre(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get genre data: %w", err)
+	}
+	result := make([]models.GenreCount, len(data))
+	for i, d := range data {
+		result[i] = models.GenreCount{Name: d.Name, Count: d.Count}
+	}
+	return result, nil
+}
+
+func (d *SqliteDB) GetTheaterVsHomeCount(ctx context.Context) ([]models.TheaterCount, error) {
+	data, err := d.queries.GetTheaterVsHomeCount(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get theater data: %w", err)
+	}
+	result := make([]models.TheaterCount, len(data))
+	for i, d := range data {
+		result[i] = models.TheaterCount{InTheater: d.WatchedInTheater, Count: d.Count}
+	}
+	return result, nil
+}
+
+func (d *SqliteDB) GetMostWatchedMovies(ctx context.Context) ([]models.TopMovie, error) {
+	data, err := d.queries.GetMostWatchedMovies(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get most watched movies: %w", err)
+	}
+	result := make([]models.TopMovie, len(data))
+	for i, d := range data {
+		result[i] = models.TopMovie{Title: d.Title, ID: d.ID, WatchCount: d.WatchCount, PosterPath: d.PosterPath}
+	}
+	return result, nil
+}
+
+func (d *SqliteDB) GetMostWatchedDay(ctx context.Context) (*models.MostWatchedDay, error) {
+	data, err := d.queries.GetMostWatchedDay(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get most watched day: %w", err)
+	}
+	if len(data) == 0 {
+		return nil, nil
+	}
+	counts := make(map[string]int64)
+	for _, t := range data {
+		day := t.Format("2006-01-02")
+		counts[day]++
+	}
+	var maxDay string
+	var maxCount int64
+	for day, count := range counts {
+		if count > maxCount {
+			maxCount = count
+			maxDay = day
+		}
+	}
+	return &models.MostWatchedDay{Day: maxDay, Count: maxCount}, nil
+}
+
+func (d *SqliteDB) GetMostWatchedActors(ctx context.Context) ([]models.TopActor, error) {
+	data, err := d.queries.GetMostWatchedActors(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get most watched actors: %w", err)
+	}
+	result := make([]models.TopActor, len(data))
+	for i, d := range data {
+		result[i] = models.TopActor{Name: d.Name, ID: d.ID, MovieCount: d.MovieCount, ProfilePath: d.ProfilePath}
+	}
+	return result, nil
+}
+
+func (d *SqliteDB) GetWatchedDateRange(ctx context.Context) (*models.DateRange, error) {
+	data, err := d.queries.GetWatchedDateRange(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return &models.DateRange{}, nil
+		}
+		return nil, fmt.Errorf("failed to get date range: %w", err)
+	}
+	var min, max *time.Time
+	if data.MinDate != nil {
+		minStr, ok := data.MinDate.(string)
+		if !ok {
+			return nil, fmt.Errorf("unexpected type for MinDate: %T", data.MinDate)
+		}
+		parsed, err := time.Parse("2006-01-02 15:04:05 -0700 MST", minStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse min date %q: %w", minStr, err)
+		}
+		min = &parsed
+	}
+	if data.MaxDate != nil {
+		maxStr, ok := data.MaxDate.(string)
+		if !ok {
+			return nil, fmt.Errorf("unexpected type for MaxDate: %T", data.MaxDate)
+		}
+		parsed, err := time.Parse("2006-01-02 15:04:05 -0700 MST", maxStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse max date %q: %w", maxStr, err)
+		}
+		max = &parsed
+	}
+	return &models.DateRange{MinDate: min, MaxDate: max}, nil
 }
