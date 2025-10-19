@@ -1,0 +1,332 @@
+package pages
+
+import (
+	"fmt"
+	"gowatch/internal/models"
+	"gowatch/internal/ui/components/moviecard"
+	"gowatch/internal/ui/templui/avatar"
+	"gowatch/internal/ui/templui/card"
+	"gowatch/internal/ui/templui/chart"
+	"gowatch/internal/ui/templui/icon"
+	"strconv"
+	"strings"
+	"time"
+)
+
+templ Stats(stats *models.WatchedStats) {
+	@Layout() {
+		@templ.Fragment("content") {
+			<div class="space-y-8 pb-5">
+				@statsHeader()
+				@statsMetrics(stats)
+				@statsCharts(stats)
+				@statsTopLists(stats)
+			</div>
+		}
+	}
+}
+
+templ statsTopLists(stats *models.WatchedStats) {
+	<div class="space-y-8">
+		<div>
+			<h2 class="text-xl font-semibold flex items-center gap-2">
+				@icon.Star(icon.Props{Size: 20})
+				Top Lists
+			</h2>
+		</div>
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			@topMoviesCard(stats.MostWatchedMovies)
+			@topActorsCard(stats.MostWatchedActors)
+		</div>
+	</div>
+}
+
+templ topMoviesCard(movies []models.TopMovie) {
+	@card.Card() {
+		@card.Header() {
+			@card.Title() {
+				Most Watched Movies
+			}
+		}
+		@card.Content() {
+			<div class="flex flex-wrap gap-4">
+				for i, movie := range movies {
+					if i >= 5 {
+						{{ break }}
+					}
+					@moviecard.MovieCard(moviecard.Props{
+						Title:      movie.Title,
+						PosterPath: "/" + strings.TrimPrefix(movie.PosterPath, "/"),
+						Href:       "/movie/" + strconv.Itoa(int(movie.ID)),
+						Hoverable:  true,
+					}) {
+						<div class="text-center text-white font-semibold">{ movie.WatchCount } watches</div>
+					}
+				}
+			</div>
+		}
+	}
+}
+
+templ topActorsCard(actors []models.TopActor) {
+	@card.Card() {
+		@card.Header() {
+			@card.Title() {
+				Most Watched Actors
+			}
+		}
+		@card.Content() {
+			<div class="space-y-3">
+				for i, actor := range actors {
+					if i >= 5 {
+						{{ break }}
+					}
+					<div class="flex items-center gap-3">
+						@avatar.Avatar() {
+							if actor.ProfilePath != "" {
+								@avatar.Image(avatar.ImageProps{
+									Src:   "https://image.tmdb.org/t/p/w185/" + strings.TrimPrefix(actor.ProfilePath, "/"),
+									Alt:   actor.Name,
+									Class: "object-cover",
+								})
+							} else {
+								@avatar.Fallback() {
+									{ string(actor.Name[0]) }
+								}
+							}
+						}
+						<div class="flex-1">
+							<div class="font-medium text-sm">{ actor.Name }</div>
+							<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d movies", actor.MovieCount) }</div>
+						</div>
+					</div>
+				}
+			</div>
+		}
+	}
+}
+
+templ statsHeader() {
+	<div class="space-y-4">
+		<h1 class="text-2xl sm:text-3xl font-bold">Statistics</h1>
+		<p class="text-muted-foreground text-sm sm:text-base max-w-2xl">
+			Overview of your movie watching habits and preferences.
+		</p>
+	</div>
+}
+
+templ statsMetrics(stats *models.WatchedStats) {
+	@card.Card() {
+		@card.Content() {
+			<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+				@statsMetricCard("Total Watched", fmt.Sprintf("%d", stats.TotalWatched), icon.Film)
+				@statsMetricCard("Avg per Day", fmt.Sprintf("%.1f", stats.AvgPerDay), icon.Calendar)
+				@statsMetricCard("Avg per Week", fmt.Sprintf("%.1f", stats.AvgPerWeek), icon.ChartBar)
+				@statsMetricCard("Avg per Month", fmt.Sprintf("%.1f", stats.AvgPerMonth), icon.TrendingUp)
+				if stats.MostWatchedDay != nil {
+					@statsMetricCard("Most Watched Day", stats.MostWatchedDay.Day, icon.Calendar)
+				}
+			</div>
+		}
+	}
+}
+
+templ statsMetricCard(label, value string, iconFunc func(...icon.Props) templ.Component) {
+	<div>
+		<div class="text-center">
+			<div class="flex items-center justify-center mb-2">
+				@iconFunc(icon.Props{Size: 24, Class: "text-primary"})
+			</div>
+			<div class="text-2xl font-bold text-primary">{ value }</div>
+			<div class="text-xs text-muted-foreground">{ label }</div>
+		</div>
+	</div>
+}
+
+templ statsCharts(stats *models.WatchedStats) {
+	<div class="space-y-8">
+		<div>
+			<h2 class="text-xl font-semibold flex items-center gap-2">
+				@icon.ChartBar(icon.Props{Size: 20})
+				Trends
+			</h2>
+		</div>
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			@card.Card() {
+				@card.Header() {
+					@card.Title() {
+						Monthly (Last Year)
+					}
+				}
+				@card.Content() {
+					@chart.Chart(chart.Props{
+						Variant:     chart.VariantBar,
+						Data:        prepareMonthlyData(stats.MonthlyLastYear),
+						Options:     chart.Options{Responsive: true, Legend: false},
+						ShowXAxis:   true,
+						ShowYAxis:   true,
+						ShowXLabels: true,
+						ShowYLabels: true,
+					})
+				}
+			}
+			@card.Card() {
+				@card.Header() {
+					@card.Title() {
+						Yearly (All Time)
+					}
+				}
+				@card.Content() {
+					@chart.Chart(chart.Props{
+						Variant:     chart.VariantLine,
+						Data:        prepareYearlyData(stats.YearlyAllTime),
+						Options:     chart.Options{Responsive: true, Legend: false},
+						ShowXAxis:   true,
+						ShowYAxis:   true,
+						ShowXLabels: true,
+						ShowYLabels: true,
+					})
+				}
+			}
+		</div>
+		<div>
+			<h2 class="text-xl font-semibold flex items-center gap-2">
+				@icon.ChartBar(icon.Props{Size: 20})
+				Distribution
+			</h2>
+		</div>
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			@card.Card() {
+				@card.Header() {
+					@card.Title() {
+						Genres
+					}
+				}
+				@card.Content() {
+					@chart.Chart(chart.Props{
+						Variant:    chart.VariantPie,
+						Data:       prepareGenresData(stats.Genres),
+						Options:    chart.Options{Responsive: true, Legend: true},
+						ShowLegend: true,
+					})
+				}
+			}
+			@card.Card() {
+				@card.Header() {
+					@card.Title() {
+						Theater vs Home
+					}
+				}
+				@card.Content() {
+					@chart.Chart(chart.Props{
+						Variant:    chart.VariantPie,
+						Data:       prepareTheaterData(stats.TheaterVsHome),
+						Options:    chart.Options{Responsive: true, Legend: true},
+						ShowLegend: true,
+					})
+				}
+			}
+		</div>
+	</div>
+}
+
+// Helper functions to prepare chart data
+func prepareMonthlyData(data []models.PeriodCount) chart.Data {
+	// Create a map of period to count
+	dataMap := make(map[string]int64)
+	for _, pc := range data {
+		dataMap[pc.Period] = pc.Count
+	}
+
+	// Generate last 12 complete months
+	now := time.Now()
+	labels := make([]string, 12)
+	values := make([]float64, 12)
+	for i := 12; i >= 1; i-- {
+		month := now.AddDate(0, -i, 0)
+		period := month.Format("2006-01")
+		labels[12-i] = period
+		values[12-i] = float64(dataMap[period])
+	}
+
+	return chart.Data{
+		Labels: labels,
+		Datasets: []chart.Dataset{{
+			Label:           "Watches",
+			Data:            values,
+			BackgroundColor: []interface{}{"rgba(59, 130, 246, 0.5)"},
+			BorderColor:     []interface{}{"rgba(59, 130, 246, 1)"},
+			BorderWidth:     1,
+		}},
+	}
+}
+
+func prepareYearlyData(data []models.PeriodCount) chart.Data {
+	labels := make([]string, len(data))
+	values := make([]float64, len(data))
+	for i, pc := range data {
+		labels[i] = pc.Period
+		values[i] = float64(pc.Count)
+	}
+	return chart.Data{
+		Labels: labels,
+		Datasets: []chart.Dataset{{
+			Label:           "Watches",
+			Data:            values,
+			Tension:         0.4,
+			BorderColor:     []interface{}{"rgba(16, 185, 129, 1)"},
+			BackgroundColor: []interface{}{"rgba(16, 185, 129, 0.1)"},
+			Fill:            true,
+		}},
+	}
+}
+
+func prepareGenresData(data []models.GenreCount) chart.Data {
+	labels := make([]string, len(data))
+	values := make([]float64, len(data))
+	colors := []interface{}{
+		"rgba(59, 130, 246, 0.8)",
+		"rgba(16, 185, 129, 0.8)",
+		"rgba(245, 158, 11, 0.8)",
+		"rgba(239, 68, 68, 0.8)",
+		"rgba(139, 92, 246, 0.8)",
+		"rgba(236, 72, 153, 0.8)",
+	}
+	for i, gc := range data {
+		labels[i] = gc.Name
+		values[i] = float64(gc.Count)
+	}
+	return chart.Data{
+		Labels: labels,
+		Datasets: []chart.Dataset{{
+			Label:           "Movies",
+			Data:            values,
+			BackgroundColor: colors,
+		}},
+	}
+}
+
+func prepareTheaterData(data []models.TheaterCount) chart.Data {
+	labels := make([]string, len(data))
+	values := make([]float64, len(data))
+	colors := []interface{}{
+		"rgba(59, 130, 246, 0.8)", // Theater
+		"rgba(16, 185, 129, 0.8)", // Home
+	}
+	for i, tc := range data {
+		if tc.InTheater {
+			labels[i] = "Theater"
+		} else {
+			labels[i] = "Home"
+		}
+		values[i] = float64(tc.Count)
+	}
+	return chart.Data{
+		Labels: labels,
+		Datasets: []chart.Dataset{{
+			Label:           "Watches",
+			Data:            values,
+			BackgroundColor: colors,
+		}},
+	}
+}

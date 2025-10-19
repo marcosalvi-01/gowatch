@@ -36,8 +36,8 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 func (h *Handlers) exportWatched(w http.ResponseWriter, r *http.Request) {
 	export, err := h.watchedService.ExportWatched(r.Context())
 	if err != nil {
-		log.Error("TODO", "error", err)
-		http.Error(w, "TODO", http.StatusInternalServerError)
+		log.Error("failed to export watched movies", "error", err)
+		http.Error(w, "Failed to export watched movies due to an internal error.", http.StatusInternalServerError)
 		return
 	}
 

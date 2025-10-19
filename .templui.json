@@ -1,5 +1,5 @@
 {
-  "componentsDir": "internal/ui/components",
+  "componentsDir": "internal/ui/templui",
   "utilsDir": "internal/ui/utils",
   "moduleName": "gowatch",
   "jsDir": "internal/handlers/static/static/js",

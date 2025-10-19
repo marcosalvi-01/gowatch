@@ -1,17 +1,21 @@
 package htmx
 
 import (
+	"bytes"
 	"fmt"
 	"gowatch/internal/services"
-	"gowatch/internal/ui"
-	"gowatch/internal/ui/components/page"
-	"gowatch/internal/ui/components/toast"
+	"gowatch/internal/ui/components/addtolistdialog"
+	"gowatch/internal/ui/components/oobwrapper"
+	"gowatch/internal/ui/components/sidebar"
+	"gowatch/internal/ui/pages"
 	"gowatch/logging"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -29,67 +33,70 @@ func NewHandlers(watchedService *services.WatchedService, listService *services.
 	}
 }
 
-func (h *Handlers) renderErrorToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
-	if duration == 0 {
-		duration = 3000
-	}
-
-	toast.Toast(toast.Props{
-		Title:         title,
-		Description:   description,
-		Variant:       toast.VariantError,
-		Position:      toast.PositionTopRight,
-		Duration:      duration,
-		ShowIndicator: true,
-		Icon:          true,
-	}).Render(r.Context(), w)
-}
-
-func (h *Handlers) renderSuccessToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
-	if duration == 0 {
-		duration = 2000
-	}
-
-	toast.Toast(toast.Props{
-		Title:         title,
-		Description:   description,
-		Variant:       toast.VariantSuccess,
-		Position:      toast.PositionBottomCenter,
-		Duration:      duration,
-		ShowIndicator: true,
-		Icon:          true,
-	}).Render(r.Context(), w)
-}
-
-func (h *Handlers) renderWarningToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
-	if duration == 0 {
-		duration = 4000
-	}
-
-	toast.Toast(toast.Props{
-		Title:         title,
-		Description:   description,
-		Variant:       toast.VariantWarning,
-		Position:      toast.PositionTopRight,
-		Duration:      duration,
-		ShowIndicator: true,
-		Icon:          true,
-	}).Render(r.Context(), w)
-}
-
 func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Post("/movies/watched", h.AddWatchedMovie)
-	r.Get("/movies/watched/count", h.GetWatchedCount)
-
-	r.Get("/lists", h.GetAllLists)
 	r.Post("/lists", h.CreateList)
-	// r.Get("/lists/{id}", h.GetList)
 	r.Delete("/lists", h.DeleteList)
-	// r.Put("/lists/{id}", h.UpdateList)
 
+	// r.Get("/lists/{id}", h.GetList)
+	// // r.Put("/lists/{id}", h.UpdateList)
 	r.Post("/lists/items", h.AddMovieToList)
-	r.Get("/lists/items", h.GetListDetails)
+	// r.Get("/lists/items", h.GetListDetails)
 	r.Delete("/lists/items", h.DeleteMovieFromList)
+
+	r.Get("/sidebar", h.GetSidebar)
+	r.Get("/lists/add-movie-dialog", h.RenderAddToListDialogContent)
+}
+
+func (h *Handlers) RenderAddToListDialogContent(w http.ResponseWriter, r *http.Request) {
+	lists, err := h.listService.GetAllLists(r.Context())
+	if err != nil {
+		log.Error("failed to get all lists for dialog", "error", err)
+		h.renderErrorToast(w, r, "Failed to Load Lists", "An unexpected error occurred while fetching your lists.", 0)
+		return
+	}
+
+	addtolistdialog.AddToListDialog(lists).Render(r.Context(), w)
+}
+
+func (h *Handlers) GetSidebar(w http.ResponseWriter, r *http.Request) {
+	currentURL := r.Header.Get("HX-Current-URL")
+	if r.Header.Get("HX-Current-URL") == "" {
+		http.Error(w, "HX-Current-URL not set", http.StatusBadRequest)
+		return
+	}
+	location := getFirstPathElement(currentURL)
+
+	log.Debug("getting sidebar", "location", location)
+
+	cookie, err := r.Cookie("sidebar_state")
+	if err != nil {
+		log.Warn("Cookie sidebar_state not set")
+	}
+	collapsed := cookie != nil && cookie.Value == "false"
+
+	count, err := h.watchedService.GetWatchedCount(r.Context())
+	if err != nil {
+		log.Error("failed to get watched count for sidebar", "error", err)
+		h.renderErrorToast(w, r, "Sidebar Error", "Could not load watched count.", 0)
+		return
+	}
+
+	lists, err := h.listService.GetAllLists(r.Context())
+	if err != nil {
+		log.Error("failed to get all lists for sidebar", "error", err)
+		h.renderErrorToast(w, r, "Sidebar Error", "Could not load lists.", 0)
+		return
+	}
+
+	sidebar.Sidebar(sidebar.Props{
+		CurrentPage:  currentURL,
+		Collapsed:    collapsed,
+		WatchedCount: count,
+		Lists:        lists,
+	}).Render(r.Context(), w)
+
+	log.Debug("rendered sidebar", "location", location, "watchedCount", count, "listCount", len(lists))
 }
 
 func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
@@ -132,7 +139,7 @@ func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
 
 	successMessage := fmt.Sprintf("Movie marked as watched on %s", watchedDate.Format("Jan 2, 2006"))
 
-	w.Header().Add("HX-Trigger", "newWatched")
+	w.Header().Add("HX-Trigger", "refreshSidebar")
 	h.renderSuccessToast(w, r, "Movie Added Successfully", successMessage, 0)
 }
 
@@ -159,30 +166,8 @@ func (h *Handlers) CreateList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Add("HX-Trigger", "refreshLists")
+	w.Header().Add("HX-Trigger", "refreshLists, refreshSidebar")
 	h.renderSuccessToast(w, r, "List Created Successfully", fmt.Sprintf("List \"%s\" has been created.", title), 0)
-}
-
-func (h *Handlers) GetAllLists(w http.ResponseWriter, r *http.Request) {
-	lists, err := h.listService.GetAllLists(r.Context())
-	if err != nil {
-		log.Error("failed to get all lists", "error", err)
-		h.renderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred", 0)
-		return
-	}
-
-	page.SidebarListsList("", lists).Render(r.Context(), w)
-}
-
-func (h *Handlers) GetWatchedCount(w http.ResponseWriter, r *http.Request) {
-	count, err := h.watchedService.GetWatchedCount(r.Context())
-	if err != nil {
-		log.Error("failed to get watched movie count", "error", err)
-		h.renderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred", 0)
-		return
-	}
-	watchedCount := "<span>" + strconv.Itoa(count) + "</span>"
-	w.Write([]byte(watchedCount))
 }
 
 func (h *Handlers) AddMovieToList(w http.ResponseWriter, r *http.Request) {
@@ -243,10 +228,21 @@ func (h *Handlers) DeleteList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO when the home is done this should redirect to there
-	w.Header().Add("HX-Redirect", "/watched")
+	// add the headers before rendering the components
+	w.Header().Set("HX-Push-Url", "/home")
+	w.Header().Add("HX-Trigger", "refreshSidebar")
 
-	// no success toast since it wouldn't be shown after the redirect
+	var buf bytes.Buffer
+	err = templ.RenderFragments(r.Context(), &buf, pages.Home(), "content")
+	if err != nil {
+		log.Error("failed to render home fragment", "error", err)
+		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
+		return
+	}
+	ctx := templ.WithChildren(r.Context(), templ.Raw(buf.String()))
+	oobwrapper.OOBWrapper("innerHTML:#main-content").Render(ctx, w)
+
+	h.renderSuccessToast(w, r, "List Deleted Successfully", "The list has been deleted.", 2000)
 }
 
 func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {
@@ -274,7 +270,22 @@ func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Add("HX-Trigger", "refreshListContents")
+	list, err := h.listService.GetListDetails(r.Context(), listID)
+	if err != nil {
+		log.Error("failed to get list details after delete", "listID", listID, "error", err)
+		h.renderErrorToast(w, r, "Failed to Refresh List", "An unexpected error occurred while refreshing the list", 0)
+		return
+	}
+
+	var buf bytes.Buffer
+	err = templ.RenderFragments(r.Context(), &buf, pages.List(list), "content")
+	if err != nil {
+		log.Error("failed to render list fragment", "error", err)
+		h.renderErrorToast(w, r, "Failed to Refresh List", "An unexpected error occurred while refreshing the list", 0)
+		return
+	}
+	ctx := templ.WithChildren(r.Context(), templ.Raw(buf.String()))
+	oobwrapper.OOBWrapper("innerHTML:#main-content").Render(ctx, w)
 
 	h.renderSuccessToast(w, r, "Removed from List", "Movie has been removed from the list", 0)
 }
@@ -287,19 +298,35 @@ func (h *Handlers) GetListDetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	listID, err := strconv.ParseInt(listIDStr, 10, 64)
+	// listID, err := strconv.ParseInt(listIDStr, 10, 64)
+	// if err != nil {
+	// 	log.Error("invalid list ID", "listID", listIDStr, "error", err)
+	// 	h.renderErrorToast(w, r, "Invalid List", "Please select a valid list", 0)
+	// 	return
+	// }
+
+	// list, err := h.listService.GetListDetails(r.Context(), listID)
+	// if err != nil {
+	// 	log.Error("failed to fetch list details from db", "listID", listID, "error", err)
+	// 	h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
+	// 	return
+	// }
+
+	// ui.ListDetails(list).Render(r.Context(), w)
+}
+
+func getFirstPathElement(urlStr string) string {
+	u, err := url.Parse(urlStr)
 	if err != nil {
-		log.Error("invalid list ID", "listID", listIDStr, "error", err)
-		h.renderErrorToast(w, r, "Invalid List", "Please select a valid list", 0)
-		return
+		return ""
 	}
 
-	list, err := h.listService.GetListDetails(r.Context(), listID)
-	if err != nil {
-		log.Error("failed to fetch list details from db", "listID", listID, "error", err)
-		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
-		return
-	}
+	// Remove leading slash and split
+	path := strings.TrimPrefix(u.Path, "/")
+	parts := strings.Split(path, "/")
 
-	ui.ListDetails(list).Render(r.Context(), w)
+	if len(parts) > 0 && parts[0] != "" {
+		return parts[0]
+	}
+	return ""
 }

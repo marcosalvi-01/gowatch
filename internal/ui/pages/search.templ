@@ -1,0 +1,81 @@
+package pages
+
+import (
+	"fmt"
+	"gowatch/internal/models"
+	"gowatch/internal/ui/components/moviecard"
+	"gowatch/internal/ui/templui/icon"
+	"strconv"
+)
+
+templ Search(query string, results []models.Movie) {
+	@Layout() {
+		@templ.Fragment("content") {
+			<div class="w-full">
+				if len(results) > 0 {
+					<div class="p-2 md:p-4 rounded-lg space-y-4">
+						<div class="flex flex-wrap gap-4 md:gap-6 w-full">
+							for _, movie := range results {
+								@moviecard.MovieCard(moviecard.Props{
+									Title:      movie.Title,
+									PosterPath: movie.PosterPath,
+									Hoverable:  true,
+									Href:       "/movie/" + strconv.Itoa(int(movie.ID)),
+								}) {
+									<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight">{ movie.Title }</h3>
+									<div class="flex items-center justify-between">
+										<div class="flex items-center">
+											@icon.Calendar(icon.Props{Size: 12})
+											<p class="ml-2 text-xs opacity-90">
+												if movie.ReleaseDate != nil {
+													{ movie.ReleaseDate.Format("2006") }
+												} else {
+													Unknown
+												}
+											</p>
+										</div>
+										if movie.VoteAverage > 0 {
+											<div class="flex items-center">
+												@icon.Star(icon.Props{
+													Size:   12,
+													Fill:   "orange",
+													Stroke: "orange",
+												})
+												<span class="ml-1 text-xs">{ fmt.Sprintf("%.1f", movie.VoteAverage) }</span>
+											</div>
+										}
+									</div>
+								}
+							}
+						</div>
+					</div>
+				} else {
+					<div class="py-16 md:py-32 rounded-lg space-y-2 text-center">
+						<p class="text-md font-medium tracking-wide mb-4">
+							if query != "" {
+								No results found for "{ query }"
+							} else {
+								No search results
+							}
+						</p>
+						<p class="text-sm mb-8">
+							if query != "" {
+								Try adjusting your search terms or check for typos.
+							} else {
+								Enter a movie title to search for films.
+							}
+						</p>
+						<div class="text-gray-500 flex flex-col items-center">
+							@icon.Search(icon.Props{
+								Size:  40,
+								Color: "gray",
+								Class: "mb-2 opacity-50",
+							})
+							<p class="text-xs">No movies to display</p>
+						</div>
+					</div>
+				}
+			</div>
+		}
+	}
+}

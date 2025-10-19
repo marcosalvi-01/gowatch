@@ -4,7 +4,7 @@ import "net/http"
 
 func HTMLMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/html")
+		w.Header().Set("Content-Type", "text/html")
 		next.ServeHTTP(w, r)
 	})
 }

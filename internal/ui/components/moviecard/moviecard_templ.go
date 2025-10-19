@@ -9,9 +9,9 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"gowatch/internal/ui/components/aspectratio"
-	"gowatch/internal/ui/components/card"
-	"gowatch/internal/ui/components/icon"
+	"gowatch/internal/ui/templui/aspectratio"
+	"gowatch/internal/ui/templui/card"
+	"gowatch/internal/ui/templui/icon"
 )
 
 const tmdbBase = "https://image.tmdb.org/t/p/w500"
@@ -46,20 +46,20 @@ func MovieCard(props Props) templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		if props.Href != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<a class=\"cursor-pointer\" href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div data-page=\"movie\" hx-get=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var2 templ.SafeURL
-			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinURLErrs(props.Href)
+			var templ_7745c5c3_Var2 string
+			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(props.Href)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/moviecard/moviecard.templ`, Line: 21, Col: 45}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/moviecard/moviecard.templ`, Line: 23, Col: 22}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" hx-target=\"#main-content\" hx-push-url=\"true\" hx-swap=\"scroll:#main-scroll-container:top\" hx-indicator=\"#main-content-loading\" class=\"cursor-pointer\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -85,7 +85,7 @@ func MovieCard(props Props) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</a>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -174,7 +174,7 @@ func cardContent(props Props) templ.Component {
 					var templ_7745c5c3_Var8 string
 					templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(tmdbBase + props.PosterPath)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/moviecard/moviecard.templ`, Line: 45, Col: 39}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/moviecard/moviecard.templ`, Line: 53, Col: 39}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 					if templ_7745c5c3_Err != nil {
@@ -187,7 +187,7 @@ func cardContent(props Props) templ.Component {
 					var templ_7745c5c3_Var9 string
 					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(props.Title)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/moviecard/moviecard.templ`, Line: 46, Col: 23}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/moviecard/moviecard.templ`, Line: 54, Col: 23}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 					if templ_7745c5c3_Err != nil {
@@ -213,7 +213,7 @@ func cardContent(props Props) templ.Component {
 					var templ_7745c5c3_Var10 string
 					templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(props.Title)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/moviecard/moviecard.templ`, Line: 53, Col: 47}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/moviecard/moviecard.templ`, Line: 61, Col: 47}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 					if templ_7745c5c3_Err != nil {
@@ -230,7 +230,7 @@ func cardContent(props Props) templ.Component {
 				}
 				if props.Hoverable {
 					if props.TopHoverComponent != nil {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<div class=\"absolute inset-x-0 top-0 -translate-y-full group-hover:translate-y-0 bg-black/80 p-2 md:p-3 text-white duration-300 ease-out\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<div class=\"absolute inset-x-0 top-0 -translate-y-full group-hover:translate-y-0 bg-black/80 p-2 md:p-3 text-white duration-300 ease-out\" onclick=\"const htmxEl = event.target.closest('[hx-get]'); if (htmxEl) { htmxEl.addEventListener('htmx:beforeOnLoad', function(e) { e.preventDefault(); }, { once: true }); }\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
@@ -273,7 +273,7 @@ func cardContent(props Props) templ.Component {
 			return nil
 		})
 		templ_7745c5c3_Err = card.Card(card.Props{
-			Class: "w-[120px] md:w-[180px] border-0 drop-shadow-2xl shadow-2xl group",
+			Class: "w-[120px] md:w-[160px] border-0 drop-shadow-2xl shadow-2xl group",
 		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var6), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
