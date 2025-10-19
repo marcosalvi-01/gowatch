@@ -70,7 +70,6 @@ func (h *Handlers) WatchedPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Header.Get("HX-Request") == "true" {
-		w.Header().Add("HX-Trigger", "refreshSidebar")
 		fragments.Watched(movies).Render(r.Context(), w)
 	} else {
 		templ.Handler(pages.Watched(movies)).ServeHTTP(w, r)

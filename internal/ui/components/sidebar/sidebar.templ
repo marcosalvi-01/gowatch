@@ -57,6 +57,7 @@ templ homeMenuItem(currentPage string) {
 				"hx-push-url":  "true",
 				"hx-indicator": "#main-content-loading",
 			},
+			Class: "cursor-pointer",
 		}) {
 			@icon.House(icon.Props{Class: "size-4"})
 			<span>Home</span>
@@ -76,6 +77,7 @@ templ watchedMenuItem(currentPage string, watchedCount int) {
 				"hx-push-url":  "true",
 				"hx-indicator": "#main-content-loading",
 			},
+			Class:    "cursor-pointer",
 			IsActive: currentPage == "watched",
 		}) {
 			@icon.Film(icon.Props{Class: "size-4"})
@@ -112,6 +114,7 @@ templ listsCollapsibleTrigger() {
 	@collapsible.Trigger() {
 		@sidebar.MenuButton(sidebar.MenuButtonProps{
 			Tooltip: "Lists",
+			Class: "cursor-pointer",
 		}) {
 			@icon.List(icon.Props{Class: "size-4"})
 			<span>Lists</span>
@@ -127,6 +130,7 @@ templ listItems(lists []models.ListEntry, currentPage string) {
 		@sidebar.MenuSubItem() {
 			@sidebar.MenuSubButton(sidebar.MenuSubButtonProps{
 				IsActive: currentPage == fmt.Sprintf("list_%d", list.ID),
+				Class:    "cursor-pointer",
 				Attributes: templ.Attributes{
 					"data-nav-url": fmt.Sprintf("/list/%d", list.ID),
 					"hx-get":       fmt.Sprintf("/list/%d", list.ID),
@@ -147,7 +151,9 @@ templ createListTriggerButton() {
 		@dialog.Trigger(dialog.TriggerProps{
 			For: "add-to-list-dialog",
 		}) {
-			@sidebar.MenuSubButton() {
+			@sidebar.MenuSubButton(sidebar.MenuSubButtonProps{
+				Class: "cursor-pointer",
+			}) {
 				@icon.Plus(icon.Props{Size: 18})
 				Create New List
 			}

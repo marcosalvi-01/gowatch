@@ -25,6 +25,7 @@ templ MovieCard(props Props) {
 			hx-push-url="true"
 			hx-swap="scroll:#main-scroll-container:top"
 			hx-indicator="#main-content-loading"
+			class="cursor-pointer"
 		>
 			@cardContent(props) {
 				{ children... }

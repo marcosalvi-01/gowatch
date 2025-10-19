@@ -237,6 +237,7 @@ func homeMenuItem(currentPage string) templ.Component {
 					"hx-push-url":  "true",
 					"hx-indicator": "#main-content-loading",
 				},
+				Class: "cursor-pointer",
 			}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var8), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -319,7 +320,7 @@ func watchedMenuItem(currentPage string, watchedCount int) templ.Component {
 					var templ_7745c5c3_Var13 string
 					templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(watchedCount)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 84, Col: 18}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 86, Col: 18}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 					if templ_7745c5c3_Err != nil {
@@ -343,6 +344,7 @@ func watchedMenuItem(currentPage string, watchedCount int) templ.Component {
 					"hx-push-url":  "true",
 					"hx-indicator": "#main-content-loading",
 				},
+				Class:    "cursor-pointer",
 				IsActive: currentPage == "watched",
 			}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var11), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
@@ -577,6 +579,7 @@ func listsCollapsibleTrigger() templ.Component {
 			})
 			templ_7745c5c3_Err = sidebar.MenuButton(sidebar.MenuButtonProps{
 				Tooltip: "Lists",
+				Class:   "cursor-pointer",
 			}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var23), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -644,7 +647,7 @@ func listItems(lists []models.ListEntry, currentPage string) templ.Component {
 					var templ_7745c5c3_Var27 string
 					templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(list.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 139, Col: 21}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 143, Col: 21}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 					if templ_7745c5c3_Err != nil {
@@ -658,6 +661,7 @@ func listItems(lists []models.ListEntry, currentPage string) templ.Component {
 				})
 				templ_7745c5c3_Err = sidebar.MenuSubButton(sidebar.MenuSubButtonProps{
 					IsActive: currentPage == fmt.Sprintf("list_%d", list.ID),
+					Class:    "cursor-pointer",
 					Attributes: templ.Attributes{
 						"data-nav-url": fmt.Sprintf("/list/%d", list.ID),
 						"hx-get":       fmt.Sprintf("/list/%d", list.ID),
@@ -748,7 +752,9 @@ func createListTriggerButton() templ.Component {
 					}
 					return nil
 				})
-				templ_7745c5c3_Err = sidebar.MenuSubButton().Render(templ.WithChildren(ctx, templ_7745c5c3_Var31), templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = sidebar.MenuSubButton(sidebar.MenuSubButtonProps{
+					Class: "cursor-pointer",
+				}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var31), templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

@@ -311,7 +311,7 @@ templ actionButtons(movieID int64) {
 }
 
 templ movieContent(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) {
-	<div class="space-y-8">
+	<div class="space-y-8 pb-5">
 		@overviewSection(movie.Movie.Overview)
 		@genresSection(movie.Genres)
 		if len(watchRecords.Records) > 0 {
