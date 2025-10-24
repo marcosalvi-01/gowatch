@@ -50,21 +50,25 @@ templ topMoviesCard(movies []models.TopMovie) {
 			}
 		}
 		@card.Content() {
-			<div class="flex flex-wrap gap-4">
-				for i, movie := range movies {
-					if i >= 5 {
-						{{ break }}
+			if len(movies) > 0 {
+				<div class="flex flex-wrap gap-4">
+					for i, movie := range movies {
+						if i >= 5 {
+							{{ break }}
+						}
+						@moviecard.MovieCard(moviecard.Props{
+							Title:      movie.Title,
+							PosterPath: "/" + strings.TrimPrefix(movie.PosterPath, "/"),
+							Href:       "/movie/" + strconv.Itoa(int(movie.ID)),
+							Hoverable:  true,
+						}) {
+							<div class="text-center text-white font-semibold">{ movie.WatchCount } watches</div>
+						}
 					}
-					@moviecard.MovieCard(moviecard.Props{
-						Title:      movie.Title,
-						PosterPath: "/" + strings.TrimPrefix(movie.PosterPath, "/"),
-						Href:       "/movie/" + strconv.Itoa(int(movie.ID)),
-						Hoverable:  true,
-					}) {
-						<div class="text-center text-white font-semibold">{ movie.WatchCount } watches</div>
-					}
-				}
-			</div>
+				</div>
+			} else {
+				<div class="text-center text-muted-foreground py-8">No data available</div>
+			}
 		}
 	}
 }
@@ -77,32 +81,36 @@ templ topActorsCard(actors []models.TopActor) {
 			}
 		}
 		@card.Content() {
-			<div class="space-y-3">
-				for i, actor := range actors {
-					if i >= 5 {
-						{{ break }}
-					}
-					<div class="flex items-center gap-3">
-						@avatar.Avatar() {
-							if actor.ProfilePath != "" {
-								@avatar.Image(avatar.ImageProps{
-									Src:   "https://image.tmdb.org/t/p/w185/" + strings.TrimPrefix(actor.ProfilePath, "/"),
-									Alt:   actor.Name,
-									Class: "object-cover",
-								})
-							} else {
-								@avatar.Fallback() {
-									{ string(actor.Name[0]) }
+			if len(actors) > 0 {
+				<div class="space-y-3">
+					for i, actor := range actors {
+						if i >= 5 {
+							{{ break }}
+						}
+						<div class="flex items-center gap-3">
+							@avatar.Avatar() {
+								if actor.ProfilePath != "" {
+									@avatar.Image(avatar.ImageProps{
+										Src:   "https://image.tmdb.org/t/p/w185/" + strings.TrimPrefix(actor.ProfilePath, "/"),
+										Alt:   actor.Name,
+										Class: "object-cover",
+									})
+								} else {
+									@avatar.Fallback() {
+										{ string(actor.Name[0]) }
+									}
 								}
 							}
-						}
-						<div class="flex-1">
-							<div class="font-medium text-sm">{ actor.Name }</div>
-							<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d movies", actor.MovieCount) }</div>
+							<div class="flex-1">
+								<div class="font-medium text-sm">{ actor.Name }</div>
+								<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d movies", actor.MovieCount) }</div>
+							</div>
 						</div>
-					</div>
-				}
-			</div>
+					}
+				</div>
+			} else {
+				<div class="text-center text-muted-foreground py-8">No data available</div>
+			}
 		}
 	}
 }
@@ -126,6 +134,8 @@ templ statsMetrics(stats *models.WatchedStats) {
 				@statsMetricCard("Avg per Month", fmt.Sprintf("%.1f", stats.AvgPerMonth), icon.TrendingUp)
 				if stats.MostWatchedDay != nil {
 					@statsMetricCard("Most Watched Day", stats.MostWatchedDay.Day, icon.Calendar)
+				} else {
+					@statsMetricCard("Most Watched Day", "No data", icon.Calendar)
 				}
 			</div>
 		}
@@ -146,50 +156,6 @@ templ statsMetricCard(label, value string, iconFunc func(...icon.Props) templ.Co
 
 templ statsCharts(stats *models.WatchedStats) {
 	<div class="space-y-8">
-		<div>
-			<h2 class="text-xl font-semibold flex items-center gap-2">
-				@icon.ChartBar(icon.Props{Size: 20})
-				Trends
-			</h2>
-		</div>
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-			@card.Card() {
-				@card.Header() {
-					@card.Title() {
-						Monthly (Last Year)
-					}
-				}
-				@card.Content() {
-					@chart.Chart(chart.Props{
-						Variant:     chart.VariantBar,
-						Data:        prepareMonthlyData(stats.MonthlyLastYear),
-						Options:     chart.Options{Responsive: true, Legend: false},
-						ShowXAxis:   true,
-						ShowYAxis:   true,
-						ShowXLabels: true,
-						ShowYLabels: true,
-					})
-				}
-			}
-			@card.Card() {
-				@card.Header() {
-					@card.Title() {
-						Yearly (All Time)
-					}
-				}
-				@card.Content() {
-					@chart.Chart(chart.Props{
-						Variant:     chart.VariantLine,
-						Data:        prepareYearlyData(stats.YearlyAllTime),
-						Options:     chart.Options{Responsive: true, Legend: false},
-						ShowXAxis:   true,
-						ShowYAxis:   true,
-						ShowXLabels: true,
-						ShowYLabels: true,
-					})
-				}
-			}
-		</div>
 		<div>
 			<h2 class="text-xl font-semibold flex items-center gap-2">
 				@icon.ChartBar(icon.Props{Size: 20})
@@ -333,7 +299,7 @@ func prepareTheaterData(data []models.TheaterCount) chart.Data {
 }
 
 templ StatsLoading() {
-	<div id="stats-loading" class="htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none">
+	<div id="stats-loading" class="htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none overflow-hidden">
 		<div class="p-4 space-y-8">
 			// Page title
 			<div class="space-y-6">

@@ -750,7 +750,7 @@ func getDirector(crew []models.Crew) string {
 }
 
 templ MovieLoading() {
-	<div id="movie-loading" class="htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none">
+	<div id="movie-loading" class="htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none overflow-hidden">
 		<div class="p-4 space-y-8">
 			// Hero section
 			<div class="mb-6">
