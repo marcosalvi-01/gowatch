@@ -8,6 +8,7 @@ import (
 	"gowatch/internal/ui/templui/card"
 	"gowatch/internal/ui/templui/chart"
 	"gowatch/internal/ui/templui/icon"
+	"gowatch/internal/ui/templui/skeleton"
 	"strconv"
 	"strings"
 	"time"
@@ -329,4 +330,27 @@ func prepareTheaterData(data []models.TheaterCount) chart.Data {
 			BackgroundColor: colors,
 		}},
 	}
+}
+
+templ StatsLoading() {
+	<div id="stats-loading" class="htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none">
+		<div class="p-4 space-y-8">
+			// Page title
+			<div class="space-y-6">
+				@skeleton.Skeleton(skeleton.Props{Class: "h-12 w-48 rounded-lg"})
+				@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-64 rounded-lg"})
+			</div>
+			// Stats charts
+			@skeleton.Skeleton(skeleton.Props{Class: "h-32 w-full mb-4 rounded-lg"})
+			<div class="flex flex-col mt-8 space-y-8">
+				for i := 0; i < 4; i++ {
+					@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-32 mb-4 rounded-lg"})
+					<div class="flex flex-row space-x-8">
+						@skeleton.Skeleton(skeleton.Props{Class: "h-48 w-full rounded-lg"})
+						@skeleton.Skeleton(skeleton.Props{Class: "h-48 w-full rounded-lg"})
+					</div>
+				}
+			</div>
+		</div>
+	</div>
 }

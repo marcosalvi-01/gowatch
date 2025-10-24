@@ -1,9 +1,33 @@
 package pages
 
+import "gowatch/internal/ui/templui/skeleton"
+
 templ Home() {
 	@Layout() {
 		@templ.Fragment("content") {
 			Home example
 		}
 	}
+}
+
+templ HomeLoading() {
+	<div id="home-loading" class="htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none">
+		<div class="p-4 space-y-6">
+			// Page title
+			<div class="space-y-2">
+				@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-48 rounded-lg"})
+				@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-64 rounded-md"})
+			</div>
+			// Movie grid
+			<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+				for i := 0; i < 6; i++ {
+					<div class="p-4 border rounded-lg">
+						@skeleton.Skeleton(skeleton.Props{Class: "h-32 w-full rounded"})
+						@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-3/4 mt-2"})
+						@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-1/2"})
+					</div>
+				}
+			</div>
+		</div>
+	</div>
 }

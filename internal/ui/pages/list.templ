@@ -8,6 +8,7 @@ import (
 	"gowatch/internal/ui/templui/dialog"
 	"gowatch/internal/ui/templui/icon"
 	"gowatch/internal/ui/templui/separator"
+	"gowatch/internal/ui/templui/skeleton"
 	"strconv"
 	"time"
 )
@@ -166,13 +167,13 @@ templ movieGrid(list *models.List) {
 templ movieListItem(listID int64, movie models.MovieItem) {
 	<div class="relative group">
 		{{
-		moviecardProps := moviecard.Props{
-			Title:             movie.MovieDetails.Movie.Title,
-			Href:              "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
-			PosterPath:        movie.MovieDetails.Movie.PosterPath,
-			Hoverable:         true,
-			TopHoverComponent: movieCardTopHoverList(movie),
-		}
+			moviecardProps := moviecard.Props{
+				Title:             movie.MovieDetails.Movie.Title,
+				Href:              "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+				PosterPath:        movie.MovieDetails.Movie.PosterPath,
+				Hoverable:         true,
+				TopHoverComponent: movieCardTopHoverList(movie),
+			}
 		}}
 		@moviecard.MovieCard(moviecardProps) {
 			<div class="space-y-1">
@@ -342,4 +343,37 @@ func formatTimeAgoShort(t time.Time) string {
 		}
 		return fmt.Sprintf("%d years ago", years)
 	}
+}
+
+templ ListLoading() {
+	<div id="list-loading" class="htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none">
+		<div class="p-4">
+			<div class="space-y-4 mb-8">
+				<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+					<div class="space-y-2">
+						@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-64 rounded-lg"})
+						@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-96 rounded-lg"})
+					</div>
+					@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-24 rounded-lg"})
+				</div>
+				<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+					for i := 0; i < 4; i++ {
+						<div class="text-center sm:text-left">
+							@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-12 mb-1 rounded"})
+							@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-16 rounded"})
+						</div>
+					}
+				</div>
+			</div>
+			@separator.Separator()
+			<div class="space-y-6 pt-4">
+				@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-24 rounded-lg"})
+				<div class="flex flex-wrap gap-4 md:gap-6 w-full">
+					for i := 0; i < 12; i++ {
+						@skeleton.Skeleton(skeleton.Props{Class: "h-56 w-40 rounded"})
+					}
+				</div>
+			</div>
+		</div>
+	</div>
 }

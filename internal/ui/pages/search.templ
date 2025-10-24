@@ -5,6 +5,7 @@ import (
 	"gowatch/internal/models"
 	"gowatch/internal/ui/components/moviecard"
 	"gowatch/internal/ui/templui/icon"
+	"gowatch/internal/ui/templui/skeleton"
 	"strconv"
 )
 
@@ -78,4 +79,21 @@ templ Search(query string, results []models.Movie) {
 			</div>
 		}
 	}
+}
+
+templ SearchLoading() {
+	<div id="search-loading" class="htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none">
+		<div class="p-4">
+			<div class="flex flex-wrap gap-4 md:gap-6 w-full">
+				for i := 0; i < 20; i++ {
+					<div class="flex flex-col space-y-4 p-2">
+						@skeleton.Skeleton(skeleton.Props{Class: "h-56 w-40 rounded-lg"})
+						<div class="space-y-1">
+							@skeleton.Skeleton(skeleton.Props{Class: "h-3 w-20 rounded-lg"})
+						</div>
+					</div>
+				}
+			</div>
+		</div>
+	</div>
 }

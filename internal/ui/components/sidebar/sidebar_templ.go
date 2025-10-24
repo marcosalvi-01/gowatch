@@ -244,7 +244,7 @@ func homeMenuItem(currentPage string) templ.Component {
 					"hx-target":    "#main-content",
 					"hx-swap":      "innerHTML scroll:#main-scroll-container:top",
 					"hx-push-url":  "true",
-					"hx-indicator": "#main-content-loading",
+					"hx-indicator": "#home-loading",
 				},
 				Class: "cursor-pointer",
 			}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var8), templ_7745c5c3_Buffer)
@@ -357,7 +357,7 @@ func watchedMenuItem(currentPage string, watchedCount int64) templ.Component {
 					"hx-target":    "#main-content",
 					"hx-swap":      "innerHTML scroll:#main-scroll-container:top",
 					"hx-push-url":  "true",
-					"hx-indicator": "#main-content-loading",
+					"hx-indicator": "#watched-loading",
 				},
 				Class: "cursor-pointer",
 			}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var11), templ_7745c5c3_Buffer)
@@ -438,7 +438,7 @@ func statsMenuItem(currentPage string) templ.Component {
 					"hx-target":    "#main-content",
 					"hx-swap":      "innerHTML scroll:#main-scroll-container:top",
 					"hx-push-url":  "true",
-					"hx-indicator": "#main-content-loading",
+					"hx-indicator": "#stats-loading",
 				},
 				Class: "cursor-pointer",
 			}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var16), templ_7745c5c3_Buffer)
@@ -763,7 +763,7 @@ func listItems(lists []models.ListEntry, currentPage string) templ.Component {
 						"hx-target":    "#main-content",
 						"hx-swap":      "innerHTML scroll:#main-scroll-container:top",
 						"hx-push-url":  "true",
-						"hx-indicator": "#main-content-loading",
+						"hx-indicator": "#list-loading",
 					},
 				}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var29), templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {

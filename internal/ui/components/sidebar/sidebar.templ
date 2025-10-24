@@ -57,7 +57,7 @@ templ homeMenuItem(currentPage string) {
 				"hx-target":    "#main-content",
 				"hx-swap":      "innerHTML scroll:#main-scroll-container:top",
 				"hx-push-url":  "true",
-				"hx-indicator": "#main-content-loading",
+				"hx-indicator": "#home-loading",
 			},
 			Class: "cursor-pointer",
 		}) {
@@ -78,7 +78,7 @@ templ watchedMenuItem(currentPage string, watchedCount int64) {
 				"hx-target":    "#main-content",
 				"hx-swap":      "innerHTML scroll:#main-scroll-container:top",
 				"hx-push-url":  "true",
-				"hx-indicator": "#main-content-loading",
+				"hx-indicator": "#watched-loading",
 			},
 			Class: "cursor-pointer",
 		}) {
@@ -107,7 +107,7 @@ templ statsMenuItem(currentPage string) {
 				"hx-target":    "#main-content",
 				"hx-swap":      "innerHTML scroll:#main-scroll-container:top",
 				"hx-push-url":  "true",
-				"hx-indicator": "#main-content-loading",
+				"hx-indicator": "#stats-loading",
 			},
 			Class: "cursor-pointer",
 		}) {
@@ -165,7 +165,7 @@ templ listItems(lists []models.ListEntry, currentPage string) {
 					"hx-target":    "#main-content",
 					"hx-swap":      "innerHTML scroll:#main-scroll-container:top",
 					"hx-push-url":  "true",
-					"hx-indicator": "#main-content-loading",
+					"hx-indicator": "#list-loading",
 				},
 			}) {
 				<span>{ list.Name }</span>

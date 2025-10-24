@@ -14,6 +14,7 @@ import (
 	"gowatch/internal/ui/templui/form"
 	"gowatch/internal/ui/templui/icon"
 	"gowatch/internal/ui/templui/separator"
+	"gowatch/internal/ui/templui/skeleton"
 	"gowatch/internal/ui/templui/table"
 	"gowatch/internal/ui/templui/textarea"
 	"slices"
@@ -746,4 +747,121 @@ func getDirector(crew []models.Crew) string {
 		}
 	}
 	return ""
+}
+
+templ MovieLoading() {
+	<div id="movie-loading" class="htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none">
+		<div class="p-4 space-y-8">
+			// Hero section
+			<div class="mb-6">
+				<div class="p-4 sm:p-6 md:p-8 lg:p-10">
+					<div class="max-w-6xl mx-auto">
+						<div class="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start">
+							// Poster section
+							<div class="hidden lg:block flex-shrink-0">
+								<div class="w-32 md:w-40 lg:w-48 xl:w-52">
+									<div class="aspect-[2/3] rounded-lg overflow-hidden shadow-lg">
+										@skeleton.Skeleton(skeleton.Props{Class: "w-full h-full"})
+									</div>
+								</div>
+							</div>
+							// Movie info section
+							<div class="flex-1 min-w-0 space-y-3 sm:space-y-4">
+								// Year and Director
+								<div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+									@skeleton.Skeleton(skeleton.Props{Class: "h-5 w-16 rounded-lg"})
+									@skeleton.Skeleton(skeleton.Props{Class: "h-5 w-32 rounded-lg"})
+								</div>
+								// Tagline
+								<div class="max-w-2xl">
+									@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-2/3 rounded-lg"})
+								</div>
+								// Action Buttons
+								<div class="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 sm:pt-4">
+									@skeleton.Skeleton(skeleton.Props{Class: "h-10 w-32 rounded-lg"})
+									@skeleton.Skeleton(skeleton.Props{Class: "h-10 w-28 rounded-lg"})
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			// Content sections
+			<div class="space-y-8 pb-5">
+				// Overview
+				<div>
+					@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-24 mb-4 rounded-lg"})
+					@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-full max-w-4xl mb-2 rounded-lg"})
+					@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-3/4 max-w-4xl rounded-lg"})
+				</div>
+				// Genres
+				<div>
+					@skeleton.Skeleton(skeleton.Props{Class: "h-5 w-16 mb-3 rounded-lg"})
+					<div class="flex gap-2">
+						for i := 0; i < 3; i++ {
+							@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-16 rounded-full"})
+						}
+					</div>
+				</div>
+				// User Activity (assuming it exists)
+				<div class="border-1 rounded-lg p-3">
+					@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-32 mb-4 rounded-lg"})
+					<div class="space-y-6">
+						// Activity stats
+						<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+							for i := 0; i < 4; i++ {
+								<div class="text-center space-y-2">
+									@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-12 mx-auto rounded-lg"})
+									@skeleton.Skeleton(skeleton.Props{Class: "h-3 w-16 mx-auto rounded-lg"})
+								</div>
+							}
+						</div>
+						@skeleton.Skeleton(skeleton.Props{Class: "h-px w-full rounded-lg"})
+						// Watch history
+						<div>
+							@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-24 mb-3 rounded-lg"})
+							<div class="space-y-2">
+								for i := 0; i < 3; i++ {
+									@skeleton.Skeleton(skeleton.Props{Class: "h-12 w-full rounded-lg"})
+								}
+							</div>
+						</div>
+					</div>
+				</div>
+				// Details
+				<div>
+					@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-16 mb-4 rounded-lg"})
+					<div class="space-y-2">
+						for i := 0; i < 6; i++ {
+							<div class="flex">
+								@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-1/4 rounded-lg"})
+								@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-1/2 ml-4 rounded-lg"})
+							</div>
+						}
+					</div>
+				</div>
+				// Cast
+				<div>
+					@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-12 mb-4 rounded-lg"})
+					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+						for i := 0; i < 9; i++ {
+							@skeleton.Skeleton(skeleton.Props{Class: "h-16 w-full rounded-lg"})
+						}
+					</div>
+				</div>
+				// Crew
+				<div>
+					@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-20 mb-4 rounded-lg"})
+					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+						for i := 0; i < 6; i++ {
+							<div class="space-y-1">
+								@skeleton.Skeleton(skeleton.Props{Class: "h-3 w-20 rounded-lg"})
+								@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-24 rounded-lg"})
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 }
