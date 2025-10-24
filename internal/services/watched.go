@@ -124,8 +124,7 @@ func (s *WatchedService) ExportWatched(ctx context.Context) (models.ImportWatche
 		ids := make([]models.ImportWatchedMovieRef, len(w.Movies))
 		for j, movieDetails := range w.Movies {
 			ids[j] = models.ImportWatchedMovieRef{
-				MovieID: int(movieDetails.MovieDetails.Movie.ID),
-				// TODO: find a way to include the inTheaters in the export, we would need to modify the GetAllWatchedMoviesInDay model to include it
+				MovieID:    int(movieDetails.MovieDetails.Movie.ID),
 				InTheaters: movieDetails.InTheaters,
 			}
 		}

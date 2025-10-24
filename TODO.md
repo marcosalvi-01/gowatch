@@ -14,15 +14,12 @@
 - add comprehensive test suite
 - implement proper error pages (404, 500, etc.)
 - create comprehensive README documentation
-- add health check endpoint
 
 # optimizations:
 
 - add pagination to watched lists
 - load movie activity section asynchronously with HTMX
 - implement graceful server shutdown
-- add slog middleware for API routes
-- add test target to makefile
 
 # security:
 
@@ -30,6 +27,5 @@
 
 # other:
 
-- include inTheaters field in watched export
 - add loading indicator to add-to-list form
 - better htmx-indicator (different one for different pages?)
