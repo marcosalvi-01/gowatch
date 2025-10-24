@@ -61,5 +61,9 @@ func NewRouter(
 	})
 
 	log.Info("router configuration complete")
+
+	// Set custom 404 handler
+	r.NotFound(pagesHandlers.Error404Page)
+
 	return r
 }

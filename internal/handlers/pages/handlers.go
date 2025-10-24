@@ -44,13 +44,6 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Get("/movie/{id}", h.MoviePage)
 	r.Get("/list/{id}", h.ListPage)
 	r.Get("/stats", h.StatsPage)
-
-	// r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-	// 	http.Redirect(w, r, "/watched", http.StatusFound) // 302 redirect
-	// })
-	// r.Get("/search", h.SearchPage)
-	// r.Get("/movie/{id}", h.MoviePage)
-	// r.Get("/list/{id}", h.ListPage)
 }
 
 func (h *Handlers) HomePage(w http.ResponseWriter, r *http.Request) {
@@ -71,7 +64,7 @@ func (h *Handlers) WatchedPage(w http.ResponseWriter, r *http.Request) {
 	movies, err := h.watchedService.GetAllWatchedMoviesInDay(r.Context())
 	if err != nil {
 		log.Error("failed to retrieve watched movies", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		render500Error(w, r)
 		return
 	}
 
@@ -102,14 +95,14 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 	movie, err := h.tmdbService.GetMovieDetails(ctx, id)
 	if err != nil {
 		log.Error("failed to get movie details", "movieID", id, "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		render500Error(w, r)
 		return
 	}
 
 	rec, err := h.watchedService.GetWatchedMovieRecordsByID(ctx, id)
 	if err != nil {
 		log.Error("failed to get watched records", "movieID", id, "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		render500Error(w, r)
 		return
 	}
 
@@ -130,7 +123,7 @@ func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
 	results, err := h.tmdbService.SearchMovies(query)
 	if err != nil {
 		log.Error("failed to search for movie", "query", query, "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		render500Error(w, r)
 		return
 	}
 
@@ -162,7 +155,7 @@ func (h *Handlers) ListPage(w http.ResponseWriter, r *http.Request) {
 	list, err := h.listService.GetListDetails(ctx, id)
 	if err != nil {
 		log.Error("failed to get list details", "listID", id, "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		render500Error(w, r)
 		return
 	}
 	log.Debug("fetched list details", "listID", id, "movieCount", len(list.Movies))
@@ -184,7 +177,7 @@ func (h *Handlers) StatsPage(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.watchedService.GetWatchedStats(ctx)
 	if err != nil {
 		log.Error("failed to retrieve watched stats", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		render500Error(w, r)
 		return
 	}
 

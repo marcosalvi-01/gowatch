@@ -14,6 +14,7 @@
 - add comprehensive test suite
 - implement proper error pages (404, 500, etc.)
 - create comprehensive README documentation
+- better search handling with automatic search and debounce
 
 # optimizations:
 
@@ -28,4 +29,3 @@
 # other:
 
 - add loading indicator to add-to-list form
-- better htmx-indicator (different one for different pages?)

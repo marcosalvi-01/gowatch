@@ -1,0 +1,24 @@
+package pages
+
+import (
+	"gowatch/internal/ui/templui/card"
+	"gowatch/internal/ui/templui/button"
+	"gowatch/internal/ui/templui/icon"
+)
+
+templ Error404() {
+	@Layout() {
+		@templ.Fragment("content") {
+			<div class="flex items-center justify-center min-h-[50vh]">
+				@card.Card(card.Props{Class: "max-w-md p-8 text-center"}) {
+					@icon.FileQuestionMark(icon.Props{Size: 64, Class: "mx-auto mb-6 text-muted-foreground"})
+					<h1 class="text-4xl font-bold text-foreground mb-4">404</h1>
+					<p class="text-lg text-muted-foreground mb-8">Page not found</p>
+					@button.Button(button.Props{Href: "/home"}) {
+						Go Home
+					}
+				}
+			</div>
+		}
+	}
+}
