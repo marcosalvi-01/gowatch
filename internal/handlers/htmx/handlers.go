@@ -38,10 +38,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Post("/lists", h.CreateList)
 	r.Delete("/lists", h.DeleteList)
 
-	// r.Get("/lists/{id}", h.GetList)
-	// // r.Put("/lists/{id}", h.UpdateList)
 	r.Post("/lists/items", h.AddMovieToList)
-	// r.Get("/lists/items", h.GetListDetails)
 	r.Delete("/lists/items", h.DeleteMovieFromList)
 
 	r.Get("/sidebar", h.GetSidebar)

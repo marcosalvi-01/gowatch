@@ -522,7 +522,6 @@ func (d *SqliteDB) GetWatchedPerMonthLastYear(ctx context.Context) ([]models.Per
 	for period, count := range counts {
 		result = append(result, models.PeriodCount{Period: period, Count: count})
 	}
-	// Sort by period
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Period < result[j].Period
 	})
@@ -548,7 +547,6 @@ func (d *SqliteDB) GetWatchedPerYear(ctx context.Context) ([]models.PeriodCount,
 	for period, count := range counts {
 		result = append(result, models.PeriodCount{Period: period, Count: count})
 	}
-	// Sort by period
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Period < result[j].Period
 	})
