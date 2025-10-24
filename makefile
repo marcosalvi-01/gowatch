@@ -10,10 +10,10 @@ tailwind:
 	npx tailwindcss -i ./internal/handlers/static/static/css/input.css -o ./internal/handlers/static/static/css/output.css --minify --watch
 
 templ:
-	go tool templ generate --watch --proxy="http://localhost:8090" --open-browser=false
+	templ generate --watch --proxy="http://localhost:8090" --open-browser=false
 
 air:
-	go tool air 
+	air 
 
 # Configuration
 BUILD_DIR := ./tmp
@@ -29,12 +29,12 @@ build: gen
 
 gen: 
 	$(MAKE) $(SQLC_TIMESTAMP)
-	go tool templ generate
+	templ generate
 
 # Generate sqlc files when SQL files or config change
 $(SQLC_TIMESTAMP): $(SQL_FILES) sqlc.yaml
 	echo 'regenerating sqlc files'
-	go tool sqlc generate
+	sqlc generate
 	@touch $@
 
 clean:
@@ -47,9 +47,15 @@ setup:
 	@command -v npm >/dev/null 2>&1 || { echo "npm is required but not installed. Please install Node.js/npm"; exit 1; }
 	@echo "Installing Go dependencies..."
 	go mod download
+	go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+	go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+	go install github.com/templui/templui/cmd/templui@latest
+	go install github.com/air-verse/air@latest
+	go install github.com/a-h/templ/cmd/templ@latest
+
 	@echo "Installing npm dependencies..."
 	npm install tailwindcss @tailwindcss/cli
 
 vet:
 	go vet ./...
-	go tool sqlc vet
+	sqlc vet

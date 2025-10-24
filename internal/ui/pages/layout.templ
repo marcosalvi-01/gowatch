@@ -49,9 +49,9 @@ templ Layout() {
 						@SearchBar("")
 						@ThemeSwitcher()
 					</div>
+					@mainContentLoading()
 					// Main content
 					<div id="main-scroll-container" class="relative flex flex-1 flex-col overflow-auto">
-						@mainContentLoading()
 						<div id="main-content" class="p-4">
 							{ children... }
 						</div>
@@ -63,7 +63,7 @@ templ Layout() {
 }
 
 templ mainContentLoading() {
-	<div id="main-content-loading" class="htmx-indicator absolute inset-0 bg-background z-10 pointer-events-none">
+	<div id="main-content-loading" class="htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none">
 		<div class="flex flex-col justify-center items-center h-full p-8">
 			<div class="w-full max-w-3xl space-y-6">
 				// Page title
@@ -269,6 +269,7 @@ templ SearchBar(searchContent string) {
 				"hx-get":       "/search",
 				"hx-trigger":   "keyup[key=='Enter']",
 				"hx-target":    "#main-content",
+				"hx-swap":      "innerHTML scroll:#main-scroll-container:top",
 				"hx-push-url":  "true",
 				"hx-include":   "this",
 				"hx-indicator": "#main-content-loading",

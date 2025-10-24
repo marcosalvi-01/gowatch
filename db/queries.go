@@ -577,7 +577,7 @@ func (d *SqliteDB) GetMostWatchedDay(ctx context.Context) (*models.MostWatchedDa
 		return nil, fmt.Errorf("failed to get most watched day: %w", err)
 	}
 	if len(data) == 0 {
-		return nil, nil
+		return nil, sql.ErrNoRows
 	}
 	counts := make(map[string]int64)
 	for _, t := range data {
