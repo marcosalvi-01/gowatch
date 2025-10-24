@@ -21,5 +21,6 @@ func NewHandlers() *Handlers {
 var staticFiles embed.FS
 
 func (h *Handlers) RegisterRoutes(r chi.Router) {
+	log.Debug("registering static file routes")
 	r.Handle("/*", http.FileServer(http.FS(staticFiles)))
 }

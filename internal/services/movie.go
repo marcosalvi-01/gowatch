@@ -77,7 +77,7 @@ func (s *MovieService) GetMovieDetails(ctx context.Context, id int64) (*models.M
 
 	movie, err := s.db.GetMovieDetailsByID(ctx, id)
 	if err == nil && time.Since(movie.Movie.UpdatedAt) <= s.cacheTTL {
-		s.log.Debug("found movie details in database cache", "movieID", id)
+		s.log.Info("movie details cache hit", "movieID", id, "title", movie.Movie.Title)
 		return movie, nil
 	}
 
@@ -85,7 +85,7 @@ func (s *MovieService) GetMovieDetails(ctx context.Context, id int64) (*models.M
 		s.log.Error("failed to get movie details from database. Fetching from TMDB", "movieID", id, "error", err)
 	}
 
-	s.log.Debug("movie not found in cache, fetching from TMDB", "movieID", id)
+	s.log.Info("movie details cache miss, fetching from TMDB", "movieID", id)
 
 	// cache miss
 	details, err := s.client.GetMovieDetails(int(id), nil)

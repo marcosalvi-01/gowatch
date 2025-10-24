@@ -130,12 +130,16 @@ func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
 
 	watchedAtTheater := r.FormValue("watched_at_theater") != ""
 
+	log.Debug("adding watched movie", "movieID", movieID, "watchedDate", watchedDate, "theater", watchedAtTheater)
+
 	err = h.watchedService.AddWatched(r.Context(), int64(movieID), watchedDate, watchedAtTheater)
 	if err != nil {
 		log.Error("failed to add new watched movie", "movieID", movieID, "watchedDate", watchedDate, "theater", watchedAtTheater, "error", err)
 		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
 		return
 	}
+
+	log.Info("successfully added watched movie", "movieID", movieID)
 
 	successMessage := fmt.Sprintf("Movie marked as watched on %s", watchedDate.Format("Jan 2, 2006"))
 
@@ -159,12 +163,16 @@ func (h *Handlers) CreateList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Debug("creating new list", "title", title, "descriptionLength", len(description))
+
 	err := h.listService.CreateList(r.Context(), title, description)
 	if err != nil {
 		log.Error("failed to create list", "title", title, "description", description, "error", err)
 		h.renderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred, please try again.", 0)
 		return
 	}
+
+	log.Info("successfully created list", "title", title)
 
 	w.Header().Add("HX-Trigger", "refreshLists, refreshSidebar")
 	h.renderSuccessToast(w, r, "List Created Successfully", fmt.Sprintf("List \"%s\" has been created.", title), 0)
@@ -209,6 +217,8 @@ func (h *Handlers) AddMovieToList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Info("successfully added movie to list", "listID", listID, "movieID", movieID)
+
 	h.renderSuccessToast(w, r, "Added to List", "Movie has been added to the list", 0)
 }
 
@@ -221,12 +231,16 @@ func (h *Handlers) DeleteList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Debug("deleting list", "listID", id)
+
 	err = h.listService.DeleteList(r.Context(), id)
 	if err != nil {
 		log.Error("failed to delete list from db", "listID", id, "error", err)
 		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
 		return
 	}
+
+	log.Info("successfully deleted list", "listID", id)
 
 	// add the headers before rendering the components
 	w.Header().Set("HX-Push-Url", "/home")
@@ -263,12 +277,16 @@ func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Debug("removing movie from list", "listID", listID, "movieID", movieID)
+
 	err = h.listService.DeleteMovieFromList(r.Context(), listID, movieID)
 	if err != nil {
 		log.Error("failed to delete movie from list", "listID", listID, "movieID", movieID, "error", err)
 		h.renderErrorToast(w, r, "Failed to Remove Movie", "An unexpected error occurred while removing the movie from the list", 0)
 		return
 	}
+
+	log.Info("successfully removed movie from list", "listID", listID, "movieID", movieID)
 
 	list, err := h.listService.GetListDetails(r.Context(), listID)
 	if err != nil {

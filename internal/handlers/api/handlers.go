@@ -34,6 +34,8 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 }
 
 func (h *Handlers) exportWatched(w http.ResponseWriter, r *http.Request) {
+	log.Debug("exporting watched movies")
+
 	export, err := h.watchedService.ExportWatched(r.Context())
 	if err != nil {
 		log.Error("failed to export watched movies", "error", err)
@@ -41,16 +43,25 @@ func (h *Handlers) exportWatched(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Info("successfully exported watched movies")
 	jsonResponse(w, http.StatusOK, export)
 }
 
 func (h *Handlers) importWatched(w http.ResponseWriter, r *http.Request) {
+	log.Debug("starting watched movies import")
+
 	var payload models.ImportWatchedMoviesLog
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		log.Error("failed to marshal JSON response", "error", err)
-		http.Error(w, "failed to encode response as JSON", http.StatusInternalServerError)
+		log.Error("failed to decode JSON payload", "error", err)
+		http.Error(w, "failed to decode request payload", http.StatusBadRequest)
 		return
 	}
+
+	totalMovies := 0
+	for _, importMovie := range payload {
+		totalMovies += len(importMovie.Movies)
+	}
+	log.Info("import request received", "totalDays", len(payload), "totalMovies", totalMovies)
 
 	ctx := context.WithoutCancel(r.Context())
 

@@ -1,7 +1,7 @@
 # bugs:
 
 - fix addtolistdialog to return full dialog content with buttons and handle empty lists
-- fix stats page 500 error when no watched movies exist
+- fix stats page layout on no watched movies
 - add input sanitization for search queries and user inputs
 
 # feats:

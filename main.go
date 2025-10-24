@@ -5,13 +5,14 @@ import (
 	"gowatch/internal/routes"
 	"gowatch/internal/services"
 	"gowatch/logging"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/caarlos0/env/v11"
 	tmdb "github.com/cyruzin/golang-tmdb"
 )
+
+var log = logging.Get("app")
 
 type Config struct {
 	Port             string        `env:"PORT" envDefault:"8080"`
@@ -26,22 +27,30 @@ type Config struct {
 func main() {
 	defer logging.Close()
 
+	log.Info("initializing application")
+
 	cfg := Config{}
 	if err := env.Parse(&cfg); err != nil {
-		log.Fatalf("Failed to parse env: %v", err)
+		log.Error("failed to parse environment configuration", "error", err)
+		panic(err)
 	}
+
+	log.Info("configuration loaded", "port", cfg.Port, "dbPath", cfg.DBPath, "dbName", cfg.DBName, "cacheTTL", cfg.CacheTTL)
 
 	db, err := db.NewSqliteDB(cfg.DBPath, cfg.DBName)
 	if err != nil {
+		log.Error("failed to initialize database", "error", err)
 		panic(err)
 	}
 	defer db.Close()
 
 	tmdb, err := tmdb.Init(cfg.TMDBAPIKey)
 	if err != nil {
+		log.Error("failed to initialize TMDB client", "error", err)
 		panic(err)
 	}
 
+	log.Debug("initializing services")
 	movieService := services.NewMovieService(db, tmdb, cfg.CacheTTL)
 	watchedService := services.NewWatchedService(db, movieService)
 	listService := services.NewListService(db, movieService)
@@ -55,8 +64,9 @@ func main() {
 		WriteTimeout: cfg.Timeout,
 	}
 
-	log.Printf("Server starting on port %s", cfg.Port)
+	log.Info("starting server", "port", cfg.Port)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatal("Server failed to start:", err)
+		log.Error("server failed to start", "error", err)
+		panic(err)
 	}
 }

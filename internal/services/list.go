@@ -67,6 +67,8 @@ func (s *ListService) CreateList(ctx context.Context, name, description string) 
 }
 
 func (s *ListService) AddMovieToList(ctx context.Context, listID int64, movieID int64, note *string) error {
+	s.log.Debug("adding movie to list", "listID", listID, "movieID", movieID)
+
 	err := s.db.AddMovieToList(ctx, db.InsertMovieList{
 		MovieID:   movieID,
 		ListID:    listID,
@@ -75,38 +77,49 @@ func (s *ListService) AddMovieToList(ctx context.Context, listID int64, movieID 
 		Note:      note,
 	})
 	if err != nil {
+		s.log.Error("failed to add movie to list", "listID", listID, "movieID", movieID, "error", err)
 		return fmt.Errorf("failed to add movie '%d' to list '%d': %w", movieID, listID, err)
 	}
 
+	s.log.Info("successfully added movie to list", "listID", listID, "movieID", movieID)
 	return nil
 }
 
 func (s *ListService) GetListDetails(ctx context.Context, listID int64) (*models.List, error) {
+	s.log.Debug("getting list details", "listID", listID)
+
 	list, err := s.db.GetList(ctx, listID)
 	if err != nil {
+		s.log.Error("failed to get list details", "listID", listID, "error", err)
 		return nil, fmt.Errorf("failed to get list with id '%d' from db: %w", listID, err)
 	}
-	s.log.Debug("fetched list details", "list", list)
+	s.log.Debug("fetched list details", "listID", listID, "movieCount", len(list.Movies))
 
 	return list, nil
 }
 
 func (s *ListService) DeleteList(ctx context.Context, id int64) error {
+	s.log.Debug("deleting list", "listID", id)
+
 	err := s.db.DeleteListByID(ctx, id)
 	if err != nil {
+		s.log.Error("failed to delete list", "listID", id, "error", err)
 		return fmt.Errorf("failed to delete list from db: %w", err)
 	}
-	s.log.Debug("deleted list from db", "listID", id)
+	s.log.Info("successfully deleted list", "listID", id)
 
 	return nil
 }
 
 func (s *ListService) DeleteMovieFromList(ctx context.Context, listID, movieID int64) error {
+	s.log.Debug("removing movie from list", "listID", listID, "movieID", movieID)
+
 	err := s.db.DeleteMovieFromList(ctx, listID, movieID)
 	if err != nil {
+		s.log.Error("failed to remove movie from list", "listID", listID, "movieID", movieID, "error", err)
 		return fmt.Errorf("failed to delete movie for list from db: %w", err)
 	}
-	s.log.Debug("deleted movie for list from db", "listID", listID, "movieID", movieID)
+	s.log.Info("successfully removed movie from list", "listID", listID, "movieID", movieID)
 
 	return nil
 }

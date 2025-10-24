@@ -6,7 +6,7 @@ require (
 	github.com/Oudwins/tailwind-merge-go v0.2.1
 	github.com/a-h/templ v0.3.960
 	github.com/caarlos0/env/v11 v11.3.1
-	github.com/cyruzin/golang-tmdb v1.8.2
+	github.com/cyruzin/golang-tmdb v1.9.0
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/pressly/goose/v3 v3.25.0
 	modernc.org/sqlite v1.39.1

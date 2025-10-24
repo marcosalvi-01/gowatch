@@ -464,38 +464,53 @@ func (d *SqliteDB) GetAllLists(ctx context.Context) ([]InsertList, error) {
 }
 
 func (d *SqliteDB) GetWatchedCount(ctx context.Context) (int64, error) {
+	log.Debug("getting watched count")
+
 	count, err := d.queries.GetWatchedCount(ctx)
 	if err != nil {
+		log.Error("failed to get watched count", "error", err)
 		return 0, fmt.Errorf("failed to get watched movie count: %w", err)
 	}
 
+	log.Debug("retrieved watched count", "count", count)
 	return count, nil
 }
 
 func (d *SqliteDB) DeleteListByID(ctx context.Context, id int64) error {
+	log.Debug("deleting list by ID", "listID", id)
+
 	err := d.queries.DeleteListByID(ctx, id)
 	if err != nil {
+		log.Error("failed to delete list", "listID", id, "error", err)
 		return fmt.Errorf("failed to delete list with id '%d' in db: %w", id, err)
 	}
 
+	log.Debug("successfully deleted list", "listID", id)
 	return nil
 }
 
 func (d *SqliteDB) DeleteMovieFromList(ctx context.Context, listID, movieID int64) error {
+	log.Debug("deleting movie from list", "listID", listID, "movieID", movieID)
+
 	err := d.queries.DeleteMovieFromList(ctx, sqlc.DeleteMovieFromListParams{
 		ListID:  listID,
 		MovieID: movieID,
 	})
 	if err != nil {
+		log.Error("failed to delete movie from list", "listID", listID, "movieID", movieID, "error", err)
 		return fmt.Errorf("failed to delete movie '%d' from list '%d' in db: %w", movieID, listID, err)
 	}
 
+	log.Debug("successfully deleted movie from list", "listID", listID, "movieID", movieID)
 	return nil
 }
 
 func (d *SqliteDB) GetWatchedPerMonthLastYear(ctx context.Context) ([]models.PeriodCount, error) {
+	log.Debug("getting watched per month last year")
+
 	data, err := d.queries.GetWatchedPerMonthLastYear(ctx)
 	if err != nil {
+		log.Error("failed to get monthly data", "error", err)
 		return nil, fmt.Errorf("failed to get monthly data: %w", err)
 	}
 	counts := make(map[string]int64)
@@ -511,12 +526,17 @@ func (d *SqliteDB) GetWatchedPerMonthLastYear(ctx context.Context) ([]models.Per
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Period < result[j].Period
 	})
+
+	log.Debug("retrieved monthly data", "periodCount", len(result))
 	return result, nil
 }
 
 func (d *SqliteDB) GetWatchedPerYear(ctx context.Context) ([]models.PeriodCount, error) {
+	log.Debug("getting watched per year")
+
 	data, err := d.queries.GetWatchedPerYear(ctx)
 	if err != nil {
+		log.Error("failed to get yearly data", "error", err)
 		return nil, fmt.Errorf("failed to get yearly data: %w", err)
 	}
 	counts := make(map[string]int64)
@@ -532,51 +552,72 @@ func (d *SqliteDB) GetWatchedPerYear(ctx context.Context) ([]models.PeriodCount,
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Period < result[j].Period
 	})
+
+	log.Debug("retrieved yearly data", "periodCount", len(result))
 	return result, nil
 }
 
 func (d *SqliteDB) GetWatchedByGenre(ctx context.Context) ([]models.GenreCount, error) {
+	log.Debug("getting watched by genre")
+
 	data, err := d.queries.GetWatchedByGenre(ctx)
 	if err != nil {
+		log.Error("failed to get genre data", "error", err)
 		return nil, fmt.Errorf("failed to get genre data: %w", err)
 	}
 	result := make([]models.GenreCount, len(data))
 	for i, d := range data {
 		result[i] = models.GenreCount{Name: d.Name, Count: d.Count}
 	}
+
+	log.Debug("retrieved genre data", "genreCount", len(result))
 	return result, nil
 }
 
 func (d *SqliteDB) GetTheaterVsHomeCount(ctx context.Context) ([]models.TheaterCount, error) {
+	log.Debug("getting theater vs home count")
+
 	data, err := d.queries.GetTheaterVsHomeCount(ctx)
 	if err != nil {
+		log.Error("failed to get theater data", "error", err)
 		return nil, fmt.Errorf("failed to get theater data: %w", err)
 	}
 	result := make([]models.TheaterCount, len(data))
 	for i, d := range data {
 		result[i] = models.TheaterCount{InTheater: d.WatchedInTheater, Count: d.Count}
 	}
+
+	log.Debug("retrieved theater data", "count", len(result))
 	return result, nil
 }
 
 func (d *SqliteDB) GetMostWatchedMovies(ctx context.Context) ([]models.TopMovie, error) {
+	log.Debug("getting most watched movies")
+
 	data, err := d.queries.GetMostWatchedMovies(ctx)
 	if err != nil {
+		log.Error("failed to get most watched movies", "error", err)
 		return nil, fmt.Errorf("failed to get most watched movies: %w", err)
 	}
 	result := make([]models.TopMovie, len(data))
 	for i, d := range data {
 		result[i] = models.TopMovie{Title: d.Title, ID: d.ID, WatchCount: d.WatchCount, PosterPath: d.PosterPath}
 	}
+
+	log.Debug("retrieved most watched movies", "count", len(result))
 	return result, nil
 }
 
 func (d *SqliteDB) GetMostWatchedDay(ctx context.Context) (*models.MostWatchedDay, error) {
+	log.Debug("getting most watched day")
+
 	data, err := d.queries.GetMostWatchedDay(ctx)
 	if err != nil {
+		log.Error("failed to get most watched day", "error", err)
 		return nil, fmt.Errorf("failed to get most watched day: %w", err)
 	}
 	if len(data) == 0 {
+		log.Debug("no watched days found")
 		return nil, sql.ErrNoRows
 	}
 	counts := make(map[string]int64)
@@ -592,37 +633,50 @@ func (d *SqliteDB) GetMostWatchedDay(ctx context.Context) (*models.MostWatchedDa
 			maxDay = day
 		}
 	}
+
+	log.Debug("retrieved most watched day", "day", maxDay, "count", maxCount)
 	return &models.MostWatchedDay{Day: maxDay, Count: maxCount}, nil
 }
 
 func (d *SqliteDB) GetMostWatchedActors(ctx context.Context) ([]models.TopActor, error) {
+	log.Debug("getting most watched actors")
+
 	data, err := d.queries.GetMostWatchedActors(ctx)
 	if err != nil {
+		log.Error("failed to get most watched actors", "error", err)
 		return nil, fmt.Errorf("failed to get most watched actors: %w", err)
 	}
 	result := make([]models.TopActor, len(data))
 	for i, d := range data {
 		result[i] = models.TopActor{Name: d.Name, ID: d.ID, MovieCount: d.MovieCount, ProfilePath: d.ProfilePath}
 	}
+
+	log.Debug("retrieved most watched actors", "count", len(result))
 	return result, nil
 }
 
 func (d *SqliteDB) GetWatchedDateRange(ctx context.Context) (*models.DateRange, error) {
+	log.Debug("getting watched date range")
+
 	data, err := d.queries.GetWatchedDateRange(ctx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			log.Debug("no watched dates found")
 			return &models.DateRange{}, nil
 		}
+		log.Error("failed to get date range", "error", err)
 		return nil, fmt.Errorf("failed to get date range: %w", err)
 	}
 	var min, max *time.Time
 	if data.MinDate != nil {
 		minStr, ok := data.MinDate.(string)
 		if !ok {
+			log.Error("unexpected type for MinDate", "type", fmt.Sprintf("%T", data.MinDate))
 			return nil, fmt.Errorf("unexpected type for MinDate: %T", data.MinDate)
 		}
 		parsed, err := time.Parse("2006-01-02 15:04:05 -0700 MST", minStr)
 		if err != nil {
+			log.Error("failed to parse min date", "date", minStr, "error", err)
 			return nil, fmt.Errorf("failed to parse min date %q: %w", minStr, err)
 		}
 		min = &parsed
@@ -630,13 +684,17 @@ func (d *SqliteDB) GetWatchedDateRange(ctx context.Context) (*models.DateRange, 
 	if data.MaxDate != nil {
 		maxStr, ok := data.MaxDate.(string)
 		if !ok {
+			log.Error("unexpected type for MaxDate", "type", fmt.Sprintf("%T", data.MaxDate))
 			return nil, fmt.Errorf("unexpected type for MaxDate: %T", data.MaxDate)
 		}
 		parsed, err := time.Parse("2006-01-02 15:04:05 -0700 MST", maxStr)
 		if err != nil {
+			log.Error("failed to parse max date", "date", maxStr, "error", err)
 			return nil, fmt.Errorf("failed to parse max date %q: %w", maxStr, err)
 		}
 		max = &parsed
 	}
+
+	log.Debug("retrieved watched date range", "minDate", min, "maxDate", max)
 	return &models.DateRange{MinDate: min, MaxDate: max}, nil
 }

@@ -54,15 +54,20 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 }
 
 func (h *Handlers) HomePage(w http.ResponseWriter, r *http.Request) {
+	log.Debug("serving home page")
+
 	if r.Header.Get("HX-Request") == "true" {
 		templ.Handler(pages.Home(), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
 		templ.Handler(pages.Home()).ServeHTTP(w, r)
 	}
-	log.Debug("serving home page")
+
+	log.Info("home page served successfully")
 }
 
 func (h *Handlers) WatchedPage(w http.ResponseWriter, r *http.Request) {
+	log.Debug("serving watched movies page")
+
 	movies, err := h.watchedService.GetAllWatchedMoviesInDay(r.Context())
 	if err != nil {
 		log.Error("failed to retrieve watched movies", "error", err)
@@ -77,6 +82,8 @@ func (h *Handlers) WatchedPage(w http.ResponseWriter, r *http.Request) {
 	} else {
 		templ.Handler(pages.Watched(movies)).ServeHTTP(w, r)
 	}
+
+	log.Info("watched movies page served successfully", "dayCount", len(movies))
 }
 
 func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
@@ -90,16 +97,18 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Debug("serving movie page", "movieID", id)
+
 	movie, err := h.tmdbService.GetMovieDetails(ctx, id)
 	if err != nil {
-		log.Error("failed to get movie details", "id", id, "error", err)
+		log.Error("failed to get movie details", "movieID", id, "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	rec, err := h.watchedService.GetWatchedMovieRecordsByID(ctx, id)
 	if err != nil {
-		log.Error("failed to get watched records", "id", id, "error", err)
+		log.Error("failed to get watched records", "movieID", id, "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -109,12 +118,14 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 	} else {
 		templ.Handler(pages.Movie(*movie, rec)).ServeHTTP(w, r)
 	}
+
+	log.Info("movie page served successfully", "movieID", id, "title", movie.Movie.Title)
 }
 
 func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 
-	log.Debug("searching movies", "query", query)
+	log.Debug("serving search page", "query", query)
 
 	results, err := h.tmdbService.SearchMovies(query)
 	if err != nil {
@@ -123,7 +134,7 @@ func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Debug("found movies", "count", len(results))
+	log.Debug("found movies", "query", query, "count", len(results))
 
 	if r.Header.Get("HX-Request") == "true" {
 		w.Header().Add("HX-Trigger", "refreshSidebar")
@@ -131,6 +142,8 @@ func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
 	} else {
 		templ.Handler(pages.Search("", results)).ServeHTTP(w, r)
 	}
+
+	log.Info("search page served successfully", "query", query, "resultCount", len(results))
 }
 
 func (h *Handlers) ListPage(w http.ResponseWriter, r *http.Request) {
@@ -140,27 +153,33 @@ func (h *Handlers) ListPage(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(paramID, 10, 64)
 	if err != nil {
 		log.Error("invalid list ID", "id", paramID, "error", err)
-		http.Error(w, "Invalid movie ID", http.StatusBadRequest)
+		http.Error(w, "Invalid list ID", http.StatusBadRequest)
 		return
 	}
 
+	log.Debug("serving list page", "listID", id)
+
 	list, err := h.listService.GetListDetails(ctx, id)
 	if err != nil {
-		log.Error("failed to get list details", "id", id, "error", err)
+		log.Error("failed to get list details", "listID", id, "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	log.Debug("fetched list details", "list", list, "listID", id)
+	log.Debug("fetched list details", "listID", id, "movieCount", len(list.Movies))
 
 	if r.Header.Get("HX-Request") == "true" {
 		templ.Handler(pages.List(list), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
 		templ.Handler(pages.List(list)).ServeHTTP(w, r)
 	}
+
+	log.Info("list page served successfully", "listID", id, "name", list.Name, "movieCount", len(list.Movies))
 }
 
 func (h *Handlers) StatsPage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+
+	log.Debug("serving stats page")
 
 	stats, err := h.watchedService.GetWatchedStats(ctx)
 	if err != nil {
@@ -169,11 +188,13 @@ func (h *Handlers) StatsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Debug("retrieved watched stats")
+	log.Debug("retrieved watched stats", "totalWatched", stats.TotalWatched)
 
 	if r.Header.Get("HX-Request") == "true" {
 		templ.Handler(pages.Stats(stats), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
 		templ.Handler(pages.Stats(stats)).ServeHTTP(w, r)
 	}
+
+	log.Info("stats page served successfully")
 }
