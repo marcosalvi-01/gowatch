@@ -6,6 +6,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"gowatch/db"
 	"gowatch/internal/models"
 	"gowatch/internal/services"
 	"gowatch/logging"
@@ -17,16 +18,19 @@ import (
 var log = logging.Get("api")
 
 type Handlers struct {
+	db             db.DB
 	watchedService *services.WatchedService
 }
 
-func NewHandlers(watchedService *services.WatchedService) *Handlers {
+func NewHandlers(db db.DB, watchedService *services.WatchedService) *Handlers {
 	return &Handlers{
+		db:             db,
 		watchedService: watchedService,
 	}
 }
 
 func (h *Handlers) RegisterRoutes(r chi.Router) {
+	r.Get("/health", h.healthCheck)
 	r.Route("/movies", func(r chi.Router) {
 		r.Post("/import", h.importWatched)
 		r.Get("/export", h.exportWatched)
@@ -75,4 +79,16 @@ func (h *Handlers) importWatched(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	jsonResponse(w, http.StatusAccepted, "import started")
+}
+
+func (h *Handlers) healthCheck(w http.ResponseWriter, r *http.Request) {
+	log.Debug("checking health")
+
+	if err := h.db.Health(); err != nil {
+		log.Error("health check failed", "error", err)
+		http.Error(w, "unhealthy", http.StatusServiceUnavailable)
+		return
+	}
+
+	jsonResponse(w, http.StatusOK, map[string]string{"status": "healthy"})
 }

@@ -55,7 +55,7 @@ func main() {
 	watchedService := services.NewWatchedService(db, movieService)
 	listService := services.NewListService(db, movieService)
 
-	router := routes.NewRouter(movieService, watchedService, listService)
+	router := routes.NewRouter(db, movieService, watchedService, listService)
 
 	server := &http.Server{
 		Addr:         ":" + cfg.Port,

@@ -5,6 +5,7 @@
 package routes
 
 import (
+	"gowatch/db"
 	"gowatch/internal/handlers/api"
 	"gowatch/internal/handlers/htmx"
 	"gowatch/internal/handlers/pages"
@@ -19,6 +20,7 @@ import (
 var log = logging.Get("routes")
 
 func NewRouter(
+	db db.DB,
 	tmdbService *services.MovieService,
 	watchedService *services.WatchedService,
 	listService *services.ListService,
@@ -32,7 +34,7 @@ func NewRouter(
 	r.Use(middleware.Recoverer)
 
 	log.Debug("registering API routes")
-	apiHandlers := api.NewHandlers(watchedService)
+	apiHandlers := api.NewHandlers(db, watchedService)
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(middleware.JSONMiddleware)
 		apiHandlers.RegisterRoutes(r)
