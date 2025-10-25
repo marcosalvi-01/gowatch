@@ -1,3 +1,4 @@
+// Package services contains business logic services for managing movies, watched lists, and user data.
 package services
 
 import (

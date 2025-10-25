@@ -1,3 +1,4 @@
+// Package logging provides structured logging utilities with configurable levels and output destinations.
 package logging
 
 import (

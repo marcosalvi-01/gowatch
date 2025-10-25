@@ -1,3 +1,4 @@
+// Package htmx contains HTTP handlers for HTMX-based dynamic interactions, such as updating UI elements without full page reloads.
 package htmx
 
 import (

@@ -1,3 +1,4 @@
+// Package middleware provides HTTP middleware functions for logging, error recovery, and content type handling.
 package middleware
 
 import (

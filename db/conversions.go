@@ -1,3 +1,4 @@
+// Package db provides database connectivity, query operations, and data conversions between SQL and internal models.
 package db
 
 import (

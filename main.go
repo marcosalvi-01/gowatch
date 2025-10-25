@@ -1,3 +1,4 @@
+// Package main is the entry point for the gowatch movie tracking application. It sets up configuration, initializes services, and starts the HTTP server.
 package main
 
 import (
