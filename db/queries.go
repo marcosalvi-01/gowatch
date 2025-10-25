@@ -647,7 +647,7 @@ func (d *SqliteDB) GetMostWatchedActors(ctx context.Context) ([]models.TopActor,
 	}
 	result := make([]models.TopActor, len(data))
 	for i, d := range data {
-		result[i] = models.TopActor{Name: d.Name, ID: d.ID, MovieCount: d.MovieCount, ProfilePath: d.ProfilePath}
+		result[i] = models.TopActor{Name: d.Name, ID: d.ID, WatchCount: d.WatchCount, ProfilePath: d.ProfilePath}
 	}
 
 	log.Debug("retrieved most watched actors", "count", len(result))

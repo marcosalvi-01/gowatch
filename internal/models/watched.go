@@ -72,7 +72,7 @@ type TopActor struct {
 	Name        string
 	ID          int64
 	ProfilePath string
-	MovieCount  int64
+	WatchCount  int64
 }
 
 type MostWatchedDay struct {

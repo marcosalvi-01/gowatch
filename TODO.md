@@ -2,7 +2,6 @@
 
 - fix addtolistdialog to return full dialog content with buttons and handle empty lists and add loading indicator
 - fix stats page layout on no watched movies
-- add input sanitization for search queries and user inputs
 
 # feats:
 

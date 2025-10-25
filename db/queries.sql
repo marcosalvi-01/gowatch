@@ -355,7 +355,7 @@ SELECT
     person.name,
     person.id,
     person.profile_path,
-    COUNT(DISTINCT watched.movie_id) AS movie_count
+    COUNT(*) AS watch_count
 FROM
     watched
     JOIN "cast" ON watched.movie_id = "cast".movie_id
@@ -365,7 +365,7 @@ GROUP BY
     person.name,
     person.profile_path
 ORDER BY
-    movie_count DESC
+    watch_count DESC
 LIMIT
     10;
 
