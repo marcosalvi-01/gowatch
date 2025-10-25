@@ -59,3 +59,6 @@ setup:
 vet:
 	go vet ./...
 	sqlc vet
+
+test:
+	go test ./... -v

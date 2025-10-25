@@ -185,148 +185,50 @@ func (s *WatchedService) GetWatchedCount(ctx context.Context) (int64, error) {
 func (s *WatchedService) GetWatchedStats(ctx context.Context) (*models.WatchedStats, error) {
 	stats := &models.WatchedStats{}
 
-	// Total watched
-	s.log.Debug("retrieving total watched count")
-	total, err := s.db.GetWatchedCount(ctx)
+	var err error
+	stats.TotalWatched, err = s.getTotalWatched(ctx)
 	if err != nil {
-		s.log.Error("failed to retrieve total watched count", "error", err)
-		return nil, fmt.Errorf("failed to get total watched: %w", err)
+		return nil, err
 	}
-	stats.TotalWatched = total
 
-	// Theater vs home
-	s.log.Debug("retrieving theater vs home counts")
-	theaterData, err := s.db.GetTheaterVsHomeCount(ctx)
+	stats.TheaterVsHome, err = s.getTheaterVsHome(ctx)
 	if err != nil {
-		s.log.Error("failed to retrieve theater vs home counts", "error", err)
-		return nil, fmt.Errorf("failed to get theater vs home: %w", err)
-	}
-	stats.TheaterVsHome = make([]models.TheaterCount, len(theaterData))
-	for i, d := range theaterData {
-		stats.TheaterVsHome[i] = models.TheaterCount{
-			InTheater: d.InTheater,
-			Count:     d.Count,
-		}
+		return nil, err
 	}
 
-	// Monthly last year
-	s.log.Debug("retrieving monthly watched data")
-	monthlyData, err := s.db.GetWatchedPerMonthLastYear(ctx)
+	stats.MonthlyLastYear, err = s.getMonthlyLastYear(ctx)
 	if err != nil {
-		s.log.Error("failed to retrieve monthly watched data", "error", err)
-		return nil, fmt.Errorf("failed to get monthly data: %w", err)
+		return nil, err
 	}
-	stats.MonthlyLastYear = monthlyData
 
-	// Yearly all time
-	s.log.Debug("retrieving yearly watched data")
-	yearlyData, err := s.db.GetWatchedPerYear(ctx)
+	stats.YearlyAllTime, err = s.getYearlyAllTime(ctx)
 	if err != nil {
-		s.log.Error("failed to retrieve yearly watched data", "error", err)
-		return nil, fmt.Errorf("failed to get yearly data: %w", err)
+		return nil, err
 	}
-	stats.YearlyAllTime = yearlyData
 
-	// Genres
-	s.log.Debug("retrieving watched by genre data")
-	genreData, err := s.db.GetWatchedByGenre(ctx)
+	stats.Genres, err = s.getGenres(ctx)
 	if err != nil {
-		s.log.Error("failed to retrieve watched by genre data", "error", err)
-		return nil, fmt.Errorf("failed to get genre data: %w", err)
-	}
-	if len(genreData) <= MaxGenresDisplayed {
-		stats.Genres = make([]models.GenreCount, len(genreData))
-		for i, d := range genreData {
-			stats.Genres[i] = models.GenreCount{
-				Name:  d.Name,
-				Count: d.Count,
-			}
-		}
-	} else {
-		stats.Genres = make([]models.GenreCount, MaxGenresDisplayed+1)
-		for i := 0; i < MaxGenresDisplayed; i++ {
-			stats.Genres[i] = models.GenreCount{
-				Name:  genreData[i].Name,
-				Count: genreData[i].Count,
-			}
-		}
-		var othersCount int64
-		for i := MaxGenresDisplayed; i < len(genreData); i++ {
-			othersCount += genreData[i].Count
-		}
-		stats.Genres[MaxGenresDisplayed] = models.GenreCount{
-			Name:  "Others",
-			Count: othersCount,
-		}
+		return nil, err
 	}
 
-	// Most watched movies
-	s.log.Debug("retrieving most watched movies")
-	movieData, err := s.db.GetMostWatchedMovies(ctx)
+	stats.MostWatchedMovies, err = s.getMostWatchedMovies(ctx)
 	if err != nil {
-		s.log.Error("failed to retrieve most watched movies", "error", err)
-		return nil, fmt.Errorf("failed to get most watched movies: %w", err)
-	}
-	stats.MostWatchedMovies = make([]models.TopMovie, len(movieData))
-	for i, d := range movieData {
-		stats.MostWatchedMovies[i] = models.TopMovie{
-			Title:      d.Title,
-			ID:         d.ID,
-			PosterPath: d.PosterPath,
-			WatchCount: d.WatchCount,
-		}
+		return nil, err
 	}
 
-	// Most watched day
-	s.log.Debug("retrieving most watched day")
-	dayData, err := s.db.GetMostWatchedDay(ctx)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		s.log.Error("failed to retrieve most watched day", "error", err)
-		return nil, fmt.Errorf("failed to get most watched day: %w", err)
-	}
-	switch err {
-	case nil:
-		stats.MostWatchedDay = &models.MostWatchedDay{
-			Date:  dayData.Date,
-			Count: dayData.Count,
-		}
-	case sql.ErrNoRows:
-		s.log.Debug("no watched days found")
-	}
-
-	// Most watched actors
-	s.log.Debug("retrieving most watched actors")
-	actorData, err := s.db.GetMostWatchedActors(ctx)
+	stats.MostWatchedDay, err = s.getMostWatchedDay(ctx)
 	if err != nil {
-		s.log.Error("failed to retrieve most watched actors", "error", err)
-		return nil, fmt.Errorf("failed to get most watched actors: %w", err)
-	}
-	stats.MostWatchedActors = make([]models.TopActor, len(actorData))
-	for i, d := range actorData {
-		stats.MostWatchedActors[i] = models.TopActor{
-			Name:        d.Name,
-			ID:          d.ID,
-			ProfilePath: d.ProfilePath,
-			MovieCount:  d.MovieCount,
-		}
+		return nil, err
 	}
 
-	// Averages
-	s.log.Debug("retrieving watched date range for average calculations")
-	dateRange, err := s.db.GetWatchedDateRange(ctx)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		s.log.Error("failed to retrieve watched date range", "error", err)
-		return nil, fmt.Errorf("failed to get date range: %w", err)
+	stats.MostWatchedActors, err = s.getMostWatchedActors(ctx)
+	if err != nil {
+		return nil, err
 	}
-	if err == sql.ErrNoRows {
-		s.log.Debug("no valid watched dates found, skipping average calculations")
-	}
-	if err == nil && dateRange.MinDate != nil && dateRange.MaxDate != nil {
-		days := dateRange.MaxDate.Sub(*dateRange.MinDate).Hours()/24 + 1
-		stats.AvgPerDay = float64(total) / days
-		stats.AvgPerWeek = float64(total) / (days / 7)
-		stats.AvgPerMonth = float64(total) / (days / 30)
-		s.log.Debug("calculated averages", "avgPerDay", stats.AvgPerDay, "avgPerWeek", stats.AvgPerWeek, "avgPerMonth", stats.AvgPerMonth)
+
+	stats.AvgPerDay, stats.AvgPerWeek, stats.AvgPerMonth, err = s.getAverages(ctx, stats.TotalWatched)
+	if err != nil {
+		return nil, err
 	}
 
 	return stats, nil
