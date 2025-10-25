@@ -5,12 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"gowatch/db"
-	"gowatch/internal/models"
-	"gowatch/logging"
 	"log/slog"
 	"sort"
 	"time"
+
+	"gowatch/db"
+	"gowatch/internal/models"
+	"gowatch/logging"
 )
 
 const MaxGenresDisplayed = 11

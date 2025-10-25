@@ -6,11 +6,12 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+
 	"gowatch/db"
 	"gowatch/internal/models"
 	"gowatch/internal/services"
 	"gowatch/logging"
-	"net/http"
 
 	"github.com/go-chi/chi/v5"
 )

@@ -2,12 +2,13 @@
 package main
 
 import (
+	"net/http"
+	"time"
+
 	"gowatch/db"
 	"gowatch/internal/routes"
 	"gowatch/internal/services"
 	"gowatch/logging"
-	"net/http"
-	"time"
 
 	"github.com/caarlos0/env/v11"
 	tmdb "github.com/cyruzin/golang-tmdb"
@@ -26,7 +27,9 @@ type Config struct {
 }
 
 func main() {
-	defer logging.Close()
+	defer func() {
+		_ = logging.Close()
+	}()
 
 	log.Info("initializing application")
 
@@ -43,7 +46,9 @@ func main() {
 		log.Error("failed to initialize database", "error", err)
 		panic(err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	tmdb, err := tmdb.Init(cfg.TMDBAPIKey)
 	if err != nil {

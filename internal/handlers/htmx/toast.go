@@ -1,8 +1,9 @@
 package htmx
 
 import (
-	"gowatch/internal/ui/templui/toast"
 	"net/http"
+
+	"gowatch/internal/ui/templui/toast"
 )
 
 func (h *Handlers) renderErrorToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
@@ -10,7 +11,7 @@ func (h *Handlers) renderErrorToast(w http.ResponseWriter, r *http.Request, titl
 		duration = 4000
 	}
 
-	toast.Toast(toast.Props{
+	if err := toast.Toast(toast.Props{
 		ID:            "toast",
 		Title:         title,
 		Description:   description,
@@ -19,7 +20,10 @@ func (h *Handlers) renderErrorToast(w http.ResponseWriter, r *http.Request, titl
 		Duration:      duration,
 		ShowIndicator: true,
 		Icon:          true,
-	}).Render(r.Context(), w)
+	}).Render(r.Context(), w); err != nil {
+		log.Error("failed to render error toast", "error", err)
+		http.Error(w, "Failed to render error notification", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) renderSuccessToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
@@ -27,7 +31,7 @@ func (h *Handlers) renderSuccessToast(w http.ResponseWriter, r *http.Request, ti
 		duration = 2000
 	}
 
-	toast.Toast(toast.Props{
+	if err := toast.Toast(toast.Props{
 		ID:            "toast",
 		Title:         title,
 		Description:   description,
@@ -36,7 +40,10 @@ func (h *Handlers) renderSuccessToast(w http.ResponseWriter, r *http.Request, ti
 		Duration:      duration,
 		ShowIndicator: true,
 		Icon:          true,
-	}).Render(r.Context(), w)
+	}).Render(r.Context(), w); err != nil {
+		log.Error("failed to render success toast", "error", err)
+		http.Error(w, "Failed to render success notification", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) renderWarningToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
@@ -44,7 +51,7 @@ func (h *Handlers) renderWarningToast(w http.ResponseWriter, r *http.Request, ti
 		duration = 3000
 	}
 
-	toast.Toast(toast.Props{
+	if err := toast.Toast(toast.Props{
 		ID:            "toast",
 		Title:         title,
 		Description:   description,
@@ -53,5 +60,8 @@ func (h *Handlers) renderWarningToast(w http.ResponseWriter, r *http.Request, ti
 		Duration:      duration,
 		ShowIndicator: true,
 		Icon:          true,
-	}).Render(r.Context(), w)
+	}).Render(r.Context(), w); err != nil {
+		log.Error("failed to render warning toast", "error", err)
+		http.Error(w, "Failed to render warning notification", http.StatusInternalServerError)
+	}
 }

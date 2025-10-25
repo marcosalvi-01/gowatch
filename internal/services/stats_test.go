@@ -1,11 +1,12 @@
 package services
 
 import (
-	"gowatch/internal/models"
 	"log/slog"
 	"reflect"
 	"testing"
 	"time"
+
+	"gowatch/internal/models"
 )
 
 func TestAggregateGenres(t *testing.T) {

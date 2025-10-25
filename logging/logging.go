@@ -44,7 +44,7 @@ func initBase() {
 
 	// Check for LOG_FILE environment variable
 	if logPath, ok := os.LookupEnv("LOG_FILE"); ok {
-		file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600) // #nosec G304
 		if err != nil {
 			slog.Error("failed to open log file, falling back to stdout", "path", logPath, "error", err)
 		} else {

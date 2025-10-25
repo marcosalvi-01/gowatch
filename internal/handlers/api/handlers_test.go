@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"gowatch/db"
-	"gowatch/internal/models"
-	"gowatch/internal/services"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"gowatch/db"
+	"gowatch/internal/models"
+	"gowatch/internal/services"
 )
 
 func TestHandlers_HealthCheck(t *testing.T) {
@@ -18,7 +19,7 @@ func TestHandlers_HealthCheck(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	watchedService := services.NewWatchedService(testDB, nil)
 	handlers := NewHandlers(testDB, watchedService)
@@ -46,7 +47,7 @@ func TestHandlers_ExportWatched(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	movieService := services.NewMovieService(testDB, nil, time.Hour)
 	watchedService := services.NewWatchedService(testDB, movieService)
@@ -90,7 +91,7 @@ func TestHandlers_ImportWatched_InvalidJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	watchedService := services.NewWatchedService(testDB, nil)
 	handlers := NewHandlers(testDB, watchedService)
@@ -111,7 +112,7 @@ func TestHandlers_ExportWatched_Empty(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	movieService := services.NewMovieService(testDB, nil, time.Hour)
 	watchedService := services.NewWatchedService(testDB, movieService)

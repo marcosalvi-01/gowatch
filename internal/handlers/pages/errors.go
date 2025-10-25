@@ -1,8 +1,9 @@
 package pages
 
 import (
-	"gowatch/internal/ui/pages"
 	"net/http"
+
+	"gowatch/internal/ui/pages"
 
 	"github.com/a-h/templ"
 )

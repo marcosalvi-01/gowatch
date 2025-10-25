@@ -3,8 +3,9 @@ package db
 import (
 	"context"
 	"database/sql"
-	"gowatch/db/sqlc"
 	"io/fs"
+
+	"gowatch/db/sqlc"
 
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
@@ -18,12 +19,12 @@ func NewTestDB() (*SqliteDB, error) {
 	}
 
 	if err := db.Ping(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, err
 	}
 
 	if err := runTestMigrations(db); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, err
 	}
 

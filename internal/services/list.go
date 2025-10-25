@@ -3,11 +3,12 @@ package services
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"time"
+
 	"gowatch/db"
 	"gowatch/internal/models"
 	"gowatch/logging"
-	"log/slog"
-	"time"
 )
 
 // ListService handles user's custom movie lists

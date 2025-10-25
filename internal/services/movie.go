@@ -6,11 +6,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
+	"time"
+
 	"gowatch/db"
 	"gowatch/internal/models"
 	"gowatch/logging"
-	"log/slog"
-	"time"
 
 	tmdb "github.com/cyruzin/golang-tmdb"
 )

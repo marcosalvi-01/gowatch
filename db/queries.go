@@ -5,10 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"gowatch/db/sqlc"
-	"gowatch/internal/models"
 	"sort"
 	"time"
+
+	"gowatch/db/sqlc"
+	"gowatch/internal/models"
 )
 
 // UpsertMovie adds a new movie to the database
@@ -20,7 +21,7 @@ func (d *SqliteDB) UpsertMovie(ctx context.Context, movie *models.MovieDetails) 
 		log.Error("failed to start database transaction for movie insert", "movieID", movie.Movie.ID, "error", err)
 		return fmt.Errorf("failed to start db transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	qtx := d.queries.WithTx(tx)
 
@@ -171,7 +172,7 @@ func (d *SqliteDB) GetMovieDetailsByID(ctx context.Context, id int64) (*models.M
 		log.Error("failed to start database transaction for movie retrieval", "movieID", id, "error", err)
 		return nil, fmt.Errorf("failed to start db transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	qtx := d.queries.WithTx(tx)
 
@@ -349,7 +350,7 @@ func (d *SqliteDB) GetList(ctx context.Context, id int64) (*models.List, error) 
 		log.Error("failed to start database transaction for list retrieval", "listID", id, "error", err)
 		return nil, fmt.Errorf("failed to start db transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	qtx := d.queries.WithTx(tx)
 
@@ -505,17 +506,10 @@ func (d *SqliteDB) DeleteMovieFromList(ctx context.Context, listID, movieID int6
 	return nil
 }
 
-func (d *SqliteDB) GetWatchedPerMonthLastYear(ctx context.Context) ([]models.PeriodCount, error) {
-	log.Debug("getting watched per month last year")
-
-	data, err := d.queries.GetWatchedPerMonthLastYear(ctx)
-	if err != nil {
-		log.Error("failed to get monthly data", "error", err)
-		return nil, fmt.Errorf("failed to get monthly data: %w", err)
-	}
+func (d *SqliteDB) aggregateWatchedByPeriod(data []time.Time, format string) []models.PeriodCount {
 	counts := make(map[string]int64)
 	for _, t := range data {
-		period := t.Format("2006-01")
+		period := t.Format(format)
 		counts[period]++
 	}
 	result := make([]models.PeriodCount, 0, len(counts))
@@ -525,6 +519,18 @@ func (d *SqliteDB) GetWatchedPerMonthLastYear(ctx context.Context) ([]models.Per
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Period < result[j].Period
 	})
+	return result
+}
+
+func (d *SqliteDB) GetWatchedPerMonthLastYear(ctx context.Context) ([]models.PeriodCount, error) {
+	log.Debug("getting watched per month last year")
+
+	data, err := d.queries.GetWatchedPerMonthLastYear(ctx)
+	if err != nil {
+		log.Error("failed to get monthly data", "error", err)
+		return nil, fmt.Errorf("failed to get monthly data: %w", err)
+	}
+	result := d.aggregateWatchedByPeriod(data, "2006-01")
 
 	log.Debug("retrieved monthly data", "periodCount", len(result))
 	return result, nil
@@ -538,18 +544,7 @@ func (d *SqliteDB) GetWatchedPerYear(ctx context.Context) ([]models.PeriodCount,
 		log.Error("failed to get yearly data", "error", err)
 		return nil, fmt.Errorf("failed to get yearly data: %w", err)
 	}
-	counts := make(map[string]int64)
-	for _, t := range data {
-		period := t.Format("2006")
-		counts[period]++
-	}
-	result := make([]models.PeriodCount, 0, len(counts))
-	for period, count := range counts {
-		result = append(result, models.PeriodCount{Period: period, Count: count})
-	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Period < result[j].Period
-	})
+	result := d.aggregateWatchedByPeriod(data, "2006")
 
 	log.Debug("retrieved yearly data", "periodCount", len(result))
 	return result, nil

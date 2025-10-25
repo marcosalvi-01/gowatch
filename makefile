@@ -1,8 +1,8 @@
-.PHONY: build clean gen setup
-
+.PHONY: build clean gen setup test lint vet fmt dev tailwind templ air
 include ./.env
 export
 
+# Development mode - runs tailwind, templ, and air in parallel
 dev:
 	make -j3 tailwind templ air
 
@@ -27,13 +27,14 @@ SQLC_TIMESTAMP := $(DB_DIR)/sqlc/.sqlc-generated
 build: gen
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o $(BUILD_DIR)/gowatch .
 
+# Generate all code (sqlc and templ)
 gen: 
 	$(MAKE) $(SQLC_TIMESTAMP)
 	templ generate
 
 # Generate sqlc files when SQL files or config change
 $(SQLC_TIMESTAMP): $(SQL_FILES) sqlc.yaml
-	echo 'regenerating sqlc files'
+	@echo 'regenerating sqlc files'
 	sqlc generate
 	@touch $@
 
@@ -48,17 +49,32 @@ setup:
 	@echo "Installing Go dependencies..."
 	go mod download
 	go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
-	go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+	go install github.com/a-h/templ/cmd/templ@latest
 	go install github.com/templui/templui/cmd/templui@latest
 	go install github.com/air-verse/air@latest
-	go install github.com/a-h/templ/cmd/templ@latest
-
+	go install mvdan.cc/gofumpt@latest
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.5.0
 	@echo "Installing npm dependencies..."
 	npm install tailwindcss @tailwindcss/cli
+	@echo "Setup complete!"
 
+# Format code with gofumpt
+fmt:
+	gofumpt -l -w .
+
+# Run go vet and sqlc vet
 vet:
 	go vet ./...
 	sqlc vet
 
+# Run golangci-lint (includes vet, formatting checks, and more)
+lint: fmt
+	golangci-lint run ./...
+
+# Run all checks before committing
+check: fmt vet lint test
+	@echo "All checks passed!"
+
+# Run tests
 test:
 	go test ./... -v

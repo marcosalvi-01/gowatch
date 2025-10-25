@@ -2,10 +2,11 @@ package services
 
 import (
 	"context"
-	"gowatch/db"
-	"gowatch/internal/models"
 	"testing"
 	"time"
+
+	"gowatch/db"
+	"gowatch/internal/models"
 )
 
 func TestListService_CRUD(t *testing.T) {
@@ -13,7 +14,7 @@ func TestListService_CRUD(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	movieService := NewMovieService(testDB, nil, time.Hour)
 	listService := NewListService(testDB, movieService)
@@ -83,7 +84,7 @@ func TestListService_CreateList_EmptyName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	movieService := NewMovieService(testDB, nil, time.Hour)
 	listService := NewListService(testDB, movieService)
@@ -102,7 +103,7 @@ func TestListService_AddMovieToList_InvalidIDs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	movieService := NewMovieService(testDB, nil, time.Hour)
 	listService := NewListService(testDB, movieService)

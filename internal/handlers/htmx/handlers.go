@@ -4,6 +4,12 @@ package htmx
 import (
 	"bytes"
 	"fmt"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+
 	"gowatch/internal/services"
 	"gowatch/internal/ui/components/addtolistdialog"
 	"gowatch/internal/ui/components/oobwrapper"
@@ -11,11 +17,6 @@ import (
 	"gowatch/internal/ui/pages"
 	"gowatch/internal/utils"
 	"gowatch/logging"
-	"net/http"
-	"net/url"
-	"strconv"
-	"strings"
-	"time"
 
 	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
@@ -55,7 +56,11 @@ func (h *Handlers) RenderAddToListDialogContent(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	addtolistdialog.AddToListDialog(lists).Render(r.Context(), w)
+	if err := addtolistdialog.AddToListDialog(lists).Render(r.Context(), w); err != nil {
+		log.Error("failed to render add to list dialog", "error", err)
+		http.Error(w, "Failed to render dialog", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *Handlers) GetSidebar(w http.ResponseWriter, r *http.Request) {
@@ -88,12 +93,16 @@ func (h *Handlers) GetSidebar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sidebar.Sidebar(sidebar.Props{
+	if err := sidebar.Sidebar(sidebar.Props{
 		CurrentPage:  currentURL,
 		Collapsed:    collapsed,
 		WatchedCount: count,
 		Lists:        lists,
-	}).Render(r.Context(), w)
+	}).Render(r.Context(), w); err != nil {
+		log.Error("failed to render sidebar", "error", err)
+		http.Error(w, "Failed to render sidebar", http.StatusInternalServerError)
+		return
+	}
 
 	log.Debug("rendered sidebar", "location", location, "watchedCount", count, "listCount", len(lists))
 }
@@ -259,7 +268,11 @@ func (h *Handlers) DeleteList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := templ.WithChildren(r.Context(), templ.Raw(buf.String()))
-	oobwrapper.OOBWrapper("innerHTML:#main-content").Render(ctx, w)
+	if err := oobwrapper.OOBWrapper("innerHTML:#main-content").Render(ctx, w); err != nil {
+		log.Error("failed to render OOB wrapper", "error", err)
+		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
+		return
+	}
 
 	h.renderSuccessToast(w, r, "List Deleted Successfully", "The list has been deleted.", 2000)
 }
@@ -308,7 +321,11 @@ func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := templ.WithChildren(r.Context(), templ.Raw(buf.String()))
-	oobwrapper.OOBWrapper("innerHTML:#main-content").Render(ctx, w)
+	if err := oobwrapper.OOBWrapper("innerHTML:#main-content").Render(ctx, w); err != nil {
+		log.Error("failed to render OOB wrapper", "error", err)
+		h.renderErrorToast(w, r, "Failed to Refresh List", "An unexpected error occurred while refreshing the list", 0)
+		return
+	}
 
 	h.renderSuccessToast(w, r, "Removed from List", "Movie has been removed from the list", 0)
 }

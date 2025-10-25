@@ -3,8 +3,9 @@ package static
 
 import (
 	"embed"
-	"gowatch/logging"
 	"net/http"
+
+	"gowatch/logging"
 
 	"github.com/go-chi/chi/v5"
 )

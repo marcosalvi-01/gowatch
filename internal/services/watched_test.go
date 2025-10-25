@@ -15,7 +15,7 @@ func TestWatchedService_AddWatched(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	movieService := NewMovieService(testDB, nil, time.Hour) // No TMDB for test
 	watchedService := NewWatchedService(testDB, movieService)
@@ -53,7 +53,7 @@ func TestWatchedService_ImportExportWatched(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	movieService := NewMovieService(testDB, nil, time.Hour)
 	watchedService := NewWatchedService(testDB, movieService)
@@ -121,7 +121,7 @@ func TestWatchedService_GetWatchedStats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	movieService := NewMovieService(testDB, nil, time.Hour)
 	watchedService := NewWatchedService(testDB, movieService)
@@ -167,7 +167,7 @@ func TestWatchedService_AddWatched_InvalidMovie(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	movieService := NewMovieService(testDB, nil, time.Hour)
 	watchedService := NewWatchedService(testDB, movieService)
@@ -187,7 +187,7 @@ func TestWatchedService_ImportExport_Empty(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	movieService := NewMovieService(testDB, nil, time.Hour)
 	watchedService := NewWatchedService(testDB, movieService)

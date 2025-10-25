@@ -14,7 +14,7 @@ func TestMovieService_GetMovieDetails_CacheHit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	movieService := NewMovieService(testDB, nil, time.Hour)
 

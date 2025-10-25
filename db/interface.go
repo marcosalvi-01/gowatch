@@ -2,8 +2,9 @@ package db
 
 import (
 	"context"
-	"gowatch/internal/models"
 	"time"
+
+	"gowatch/internal/models"
 )
 
 type DB interface {

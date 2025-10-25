@@ -2,10 +2,11 @@
 package middleware
 
 import (
-	"gowatch/logging"
 	"net/http"
 	"strings"
 	"time"
+
+	"gowatch/logging"
 )
 
 var log = logging.Get("http")
@@ -53,11 +54,15 @@ func Recoverer(next http.Handler) http.Handler {
 				if strings.HasPrefix(r.URL.Path, "/api") {
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(`{"error": "Internal Server Error"}`))
+					if _, err := w.Write([]byte(`{"error": "Internal Server Error"}`)); err != nil {
+						log.Error("failed to write error response", "error", err)
+					}
 				} else {
 					w.Header().Set("Content-Type", "text/html")
 					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(`<!DOCTYPE html><html><head><title>500 Internal Server Error</title></head><body><h1>500 Internal Server Error</h1><p>Something went wrong. <a href="/home">Go Home</a></p></body></html>`))
+					if _, err := w.Write([]byte(`<!DOCTYPE html><html><head><title>500 Internal Server Error</title></head><body><h1>500 Internal Server Error</h1><p>Something went wrong. <a href="/home">Go Home</a></p></body></html>`)); err != nil {
+						log.Error("failed to write error response", "error", err)
+					}
 				}
 			}
 		}()

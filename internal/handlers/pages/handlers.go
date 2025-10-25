@@ -2,16 +2,19 @@
 package pages
 
 import (
+	"net/http"
+	"strconv"
+
 	"gowatch/internal/services"
 	"gowatch/internal/ui/pages"
 	"gowatch/internal/utils"
 	"gowatch/logging"
-	"net/http"
-	"strconv"
 
 	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 )
+
+const htmxRequestHeaderValue = "true"
 
 var log = logging.Get("pages")
 
@@ -50,7 +53,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 func (h *Handlers) HomePage(w http.ResponseWriter, r *http.Request) {
 	log.Debug("serving home page")
 
-	if r.Header.Get("HX-Request") == "true" {
+	if r.Header.Get("HX-Request") == htmxRequestHeaderValue {
 		templ.Handler(pages.Home(), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
 		templ.Handler(pages.Home()).ServeHTTP(w, r)
@@ -71,7 +74,7 @@ func (h *Handlers) WatchedPage(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("retrieved watched movies", "dayCount", len(movies))
 
-	if r.Header.Get("HX-Request") == "true" {
+	if r.Header.Get("HX-Request") == htmxRequestHeaderValue {
 		templ.Handler(pages.Watched(movies), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
 		templ.Handler(pages.Watched(movies)).ServeHTTP(w, r)
@@ -107,7 +110,7 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Header.Get("HX-Request") == "true" {
+	if r.Header.Get("HX-Request") == htmxRequestHeaderValue {
 		templ.Handler(pages.Movie(*movie, rec), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
 		templ.Handler(pages.Movie(*movie, rec)).ServeHTTP(w, r)
@@ -137,7 +140,7 @@ func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("found movies", "query", sanitizedQuery, "count", len(results))
 
-	if r.Header.Get("HX-Request") == "true" {
+	if r.Header.Get("HX-Request") == htmxRequestHeaderValue {
 		w.Header().Add("HX-Trigger", "refreshSidebar")
 		templ.Handler(pages.Search("", results), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
@@ -168,7 +171,7 @@ func (h *Handlers) ListPage(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Debug("fetched list details", "listID", id, "movieCount", len(list.Movies))
 
-	if r.Header.Get("HX-Request") == "true" {
+	if r.Header.Get("HX-Request") == htmxRequestHeaderValue {
 		templ.Handler(pages.List(list), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
 		templ.Handler(pages.List(list)).ServeHTTP(w, r)
@@ -191,7 +194,7 @@ func (h *Handlers) StatsPage(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("retrieved watched stats", "totalWatched", stats.TotalWatched)
 
-	if r.Header.Get("HX-Request") == "true" {
+	if r.Header.Get("HX-Request") == htmxRequestHeaderValue {
 		templ.Handler(pages.Stats(stats), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
 		templ.Handler(pages.Stats(stats)).ServeHTTP(w, r)

@@ -1,0 +1,81 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  # Use go version from go.mod
+  modules-download-mode: readonly
+
+linters:
+  # Start with standard linters, then add more
+  default: standard
+  enable:
+    # Code quality
+    - goconst # Find repeated strings that could be constants
+    - gocyclo # Check cyclomatic complexity
+    - misspell # Fix common spelling mistakes
+    - unconvert # Remove unnecessary type conversions
+    - unparam # Find unused function parameters
+    - dupl # Find duplicated code
+
+    # Bug detection
+    - bodyclose # Check HTTP response body is closed
+    - gosec # Security checks
+    - rowserrcheck # Check sql.Rows.Err is checked
+    - sqlclosecheck # Check sql.Rows and sql.Stmt are closed
+
+    # Best practices
+    - errname # Check error naming conventions
+    - errorlint # Find misuse of error wrapping
+    - nilerr # Find incorrect nil error returns
+
+linters-settings:
+  gocyclo:
+    # Minimal cyclomatic complexity to report
+    min-complexity: 15
+
+  dupl:
+    # Tokens threshold to detect duplicate code
+    threshold: 100
+
+  goconst:
+    # Minimal length of string constant
+    min-len: 3
+    # Minimum occurrences to report
+    min-occurrences: 3
+
+  errcheck:
+    # Report about not checking of errors in type assertions
+    check-type-assertions: true
+    # Report about assignment of errors to blank identifier
+    check-blank: true
+
+  govet:
+    # Enable all analyzers
+    enable-all: true
+    # Disable specific analyzers if needed
+    disable:
+      - shadow # Can be too noisy
+
+issues:
+  # Maximum issues count per one linter
+  max-issues-per-linter: 0
+
+  # Maximum count of issues with the same text
+  max-same-issues: 0
+
+  # Exclude some linters from test files and generated files
+  exclude-rules:
+     # Exclude some linters from running on test files
+     - path: ".*_test.go$"
+       linters:
+         - gocyclo
+         - errcheck
+         - dupl
+         - gosec
+         - goconst
+     # Exclude generated files from all linters
+     - path: "db/sqlc/.*"
+     - path: "internal/ui/.*_templ.go"
+     - path: "internal/ui/templui/.*"
+     - path: "internal/ui/utils/templui.go"
