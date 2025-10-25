@@ -4,6 +4,7 @@ package pages
 import (
 	"gowatch/internal/services"
 	"gowatch/internal/ui/pages"
+	"gowatch/internal/utils"
 	"gowatch/logging"
 	"net/http"
 	"strconv"
@@ -118,16 +119,23 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 
-	log.Debug("serving search page", "query", query)
-
-	results, err := h.tmdbService.SearchMovies(query)
+	sanitizedQuery, err := utils.TrimAndValidateString(query, 255)
 	if err != nil {
-		log.Error("failed to search for movie", "query", query, "error", err)
+		log.Error("invalid search query", "query", query, "error", err)
+		http.Error(w, "Invalid search query", http.StatusBadRequest)
+		return
+	}
+
+	log.Debug("serving search page", "query", sanitizedQuery)
+
+	results, err := h.tmdbService.SearchMovies(sanitizedQuery)
+	if err != nil {
+		log.Error("failed to search for movie", "query", sanitizedQuery, "error", err)
 		render500Error(w, r)
 		return
 	}
 
-	log.Debug("found movies", "query", query, "count", len(results))
+	log.Debug("found movies", "query", sanitizedQuery, "count", len(results))
 
 	if r.Header.Get("HX-Request") == "true" {
 		w.Header().Add("HX-Trigger", "refreshSidebar")
@@ -136,7 +144,7 @@ func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
 		templ.Handler(pages.Search("", results)).ServeHTTP(w, r)
 	}
 
-	log.Info("search page served successfully", "query", query, "resultCount", len(results))
+	log.Info("search page served successfully", "query", sanitizedQuery, "resultCount", len(results))
 }
 
 func (h *Handlers) ListPage(w http.ResponseWriter, r *http.Request) {

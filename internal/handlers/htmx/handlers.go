@@ -9,6 +9,7 @@ import (
 	"gowatch/internal/ui/components/oobwrapper"
 	"gowatch/internal/ui/components/sidebar"
 	"gowatch/internal/ui/pages"
+	"gowatch/internal/utils"
 	"gowatch/logging"
 	"net/http"
 	"net/url"
@@ -149,31 +150,32 @@ func (h *Handlers) CreateList(w http.ResponseWriter, r *http.Request) {
 	title := r.FormValue("title")
 	description := r.FormValue("description")
 
-	if title == "" {
-		log.Error("missing list title")
-		h.renderErrorToast(w, r, "Missing Title", "Please provide a title for your list.", 4000)
-		return
-	}
-
-	if len(description) > 500 {
-		log.Error("description too long", "length", len(description))
-		h.renderErrorToast(w, r, "Description Too Long", "Please keep the description under 500 characters.", 4000)
-		return
-	}
-
-	log.Debug("creating new list", "title", title, "descriptionLength", len(description))
-
-	err := h.listService.CreateList(r.Context(), title, description)
+	sanitizedTitle, err := utils.TrimAndValidateString(title, 100)
 	if err != nil {
-		log.Error("failed to create list", "title", title, "description", description, "error", err)
+		log.Error("invalid list title", "title", title, "error", err)
+		h.renderErrorToast(w, r, "Invalid Title", "Please provide a valid title for your list.", 4000)
+		return
+	}
+
+	sanitizedDescription, err := utils.TrimAndValidateString(description, 500)
+	if err != nil {
+		// description is optional, so allow empty
+		sanitizedDescription = ""
+	}
+
+	log.Debug("creating new list", "title", sanitizedTitle, "descriptionLength", len(sanitizedDescription))
+
+	err = h.listService.CreateList(r.Context(), sanitizedTitle, sanitizedDescription)
+	if err != nil {
+		log.Error("failed to create list", "title", sanitizedTitle, "description", sanitizedDescription, "error", err)
 		h.renderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred, please try again.", 0)
 		return
 	}
 
-	log.Info("successfully created list", "title", title)
+	log.Info("successfully created list", "title", sanitizedTitle)
 
 	w.Header().Add("HX-Trigger", "refreshLists, refreshSidebar")
-	h.renderSuccessToast(w, r, "List Created Successfully", fmt.Sprintf("List \"%s\" has been created.", title), 0)
+	h.renderSuccessToast(w, r, "List Created Successfully", fmt.Sprintf("List \"%s\" has been created.", sanitizedTitle), 0)
 }
 
 func (h *Handlers) AddMovieToList(w http.ResponseWriter, r *http.Request) {
@@ -181,7 +183,12 @@ func (h *Handlers) AddMovieToList(w http.ResponseWriter, r *http.Request) {
 	movieIDStr := r.FormValue("movie_id")
 	note := r.FormValue("note")
 
-	log.Debug("adding movie to list", "listID", listIDStr, "movieID", movieIDStr, "note", note)
+	sanitizedNote, err := utils.TrimAndValidateString(note, 500)
+	if err != nil {
+		sanitizedNote = ""
+	}
+
+	log.Debug("adding movie to list", "listID", listIDStr, "movieID", movieIDStr, "note", sanitizedNote)
 
 	listID, err := strconv.ParseInt(listIDStr, 10, 64)
 	if err != nil {
@@ -198,8 +205,8 @@ func (h *Handlers) AddMovieToList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var notePtr *string
-	if strings.TrimSpace(note) != "" {
-		notePtr = &note
+	if sanitizedNote != "" {
+		notePtr = &sanitizedNote
 	}
 
 	err = h.listService.AddMovieToList(r.Context(), listID, movieID, notePtr)

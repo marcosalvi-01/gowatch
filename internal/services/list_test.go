@@ -2,11 +2,10 @@ package services
 
 import (
 	"context"
-	"testing"
-	"time"
-
 	"gowatch/db"
 	"gowatch/internal/models"
+	"testing"
+	"time"
 )
 
 func TestListService_CRUD(t *testing.T) {

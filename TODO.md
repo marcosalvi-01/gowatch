@@ -15,6 +15,7 @@
 - create comprehensive README documentation
 - better search handling with automatic search and debounce
 - shortcut to search
+- improve the watched page when empty
 
 # optimizations:
 

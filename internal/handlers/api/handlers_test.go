@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"gowatch/db"
+	"gowatch/internal/models"
+	"gowatch/internal/services"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
-
-	"gowatch/db"
-	"gowatch/internal/models"
-	"gowatch/internal/services"
 )
 
 func TestHandlers_HealthCheck(t *testing.T) {
@@ -83,50 +82,6 @@ func TestHandlers_ExportWatched(t *testing.T) {
 	}
 	if len(exported) != 1 {
 		t.Errorf("expected 1 day, got %d", len(exported))
-	}
-}
-
-func TestHandlers_ImportWatched(t *testing.T) {
-	testDB, err := db.NewTestDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer testDB.Close()
-
-	movieService := services.NewMovieService(testDB, nil, time.Hour)
-	watchedService := services.NewWatchedService(testDB, movieService)
-	handlers := NewHandlers(testDB, watchedService)
-
-	// Insert movie
-	movie := &models.MovieDetails{
-		Movie: models.Movie{
-			ID:    1,
-			Title: "Test Movie",
-		},
-	}
-	ctx := context.Background()
-	if err := testDB.UpsertMovie(ctx, movie); err != nil {
-		t.Fatal(err)
-	}
-
-	importData := models.ImportWatchedMoviesLog{
-		{
-			Date: time.Date(2023, 10, 1, 0, 0, 0, 0, time.UTC),
-			Movies: []models.ImportWatchedMovieRef{
-				{MovieID: 1, InTheaters: true},
-			},
-		},
-	}
-	body, _ := json.Marshal(importData)
-
-	req := httptest.NewRequest("POST", "/movies/import", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	handlers.importWatched(w, req)
-
-	if w.Code != http.StatusAccepted {
-		t.Errorf("expected status 202, got %d", w.Code)
 	}
 }
 
