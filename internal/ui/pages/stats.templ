@@ -133,7 +133,7 @@ templ statsMetrics(stats *models.WatchedStats) {
 				@statsMetricCard("Avg per Week", fmt.Sprintf("%.1f", stats.AvgPerWeek), icon.ChartBar)
 				@statsMetricCard("Avg per Month", fmt.Sprintf("%.1f", stats.AvgPerMonth), icon.TrendingUp)
 				if stats.MostWatchedDay != nil {
-					@statsMetricCard("Most Watched Day", stats.MostWatchedDay.Day, icon.Calendar)
+					@statsMetricCard("Most Watched Day", stats.MostWatchedDay.Date.Format("2 of January 2006"), icon.Calendar)
 				} else {
 					@statsMetricCard("Most Watched Day", "No data", icon.Calendar)
 				}

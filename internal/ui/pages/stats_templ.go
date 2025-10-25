@@ -635,7 +635,7 @@ func statsMetrics(stats *models.WatchedStats) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				if stats.MostWatchedDay != nil {
-					templ_7745c5c3_Err = statsMetricCard("Most Watched Day", stats.MostWatchedDay.Day, icon.Calendar).Render(ctx, templ_7745c5c3_Buffer)
+					templ_7745c5c3_Err = statsMetricCard("Most Watched Day", stats.MostWatchedDay.Date.Format("2 of January 2006"), icon.Calendar).Render(ctx, templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}

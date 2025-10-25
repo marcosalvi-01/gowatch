@@ -289,7 +289,8 @@ SELECT
 FROM
     watched
 WHERE
-    watched_date >= date('now', 'start of month', '-12 months') AND watched_date < date('now', 'start of month')
+    watched_date >= date('now', 'start of month', '-12 months')
+    AND watched_date < date('now', 'start of month')
 ORDER BY
     watched_date;
 
@@ -314,8 +315,7 @@ GROUP BY
     genre.id,
     genre.name
 ORDER BY
-    count DESC
-LIMIT 10;
+    count DESC;
 
 -- name: GetTheaterVsHomeCount :many
 SELECT
@@ -341,7 +341,8 @@ GROUP BY
     movie.poster_path
 ORDER BY
     watch_count DESC
-LIMIT 10;
+LIMIT
+    10;
 
 -- name: GetMostWatchedDay :many
 SELECT
@@ -365,7 +366,8 @@ GROUP BY
     person.profile_path
 ORDER BY
     movie_count DESC
-LIMIT 10;
+LIMIT
+    10;
 
 -- name: GetWatchedDateRange :one
 SELECT

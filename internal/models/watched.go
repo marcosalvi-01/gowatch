@@ -76,7 +76,7 @@ type TopActor struct {
 }
 
 type MostWatchedDay struct {
-	Day   string
+	Date  time.Time
 	Count int64
 }
 

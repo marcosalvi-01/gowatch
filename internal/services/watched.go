@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+const MaxGenresDisplayed = 11
+
 // WatchedService handles user's watched movie tracking
 type WatchedService struct {
 	db   db.DB
@@ -232,11 +234,29 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context) (*models.WatchedSt
 		s.log.Error("failed to retrieve watched by genre data", "error", err)
 		return nil, fmt.Errorf("failed to get genre data: %w", err)
 	}
-	stats.Genres = make([]models.GenreCount, len(genreData))
-	for i, d := range genreData {
-		stats.Genres[i] = models.GenreCount{
-			Name:  d.Name,
-			Count: d.Count,
+	if len(genreData) <= MaxGenresDisplayed {
+		stats.Genres = make([]models.GenreCount, len(genreData))
+		for i, d := range genreData {
+			stats.Genres[i] = models.GenreCount{
+				Name:  d.Name,
+				Count: d.Count,
+			}
+		}
+	} else {
+		stats.Genres = make([]models.GenreCount, MaxGenresDisplayed+1)
+		for i := 0; i < MaxGenresDisplayed; i++ {
+			stats.Genres[i] = models.GenreCount{
+				Name:  genreData[i].Name,
+				Count: genreData[i].Count,
+			}
+		}
+		var othersCount int64
+		for i := MaxGenresDisplayed; i < len(genreData); i++ {
+			othersCount += genreData[i].Count
+		}
+		stats.Genres[MaxGenresDisplayed] = models.GenreCount{
+			Name:  "Others",
+			Count: othersCount,
 		}
 	}
 
@@ -264,12 +284,13 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context) (*models.WatchedSt
 		s.log.Error("failed to retrieve most watched day", "error", err)
 		return nil, fmt.Errorf("failed to get most watched day: %w", err)
 	}
-	if err == nil {
+	switch err {
+	case nil:
 		stats.MostWatchedDay = &models.MostWatchedDay{
-			Day:   dayData.Day,
+			Date:  dayData.Date,
 			Count: dayData.Count,
 		}
-	} else if err == sql.ErrNoRows {
+	case sql.ErrNoRows:
 		s.log.Debug("no watched days found")
 	}
 

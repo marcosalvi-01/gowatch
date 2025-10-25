@@ -632,8 +632,14 @@ func (d *SqliteDB) GetMostWatchedDay(ctx context.Context) (*models.MostWatchedDa
 		}
 	}
 
-	log.Debug("retrieved most watched day", "day", maxDay, "count", maxCount)
-	return &models.MostWatchedDay{Day: maxDay, Count: maxCount}, nil
+	t, err := time.Parse("2006-01-02", maxDay)
+	if err != nil {
+		log.Error("failed to parse most watched day", "error", err, "day", maxDay)
+		return nil, fmt.Errorf("failed to parse most watched day: %w", err)
+	}
+
+	log.Debug("retrieved most watched day", "date", t, "count", maxCount)
+	return &models.MostWatchedDay{Date: t, Count: maxCount}, nil
 }
 
 func (d *SqliteDB) GetMostWatchedActors(ctx context.Context) ([]models.TopActor, error) {
