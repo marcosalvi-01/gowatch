@@ -14,6 +14,7 @@
 - add comprehensive test suite
 - create comprehensive README documentation
 - better search handling with automatic search and debounce
+- shortcut to search
 
 # optimizations:
 
