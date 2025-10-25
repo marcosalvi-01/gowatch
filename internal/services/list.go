@@ -51,6 +51,9 @@ func (s *ListService) GetAllLists(ctx context.Context) ([]models.ListEntry, erro
 }
 
 func (s *ListService) CreateList(ctx context.Context, name, description string) error {
+	if name == "" {
+		return fmt.Errorf("list name cannot be empty")
+	}
 	s.log.Debug("creating new list", "name", name, "descriptionLength", len(description))
 
 	err := s.db.InsertList(ctx, db.InsertList{
@@ -67,6 +70,12 @@ func (s *ListService) CreateList(ctx context.Context, name, description string) 
 }
 
 func (s *ListService) AddMovieToList(ctx context.Context, listID int64, movieID int64, note *string) error {
+	if listID <= 0 {
+		return fmt.Errorf("invalid list ID")
+	}
+	if movieID <= 0 {
+		return fmt.Errorf("invalid movie ID")
+	}
 	s.log.Debug("adding movie to list", "listID", listID, "movieID", movieID)
 
 	err := s.db.AddMovieToList(ctx, db.InsertMovieList{

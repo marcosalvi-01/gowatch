@@ -58,7 +58,15 @@ func NewSqliteDB(dbPath, dbName string) (*SqliteDB, error) {
 		return nil, fmt.Errorf("failed to ping database %s: %w", dbFile, err)
 	}
 
+	// Enable foreign keys
+	if _, err := db.Exec("PRAGMA foreign_keys = ON;"); err != nil {
+		db.Close()
+		log.Error("Failed to enable foreign keys", "error", err)
+		return nil, fmt.Errorf("failed to enable foreign keys: %w", err)
+	}
+
 	log.Debug("DB connection opened", "dbFile", dbFile)
+	log.Info("foreign keys enabled")
 
 	if err := runMigrations(db, dbPath, dbName); err != nil {
 		db.Close()

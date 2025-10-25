@@ -74,19 +74,6 @@ func (d *SqliteDB) UpsertMovie(ctx context.Context, movie *models.MovieDetails) 
 	log.Debug("processed genres, inserting cast", "movieID", movie.Movie.ID, "castCount", len(movie.Credits.Cast))
 
 	for _, cast := range movie.Credits.Cast {
-		err := qtx.UpsertCast(ctx, sqlc.UpsertCastParams{
-			MovieID:   cast.MovieID,
-			PersonID:  cast.PersonID,
-			CastID:    cast.CastID,
-			CreditID:  cast.CreditID,
-			Character: cast.Character,
-			CastOrder: cast.CastOrder,
-		})
-		if err != nil {
-			log.Error("failed to insert cast record", "movieID", movie.Movie.ID, "personID", cast.PersonID, "error", err)
-			return fmt.Errorf("failed to insert cast record: %w", err)
-		}
-
 		err = qtx.UpsertPerson(ctx, sqlc.UpsertPersonParams{
 			ID:                 cast.Person.ID,
 			Name:               cast.Person.Name,
@@ -101,23 +88,24 @@ func (d *SqliteDB) UpsertMovie(ctx context.Context, movie *models.MovieDetails) 
 			log.Error("failed to insert person record from cast", "movieID", movie.Movie.ID, "personID", cast.Person.ID, "error", err)
 			return fmt.Errorf("failed to insert person from cast: %w", err)
 		}
+
+		err := qtx.UpsertCast(ctx, sqlc.UpsertCastParams{
+			MovieID:   cast.MovieID,
+			PersonID:  cast.PersonID,
+			CastID:    cast.CastID,
+			CreditID:  cast.CreditID,
+			Character: cast.Character,
+			CastOrder: cast.CastOrder,
+		})
+		if err != nil {
+			log.Error("failed to insert cast record", "movieID", movie.Movie.ID, "personID", cast.PersonID, "error", err)
+			return fmt.Errorf("failed to insert cast record: %w", err)
+		}
 	}
 
 	log.Debug("processed cast, inserting crew", "movieID", movie.Movie.ID, "crewCount", len(movie.Credits.Crew))
 
 	for _, crew := range movie.Credits.Crew {
-		err := qtx.UpsertCrew(ctx, sqlc.UpsertCrewParams{
-			MovieID:    crew.MovieID,
-			PersonID:   crew.PersonID,
-			CreditID:   crew.CreditID,
-			Job:        crew.Job,
-			Department: crew.Department,
-		})
-		if err != nil {
-			log.Error("failed to insert crew record", "movieID", movie.Movie.ID, "personID", crew.PersonID, "error", err)
-			return fmt.Errorf("failed to insert crew record: %w", err)
-		}
-
 		err = qtx.UpsertPerson(ctx, sqlc.UpsertPersonParams{
 			ID:                 crew.Person.ID,
 			Name:               crew.Person.Name,
@@ -131,6 +119,18 @@ func (d *SqliteDB) UpsertMovie(ctx context.Context, movie *models.MovieDetails) 
 		if err != nil {
 			log.Error("failed to insert person record from crew", "movieID", movie.Movie.ID, "personID", crew.Person.ID, "error", err)
 			return fmt.Errorf("failed to insert person from crew: %w", err)
+		}
+
+		err := qtx.UpsertCrew(ctx, sqlc.UpsertCrewParams{
+			MovieID:    crew.MovieID,
+			PersonID:   crew.PersonID,
+			CreditID:   crew.CreditID,
+			Job:        crew.Job,
+			Department: crew.Department,
+		})
+		if err != nil {
+			log.Error("failed to insert crew record", "movieID", movie.Movie.ID, "personID", crew.PersonID, "error", err)
+			return fmt.Errorf("failed to insert crew record: %w", err)
 		}
 	}
 

@@ -20,6 +20,7 @@
 - add pagination to watched lists
 - load movie activity section asynchronously with HTMX
 - implement graceful server shutdown
+- add proxy and cache for poster images
 
 # security:
 

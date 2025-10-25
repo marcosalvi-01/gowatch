@@ -33,6 +33,9 @@ func NewWatchedService(db db.DB, tmdb *MovieService) *WatchedService {
 }
 
 func (s *WatchedService) AddWatched(ctx context.Context, movieID int64, date time.Time, inTheaters bool) error {
+	if movieID <= 0 {
+		return fmt.Errorf("invalid movie ID")
+	}
 	s.log.Debug("adding watched movie", "movieID", movieID, "date", date, "inTheaters", inTheaters)
 
 	err := s.db.InsertWatched(ctx, db.InsertWatched{
@@ -90,16 +93,16 @@ func (s *WatchedService) ImportWatched(ctx context.Context, movies models.Import
 
 	for _, importMovie := range movies {
 		for _, movieRef := range importMovie.Movies {
-			err := s.AddWatched(ctx, int64(movieRef.MovieID), importMovie.Date, movieRef.InTheaters)
+			_, err := s.tmdb.GetMovieDetails(ctx, int64(movieRef.MovieID))
+			if err != nil {
+				s.log.Error("failed to fetch movie details", "movieID", movieRef.MovieID, "date", importMovie.Date, "error", err)
+				return fmt.Errorf("failed to fetch movie details: %w", err)
+			}
+
+			err = s.AddWatched(ctx, int64(movieRef.MovieID), importMovie.Date, movieRef.InTheaters)
 			if err != nil {
 				s.log.Error("failed to import movie", "movieID", movieRef.MovieID, "date", importMovie.Date, "error", err)
 				return fmt.Errorf("failed to import movie: %w", err)
-			}
-
-			_, err = s.tmdb.GetMovieDetails(ctx, int64(movieRef.MovieID))
-			if err != nil {
-				s.log.Error("failed to cache movie in db", "movieID", movieRef.MovieID, "date", importMovie.Date, "error", err)
-				return fmt.Errorf("failed to cache movie in db: %w", err)
 			}
 		}
 	}
