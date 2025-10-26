@@ -46,6 +46,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 
 	r.Get("/sidebar", h.GetSidebar)
 	r.Get("/lists/add-movie-dialog", h.RenderAddToListDialogContent)
+	r.Get("/stats/top-lists", h.GetTopLists)
 }
 
 func (h *Handlers) RenderAddToListDialogContent(w http.ResponseWriter, r *http.Request) {
@@ -275,6 +276,30 @@ func (h *Handlers) DeleteList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.renderSuccessToast(w, r, "List Deleted Successfully", "The list has been deleted.", 2000)
+}
+
+func (h *Handlers) GetTopLists(w http.ResponseWriter, r *http.Request) {
+	const maxLimit = 100
+	limitStr := r.URL.Query().Get("limit")
+	limit := 5
+	if limitStr != "" {
+		if parsed, err := strconv.Atoi(limitStr); err == nil && parsed > 0 {
+			limit = min(parsed, maxLimit)
+		}
+	}
+
+	stats, err := h.watchedService.GetWatchedStats(r.Context(), limit)
+	if err != nil {
+		log.Error("failed to retrieve watched stats for top lists", "error", err)
+		http.Error(w, "Failed to load top lists", http.StatusInternalServerError)
+		return
+	}
+
+	if err := pages.TopLists(stats, limit).Render(r.Context(), w); err != nil {
+		log.Error("failed to render top lists", "error", err)
+		http.Error(w, "Failed to render top lists", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {

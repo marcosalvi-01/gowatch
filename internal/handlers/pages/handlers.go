@@ -185,7 +185,7 @@ func (h *Handlers) StatsPage(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("serving stats page")
 
-	stats, err := h.watchedService.GetWatchedStats(ctx)
+	stats, err := h.watchedService.GetWatchedStats(ctx, 5)
 	if err != nil {
 		log.Error("failed to retrieve watched stats", "error", err)
 		render500Error(w, r)
@@ -195,9 +195,9 @@ func (h *Handlers) StatsPage(w http.ResponseWriter, r *http.Request) {
 	log.Debug("retrieved watched stats", "totalWatched", stats.TotalWatched)
 
 	if r.Header.Get("HX-Request") == htmxRequestHeaderValue {
-		templ.Handler(pages.Stats(stats), templ.WithFragments("content")).ServeHTTP(w, r)
+		templ.Handler(pages.Stats(stats, 5), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
-		templ.Handler(pages.Stats(stats)).ServeHTTP(w, r)
+		templ.Handler(pages.Stats(stats, 5)).ServeHTTP(w, r)
 	}
 
 	log.Info("stats page served successfully")

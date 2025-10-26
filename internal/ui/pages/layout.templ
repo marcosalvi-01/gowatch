@@ -13,6 +13,7 @@ import (
 	"gowatch/internal/ui/templui/icon"
 	"gowatch/internal/ui/templui/input"
 	"gowatch/internal/ui/templui/popover"
+	"gowatch/internal/ui/templui/selectbox"
 	templSidebar "gowatch/internal/ui/templui/sidebar"
 	"gowatch/internal/ui/templui/skeleton"
 	"gowatch/internal/ui/templui/textarea"
@@ -146,6 +147,7 @@ templ Scripts() {
 	@collapsible.Script()
 	@textarea.Script()
 	@chart.Script()
+	@selectbox.Script()
 }
 
 templ SidebarNavigationScript() {

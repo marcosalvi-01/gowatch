@@ -342,7 +342,7 @@ GROUP BY
 ORDER BY
     watch_count DESC
 LIMIT
-    10;
+    ?;
 
 -- name: GetMostWatchedDay :many
 SELECT
@@ -371,7 +371,7 @@ GROUP BY
 ORDER BY
     watch_count DESC
 LIMIT
-    5;
+    ?;
 
 -- name: GetMostWatchedFemaleActors :many
 SELECT
@@ -394,7 +394,7 @@ GROUP BY
 ORDER BY
     watch_count DESC
 LIMIT
-    5;
+    ?;
 
 -- name: GetWatchedDateRange :one
 SELECT

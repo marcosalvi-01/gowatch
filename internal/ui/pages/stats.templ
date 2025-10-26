@@ -8,42 +8,92 @@ import (
 	"gowatch/internal/ui/templui/card"
 	"gowatch/internal/ui/templui/chart"
 	"gowatch/internal/ui/templui/icon"
+	"gowatch/internal/ui/templui/selectbox"
 	"gowatch/internal/ui/templui/skeleton"
 	"strconv"
 	"strings"
 	"time"
 )
 
-templ Stats(stats *models.WatchedStats) {
+templ Stats(stats *models.WatchedStats, limit int) {
 	@Layout() {
 		@templ.Fragment("content") {
 			<div class="space-y-8 pb-5">
 				@statsHeader()
 				@statsMetrics(stats)
 				@statsCharts(stats)
-				@statsTopLists(stats)
+				@topListsSection(limit)
 			</div>
 		}
 	}
 }
 
-templ statsTopLists(stats *models.WatchedStats) {
+templ topListsSection(limit int) {
 	<div class="space-y-8">
 		<div>
-			<h2 class="text-xl font-semibold flex items-center gap-2">
-				@icon.Star(icon.Props{Size: 20})
-				Top Lists
+			<h2 class="flex items-center justify-between mb-2">
+				<div class="flex flex-row items-center gap-2 text-xl font-semibold">
+					@icon.Star(icon.Props{
+						Size: 20,
+					})
+					Top Lists
+				</div>
+				<form hx-get="/htmx/stats/top-lists" hx-target="#top-lists" hx-trigger="change">
+					@selectbox.SelectBox(selectbox.Props{
+						Attributes: templ.Attributes{},
+					}) {
+						@selectbox.Trigger(selectbox.TriggerProps{
+							Name: "limit",
+						}) {
+							@selectbox.Value(selectbox.ValueProps{
+								Placeholder: "Select number of items",
+							})
+						}
+						@selectbox.Content(selectbox.ContentProps{
+							NoSearch: true,
+						}) {
+							@selectbox.Item(selectbox.ItemProps{
+								Value:    "5",
+								Selected: limit == 5,
+							}) {
+								5 
+							}
+							@selectbox.Item(selectbox.ItemProps{
+								Value:    "10",
+								Selected: limit == 10,
+							}) {
+								10 
+							}
+							@selectbox.Item(selectbox.ItemProps{
+								Value:    "15",
+								Selected: limit == 15,
+							}) {
+								15 
+							}
+							@selectbox.Item(selectbox.ItemProps{
+								Value:    "20",
+								Selected: limit == 20,
+							}) {
+								20 
+							}
+						}
+					}
+				</form>
 			</h2>
-		</div>
-		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-			@topMoviesCard(stats.MostWatchedMovies)
-			@topMaleActorsCard(stats.MostWatchedActors)
-			@topFemaleActorsCard(stats.MostWatchedActors)
+			<div id="top-lists" hx-get={ templ.SafeURL(fmt.Sprintf("/htmx/stats/top-lists?limit=%d", limit)) } hx-trigger="load"></div>
 		</div>
 	</div>
 }
 
-templ topMoviesCard(movies []models.TopMovie) {
+templ TopLists(stats *models.WatchedStats, limit int) {
+	<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+		@topMoviesCard(stats.MostWatchedMovies, limit)
+		@topActorsCard("Most Watched Male Actors", int64(2), stats.MostWatchedActors, limit)
+		@topActorsCard("Most Watched Female Actors", int64(1), stats.MostWatchedActors, limit)
+	</div>
+}
+
+templ topMoviesCard(movies []models.TopMovie, limit int) {
 	@card.Card() {
 		@card.Header() {
 			@card.Title() {
@@ -54,7 +104,7 @@ templ topMoviesCard(movies []models.TopMovie) {
 			if len(movies) > 0 {
 				<div class="flex flex-wrap gap-4">
 					for i, movie := range movies {
-						if i >= 5 {
+						if i >= limit {
 							{{ break }}
 						}
 						@moviecard.MovieCard(moviecard.Props{
@@ -74,76 +124,25 @@ templ topMoviesCard(movies []models.TopMovie) {
 	}
 }
 
-templ topMaleActorsCard(actors []models.TopActor) {
+templ topActorsCard(title string, gender int64, actors []models.TopActor, limit int) {
 	@card.Card() {
 		@card.Header() {
 			@card.Title() {
-				Most Watched Male Actors
+				{ title }
 			}
 		}
 		@card.Content() {
-			{{ hasMaleActors := false }}
 			{{ count := 0 }}
 			for _, actor := range actors {
-				if actor.Gender == 2 {
-					{{ hasMaleActors = true }}
-					{{ break }}
+				if actor.Gender == gender && count < limit {
+					{{ count++ }}
 				}
 			}
-			if hasMaleActors {
+			if count > 0 {
 				<div class="space-y-3">
+					{{ count = 0 }}
 					for _, actor := range actors {
-						if actor.Gender == 2 && count < 5 {
-							<div class="flex items-center gap-3">
-								@avatar.Avatar() {
-									if actor.ProfilePath != "" {
-										@avatar.Image(avatar.ImageProps{
-											Src:   "https://image.tmdb.org/t/p/w185/" + strings.TrimPrefix(actor.ProfilePath, "/"),
-											Alt:   actor.Name,
-											Class: "object-cover",
-										})
-									} else {
-										@avatar.Fallback() {
-											{ string(actor.Name[0]) }
-										}
-									}
-								}
-								<div class="flex-1">
-									<div class="font-medium text-sm">{ actor.Name }</div>
-									<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", actor.WatchCount) }</div>
-								</div>
-							</div>
-							{{ count++ }}
-						}
-					}
-				</div>
-			} else {
-				<div class="text-center text-muted-foreground py-8">No data available</div>
-			}
-		}
-	}
-}
-
-templ topFemaleActorsCard(actors []models.TopActor) {
-	@card.Card() {
-		@card.Header() {
-			@card.Title() {
-				Most Watched Female Actors
-			}
-		}
-		@card.Content() {
-			{{ hasFemaleActors := false }}
-			{{ count := 0 }}
-			for _, actor := range actors {
-				if actor.Gender == 1 {
-					{{ hasFemaleActors = true }}
-					{{ break }}
-				}
-			}
-			if hasFemaleActors {
-				<div class="space-y-3">
-					for _, actor := range actors {
-						if actor.Gender == 1 && count < 5 {
+						if actor.Gender == gender && count < limit {
 							<div class="flex items-center gap-3">
 								@avatar.Avatar() {
 									if actor.ProfilePath != "" {

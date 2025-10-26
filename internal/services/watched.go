@@ -186,7 +186,7 @@ func (s *WatchedService) GetWatchedCount(ctx context.Context) (int64, error) {
 	return count, nil
 }
 
-func (s *WatchedService) GetWatchedStats(ctx context.Context) (*models.WatchedStats, error) {
+func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*models.WatchedStats, error) {
 	stats := &models.WatchedStats{}
 
 	var err error
@@ -220,7 +220,7 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context) (*models.WatchedSt
 		return nil, err
 	}
 
-	stats.MostWatchedMovies, err = s.getMostWatchedMovies(ctx)
+	stats.MostWatchedMovies, err = s.getMostWatchedMovies(ctx, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +230,7 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context) (*models.WatchedSt
 		return nil, err
 	}
 
-	stats.MostWatchedActors, err = s.getMostWatchedActors(ctx)
+	stats.MostWatchedActors, err = s.getMostWatchedActors(ctx, limit)
 	if err != nil {
 		return nil, err
 	}

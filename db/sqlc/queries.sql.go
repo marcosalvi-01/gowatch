@@ -329,7 +329,7 @@ GROUP BY
 ORDER BY
     watch_count DESC
 LIMIT
-    5
+    ?
 `
 
 type GetMostWatchedFemaleActorsRow struct {
@@ -340,8 +340,8 @@ type GetMostWatchedFemaleActorsRow struct {
 	WatchCount  int64
 }
 
-func (q *Queries) GetMostWatchedFemaleActors(ctx context.Context) ([]GetMostWatchedFemaleActorsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getMostWatchedFemaleActors)
+func (q *Queries) GetMostWatchedFemaleActors(ctx context.Context, limit int64) ([]GetMostWatchedFemaleActorsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMostWatchedFemaleActors, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -390,7 +390,7 @@ GROUP BY
 ORDER BY
     watch_count DESC
 LIMIT
-    5
+    ?
 `
 
 type GetMostWatchedMaleActorsRow struct {
@@ -401,8 +401,8 @@ type GetMostWatchedMaleActorsRow struct {
 	WatchCount  int64
 }
 
-func (q *Queries) GetMostWatchedMaleActors(ctx context.Context) ([]GetMostWatchedMaleActorsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getMostWatchedMaleActors)
+func (q *Queries) GetMostWatchedMaleActors(ctx context.Context, limit int64) ([]GetMostWatchedMaleActorsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMostWatchedMaleActors, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -446,7 +446,7 @@ GROUP BY
 ORDER BY
     watch_count DESC
 LIMIT
-    10
+    ?
 `
 
 type GetMostWatchedMoviesRow struct {
@@ -456,8 +456,8 @@ type GetMostWatchedMoviesRow struct {
 	WatchCount int64
 }
 
-func (q *Queries) GetMostWatchedMovies(ctx context.Context) ([]GetMostWatchedMoviesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getMostWatchedMovies)
+func (q *Queries) GetMostWatchedMovies(ctx context.Context, limit int64) ([]GetMostWatchedMoviesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMostWatchedMovies, limit)
 	if err != nil {
 		return nil, err
 	}

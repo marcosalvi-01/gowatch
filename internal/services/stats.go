@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sort"
 
 	"gowatch/internal/models"
 )
@@ -69,9 +70,9 @@ func (s *WatchedService) getGenres(ctx context.Context) ([]models.GenreCount, er
 	return s.aggregateGenres(genreData, MaxGenresDisplayed), nil
 }
 
-func (s *WatchedService) getMostWatchedMovies(ctx context.Context) ([]models.TopMovie, error) {
-	s.log.Debug("retrieving most watched movies")
-	data, err := s.db.GetMostWatchedMovies(ctx)
+func (s *WatchedService) getMostWatchedMovies(ctx context.Context, limit int) ([]models.TopMovie, error) {
+	s.log.Debug("retrieving most watched movies", "limit", limit)
+	data, err := s.db.GetMostWatchedMovies(ctx, limit)
 	if err != nil {
 		s.log.Error("failed to retrieve most watched movies", "error", err)
 		return nil, fmt.Errorf("failed to get most watched movies: %w", err)
@@ -93,16 +94,16 @@ func (s *WatchedService) getMostWatchedDay(ctx context.Context) (*models.MostWat
 	return dayData, nil
 }
 
-func (s *WatchedService) getMostWatchedActors(ctx context.Context) ([]models.TopActor, error) {
-	s.log.Debug("retrieving most watched actors")
+func (s *WatchedService) getMostWatchedActors(ctx context.Context, limit int) ([]models.TopActor, error) {
+	s.log.Debug("retrieving most watched actors", "limit", limit)
 
-	maleActors, err := s.db.GetMostWatchedMaleActors(ctx)
+	maleActors, err := s.db.GetMostWatchedMaleActors(ctx, limit)
 	if err != nil {
 		s.log.Error("failed to retrieve most watched male actors", "error", err)
 		return nil, fmt.Errorf("failed to get most watched male actors: %w", err)
 	}
 
-	femaleActors, err := s.db.GetMostWatchedFemaleActors(ctx)
+	femaleActors, err := s.db.GetMostWatchedFemaleActors(ctx, limit)
 	if err != nil {
 		s.log.Error("failed to retrieve most watched female actors", "error", err)
 		return nil, fmt.Errorf("failed to get most watched female actors: %w", err)
@@ -112,13 +113,9 @@ func (s *WatchedService) getMostWatchedActors(ctx context.Context) ([]models.Top
 	allActors := append(maleActors, femaleActors...)
 
 	// Sort by watch count descending
-	for i := 0; i < len(allActors)-1; i++ {
-		for j := i + 1; j < len(allActors); j++ {
-			if allActors[i].WatchCount < allActors[j].WatchCount {
-				allActors[i], allActors[j] = allActors[j], allActors[i]
-			}
-		}
-	}
+	sort.Slice(allActors, func(i, j int) bool {
+		return allActors[i].WatchCount > allActors[j].WatchCount
+	})
 
 	s.log.Debug("retrieved most watched actors", "count", len(allActors))
 	return allActors, nil

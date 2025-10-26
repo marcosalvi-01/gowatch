@@ -609,10 +609,10 @@ func (d *SqliteDB) GetTheaterVsHomeCount(ctx context.Context) ([]models.TheaterC
 	return result, nil
 }
 
-func (d *SqliteDB) GetMostWatchedMovies(ctx context.Context) ([]models.TopMovie, error) {
-	log.Debug("getting most watched movies")
+func (d *SqliteDB) GetMostWatchedMovies(ctx context.Context, limit int) ([]models.TopMovie, error) {
+	log.Debug("getting most watched movies", "limit", limit)
 
-	data, err := d.queries.GetMostWatchedMovies(ctx)
+	data, err := d.queries.GetMostWatchedMovies(ctx, int64(limit))
 	if err != nil {
 		log.Error("failed to get most watched movies", "error", err)
 		return nil, fmt.Errorf("failed to get most watched movies: %w", err)
@@ -662,10 +662,10 @@ func (d *SqliteDB) GetMostWatchedDay(ctx context.Context) (*models.MostWatchedDa
 	return &models.MostWatchedDay{Date: t, Count: maxCount}, nil
 }
 
-func (d *SqliteDB) GetMostWatchedMaleActors(ctx context.Context) ([]models.TopActor, error) {
-	log.Debug("getting most watched male actors")
+func (d *SqliteDB) GetMostWatchedMaleActors(ctx context.Context, limit int) ([]models.TopActor, error) {
+	log.Debug("getting most watched male actors", "limit", limit)
 
-	data, err := d.queries.GetMostWatchedMaleActors(ctx)
+	data, err := d.queries.GetMostWatchedMaleActors(ctx, int64(limit))
 	if err != nil {
 		log.Error("failed to get most watched male actors", "error", err)
 		return nil, fmt.Errorf("failed to get most watched male actors: %w", err)
@@ -679,10 +679,10 @@ func (d *SqliteDB) GetMostWatchedMaleActors(ctx context.Context) ([]models.TopAc
 	return result, nil
 }
 
-func (d *SqliteDB) GetMostWatchedFemaleActors(ctx context.Context) ([]models.TopActor, error) {
-	log.Debug("getting most watched female actors")
+func (d *SqliteDB) GetMostWatchedFemaleActors(ctx context.Context, limit int) ([]models.TopActor, error) {
+	log.Debug("getting most watched female actors", "limit", limit)
 
-	data, err := d.queries.GetMostWatchedFemaleActors(ctx)
+	data, err := d.queries.GetMostWatchedFemaleActors(ctx, int64(limit))
 	if err != nil {
 		log.Error("failed to get most watched female actors", "error", err)
 		return nil, fmt.Errorf("failed to get most watched female actors: %w", err)

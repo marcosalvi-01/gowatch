@@ -146,7 +146,7 @@ func TestWatchedService_GetWatchedStats(t *testing.T) {
 	}
 
 	// Get stats
-	stats, err := watchedService.GetWatchedStats(ctx)
+	stats, err := watchedService.GetWatchedStats(ctx, 5)
 	if err != nil {
 		t.Fatal(err)
 	}
