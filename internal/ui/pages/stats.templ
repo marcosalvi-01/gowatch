@@ -35,9 +35,10 @@ templ statsTopLists(stats *models.WatchedStats) {
 				Top Lists
 			</h2>
 		</div>
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 			@topMoviesCard(stats.MostWatchedMovies)
-			@topActorsCard(stats.MostWatchedActors)
+			@topMaleActorsCard(stats.MostWatchedActors)
+			@topFemaleActorsCard(stats.MostWatchedActors)
 		</div>
 	</div>
 }
@@ -73,39 +74,97 @@ templ topMoviesCard(movies []models.TopMovie) {
 	}
 }
 
-templ topActorsCard(actors []models.TopActor) {
+templ topMaleActorsCard(actors []models.TopActor) {
 	@card.Card() {
 		@card.Header() {
 			@card.Title() {
-				Most Watched Actors
+				Most Watched Male Actors
 			}
 		}
 		@card.Content() {
-			if len(actors) > 0 {
+			{{ hasMaleActors := false }}
+			{{ count := 0 }}
+			for _, actor := range actors {
+				if actor.Gender == 2 {
+					{{ hasMaleActors = true }}
+					{{ break }}
+				}
+			}
+			if hasMaleActors {
 				<div class="space-y-3">
-					for i, actor := range actors {
-						if i >= 5 {
-							{{ break }}
-						}
-						<div class="flex items-center gap-3">
-							@avatar.Avatar() {
-								if actor.ProfilePath != "" {
-									@avatar.Image(avatar.ImageProps{
-										Src:   "https://image.tmdb.org/t/p/w185/" + strings.TrimPrefix(actor.ProfilePath, "/"),
-										Alt:   actor.Name,
-										Class: "object-cover",
-									})
-								} else {
-									@avatar.Fallback() {
-										{ string(actor.Name[0]) }
+					for _, actor := range actors {
+						if actor.Gender == 2 && count < 5 {
+							<div class="flex items-center gap-3">
+								@avatar.Avatar() {
+									if actor.ProfilePath != "" {
+										@avatar.Image(avatar.ImageProps{
+											Src:   "https://image.tmdb.org/t/p/w185/" + strings.TrimPrefix(actor.ProfilePath, "/"),
+											Alt:   actor.Name,
+											Class: "object-cover",
+										})
+									} else {
+										@avatar.Fallback() {
+											{ string(actor.Name[0]) }
+										}
 									}
 								}
-							}
-							<div class="flex-1">
-								<div class="font-medium text-sm">{ actor.Name }</div>
-								<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", actor.WatchCount) }</div>
+								<div class="flex-1">
+									<div class="font-medium text-sm">{ actor.Name }</div>
+									<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", actor.WatchCount) }</div>
+								</div>
 							</div>
-						</div>
+							{{ count++ }}
+						}
+					}
+				</div>
+			} else {
+				<div class="text-center text-muted-foreground py-8">No data available</div>
+			}
+		}
+	}
+}
+
+templ topFemaleActorsCard(actors []models.TopActor) {
+	@card.Card() {
+		@card.Header() {
+			@card.Title() {
+				Most Watched Female Actors
+			}
+		}
+		@card.Content() {
+			{{ hasFemaleActors := false }}
+			{{ count := 0 }}
+			for _, actor := range actors {
+				if actor.Gender == 1 {
+					{{ hasFemaleActors = true }}
+					{{ break }}
+				}
+			}
+			if hasFemaleActors {
+				<div class="space-y-3">
+					for _, actor := range actors {
+						if actor.Gender == 1 && count < 5 {
+							<div class="flex items-center gap-3">
+								@avatar.Avatar() {
+									if actor.ProfilePath != "" {
+										@avatar.Image(avatar.ImageProps{
+											Src:   "https://image.tmdb.org/t/p/w185/" + strings.TrimPrefix(actor.ProfilePath, "/"),
+											Alt:   actor.Name,
+											Class: "object-cover",
+										})
+									} else {
+										@avatar.Fallback() {
+											{ string(actor.Name[0]) }
+										}
+									}
+								}
+								<div class="flex-1">
+									<div class="font-medium text-sm">{ actor.Name }</div>
+									<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", actor.WatchCount) }</div>
+								</div>
+							</div>
+							{{ count++ }}
+						}
 					}
 				</div>
 			} else {
@@ -190,6 +249,26 @@ templ statsCharts(stats *models.WatchedStats) {
 						Data:       prepareTheaterData(stats.TheaterVsHome),
 						Options:    chart.Options{Responsive: true, Legend: true},
 						ShowLegend: true,
+					})
+				}
+			}
+		</div>
+		<div class="mt-6">
+			@card.Card() {
+				@card.Header() {
+					@card.Title() {
+						Weekday Distribution
+					}
+				}
+				@card.Content() {
+					@chart.Chart(chart.Props{
+						Variant:     chart.VariantBar,
+						Data:        prepareWeekdayData(stats.WeekdayDistribution),
+						Options:     chart.Options{Responsive: true},
+						ShowXAxis:   true,
+						ShowXLabels: true,
+						ShowYAxis:   true,
+						ShowYLabels: true,
 					})
 				}
 			}
@@ -294,6 +373,25 @@ func prepareTheaterData(data []models.TheaterCount) chart.Data {
 			Label:           "Watches",
 			Data:            values,
 			BackgroundColor: colors,
+		}},
+	}
+}
+
+func prepareWeekdayData(data []models.PeriodCount) chart.Data {
+	labels := make([]string, len(data))
+	values := make([]float64, len(data))
+	for i, pc := range data {
+		labels[i] = pc.Period
+		values[i] = float64(pc.Count)
+	}
+	return chart.Data{
+		Labels: labels,
+		Datasets: []chart.Dataset{{
+			Label:           "Watches",
+			Data:            values,
+			BackgroundColor: []interface{}{"rgba(139, 92, 246, 0.5)"},
+			BorderColor:     []interface{}{"rgba(139, 92, 246, 1)"},
+			BorderWidth:     1,
 		}},
 	}
 }

@@ -49,6 +49,16 @@ func (s *WatchedService) getYearlyAllTime(ctx context.Context) ([]models.PeriodC
 	return data, nil
 }
 
+func (s *WatchedService) getWeekdayDistribution(ctx context.Context) ([]models.PeriodCount, error) {
+	s.log.Debug("retrieving weekday distribution")
+	data, err := s.db.GetWeekdayDistribution(ctx)
+	if err != nil {
+		s.log.Error("failed to retrieve weekday distribution", "error", err)
+		return nil, fmt.Errorf("failed to get weekday distribution: %w", err)
+	}
+	return data, nil
+}
+
 func (s *WatchedService) getGenres(ctx context.Context) ([]models.GenreCount, error) {
 	s.log.Debug("retrieving watched by genre data")
 	genreData, err := s.db.GetWatchedByGenre(ctx)
@@ -85,12 +95,33 @@ func (s *WatchedService) getMostWatchedDay(ctx context.Context) (*models.MostWat
 
 func (s *WatchedService) getMostWatchedActors(ctx context.Context) ([]models.TopActor, error) {
 	s.log.Debug("retrieving most watched actors")
-	data, err := s.db.GetMostWatchedActors(ctx)
+
+	maleActors, err := s.db.GetMostWatchedMaleActors(ctx)
 	if err != nil {
-		s.log.Error("failed to retrieve most watched actors", "error", err)
-		return nil, fmt.Errorf("failed to get most watched actors: %w", err)
+		s.log.Error("failed to retrieve most watched male actors", "error", err)
+		return nil, fmt.Errorf("failed to get most watched male actors: %w", err)
 	}
-	return data, nil
+
+	femaleActors, err := s.db.GetMostWatchedFemaleActors(ctx)
+	if err != nil {
+		s.log.Error("failed to retrieve most watched female actors", "error", err)
+		return nil, fmt.Errorf("failed to get most watched female actors: %w", err)
+	}
+
+	// Combine male and female actors
+	allActors := append(maleActors, femaleActors...)
+
+	// Sort by watch count descending
+	for i := 0; i < len(allActors)-1; i++ {
+		for j := i + 1; j < len(allActors); j++ {
+			if allActors[i].WatchCount < allActors[j].WatchCount {
+				allActors[i], allActors[j] = allActors[j], allActors[i]
+			}
+		}
+	}
+
+	s.log.Debug("retrieved most watched actors", "count", len(allActors))
+	return allActors, nil
 }
 
 func (s *WatchedService) getAverages(ctx context.Context, total int64) (float64, float64, float64, error) {

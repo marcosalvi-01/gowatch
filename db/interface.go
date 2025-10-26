@@ -20,11 +20,13 @@ type DB interface {
 	GetWatchedCount(ctx context.Context) (int64, error)
 	GetWatchedPerMonthLastYear(ctx context.Context) ([]models.PeriodCount, error)
 	GetWatchedPerYear(ctx context.Context) ([]models.PeriodCount, error)
+	GetWeekdayDistribution(ctx context.Context) ([]models.PeriodCount, error)
 	GetWatchedByGenre(ctx context.Context) ([]models.GenreCount, error)
 	GetTheaterVsHomeCount(ctx context.Context) ([]models.TheaterCount, error)
 	GetMostWatchedMovies(ctx context.Context) ([]models.TopMovie, error)
 	GetMostWatchedDay(ctx context.Context) (*models.MostWatchedDay, error)
-	GetMostWatchedActors(ctx context.Context) ([]models.TopActor, error)
+	GetMostWatchedMaleActors(ctx context.Context) ([]models.TopActor, error)
+	GetMostWatchedFemaleActors(ctx context.Context) ([]models.TopActor, error)
 	GetWatchedDateRange(ctx context.Context) (*models.DateRange, error)
 
 	InsertList(ctx context.Context, list InsertList) error

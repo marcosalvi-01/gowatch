@@ -278,61 +278,6 @@ func (q *Queries) GetListJoinMovieByID(ctx context.Context, id int64) ([]GetList
 	return items, nil
 }
 
-const getMostWatchedActors = `-- name: GetMostWatchedActors :many
-SELECT
-    person.name,
-    person.id,
-    person.profile_path,
-    COUNT(*) AS watch_count
-FROM
-    watched
-    JOIN "cast" ON watched.movie_id = "cast".movie_id
-    JOIN person ON "cast".person_id = person.id
-GROUP BY
-    person.id,
-    person.name,
-    person.profile_path
-ORDER BY
-    watch_count DESC
-LIMIT
-    10
-`
-
-type GetMostWatchedActorsRow struct {
-	Name        string
-	ID          int64
-	ProfilePath string
-	WatchCount  int64
-}
-
-func (q *Queries) GetMostWatchedActors(ctx context.Context) ([]GetMostWatchedActorsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getMostWatchedActors)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetMostWatchedActorsRow
-	for rows.Next() {
-		var i GetMostWatchedActorsRow
-		if err := rows.Scan(
-			&i.Name,
-			&i.ID,
-			&i.ProfilePath,
-			&i.WatchCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getMostWatchedDay = `-- name: GetMostWatchedDay :many
 SELECT
     watched_date
@@ -353,6 +298,128 @@ func (q *Queries) GetMostWatchedDay(ctx context.Context) ([]time.Time, error) {
 			return nil, err
 		}
 		items = append(items, watched_date)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getMostWatchedFemaleActors = `-- name: GetMostWatchedFemaleActors :many
+SELECT
+    person.name,
+    person.id,
+    person.profile_path,
+    person.gender,
+    COUNT(*) AS watch_count
+FROM
+    watched
+    JOIN "cast" ON watched.movie_id = "cast".movie_id
+    JOIN person ON "cast".person_id = person.id
+WHERE
+    person.gender = 1
+GROUP BY
+    person.id,
+    person.name,
+    person.profile_path,
+    person.gender
+ORDER BY
+    watch_count DESC
+LIMIT
+    5
+`
+
+type GetMostWatchedFemaleActorsRow struct {
+	Name        string
+	ID          int64
+	ProfilePath string
+	Gender      int64
+	WatchCount  int64
+}
+
+func (q *Queries) GetMostWatchedFemaleActors(ctx context.Context) ([]GetMostWatchedFemaleActorsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMostWatchedFemaleActors)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMostWatchedFemaleActorsRow
+	for rows.Next() {
+		var i GetMostWatchedFemaleActorsRow
+		if err := rows.Scan(
+			&i.Name,
+			&i.ID,
+			&i.ProfilePath,
+			&i.Gender,
+			&i.WatchCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getMostWatchedMaleActors = `-- name: GetMostWatchedMaleActors :many
+SELECT
+    person.name,
+    person.id,
+    person.profile_path,
+    person.gender,
+    COUNT(*) AS watch_count
+FROM
+    watched
+    JOIN "cast" ON watched.movie_id = "cast".movie_id
+    JOIN person ON "cast".person_id = person.id
+WHERE
+    person.gender = 2
+GROUP BY
+    person.id,
+    person.name,
+    person.profile_path,
+    person.gender
+ORDER BY
+    watch_count DESC
+LIMIT
+    5
+`
+
+type GetMostWatchedMaleActorsRow struct {
+	Name        string
+	ID          int64
+	ProfilePath string
+	Gender      int64
+	WatchCount  int64
+}
+
+func (q *Queries) GetMostWatchedMaleActors(ctx context.Context) ([]GetMostWatchedMaleActorsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMostWatchedMaleActors)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMostWatchedMaleActorsRow
+	for rows.Next() {
+		var i GetMostWatchedMaleActorsRow
+		if err := rows.Scan(
+			&i.Name,
+			&i.ID,
+			&i.ProfilePath,
+			&i.Gender,
+			&i.WatchCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -644,6 +711,38 @@ func (q *Queries) GetWatchedDateRange(ctx context.Context) (GetWatchedDateRangeR
 	var i GetWatchedDateRangeRow
 	err := row.Scan(&i.MinDate, &i.MaxDate)
 	return i, err
+}
+
+const getWatchedDates = `-- name: GetWatchedDates :many
+SELECT
+    watched_date
+FROM
+    watched
+ORDER BY
+    watched_date
+`
+
+func (q *Queries) GetWatchedDates(ctx context.Context) ([]time.Time, error) {
+	rows, err := q.db.QueryContext(ctx, getWatchedDates)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []time.Time
+	for rows.Next() {
+		var watched_date time.Time
+		if err := rows.Scan(&watched_date); err != nil {
+			return nil, err
+		}
+		items = append(items, watched_date)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getWatchedJoinMovie = `-- name: GetWatchedJoinMovie :many

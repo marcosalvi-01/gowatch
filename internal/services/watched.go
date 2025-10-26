@@ -210,6 +210,11 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context) (*models.WatchedSt
 		return nil, err
 	}
 
+	stats.WeekdayDistribution, err = s.getWeekdayDistribution(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	stats.Genres, err = s.getGenres(ctx)
 	if err != nil {
 		return nil, err

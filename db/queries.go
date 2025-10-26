@@ -550,6 +550,31 @@ func (d *SqliteDB) GetWatchedPerYear(ctx context.Context) ([]models.PeriodCount,
 	return result, nil
 }
 
+func (d *SqliteDB) GetWeekdayDistribution(ctx context.Context) ([]models.PeriodCount, error) {
+	log.Debug("getting weekday distribution")
+
+	data, err := d.queries.GetWatchedDates(ctx)
+	if err != nil {
+		log.Error("failed to get watched dates", "error", err)
+		return nil, fmt.Errorf("failed to get watched dates: %w", err)
+	}
+
+	counts := make(map[string]int64)
+	for _, t := range data {
+		weekday := t.Weekday().String()
+		counts[weekday]++
+	}
+
+	weekdays := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
+	result := make([]models.PeriodCount, len(weekdays))
+	for i, day := range weekdays {
+		result[i] = models.PeriodCount{Period: day, Count: counts[day]}
+	}
+
+	log.Debug("retrieved weekday distribution", "dayCount", len(result))
+	return result, nil
+}
+
 func (d *SqliteDB) GetWatchedByGenre(ctx context.Context) ([]models.GenreCount, error) {
 	log.Debug("getting watched by genre")
 
@@ -637,20 +662,37 @@ func (d *SqliteDB) GetMostWatchedDay(ctx context.Context) (*models.MostWatchedDa
 	return &models.MostWatchedDay{Date: t, Count: maxCount}, nil
 }
 
-func (d *SqliteDB) GetMostWatchedActors(ctx context.Context) ([]models.TopActor, error) {
-	log.Debug("getting most watched actors")
+func (d *SqliteDB) GetMostWatchedMaleActors(ctx context.Context) ([]models.TopActor, error) {
+	log.Debug("getting most watched male actors")
 
-	data, err := d.queries.GetMostWatchedActors(ctx)
+	data, err := d.queries.GetMostWatchedMaleActors(ctx)
 	if err != nil {
-		log.Error("failed to get most watched actors", "error", err)
-		return nil, fmt.Errorf("failed to get most watched actors: %w", err)
+		log.Error("failed to get most watched male actors", "error", err)
+		return nil, fmt.Errorf("failed to get most watched male actors: %w", err)
 	}
 	result := make([]models.TopActor, len(data))
 	for i, d := range data {
-		result[i] = models.TopActor{Name: d.Name, ID: d.ID, WatchCount: d.WatchCount, ProfilePath: d.ProfilePath}
+		result[i] = models.TopActor{Name: d.Name, ID: d.ID, WatchCount: d.WatchCount, ProfilePath: d.ProfilePath, Gender: d.Gender}
 	}
 
-	log.Debug("retrieved most watched actors", "count", len(result))
+	log.Debug("retrieved most watched male actors", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetMostWatchedFemaleActors(ctx context.Context) ([]models.TopActor, error) {
+	log.Debug("getting most watched female actors")
+
+	data, err := d.queries.GetMostWatchedFemaleActors(ctx)
+	if err != nil {
+		log.Error("failed to get most watched female actors", "error", err)
+		return nil, fmt.Errorf("failed to get most watched female actors: %w", err)
+	}
+	result := make([]models.TopActor, len(data))
+	for i, d := range data {
+		result[i] = models.TopActor{Name: d.Name, ID: d.ID, WatchCount: d.WatchCount, ProfilePath: d.ProfilePath, Gender: d.Gender}
+	}
+
+	log.Debug("retrieved most watched female actors", "count", len(result))
 	return result, nil
 }
 

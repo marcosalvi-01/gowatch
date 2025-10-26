@@ -330,31 +330,6 @@ func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {
 	h.renderSuccessToast(w, r, "Removed from List", "Movie has been removed from the list", 0)
 }
 
-func (h *Handlers) GetListDetails(w http.ResponseWriter, r *http.Request) {
-	listIDStr := r.FormValue("list_id")
-	if listIDStr == "" {
-		log.Error("missing list ID parameter")
-		h.renderErrorToast(w, r, "Missing List", "Please select a valid list to view", 0)
-		return
-	}
-
-	// listID, err := strconv.ParseInt(listIDStr, 10, 64)
-	// if err != nil {
-	// 	log.Error("invalid list ID", "listID", listIDStr, "error", err)
-	// 	h.renderErrorToast(w, r, "Invalid List", "Please select a valid list", 0)
-	// 	return
-	// }
-
-	// list, err := h.listService.GetListDetails(r.Context(), listID)
-	// if err != nil {
-	// 	log.Error("failed to fetch list details from db", "listID", listID, "error", err)
-	// 	h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
-	// 	return
-	// }
-
-	// ui.ListDetails(list).Render(r.Context(), w)
-}
-
 func getFirstPathElement(urlStr string) string {
 	u, err := url.Parse(urlStr)
 	if err != nil {

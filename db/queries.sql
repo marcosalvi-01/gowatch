@@ -350,24 +350,51 @@ SELECT
 FROM
     watched;
 
--- name: GetMostWatchedActors :many
+-- name: GetMostWatchedMaleActors :many
 SELECT
     person.name,
     person.id,
     person.profile_path,
+    person.gender,
     COUNT(*) AS watch_count
 FROM
     watched
     JOIN "cast" ON watched.movie_id = "cast".movie_id
     JOIN person ON "cast".person_id = person.id
+WHERE
+    person.gender = 2
 GROUP BY
     person.id,
     person.name,
-    person.profile_path
+    person.profile_path,
+    person.gender
 ORDER BY
     watch_count DESC
 LIMIT
-    10;
+    5;
+
+-- name: GetMostWatchedFemaleActors :many
+SELECT
+    person.name,
+    person.id,
+    person.profile_path,
+    person.gender,
+    COUNT(*) AS watch_count
+FROM
+    watched
+    JOIN "cast" ON watched.movie_id = "cast".movie_id
+    JOIN person ON "cast".person_id = person.id
+WHERE
+    person.gender = 1
+GROUP BY
+    person.id,
+    person.name,
+    person.profile_path,
+    person.gender
+ORDER BY
+    watch_count DESC
+LIMIT
+    5;
 
 -- name: GetWatchedDateRange :one
 SELECT
@@ -377,3 +404,11 @@ FROM
     watched
 WHERE
     watched_date IS NOT NULL;
+
+-- name: GetWatchedDates :many
+SELECT
+    watched_date
+FROM
+    watched
+ORDER BY
+    watched_date;

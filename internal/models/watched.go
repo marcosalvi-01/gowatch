@@ -33,17 +33,18 @@ type WatchedMovieRecords struct {
 
 // WatchedStats contains all statistics for watched movies
 type WatchedStats struct {
-	TotalWatched      int64
-	TheaterVsHome     []TheaterCount
-	MonthlyLastYear   []PeriodCount
-	YearlyAllTime     []PeriodCount
-	Genres            []GenreCount
-	MostWatchedMovies []TopMovie
-	MostWatchedDay    *MostWatchedDay
-	MostWatchedActors []TopActor
-	AvgPerDay         float64
-	AvgPerWeek        float64
-	AvgPerMonth       float64
+	TotalWatched        int64
+	TheaterVsHome       []TheaterCount
+	MonthlyLastYear     []PeriodCount
+	YearlyAllTime       []PeriodCount
+	WeekdayDistribution []PeriodCount
+	Genres              []GenreCount
+	MostWatchedMovies   []TopMovie
+	MostWatchedDay      *MostWatchedDay
+	MostWatchedActors   []TopActor
+	AvgPerDay           float64
+	AvgPerWeek          float64
+	AvgPerMonth         float64
 }
 
 type PeriodCount struct {
@@ -73,6 +74,7 @@ type TopActor struct {
 	ID          int64
 	ProfilePath string
 	WatchCount  int64
+	Gender      int64
 }
 
 type MostWatchedDay struct {
