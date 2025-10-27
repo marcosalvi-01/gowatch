@@ -152,67 +152,66 @@ templ Scripts() {
 
 templ SidebarNavigationScript() {
 	<script>
-	// Sidebar Navigation Active State Handler
-	// This script uses a simple, explicit approach: store the target URL directly on each navigation item
 	document.addEventListener("DOMContentLoaded", () => {
-	  // Function to update active state based on current URL
+	  // Function to update active state based on a specific URL
 	  function updateSidebarActiveState(url = window.location.pathname) {
-		// Find all navigation items (both main menu and sub-menu)
 		const allNavButtons = document.querySelectorAll(
 		  "[data-tui-sidebar=menu-button][data-nav-url], [data-tui-sidebar=menu-sub-button][data-nav-url]"
 		);
 
-		// Remove active state from all buttons
+		// Reset all buttons
 		allNavButtons.forEach(btn => {
 		  btn.removeAttribute("data-tui-sidebar-active");
 		});
 
-		// Find and activate the matching button(s)
+		// Activate the button matching the URL
 		allNavButtons.forEach(btn => {
-		  const navUrl = btn.getAttribute("data-nav-url");
-
-		  if (navUrl === url) {
+		  if (btn.getAttribute("data-nav-url") === url) {
 			btn.setAttribute("data-tui-sidebar-active", "true");
 		  }
 		});
 	  }
 
-	  // Set initial active state on page load
+	  // Set initial active state on full page load
 	  updateSidebarActiveState();
 
-	  // Update active state after HTMX navigation completes
+	  // Single listener for all post-swap logic
 	  document.body.addEventListener("htmx:afterSwap", (e) => {
-		// Only update if the swap was for main content
-		if (e.detail.target &&
-			(e.detail.target.id === "main-content" ||
-			 e.detail.target.closest("#main-content"))) {
-		  // Use the URL from the request or current location
-		  const newUrl = e.detail.pathInfo?.requestPath || window.location.pathname;
-		  updateSidebarActiveState(newUrl);
+		if (!e.detail.target) return;
+
+		// Case 1: The sidebar itself was refreshed.
+		// Re-apply the active state based on the current browser URL.
+		if (e.detail.target.id === "sidebar-content") {
+		  updateSidebarActiveState(window.location.pathname);
+		  return;
+		}
+
+		// Case 2: A main navigation link was clicked.
+		// The request was triggered by an element inside the sidebar menu.
+		// We only update the active state for these explicit navigation events.
+		const trigger = e.detail.elt;
+		const isNavigation = trigger && trigger.closest('[data-tui-sidebar="menu"], [data-tui-sidebar="menu-sub"]');
+		
+		if (isNavigation) {
+			const newUrl = e.detail.pathInfo?.requestPath || window.location.pathname;
+			updateSidebarActiveState(newUrl);
 		}
 	  });
 
+
 	  // Handle browser back/forward navigation
 	  window.addEventListener("popstate", () => {
-		updateSidebarActiveState();
+		updateSidebarActiveState(window.location.pathname);
 	  });
 
-	  // Handle direct clicks for immediate visual feedback
+	  // Keep click handler for immediate UI feedback before htmx swap
 	  document.body.addEventListener("click", (e) => {
 		const navButton = e.target.closest("[data-nav-url]");
-
 		if (navButton) {
 		  const targetUrl = navButton.getAttribute("data-nav-url");
 		  if (targetUrl) {
 			updateSidebarActiveState(targetUrl);
 		  }
-		}
-	  });
-
-	  // Re-apply active state after sidebar content refresh
-	  document.body.addEventListener("htmx:afterSwap", (e) => {
-		if (e.detail.target && e.detail.target.id === "sidebar-content") {
-		  updateSidebarActiveState();
 		}
 	  });
 	});
