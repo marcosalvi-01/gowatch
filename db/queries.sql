@@ -216,7 +216,7 @@ WHERE
 ORDER BY
     watched.watched_date DESC;
 
--- name: InsertList :exec
+-- name: InsertList :one
 INSERT INTO
     list (
         name,
@@ -224,7 +224,8 @@ INSERT INTO
         description
     )
 VALUES
-    (?, ?, ?);
+    (?, ?, ?)
+RETURNING id;
 
 -- name: GetListJoinMovieByID :many
 SELECT
@@ -412,3 +413,15 @@ FROM
     watched
 ORDER BY
     watched_date;
+
+-- name: GetRecentWatchedMovies :many
+SELECT
+    sqlc.embed(movie),
+    watched.watched_in_theater as in_theaters
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+ORDER BY
+    watched.watched_date DESC
+LIMIT
+    ?;

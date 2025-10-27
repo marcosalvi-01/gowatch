@@ -325,21 +325,42 @@ func (d *SqliteDB) GetWatchedJoinMovieByID(ctx context.Context, movieID int64) (
 	return watched, nil
 }
 
-func (d *SqliteDB) InsertList(ctx context.Context, list InsertList) error {
+func (d *SqliteDB) GetRecentWatchedMovies(ctx context.Context, limit int) ([]models.WatchedMovieInDay, error) {
+	log.Debug("retrieving recent watched movies", "limit", limit)
+
+	rows, err := d.queries.GetRecentWatchedMovies(ctx, int64(limit))
+	if err != nil {
+		log.Error("failed to fetch recent watched movies from database", "error", err)
+		return nil, fmt.Errorf("failed to fetch recent watched movies: %w", err)
+	}
+
+	result := make([]models.WatchedMovieInDay, len(rows))
+	for i, row := range rows {
+		result[i] = models.WatchedMovieInDay{
+			MovieDetails: toModelsMovieDetails(row.Movie),
+			InTheaters:   row.InTheaters,
+		}
+	}
+
+	log.Debug("retrieved recent watched movies", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) InsertList(ctx context.Context, list InsertList) (int64, error) {
 	log.Debug("inserting new list into database", "name", list.Name)
 
-	err := d.queries.InsertList(ctx, sqlc.InsertListParams{
+	id, err := d.queries.InsertList(ctx, sqlc.InsertListParams{
 		Name:         list.Name,
 		CreationDate: time.Now().Format("2006-01-02 15:04:05.999999999 -0700 MST"),
 		Description:  list.Description,
 	})
 	if err != nil {
 		log.Error("failed to insert list", "name", list.Name, "error", err)
-		return fmt.Errorf("failed to insert list %q: %w", list.Name, err)
+		return 0, fmt.Errorf("failed to insert list %q: %w", list.Name, err)
 	}
 
-	log.Info("successfully inserted list", "name", list.Name)
-	return nil
+	log.Info("successfully inserted list", "name", list.Name, "id", id)
+	return id, nil
 }
 
 func (d *SqliteDB) GetList(ctx context.Context, id int64) (*models.List, error) {

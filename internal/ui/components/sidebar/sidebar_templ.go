@@ -55,7 +55,7 @@ func Sidebar(props Props) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = createListDialog().Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = CreateListDialog().Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -244,7 +244,7 @@ func homeMenuItem(currentPage string) templ.Component {
 					"data-nav-url": "/home",
 					"hx-get":       "/home",
 					"hx-target":    "#main-content",
-					"hx-swap":      "innerHTML scroll:#main-scroll-container:top",
+					"hx-swap":      "innerHTML show:#main-scroll-container:top",
 					"hx-push-url":  "true",
 					"hx-indicator": "#home-loading",
 				},
@@ -357,7 +357,7 @@ func watchedMenuItem(currentPage string, watchedCount int64) templ.Component {
 					"data-nav-url": "/watched",
 					"hx-get":       "/watched",
 					"hx-target":    "#main-content",
-					"hx-swap":      "innerHTML scroll:#main-scroll-container:top",
+					"hx-swap":      "innerHTML show:#main-scroll-container:top",
 					"hx-push-url":  "true",
 					"hx-indicator": "#watched-loading",
 				},
@@ -438,7 +438,7 @@ func statsMenuItem(currentPage string) templ.Component {
 					"data-nav-url": "/stats",
 					"hx-get":       "/stats",
 					"hx-target":    "#main-content",
-					"hx-swap":      "innerHTML scroll:#main-scroll-container:top",
+					"hx-swap":      "innerHTML show:#main-scroll-container:top",
 					"hx-push-url":  "true",
 					"hx-indicator": "#stats-loading",
 				},
@@ -763,7 +763,7 @@ func listItems(lists []models.ListEntry, currentPage string) templ.Component {
 						"data-nav-url": fmt.Sprintf("/list/%d", list.ID),
 						"hx-get":       fmt.Sprintf("/list/%d", list.ID),
 						"hx-target":    "#main-content",
-						"hx-swap":      "innerHTML scroll:#main-scroll-container:top",
+						"hx-swap":      "innerHTML show:#main-scroll-container:top",
 						"hx-push-url":  "true",
 						"hx-indicator": "#list-loading",
 					},
@@ -873,7 +873,7 @@ func createListTriggerButton() templ.Component {
 	})
 }
 
-func createListDialog() templ.Component {
+func CreateListDialog() templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {

@@ -22,17 +22,20 @@ type Handlers struct {
 	tmdbService    *services.MovieService
 	watchedService *services.WatchedService
 	listService    *services.ListService
+	homeService    *services.HomeService
 }
 
 func NewHandlers(
 	tmdbService *services.MovieService,
 	watchedService *services.WatchedService,
 	listService *services.ListService,
+	homeService *services.HomeService,
 ) *Handlers {
 	return &Handlers{
 		tmdbService:    tmdbService,
 		watchedService: watchedService,
 		listService:    listService,
+		homeService:    homeService,
 	}
 }
 
@@ -51,12 +54,20 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 }
 
 func (h *Handlers) HomePage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	log.Debug("serving home page")
 
+	homeData, err := h.homeService.GetHomeData(ctx)
+	if err != nil {
+		log.Error("failed to retrieve home data", "error", err)
+		render500Error(w, r)
+		return
+	}
+
 	if r.Header.Get("HX-Request") == htmxRequestHeaderValue {
-		templ.Handler(pages.Home(), templ.WithFragments("content")).ServeHTTP(w, r)
+		templ.Handler(pages.Home(*homeData), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
-		templ.Handler(pages.Home()).ServeHTTP(w, r)
+		templ.Handler(pages.Home(*homeData)).ServeHTTP(w, r)
 	}
 
 	log.Info("home page served successfully")

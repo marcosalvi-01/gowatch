@@ -1,30 +1,233 @@
 package pages
 
-import "gowatch/internal/ui/templui/skeleton"
+import (
+	"fmt"
+	"gowatch/internal/models"
+	"gowatch/internal/ui/components/listcard"
+	"gowatch/internal/ui/components/moviecard"
+	"gowatch/internal/ui/templui/card"
+	"gowatch/internal/ui/templui/dialog"
+	"gowatch/internal/ui/templui/icon"
+	"gowatch/internal/ui/templui/skeleton"
+)
 
-templ Home() {
+templ Home(data models.HomeData) {
 	@Layout() {
 		@templ.Fragment("content") {
-			Home example
+			<div class="space-y-8 pb-5">
+				@homeHeader()
+				@homeStats(data.Stats)
+				@homeRecentActivity(data.RecentMovies)
+				<div hx-get="/htmx/lists/home-lists" hx-trigger="load, refreshLists from:body" hx-indicator="#lists-loading"></div>
+			</div>
 		}
 	}
 }
 
+templ homeStats(stats models.HomeStatsSummary) {
+	@card.Card() {
+		@card.Header() {
+			@card.Title(card.TitleProps{
+				Class: "flex flex-row",
+			}) {
+				@icon.ChartBar(icon.Props{Size: 20, Class: "mr-2"})
+				Your Stats
+			}
+		}
+		@card.Content() {
+			<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+				@homeStatsMetric("Total Watched", fmt.Sprintf("%d", stats.TotalWatched), icon.Film)
+				@homeStatsMetric("Avg per Week", fmt.Sprintf("%.1f", stats.AvgPerWeek), icon.TrendingUp)
+				if stats.TopGenre != nil {
+					@homeStatsMetric("Top Genre", stats.TopGenre.Name, icon.Tag)
+				} else {
+					@homeStatsMetric("Top Genre", "No data", icon.Tag)
+				}
+			</div>
+		}
+	}
+}
+
+templ homeRecentActivity(movies []models.WatchedMovieInDay) {
+	if len(movies) > 0 {
+		@card.Card() {
+			@card.Header() {
+				@card.Title(card.TitleProps{
+					Class: "flex flex-row",
+				}) {
+					@icon.Clock(icon.Props{Size: 20, Class: "mr-2"})
+					Recent Activity
+				}
+			}
+			@card.Content() {
+				<div class="flex gap-4 overflow-x-auto pb-2 items-stretch">
+					for _, movie := range movies {
+						<div class="flex-shrink-0">
+							@moviecard.MovieCard(moviecard.Props{
+								Title:      movie.MovieDetails.Movie.Title,
+								PosterPath: movie.MovieDetails.Movie.PosterPath,
+								Href:       fmt.Sprintf("/movie/%d", movie.MovieDetails.Movie.ID),
+								Hoverable:  false,
+							})
+						</div>
+					}
+					<div class="flex-shrink-0">
+						@card.Card(card.Props{
+							Class: "w-[120px] md:w-[160px] border-dotted border-2 cursor-pointer hover:bg-muted transition-colors h-full",
+							Attributes: templ.Attributes{
+								"hx-get":       "/watched",
+								"hx-target":    "#main-content",
+								"hx-swap":      "innerHTML show:#main-scroll-container:top",
+								"hx-push-url":  "true",
+								"hx-indicator": "#watched-loading",
+							},
+						}) {
+							@card.Content() {
+								<div class="flex flex-col items-center justify-center gap-2 p-4 text-center h-full">
+									@icon.ArrowRight(icon.Props{Size: 24, Class: "text-primary"})
+									<h3 class="font-semibold text-sm leading-tight">See More</h3>
+								</div>
+							}
+						}
+					</div>
+				</div>
+			}
+		}
+	}
+}
+
+templ HomeLists(lists []models.ListEntry) {
+	@card.Card() {
+		@card.Header() {
+			@card.Title(card.TitleProps{
+				Class: "flex flex-row",
+			}) {
+				@icon.List(icon.Props{Size: 20, Class: "mr-2"})
+				Your Lists
+			}
+		}
+		@card.Content() {
+			<div id="lists-section" class="flex gap-4 overflow-x-auto pb-2 items-stretch">
+				for _, list := range lists {
+					<div class="flex-shrink-0">
+						@listcard.ListCard(listcard.Props{
+							Name: list.Name,
+							Href: fmt.Sprintf("/list/%d", list.ID),
+						})
+					</div>
+				}
+				<div class="flex-shrink-0">
+					@dialog.Trigger(dialog.TriggerProps{
+						For: "add-to-list-dialog",
+					}) {
+						@card.Card(card.Props{
+							Class: "w-[120px] md:w-[160px] border-dotted border-2 cursor-pointer hover:bg-muted transition-colors h-full",
+						}) {
+							@card.Content() {
+								<div class="flex flex-col items-center justify-center gap-2 p-4 text-center h-full">
+									@icon.Plus(icon.Props{Size: 24, Class: "text-primary"})
+									<h3 class="font-semibold text-sm leading-tight">Create New List</h3>
+								</div>
+							}
+						}
+					}
+				</div>
+			</div>
+		}
+	}
+}
+
+templ homeStatsMetric(label, value string, iconFunc func(...icon.Props) templ.Component) {
+	<div class="text-center">
+		<div class="flex items-center justify-center mb-2">
+			@iconFunc(icon.Props{Size: 24, Class: "text-primary"})
+		</div>
+		<div class="text-2xl font-bold text-primary">{ value }</div>
+		<div class="text-xs text-muted-foreground">{ label }</div>
+	</div>
+}
+
+templ homeHeader() {
+	<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+		<div>
+			<h1 class="text-3xl font-bold">Welcome back</h1>
+			<p class="text-muted-foreground">Here's what's happening with your movies</p>
+		</div>
+	</div>
+}
+
 templ HomeLoading() {
 	<div id="home-loading" class="htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none overflow-hidden">
-		<div class="p-4 space-y-6">
-			// Page title
-			<div class="space-y-2">
-				@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-48 rounded-lg"})
-				@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-64 rounded-md"})
+		<div class="p-4 space-y-8">
+			// Header with actions
+			<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+				<div class="space-y-2">
+					@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-48 rounded-lg"})
+					@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-64 rounded-md"})
+				</div>
+				<div class="flex gap-2">
+					@skeleton.Skeleton(skeleton.Props{Class: "h-10 w-24 rounded"})
+					@skeleton.Skeleton(skeleton.Props{Class: "h-10 w-24 rounded"})
+				</div>
 			</div>
-			// Movie grid
-			<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+			// Stats section
+			<div class="border rounded-lg p-6">
+				<div class="space-y-2 mb-4">
+					@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-32 rounded"})
+				</div>
+				<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+					for i := 0; i < 3; i++ {
+						<div class="text-center space-y-2">
+							@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-6 mx-auto rounded"})
+							@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-16 mx-auto rounded"})
+							@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-20 mx-auto rounded"})
+						</div>
+					}
+				</div>
+			</div>
+			// Recent activity section
+			<div class="border rounded-lg p-6">
+				<div class="space-y-2 mb-4">
+					@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-40 rounded"})
+				</div>
+				<div class="flex gap-4 overflow-x-auto pb-2">
+					for i := 0; i < 6; i++ {
+						<div class="flex-shrink-0 w-[120px] md:w-[160px]">
+							@skeleton.Skeleton(skeleton.Props{Class: "h-48 w-full rounded"})
+							@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-3/4 mt-2 rounded"})
+							@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-1/2 rounded"})
+						</div>
+					}
+				</div>
+			</div>
+			// Lists section
+			<div class="border rounded-lg p-6">
+				<div class="space-y-2 mb-4">
+					@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-24 rounded"})
+				</div>
+				<div class="flex gap-4 overflow-x-auto pb-2">
+					for i := 0; i < 6; i++ {
+						<div class="flex-shrink-0 w-[120px] md:w-[160px]">
+							@skeleton.Skeleton(skeleton.Props{Class: "h-32 w-full rounded"})
+						</div>
+					}
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+templ ListsLoading() {
+	<div id="lists-loading" class="htmx-indicator">
+		// Lists section
+		<div class="border rounded-lg p-6">
+			<div class="space-y-2 mb-4">
+				@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-24 rounded"})
+			</div>
+			<div class="flex gap-4 overflow-x-auto pb-2">
 				for i := 0; i < 6; i++ {
-					<div class="p-4 border rounded-lg">
+					<div class="flex-shrink-0 w-[120px] md:w-[160px]">
 						@skeleton.Skeleton(skeleton.Props{Class: "h-32 w-full rounded"})
-						@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-3/4 mt-2"})
-						@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-1/2"})
 					</div>
 				}
 			</div>

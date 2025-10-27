@@ -27,12 +27,14 @@ var log = logging.Get("htmx handlers")
 type Handlers struct {
 	watchedService *services.WatchedService
 	listService    *services.ListService
+	homeService    *services.HomeService
 }
 
-func NewHandlers(watchedService *services.WatchedService, listService *services.ListService) *Handlers {
+func NewHandlers(watchedService *services.WatchedService, listService *services.ListService, homeService *services.HomeService) *Handlers {
 	return &Handlers{
 		watchedService: watchedService,
 		listService:    listService,
+		homeService:    homeService,
 	}
 }
 
@@ -47,6 +49,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Get("/sidebar", h.GetSidebar)
 	r.Get("/lists/add-movie-dialog", h.RenderAddToListDialogContent)
 	r.Get("/stats/top-lists", h.GetTopLists)
+	r.Get("/lists/home-lists", h.HomeLists)
 }
 
 func (h *Handlers) RenderAddToListDialogContent(w http.ResponseWriter, r *http.Request) {
@@ -168,14 +171,14 @@ func (h *Handlers) CreateList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sanitizedDescription, err := utils.TrimAndValidateString(description, 500)
-	if err != nil {
-		// description is optional, so allow empty
-		sanitizedDescription = ""
+	var descPtr *string
+	if err == nil && sanitizedDescription != "" {
+		descPtr = &sanitizedDescription
 	}
 
 	log.Debug("creating new list", "title", sanitizedTitle, "descriptionLength", len(sanitizedDescription))
 
-	err = h.listService.CreateList(r.Context(), sanitizedTitle, sanitizedDescription)
+	_, err = h.listService.CreateList(r.Context(), sanitizedTitle, descPtr)
 	if err != nil {
 		log.Error("failed to create list", "title", sanitizedTitle, "description", sanitizedDescription, "error", err)
 		h.renderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred, please try again.", 0)
@@ -257,19 +260,30 @@ func (h *Handlers) DeleteList(w http.ResponseWriter, r *http.Request) {
 
 	log.Info("successfully deleted list", "listID", id)
 
+	// Fetch home data
+	ctx := r.Context()
+
+	homeData, err := h.homeService.GetHomeData(ctx)
+	if err != nil {
+		log.Error("failed to retrieve home data", "error", err)
+		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
+		return
+	}
+
 	// add the headers before rendering the components
 	w.Header().Set("HX-Push-Url", "/home")
 	w.Header().Add("HX-Trigger", "refreshSidebar")
 
 	var buf bytes.Buffer
-	err = templ.RenderFragments(r.Context(), &buf, pages.Home(), "content")
+	err = templ.RenderFragments(r.Context(), &buf, pages.Home(*homeData), "content")
 	if err != nil {
 		log.Error("failed to render home fragment", "error", err)
 		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
 		return
 	}
-	ctx := templ.WithChildren(r.Context(), templ.Raw(buf.String()))
-	if err := oobwrapper.OOBWrapper("innerHTML:#main-content").Render(ctx, w); err != nil {
+
+	oobCtx := templ.WithChildren(r.Context(), templ.Raw(buf.String()))
+	if err := oobwrapper.OOBWrapper("innerHTML:#main-content").Render(oobCtx, w); err != nil {
 		log.Error("failed to render OOB wrapper", "error", err)
 		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
 		return
@@ -353,6 +367,21 @@ func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.renderSuccessToast(w, r, "Removed from List", "Movie has been removed from the list", 0)
+}
+
+func (h *Handlers) HomeLists(w http.ResponseWriter, r *http.Request) {
+	lists, err := h.listService.GetAllLists(r.Context())
+	if err != nil {
+		log.Error("failed to get all lists for dialog", "error", err)
+		h.renderErrorToast(w, r, "Failed to Load Lists", "An unexpected error occurred while fetching your lists.", 0)
+		return
+	}
+
+	if err := pages.HomeLists(lists).Render(r.Context(), w); err != nil {
+		log.Error("failed to render sidebar", "error", err)
+		http.Error(w, "Failed to render sidebar", http.StatusInternalServerError)
+		return
+	}
 }
 
 func getFirstPathElement(urlStr string) string {

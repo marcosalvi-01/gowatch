@@ -186,6 +186,19 @@ func (s *WatchedService) GetWatchedCount(ctx context.Context) (int64, error) {
 	return count, nil
 }
 
+func (s *WatchedService) GetRecentWatchedMovies(ctx context.Context, limit int) ([]models.WatchedMovieInDay, error) {
+	s.log.Debug("retrieving recent watched movies", "limit", limit)
+
+	result, err := s.db.GetRecentWatchedMovies(ctx, limit)
+	if err != nil {
+		s.log.Error("failed to fetch recent watched movies from database", "error", err)
+		return nil, fmt.Errorf("failed to fetch recent watched movies: %w", err)
+	}
+
+	s.log.Debug("retrieved recent watched movies", "count", len(result))
+	return result, nil
+}
+
 func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*models.WatchedStats, error) {
 	stats := &models.WatchedStats{}
 

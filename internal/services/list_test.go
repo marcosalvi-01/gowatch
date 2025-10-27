@@ -33,7 +33,8 @@ func TestListService_CRUD(t *testing.T) {
 	}
 
 	// Create list
-	if err := listService.CreateList(ctx, "Test List", "A test list"); err != nil {
+	desc := "A test list"
+	if _, err := listService.CreateList(ctx, "Test List", &desc); err != nil {
 		t.Fatal(err)
 	}
 
@@ -92,7 +93,8 @@ func TestListService_CreateList_EmptyName(t *testing.T) {
 	ctx := context.Background()
 
 	// Try to create list with empty name
-	err = listService.CreateList(ctx, "", "desc")
+	desc := "desc"
+	_, err = listService.CreateList(ctx, "", &desc)
 	if err == nil {
 		t.Error("expected error for empty list name")
 	}
@@ -117,7 +119,9 @@ func TestListService_AddMovieToList_InvalidIDs(t *testing.T) {
 	}
 
 	// Create list
-	if err := listService.CreateList(ctx, "Test", ""); err != nil {
+	desc := ""
+	_, err = listService.CreateList(ctx, "Test", &desc)
+	if err != nil {
 		t.Fatal(err)
 	}
 	lists, _ := listService.GetAllLists(ctx)

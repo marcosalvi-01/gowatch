@@ -595,6 +595,68 @@ func (q *Queries) GetPerson(ctx context.Context, id int64) (Person, error) {
 	return i, err
 }
 
+const getRecentWatchedMovies = `-- name: GetRecentWatchedMovies :many
+SELECT
+    movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
+    watched.watched_in_theater as in_theaters
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+ORDER BY
+    watched.watched_date DESC
+LIMIT
+    ?
+`
+
+type GetRecentWatchedMoviesRow struct {
+	Movie      Movie
+	InTheaters bool
+}
+
+func (q *Queries) GetRecentWatchedMovies(ctx context.Context, limit int64) ([]GetRecentWatchedMoviesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRecentWatchedMovies, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRecentWatchedMoviesRow
+	for rows.Next() {
+		var i GetRecentWatchedMoviesRow
+		if err := rows.Scan(
+			&i.Movie.ID,
+			&i.Movie.Title,
+			&i.Movie.OriginalTitle,
+			&i.Movie.OriginalLanguage,
+			&i.Movie.Overview,
+			&i.Movie.ReleaseDate,
+			&i.Movie.PosterPath,
+			&i.Movie.BackdropPath,
+			&i.Movie.Popularity,
+			&i.Movie.VoteCount,
+			&i.Movie.VoteAverage,
+			&i.Movie.Budget,
+			&i.Movie.Homepage,
+			&i.Movie.ImdbID,
+			&i.Movie.Revenue,
+			&i.Movie.Runtime,
+			&i.Movie.Status,
+			&i.Movie.Tagline,
+			&i.Movie.UpdatedAt,
+			&i.InTheaters,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTheaterVsHomeCount = `-- name: GetTheaterVsHomeCount :many
 SELECT
     watched_in_theater,
@@ -936,7 +998,7 @@ func (q *Queries) GetWatchedPerYear(ctx context.Context) ([]time.Time, error) {
 	return items, nil
 }
 
-const insertList = `-- name: InsertList :exec
+const insertList = `-- name: InsertList :one
 INSERT INTO
     list (
         name,
@@ -945,6 +1007,7 @@ INSERT INTO
     )
 VALUES
     (?, ?, ?)
+RETURNING id
 `
 
 type InsertListParams struct {
@@ -953,9 +1016,11 @@ type InsertListParams struct {
 	Description  *string
 }
 
-func (q *Queries) InsertList(ctx context.Context, arg InsertListParams) error {
-	_, err := q.db.ExecContext(ctx, insertList, arg.Name, arg.CreationDate, arg.Description)
-	return err
+func (q *Queries) InsertList(ctx context.Context, arg InsertListParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertList, arg.Name, arg.CreationDate, arg.Description)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const insertWatched = `-- name: InsertWatched :one

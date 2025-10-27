@@ -33,6 +33,8 @@ func NewRouter(
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
+	homeService := services.NewHomeService(watchedService, listService)
+
 	log.Debug("registering API routes")
 	apiHandlers := api.NewHandlers(db, watchedService)
 	r.Route("/api/v1", func(r chi.Router) {
@@ -41,7 +43,7 @@ func NewRouter(
 	})
 
 	log.Debug("registering pages routes")
-	pagesHandlers := pages.NewHandlers(tmdbService, watchedService, listService)
+	pagesHandlers := pages.NewHandlers(tmdbService, watchedService, listService, homeService)
 	r.Route("/", func(r chi.Router) {
 		r.Use(middleware.HTMLMiddleware)
 		pagesHandlers.RegisterRoutes(r)
@@ -54,7 +56,7 @@ func NewRouter(
 	})
 
 	log.Debug("registering HTMX routes")
-	htmxHandlers := htmx.NewHandlers(watchedService, listService)
+	htmxHandlers := htmx.NewHandlers(watchedService, listService, homeService)
 	r.Route("/htmx", func(r chi.Router) {
 		r.Use(middleware.HTMLMiddleware)
 		htmxHandlers.RegisterRoutes(r)

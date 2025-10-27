@@ -17,6 +17,7 @@ type DB interface {
 	InsertWatched(ctx context.Context, watched InsertWatched) error
 	GetWatchedJoinMovie(ctx context.Context) ([]models.WatchedMovie, error)
 	GetWatchedJoinMovieByID(ctx context.Context, movieID int64) ([]models.WatchedMovie, error)
+	GetRecentWatchedMovies(ctx context.Context, limit int) ([]models.WatchedMovieInDay, error)
 	GetWatchedCount(ctx context.Context) (int64, error)
 	GetWatchedPerMonthLastYear(ctx context.Context) ([]models.PeriodCount, error)
 	GetWatchedPerYear(ctx context.Context) ([]models.PeriodCount, error)
@@ -29,7 +30,7 @@ type DB interface {
 	GetMostWatchedFemaleActors(ctx context.Context, limit int) ([]models.TopActor, error)
 	GetWatchedDateRange(ctx context.Context) (*models.DateRange, error)
 
-	InsertList(ctx context.Context, list InsertList) error
+	InsertList(ctx context.Context, list InsertList) (int64, error)
 
 	GetList(ctx context.Context, id int64) (*models.List, error)
 	GetAllLists(ctx context.Context) ([]InsertList, error)

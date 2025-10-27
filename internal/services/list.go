@@ -51,23 +51,29 @@ func (s *ListService) GetAllLists(ctx context.Context) ([]models.ListEntry, erro
 	return lists, nil
 }
 
-func (s *ListService) CreateList(ctx context.Context, name, description string) error {
+func (s *ListService) CreateList(ctx context.Context, name string, description *string) (*models.List, error) {
 	if name == "" {
-		return fmt.Errorf("list name cannot be empty")
+		return nil, fmt.Errorf("list name cannot be empty")
 	}
-	s.log.Debug("creating new list", "name", name, "descriptionLength", len(description))
+	s.log.Debug("creating new list", "name", name)
 
-	err := s.db.InsertList(ctx, db.InsertList{
+	id, err := s.db.InsertList(ctx, db.InsertList{
 		Name:        name,
-		Description: &description,
+		Description: description,
 	})
 	if err != nil {
 		s.log.Error("failed to create list", "name", name, "error", err)
-		return fmt.Errorf("failed to create list: %w", err)
+		return nil, fmt.Errorf("failed to create list: %w", err)
 	}
 
-	s.log.Info("successfully created new list", "name", name)
-	return nil
+	list, err := s.db.GetList(ctx, id)
+	if err != nil {
+		s.log.Error("failed to retrieve created list", "id", id, "error", err)
+		return nil, fmt.Errorf("failed to retrieve created list: %w", err)
+	}
+
+	s.log.Info("successfully created new list", "name", name, "id", id)
+	return list, nil
 }
 
 func (s *ListService) AddMovieToList(ctx context.Context, listID int64, movieID int64, note *string) error {
