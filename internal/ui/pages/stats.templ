@@ -312,7 +312,7 @@ templ statsCharts(stats *models.WatchedStats) {
 								<span class="text-green-500">+{ stats.MonthlyMoviesTrendValue }</span> movies this month
 							case models.TrendDown:
 								@icon.TrendingDown(icon.Props{Size: 16, Class: "text-red-500"})
-								<span class="text-red-500">-{ stats.MonthlyMoviesTrendValue }</span> movies this month
+								<span class="text-red-500">{ stats.MonthlyMoviesTrendValue }</span> movies this month
 							default:
 								<span class="text-muted-foreground">{ stats.MonthlyMoviesTrendValue }</span> movies this month
 						}
@@ -359,7 +359,7 @@ templ statsCharts(stats *models.WatchedStats) {
 								<span class="text-green-500">+{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
 							case models.TrendDown:
 								@icon.TrendingDown(icon.Props{Size: 16, Class: "text-red-500"})
-								<span class="text-red-500">-{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
+								<span class="text-red-500">{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
 							default:
 								<span class="text-muted-foreground">{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
 						}
