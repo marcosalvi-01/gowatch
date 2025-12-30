@@ -239,7 +239,7 @@ templ statsCharts(stats *models.WatchedStats) {
 				Distribution
 			</h2>
 		</div>
-		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+		<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
 			@card.Card() {
 				@card.Header() {
 					@card.Title() {
@@ -253,6 +253,38 @@ templ statsCharts(stats *models.WatchedStats) {
 						Options:    chart.Options{Responsive: true, Legend: true},
 						ShowLegend: true,
 					})
+				}
+			}
+			@card.Card() {
+				@card.Header() {
+					@card.Title() {
+						Movies per Month
+					}
+				}
+				@card.Content() {
+					@chart.Chart(chart.Props{
+						Variant:     chart.VariantBar,
+						Data:        prepareMonthlyMoviesData(stats.MonthlyLastYear),
+						Options:     chart.Options{Responsive: true},
+						ShowXAxis:   true,
+						ShowXLabels: true,
+						ShowYAxis:   true,
+						ShowYLabels: true,
+					})
+
+					// Trend indicator below chart
+					<div class="mt-8 flex items-center justify-center gap-2 text-md">
+						switch stats.MonthlyMoviesTrendDirection {
+						case models.TrendUp:
+							@icon.TrendingUp(icon.Props{Size: 16, Class: "text-green-500"})
+							<span class="text-green-500">+{ stats.MonthlyMoviesTrendValue }</span> movies this month
+						case models.TrendDown:
+							@icon.TrendingDown(icon.Props{Size: 16, Class: "text-red-500"})
+							<span class="text-red-500">-{ stats.MonthlyMoviesTrendValue }</span> movies this month
+						default:
+							<span class="text-muted-foreground">{ stats.MonthlyMoviesTrendValue }</span> movies this month
+						}
+					</div>
 				}
 			}
 			@card.Card() {
@@ -273,7 +305,7 @@ templ statsCharts(stats *models.WatchedStats) {
 			@card.Card() {
 				@card.Header() {
 					@card.Title() {
-						Monthly Hours
+						Hours per Month
 					}
 				}
 				@card.Content() {
@@ -289,14 +321,14 @@ templ statsCharts(stats *models.WatchedStats) {
 					// Trend indicator below chart
 					<div class="mt-8 flex items-center justify-center gap-2 text-md">
 						switch stats.MonthlyHoursTrendDirection {
-							case "up":
-								@icon.TrendingUp(icon.Props{Size: 16, Class: "text-green-500"})
-								<span class="text-green-500">{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
-							case "down":
-								@icon.TrendingDown(icon.Props{Size: 16, Class: "text-red-500"})
-								<span class="text-red-500">{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
-							default:
-								<span class="text-muted-foreground">{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
+						case models.TrendUp:
+							@icon.TrendingUp(icon.Props{Size: 16, Class: "text-green-500"})
+							<span class="text-green-500">+{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
+						case models.TrendDown:
+							@icon.TrendingDown(icon.Props{Size: 16, Class: "text-red-500"})
+							<span class="text-red-500">-{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
+						default:
+							<span class="text-muted-foreground">{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
 						}
 					</div>
 				}
@@ -422,6 +454,36 @@ func prepareTheaterData(data []models.TheaterCount) chart.Data {
 			Label:           "Watches",
 			Data:            values,
 			BackgroundColor: colors,
+		}},
+	}
+}
+
+func prepareMonthlyMoviesData(data []models.PeriodCount) chart.Data {
+	// Create a map of period to count
+	dataMap := make(map[string]int64)
+	for _, pc := range data {
+		dataMap[pc.Period] = pc.Count
+	}
+
+	// Generate last 12 complete months
+	now := time.Now()
+	labels := make([]string, 12)
+	values := make([]float64, 12)
+	for i := 12; i >= 1; i-- {
+		month := now.AddDate(0, -i, 0)
+		period := month.Format("2006-01")
+		labels[12-i] = period
+		values[12-i] = float64(dataMap[period])
+	}
+
+	return chart.Data{
+		Labels: labels,
+		Datasets: []chart.Dataset{{
+			Label:           "Movies",
+			Data:            values,
+			BackgroundColor: []any{"rgba(59, 130, 246, 0.5)"}, // Blue theme
+			BorderColor:     []any{"rgba(59, 130, 246, 1)"},   // Blue theme
+			BorderWidth:     1,
 		}},
 	}
 }

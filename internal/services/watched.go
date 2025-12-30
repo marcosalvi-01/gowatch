@@ -265,6 +265,8 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 
 	stats.MonthlyHoursTrendDirection, stats.MonthlyHoursTrendValue = s.calculateMonthlyHoursTrend(stats.MonthlyHoursLastYear)
 
+	stats.MonthlyMoviesTrendDirection, stats.MonthlyMoviesTrendValue = s.calculateMonthlyMoviesTrend(stats.MonthlyLastYear)
+
 	stats.AvgHoursPerDay, stats.AvgHoursPerWeek, stats.AvgHoursPerMonth, err = s.getHoursAverages(ctx, stats.TotalHoursWatched)
 	if err != nil {
 		return nil, err

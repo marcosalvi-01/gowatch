@@ -183,9 +183,9 @@ func (s *WatchedService) calculateHoursAverages(totalHours float64, dateRange *m
 	return avgPerDay, avgPerWeek, avgPerMonth
 }
 
-func (s *WatchedService) calculateMonthlyHoursTrend(monthlyHours []models.PeriodHours) (direction string, value float64) {
+func (s *WatchedService) calculateMonthlyHoursTrend(monthlyHours []models.PeriodHours) (direction models.TrendDirection, value float64) {
 	if len(monthlyHours) < 2 {
-		return "neutral", 0
+		return models.TrendNeutral, 0
 	}
 
 	// Sort by period for chronological order
@@ -204,11 +204,38 @@ func (s *WatchedService) calculateMonthlyHoursTrend(monthlyHours []models.Period
 
 	// Determine direction based on the difference
 	if diff > 0 {
-		return "up", diff
+		return models.TrendUp, diff
 	} else if diff < 0 {
-		return "down", diff
+		return models.TrendDown, diff
 	}
-	return "neutral", diff
+	return models.TrendNeutral, diff
+}
+
+func (s *WatchedService) calculateMonthlyMoviesTrend(monthlyMovies []models.PeriodCount) (direction models.TrendDirection, value int64) {
+	if len(monthlyMovies) < 2 {
+		return models.TrendNeutral, 0
+	}
+
+	// Sort by period for chronological order
+	sort.Slice(monthlyMovies, func(i, j int) bool {
+		return monthlyMovies[i].Period < monthlyMovies[j].Period
+	})
+
+	// Compare last month vs previous month
+	lastIdx := len(monthlyMovies) - 1
+	prevIdx := lastIdx - 1
+
+	lastMonth := monthlyMovies[lastIdx].Count
+	prevMonth := monthlyMovies[prevIdx].Count
+
+	diff := lastMonth - prevMonth
+
+	if diff > 0 {
+		return models.TrendUp, diff
+	} else if diff < 0 {
+		return models.TrendDown, diff
+	}
+	return models.TrendNeutral, diff
 }
 
 func (s *WatchedService) aggregateGenres(genreData []models.GenreCount, maxDisplayed int) []models.GenreCount {
