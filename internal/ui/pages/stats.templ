@@ -198,6 +198,25 @@ templ statsMetrics(stats *models.WatchedStats) {
 			</div>
 		}
 	}
+	@statsTimeMetrics(stats)
+}
+
+templ statsTimeMetrics(stats *models.WatchedStats) {
+	@card.Card() {
+		@card.Header() {
+			@card.Title() {
+				Time Stats
+			}
+		}
+		@card.Content() {
+			<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+				@statsMetricCard("Total Hours", fmt.Sprintf("%.1f hours", stats.TotalHoursWatched), icon.Clock)
+				@statsMetricCard("Avg Hours/Day", fmt.Sprintf("%.1f", stats.AvgHoursPerDay), icon.Clock)
+				@statsMetricCard("Avg Hours/Week", fmt.Sprintf("%.1f", stats.AvgHoursPerWeek), icon.Clock)
+				@statsMetricCard("Avg Hours/Month", fmt.Sprintf("%.1f", stats.AvgHoursPerMonth), icon.Clock)
+			</div>
+		}
+	}
 }
 
 templ statsMetricCard(label, value string, iconFunc func(...icon.Props) templ.Component) {
@@ -220,7 +239,7 @@ templ statsCharts(stats *models.WatchedStats) {
 				Distribution
 			</h2>
 		</div>
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 			@card.Card() {
 				@card.Header() {
 					@card.Title() {
@@ -249,6 +268,37 @@ templ statsCharts(stats *models.WatchedStats) {
 						Options:    chart.Options{Responsive: true, Legend: true},
 						ShowLegend: true,
 					})
+				}
+			}
+			@card.Card() {
+				@card.Header() {
+					@card.Title() {
+						Monthly Hours
+					}
+				}
+				@card.Content() {
+					@chart.Chart(chart.Props{
+						Variant:     chart.VariantBar,
+						Data:        prepareMonthlyHoursData(stats.MonthlyHoursLastYear),
+						Options:     chart.Options{Responsive: true},
+						ShowXAxis:   true,
+						ShowXLabels: true,
+						ShowYAxis:   true,
+						ShowYLabels: true,
+					})
+					// Trend indicator below chart
+					<div class="mt-8 flex items-center justify-center gap-2 text-md">
+						switch stats.MonthlyHoursTrendDirection {
+							case "up":
+								@icon.TrendingUp(icon.Props{Size: 16, Class: "text-green-500"})
+								<span class="text-green-500">{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
+							case "down":
+								@icon.TrendingDown(icon.Props{Size: 16, Class: "text-red-500"})
+								<span class="text-red-500">{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
+							default:
+								<span class="text-muted-foreground">{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
+						}
+					</div>
 				}
 			}
 		</div>
@@ -299,8 +349,8 @@ func prepareMonthlyData(data []models.PeriodCount) chart.Data {
 		Datasets: []chart.Dataset{{
 			Label:           "Watches",
 			Data:            values,
-			BackgroundColor: []interface{}{"rgba(59, 130, 246, 0.5)"},
-			BorderColor:     []interface{}{"rgba(59, 130, 246, 1)"},
+			BackgroundColor: []any{"rgba(59, 130, 246, 0.5)"},
+			BorderColor:     []any{"rgba(59, 130, 246, 1)"},
 			BorderWidth:     1,
 		}},
 	}
@@ -319,8 +369,8 @@ func prepareYearlyData(data []models.PeriodCount) chart.Data {
 			Label:           "Watches",
 			Data:            values,
 			Tension:         0.4,
-			BorderColor:     []interface{}{"rgba(16, 185, 129, 1)"},
-			BackgroundColor: []interface{}{"rgba(16, 185, 129, 0.1)"},
+			BorderColor:     []any{"rgba(16, 185, 129, 1)"},
+			BackgroundColor: []any{"rgba(16, 185, 129, 0.1)"},
 			Fill:            true,
 		}},
 	}
@@ -329,7 +379,7 @@ func prepareYearlyData(data []models.PeriodCount) chart.Data {
 func prepareGenresData(data []models.GenreCount) chart.Data {
 	labels := make([]string, len(data))
 	values := make([]float64, len(data))
-	colors := []interface{}{
+	colors := []any{
 		"rgba(59, 130, 246, 0.8)",
 		"rgba(16, 185, 129, 0.8)",
 		"rgba(245, 158, 11, 0.8)",
@@ -354,7 +404,7 @@ func prepareGenresData(data []models.GenreCount) chart.Data {
 func prepareTheaterData(data []models.TheaterCount) chart.Data {
 	labels := make([]string, len(data))
 	values := make([]float64, len(data))
-	colors := []interface{}{
+	colors := []any{
 		"rgba(59, 130, 246, 0.8)", // Theater
 		"rgba(16, 185, 129, 0.8)", // Home
 	}
@@ -388,8 +438,38 @@ func prepareWeekdayData(data []models.PeriodCount) chart.Data {
 		Datasets: []chart.Dataset{{
 			Label:           "Watches",
 			Data:            values,
-			BackgroundColor: []interface{}{"rgba(139, 92, 246, 0.5)"},
-			BorderColor:     []interface{}{"rgba(139, 92, 246, 1)"},
+			BackgroundColor: []any{"rgba(139, 92, 246, 0.5)"},
+			BorderColor:     []any{"rgba(139, 92, 246, 1)"},
+			BorderWidth:     1,
+		}},
+	}
+}
+
+func prepareMonthlyHoursData(data []models.PeriodHours) chart.Data {
+	// Create a map of period to hours
+	dataMap := make(map[string]float64)
+	for _, ph := range data {
+		dataMap[ph.Period] = ph.Hours
+	}
+
+	// Generate last 12 complete months
+	now := time.Now()
+	labels := make([]string, 12)
+	values := make([]float64, 12)
+	for i := 12; i >= 1; i-- {
+		month := now.AddDate(0, -i, 0)
+		period := month.Format("2006-01")
+		labels[12-i] = period
+		values[12-i] = dataMap[period]
+	}
+
+	return chart.Data{
+		Labels: labels,
+		Datasets: []chart.Dataset{{
+			Label:           "Hours",
+			Data:            values,
+			BackgroundColor: []any{"rgba(245, 158, 11, 0.5)"},
+			BorderColor:     []any{"rgba(245, 158, 11, 1)"},
 			BorderWidth:     1,
 		}},
 	}
@@ -406,7 +486,7 @@ templ StatsLoading() {
 			// Stats charts
 			@skeleton.Skeleton(skeleton.Props{Class: "h-32 w-full mb-4 rounded-lg"})
 			<div class="flex flex-col mt-8 space-y-8">
-				for i := 0; i < 4; i++ {
+				for _ = range 4 {
 					@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-32 mb-4 rounded-lg"})
 					<div class="flex flex-row space-x-8">
 						@skeleton.Skeleton(skeleton.Props{Class: "h-48 w-full rounded-lg"})

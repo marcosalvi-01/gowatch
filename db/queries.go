@@ -760,3 +760,47 @@ func (d *SqliteDB) GetWatchedDateRange(ctx context.Context) (*models.DateRange, 
 	log.Debug("retrieved watched date range", "minDate", min, "maxDate", max)
 	return &models.DateRange{MinDate: min, MaxDate: max}, nil
 }
+
+func (d *SqliteDB) aggregateWatchedByPeriodHours(data []sqlc.GetWatchedRuntimesLastYearRow, format string) []models.PeriodHours {
+	hours := make(map[string]float64)
+	for _, item := range data {
+		period := item.WatchedDate.Format(format)
+		hours[period] += float64(item.Runtime) / 60.0 // Convert minutes to hours
+	}
+	result := make([]models.PeriodHours, 0, len(hours))
+	for period, hourCount := range hours {
+		result = append(result, models.PeriodHours{Period: period, Hours: hourCount})
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Period < result[j].Period
+	})
+	return result
+}
+
+func (d *SqliteDB) GetWatchedHoursPerMonthLastYear(ctx context.Context) ([]models.PeriodHours, error) {
+	log.Debug("getting watched hours per month last year")
+
+	data, err := d.queries.GetWatchedRuntimesLastYear(ctx)
+	if err != nil {
+		log.Error("failed to get monthly hours data", "error", err)
+		return nil, fmt.Errorf("failed to get monthly hours data: %w", err)
+	}
+	result := d.aggregateWatchedByPeriodHours(data, "2006-01")
+
+	log.Debug("retrieved monthly hours data", "periodCount", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetTotalHoursWatched(ctx context.Context) (float64, error) {
+	log.Debug("getting total hours watched")
+
+	totalMinutes, err := d.queries.GetTotalHoursWatched(ctx)
+	if err != nil {
+		log.Error("failed to get total minutes", "error", err)
+		return 0, fmt.Errorf("failed to get total minutes: %w", err)
+	}
+
+	hours := *totalMinutes / 60.0
+	log.Debug("retrieved total hours", "hours", hours)
+	return hours, nil
+}

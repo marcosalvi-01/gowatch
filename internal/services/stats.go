@@ -136,6 +136,81 @@ func (s *WatchedService) getAverages(ctx context.Context, total int64) (float64,
 	return avgPerDay, avgPerWeek, avgPerMonth, nil
 }
 
+func (s *WatchedService) getTotalHoursWatched(ctx context.Context) (float64, error) {
+	s.log.Debug("retrieving total hours watched")
+	total, err := s.db.GetTotalHoursWatched(ctx)
+	if err != nil {
+		s.log.Error("failed to retrieve total hours watched", "error", err)
+		return 0, fmt.Errorf("failed to get total hours watched: %w", err)
+	}
+	return total, nil
+}
+
+func (s *WatchedService) getMonthlyHoursLastYear(ctx context.Context) ([]models.PeriodHours, error) {
+	s.log.Debug("retrieving monthly hours data")
+	data, err := s.db.GetWatchedHoursPerMonthLastYear(ctx)
+	if err != nil {
+		s.log.Error("failed to retrieve monthly hours data", "error", err)
+		return nil, fmt.Errorf("failed to get monthly hours data: %w", err)
+	}
+	return data, nil
+}
+
+func (s *WatchedService) getHoursAverages(ctx context.Context, totalHours float64) (float64, float64, float64, error) {
+	s.log.Debug("retrieving watched date range for hours average calculations")
+	dateRange, err := s.db.GetWatchedDateRange(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			s.log.Debug("no valid watched dates found, skipping hours average calculations")
+			return 0, 0, 0, nil
+		}
+		s.log.Error("failed to retrieve watched date range", "error", err)
+		return 0, 0, 0, fmt.Errorf("failed to get date range: %w", err)
+	}
+	avgHoursPerDay, avgHoursPerWeek, avgHoursPerMonth := s.calculateHoursAverages(totalHours, dateRange)
+	return avgHoursPerDay, avgHoursPerWeek, avgHoursPerMonth, nil
+}
+
+func (s *WatchedService) calculateHoursAverages(totalHours float64, dateRange *models.DateRange) (avgPerDay, avgPerWeek, avgPerMonth float64) {
+	if dateRange == nil || dateRange.MinDate == nil || dateRange.MaxDate == nil {
+		return 0, 0, 0
+	}
+	days := dateRange.MaxDate.Sub(*dateRange.MinDate).Hours()/24 + 1
+	avgPerDay = totalHours / days
+	avgPerWeek = totalHours / (days / 7)
+	avgPerMonth = totalHours / (days / 30)
+	s.log.Debug("calculated hours averages", "avgPerDay", avgPerDay, "avgPerWeek", avgPerWeek, "avgPerMonth", avgPerMonth)
+	return avgPerDay, avgPerWeek, avgPerMonth
+}
+
+func (s *WatchedService) calculateMonthlyHoursTrend(monthlyHours []models.PeriodHours) (direction string, value float64) {
+	if len(monthlyHours) < 2 {
+		return "neutral", 0
+	}
+
+	// Sort by period for chronological order
+	sort.Slice(monthlyHours, func(i, j int) bool {
+		return monthlyHours[i].Period < monthlyHours[j].Period
+	})
+
+	// Compare last month vs previous month
+	lastIdx := len(monthlyHours) - 1
+	prevIdx := lastIdx - 1
+
+	lastMonth := monthlyHours[lastIdx].Hours
+	prevMonth := monthlyHours[prevIdx].Hours
+
+	diff := lastMonth - prevMonth
+
+	// Determine direction based on the difference
+	if diff > 0 {
+		return "up", diff
+	} else if diff < 0 {
+		return "down", diff
+	}
+	return "neutral", diff
+}
+
 func (s *WatchedService) aggregateGenres(genreData []models.GenreCount, maxDisplayed int) []models.GenreCount {
 	if len(genreData) <= maxDisplayed {
 		return genreData

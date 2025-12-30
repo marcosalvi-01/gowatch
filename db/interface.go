@@ -29,6 +29,8 @@ type DB interface {
 	GetMostWatchedMaleActors(ctx context.Context, limit int) ([]models.TopActor, error)
 	GetMostWatchedFemaleActors(ctx context.Context, limit int) ([]models.TopActor, error)
 	GetWatchedDateRange(ctx context.Context) (*models.DateRange, error)
+	GetWatchedHoursPerMonthLastYear(ctx context.Context) ([]models.PeriodHours, error)
+	GetTotalHoursWatched(ctx context.Context) (float64, error)
 
 	InsertList(ctx context.Context, list InsertList) (int64, error)
 

@@ -598,7 +598,7 @@ func (q *Queries) GetPerson(ctx context.Context, id int64) (Person, error) {
 const getRecentWatchedMovies = `-- name: GetRecentWatchedMovies :many
 SELECT
     movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
-    watched.watched_in_theater as in_theaters
+    watched.watched_in_theater AS in_theaters
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
@@ -693,6 +693,23 @@ func (q *Queries) GetTheaterVsHomeCount(ctx context.Context) ([]GetTheaterVsHome
 		return nil, err
 	}
 	return items, nil
+}
+
+const getTotalHoursWatched = `-- name: GetTotalHoursWatched :one
+SELECT
+    SUM(movie.runtime) AS total_minutes
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+WHERE
+    movie.runtime > 0
+`
+
+func (q *Queries) GetTotalHoursWatched(ctx context.Context) (*float64, error) {
+	row := q.db.QueryRowContext(ctx, getTotalHoursWatched)
+	var total_minutes *float64
+	err := row.Scan(&total_minutes)
+	return total_minutes, err
 }
 
 const getWatchedByGenre = `-- name: GetWatchedByGenre :many
@@ -998,6 +1015,49 @@ func (q *Queries) GetWatchedPerYear(ctx context.Context) ([]time.Time, error) {
 	return items, nil
 }
 
+const getWatchedRuntimesLastYear = `-- name: GetWatchedRuntimesLastYear :many
+SELECT
+    watched.watched_date,
+    movie.runtime
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.watched_date >= date('now', 'start of month', '-12 months')
+    AND watched.watched_date < date('now', 'start of month')
+    AND movie.runtime > 0
+ORDER BY
+    watched.watched_date
+`
+
+type GetWatchedRuntimesLastYearRow struct {
+	WatchedDate time.Time
+	Runtime     int64
+}
+
+func (q *Queries) GetWatchedRuntimesLastYear(ctx context.Context) ([]GetWatchedRuntimesLastYearRow, error) {
+	rows, err := q.db.QueryContext(ctx, getWatchedRuntimesLastYear)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetWatchedRuntimesLastYearRow
+	for rows.Next() {
+		var i GetWatchedRuntimesLastYearRow
+		if err := rows.Scan(&i.WatchedDate, &i.Runtime); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertList = `-- name: InsertList :one
 INSERT INTO
     list (
@@ -1007,7 +1067,8 @@ INSERT INTO
     )
 VALUES
     (?, ?, ?)
-RETURNING id
+RETURNING
+    id
 `
 
 type InsertListParams struct {

@@ -225,7 +225,8 @@ INSERT INTO
     )
 VALUES
     (?, ?, ?)
-RETURNING id;
+RETURNING
+    id;
 
 -- name: GetListJoinMovieByID :many
 SELECT
@@ -417,7 +418,7 @@ ORDER BY
 -- name: GetRecentWatchedMovies :many
 SELECT
     sqlc.embed(movie),
-    watched.watched_in_theater as in_theaters
+    watched.watched_in_theater AS in_theaters
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
@@ -425,3 +426,26 @@ ORDER BY
     watched.watched_date DESC
 LIMIT
     ?;
+
+-- name: GetWatchedRuntimesLastYear :many
+SELECT
+    watched.watched_date,
+    movie.runtime
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.watched_date >= date('now', 'start of month', '-12 months')
+    AND watched.watched_date < date('now', 'start of month')
+    AND movie.runtime > 0
+ORDER BY
+    watched.watched_date;
+
+-- name: GetTotalHoursWatched :one
+SELECT
+    SUM(movie.runtime) AS total_minutes
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+WHERE
+    movie.runtime > 0;
