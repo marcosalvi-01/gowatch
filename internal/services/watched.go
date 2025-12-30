@@ -205,71 +205,76 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 	var err error
 	stats.TotalWatched, err = s.getTotalWatched(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get total watched: %w", err)
 	}
 
 	stats.TheaterVsHome, err = s.getTheaterVsHome(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get theater vs home data: %w", err)
 	}
 
 	stats.MonthlyLastYear, err = s.getMonthlyLastYear(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get monthly data: %w", err)
 	}
 
 	stats.YearlyAllTime, err = s.getYearlyAllTime(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get yearly data: %w", err)
 	}
 
 	stats.WeekdayDistribution, err = s.getWeekdayDistribution(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get weekday distribution: %w", err)
 	}
 
 	stats.Genres, err = s.getGenres(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get genre data: %w", err)
 	}
 
 	stats.MostWatchedMovies, err = s.getMostWatchedMovies(ctx, limit)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get most watched movies: %w", err)
 	}
 
 	stats.MostWatchedDay, err = s.getMostWatchedDay(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get most watched day: %w", err)
 	}
 
 	stats.MostWatchedActors, err = s.getMostWatchedActors(ctx, limit)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get most watched actors: %w", err)
 	}
 
 	stats.AvgPerDay, stats.AvgPerWeek, stats.AvgPerMonth, err = s.getAverages(ctx, stats.TotalWatched)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to calculate averages: %w", err)
 	}
 
 	stats.TotalHoursWatched, err = s.getTotalHoursWatched(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get total hours watched: %w", err)
 	}
 
 	stats.MonthlyHoursLastYear, err = s.getMonthlyHoursLastYear(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get monthly hours data: %w", err)
 	}
 
 	stats.MonthlyHoursTrendDirection, stats.MonthlyHoursTrendValue = s.calculateMonthlyHoursTrend(stats.MonthlyHoursLastYear)
+
+	stats.MonthlyGenreBreakdown, err = s.getMonthlyGenreBreakdown(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get monthly genre breakdown: %w", err)
+	}
 
 	stats.MonthlyMoviesTrendDirection, stats.MonthlyMoviesTrendValue = s.calculateMonthlyMoviesTrend(stats.MonthlyLastYear)
 
 	stats.AvgHoursPerDay, stats.AvgHoursPerWeek, stats.AvgHoursPerMonth, err = s.getHoursAverages(ctx, stats.TotalHoursWatched)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to calculate hours averages: %w", err)
 	}
 
 	return stats, nil

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 
 	"gowatch/internal/models"
@@ -156,6 +157,18 @@ func (s *WatchedService) getMonthlyHoursLastYear(ctx context.Context) ([]models.
 	return data, nil
 }
 
+func (s *WatchedService) getMonthlyGenreBreakdown(ctx context.Context) ([]models.MonthlyGenreBreakdown, error) {
+	s.log.Debug("retrieving monthly genre breakdown")
+	data, err := s.db.GetMonthlyGenreBreakdown(ctx)
+	if err != nil {
+		s.log.Error("failed to retrieve monthly genre breakdown", "error", err)
+		return nil, fmt.Errorf("failed to get monthly genre breakdown: %w", err)
+	}
+
+	aggregated := s.aggregateTopGenresForChart(data, MaxGenresDisplayed)
+	return aggregated, nil
+}
+
 func (s *WatchedService) getHoursAverages(ctx context.Context, totalHours float64) (float64, float64, float64, error) {
 	s.log.Debug("retrieving watched date range for hours average calculations")
 	dateRange, err := s.db.GetWatchedDateRange(ctx)
@@ -236,6 +249,64 @@ func (s *WatchedService) calculateMonthlyMoviesTrend(monthlyMovies []models.Peri
 		return models.TrendDown, diff
 	}
 	return models.TrendNeutral, diff
+}
+
+func (s *WatchedService) aggregateTopGenresForChart(data []models.MonthlyGenreBreakdown, topN int) []models.MonthlyGenreBreakdown {
+	// Calculate total counts across all months to determine top genres
+	genreTotals := make(map[string]int)
+	for _, month := range data {
+		for genre, count := range month.Genres {
+			genreTotals[genre] += count
+		}
+	}
+
+	// Sort genres by total count to find top N
+	type genreCount struct {
+		name  string
+		count int
+	}
+	var sortedGenres []genreCount
+	for genre, count := range genreTotals {
+		sortedGenres = append(sortedGenres, genreCount{name: genre, count: count})
+	}
+	sort.Slice(sortedGenres, func(i, j int) bool {
+		return sortedGenres[i].count > sortedGenres[j].count
+	})
+
+	// Take top N genres, rest go to "Other"
+	topGenres := make([]string, 0, topN)
+	for i := 0; i < len(sortedGenres) && i < topN; i++ {
+		topGenres = append(topGenres, sortedGenres[i].name)
+	}
+
+	// Create result with top genres + Other
+	result := make([]models.MonthlyGenreBreakdown, len(data))
+	for i, month := range data {
+		genres := make(map[string]int)
+		otherCount := 0
+
+		for genre, count := range month.Genres {
+			isTopGenre := false
+			if slices.Contains(topGenres, genre) {
+				genres[genre] = count
+				isTopGenre = true
+			}
+			if !isTopGenre {
+				otherCount += count
+			}
+		}
+
+		if otherCount > 0 {
+			genres["Others"] = otherCount
+		}
+
+		result[i] = models.MonthlyGenreBreakdown{
+			Month:  month.Month,
+			Genres: genres,
+		}
+	}
+
+	return result
 }
 
 func (s *WatchedService) aggregateGenres(genreData []models.GenreCount, maxDisplayed int) []models.GenreCount {

@@ -449,3 +449,22 @@ FROM
     JOIN movie ON watched.movie_id = movie.id
 WHERE
     movie.runtime > 0;
+
+-- name: GetMonthlyGenreBreakdown :many
+SELECT
+    watched.watched_date,
+    genre.name AS genre_name,
+    COUNT(*) AS movie_count
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+    JOIN genre_movie ON movie.id = genre_movie.movie_id
+    JOIN genre ON genre_movie.genre_id = genre.id
+WHERE
+    watched.watched_date >= date('now', 'start of month', '-12 months')
+GROUP BY
+    watched.watched_date,
+    genre_name
+ORDER BY
+    watched.watched_date,
+    movie_count DESC;

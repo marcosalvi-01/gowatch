@@ -63,6 +63,12 @@ type WatchedStats struct {
 	MonthlyHoursTrendValue      float64
 	MonthlyMoviesTrendDirection TrendDirection
 	MonthlyMoviesTrendValue     int64
+	MonthlyGenreBreakdown       []MonthlyGenreBreakdown
+}
+
+type MonthlyGenreBreakdown struct {
+	Month  string
+	Genres map[string]int
 }
 
 type PeriodCount struct {

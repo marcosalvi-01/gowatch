@@ -278,6 +278,55 @@ func (q *Queries) GetListJoinMovieByID(ctx context.Context, id int64) ([]GetList
 	return items, nil
 }
 
+const getMonthlyGenreBreakdown = `-- name: GetMonthlyGenreBreakdown :many
+SELECT
+    watched.watched_date,
+    genre.name AS genre_name,
+    COUNT(*) AS movie_count
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+    JOIN genre_movie ON movie.id = genre_movie.movie_id
+    JOIN genre ON genre_movie.genre_id = genre.id
+WHERE
+    watched.watched_date >= date('now', 'start of month', '-12 months')
+GROUP BY
+    watched.watched_date,
+    genre_name
+ORDER BY
+    watched.watched_date,
+    movie_count DESC
+`
+
+type GetMonthlyGenreBreakdownRow struct {
+	WatchedDate time.Time
+	GenreName   string
+	MovieCount  int64
+}
+
+func (q *Queries) GetMonthlyGenreBreakdown(ctx context.Context) ([]GetMonthlyGenreBreakdownRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMonthlyGenreBreakdown)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMonthlyGenreBreakdownRow
+	for rows.Next() {
+		var i GetMonthlyGenreBreakdownRow
+		if err := rows.Scan(&i.WatchedDate, &i.GenreName, &i.MovieCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getMostWatchedDay = `-- name: GetMostWatchedDay :many
 SELECT
     watched_date

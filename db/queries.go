@@ -804,3 +804,38 @@ func (d *SqliteDB) GetTotalHoursWatched(ctx context.Context) (float64, error) {
 	log.Debug("retrieved total hours", "hours", hours)
 	return hours, nil
 }
+
+func (d *SqliteDB) GetMonthlyGenreBreakdown(ctx context.Context) ([]models.MonthlyGenreBreakdown, error) {
+	log.Debug("getting monthly genre breakdown")
+
+	rawData, err := d.queries.GetMonthlyGenreBreakdown(ctx)
+	if err != nil {
+		log.Error("failed to get monthly genre data", "error", err)
+		return nil, fmt.Errorf("failed to get monthly genre data: %w", err)
+	}
+
+	monthMap := make(map[string]map[string]int)
+	for _, row := range rawData {
+		monthStr := row.WatchedDate.Format("2006-01")
+		if monthMap[monthStr] == nil {
+			monthMap[monthStr] = make(map[string]int)
+		}
+		monthMap[monthStr][row.GenreName] = int(row.MovieCount)
+	}
+
+	// Convert to slice and sort by month
+	result := make([]models.MonthlyGenreBreakdown, 0, len(monthMap))
+	for month := range monthMap {
+		result = append(result, models.MonthlyGenreBreakdown{
+			Month:  month,
+			Genres: monthMap[month],
+		})
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Month < result[j].Month
+	})
+
+	log.Debug("retrieved monthly genre breakdown", "months", len(result))
+	return result, nil
+}
