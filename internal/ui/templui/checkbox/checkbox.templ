@@ -1,4 +1,5 @@
-// templui component checkbox - version: v0.98.0 installed by templui v0.98.0
+// templui component checkbox - version: v1.0.0 installed by templui v1.0.0
+// 📚 Documentation: https://templui.io/docs/components/checkbox
 package checkbox
 
 import (
@@ -13,7 +14,6 @@ type Props struct {
 	Name       string
 	Value      string
 	Disabled   bool
-	Required   bool
 	Checked    bool
 	Form       string
 	Icon       templ.Component
@@ -28,7 +28,6 @@ templ Checkbox(props ...Props) {
 		<input
 			checked?={ p.Checked }
 			disabled?={ p.Disabled }
-			required?={ p.Required }
 			if p.ID != "" {
 				id={ p.ID }
 			}

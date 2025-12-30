@@ -1095,7 +1095,6 @@ func createListFormFields() templ.Component {
 			}
 			templ_7745c5c3_Err = input.Input(input.Props{
 				ID:          "add-list-input",
-				Required:    true,
 				Placeholder: "A cool name",
 				Name:        "title",
 			}).Render(ctx, templ_7745c5c3_Buffer)
@@ -1135,7 +1134,6 @@ func createListFormFields() templ.Component {
 		templ_7745c5c3_Err = textarea.Textarea(textarea.Props{
 			ID:          "add-list-description-input",
 			Placeholder: "A list of funny movies",
-			Required:    false,
 			Name:        "description",
 		}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {

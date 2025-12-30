@@ -1,4 +1,5 @@
-// templui component calendar - version: v0.98.0 installed by templui v0.98.0
+// templui component calendar - version: v1.0.0 installed by templui v1.0.0
+// 📚 Documentation: https://templui.io/docs/components/calendar
 package calendar
 
 import (
@@ -47,63 +48,63 @@ type Props struct {
 
 templ Calendar(props ...Props) {
 	{{
-	var p Props
-	if len(props) > 0 {
-		p = props[0]
-	}
-	if p.ID == "" {
-		p.ID = utils.RandomID() + "-calendar"
-	}
-	if p.Name == "" {
-		// Should be provided by parent (e.g., DatePicker or in standalone usage)
-		p.Name = p.ID + "-value" // Fallback name
-	}
-	if p.LocaleTag == "" {
-		p.LocaleTag = LocaleDefaultTag
-	}
-	// Default to rendering hidden input unless explicitly set to false
-	if p.RenderHiddenInput == false && len(props) > 0 {
-		// Only respect false if it was explicitly passed
-		p.RenderHiddenInput = props[0].RenderHiddenInput
-	} else {
-		p.RenderHiddenInput = true
-	}
+		var p Props
+		if len(props) > 0 {
+			p = props[0]
+		}
+		if p.ID == "" {
+			p.ID = utils.RandomID() + "-calendar"
+		}
+		if p.Name == "" {
+			// Should be provided by parent (e.g., DatePicker or in standalone usage)
+			p.Name = p.ID + "-value" // Fallback name
+		}
+		if p.LocaleTag == "" {
+			p.LocaleTag = LocaleDefaultTag
+		}
+		// Default to rendering hidden input unless explicitly set to false
+		if p.RenderHiddenInput == false && len(props) > 0 {
+			// Only respect false if it was explicitly passed
+			p.RenderHiddenInput = props[0].RenderHiddenInput
+		} else {
+			p.RenderHiddenInput = true
+		}
 
-	initialStartOfWeek := Monday
-	if p.StartOfWeek != nil {
-		initialStartOfWeek = *p.StartOfWeek
-	}
+		initialStartOfWeek := Monday
+		if p.StartOfWeek != nil {
+			initialStartOfWeek = *p.StartOfWeek
+		}
 
-	initialView := time.Now()
-	if p.Value != nil {
-		initialView = *p.Value
-	}
+		initialView := time.Now()
+		if p.Value != nil {
+			initialView = *p.Value
+		}
 
-	initialMonth := p.InitialMonth
-	initialYear := p.InitialYear
+		initialMonth := p.InitialMonth
+		initialYear := p.InitialYear
 
-	// Use year from initialView if InitialYear prop is invalid/unset (<= 0)
-	if initialYear <= 0 {
-		initialYear = initialView.Year()
-	}
+		// Use year from initialView if InitialYear prop is invalid/unset (<= 0)
+		if initialYear <= 0 {
+			initialYear = initialView.Year()
+		}
 
-	// Use month from initialView if InitialMonth prop is invalid OR
-	// if InitialMonth is default 0 AND InitialYear was also defaulted (meaning neither was likely set explicitly)
-	if (initialMonth < 0 || initialMonth > 11) || (initialMonth == 0 && p.InitialYear <= 0) {
-		initialMonth = int(initialView.Month()) - 1 // time.Month is 1-12
-	}
+		// Use month from initialView if InitialMonth prop is invalid OR
+		// if InitialMonth is default 0 AND InitialYear was also defaulted (meaning neither was likely set explicitly)
+		if (initialMonth < 0 || initialMonth > 11) || (initialMonth == 0 && p.InitialYear <= 0) {
+			initialMonth = int(initialView.Month()) - 1 // time.Month is 1-12
+		}
 
-	initialSelectedISO := ""
-	if p.Value != nil {
-		initialSelectedISO = p.Value.Format("2006-01-02")
-	}
+		initialSelectedISO := ""
+		if p.Value != nil {
+			initialSelectedISO = p.Value.Format("2006-01-02")
+		}
 
-	// For SelectBox display
-	currentMonth := initialMonth
-	currentYear := initialYear
+		// For SelectBox display
+		currentMonth := initialMonth
+		currentYear := initialYear
 
-	// Generate short month names (English only, JS will update with localized)
-	monthNames := []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
+		// Generate short month names (English only, JS will update with localized)
+		monthNames := []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
 	}}
 	<div class={ p.Class } id={ p.ID + "-wrapper" } data-tui-calendar-wrapper="true">
 		if p.RenderHiddenInput {

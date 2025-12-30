@@ -1,4 +1,5 @@
-// templui component dialog - version: v0.98.0 installed by templui v0.98.0
+// templui component dialog - version: v1.0.0 installed by templui v1.0.0
+// 📚 Documentation: https://templui.io/docs/components/dialog
 package dialog
 
 import (
@@ -27,16 +28,16 @@ type TriggerProps struct {
 	ID         string
 	Class      string
 	Attributes templ.Attributes
-	Disabled   bool
 	For        string // Reference to a specific dialog ID (for external triggers)
 }
 
 type ContentProps struct {
-	ID              string
-	Class           string
-	Attributes      templ.Attributes
-	HideCloseButton bool
-	Open            bool // Initial open state for standalone usage (when no context)
+	ID               string
+	Class            string
+	Attributes       templ.Attributes
+	HideCloseButton  bool
+	Open             bool // Initial open state for standalone usage (when no context)
+	DisableAutoFocus bool
 }
 
 type CloseProps struct {
@@ -106,11 +107,11 @@ templ Trigger(props ...TriggerProps) {
 		{{ p = props[0] }}
 	}
 	{{ instanceID := "" }}
-	// Try to get instance ID from context first, fallback to For prop
-	if val := ctx.Value(instanceKey); val != nil {
-		{{ instanceID = val.(string) }}
-	} else if p.For != "" {
+	// Explicit For prop takes priority over inherited context
+	if p.For != "" {
 		{{ instanceID = p.For }}
+	} else if val := ctx.Value(instanceKey); val != nil {
+		{{ instanceID = val.(string) }}
 	}
 	<span
 		if p.ID != "" {
@@ -119,13 +120,7 @@ templ Trigger(props ...TriggerProps) {
 		data-tui-dialog-trigger={ instanceID }
 		data-dialog-instance={ instanceID }
 		data-tui-dialog-trigger-open="false"
-		class={
-			utils.TwMerge(
-				"group",
-				utils.IfElse(p.Disabled, "cursor-not-allowed opacity-50", "cursor-pointer"),
-				p.Class,
-			),
-		}
+		class={ utils.TwMerge("contents", p.Class) }
 		{ p.Attributes... }
 	>
 		{ children... }
@@ -201,6 +196,9 @@ templ Content(props ...ContentProps) {
 		}
 		data-tui-dialog-content
 		data-dialog-instance={ instanceID }
+		if p.DisableAutoFocus {
+			data-tui-dialog-disable-autofocus="true"
+		}
 		if open {
 			data-tui-dialog-open="true"
 		} else {

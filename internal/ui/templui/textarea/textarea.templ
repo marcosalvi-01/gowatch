@@ -1,4 +1,5 @@
-// templui component textarea - version: v0.98.0 installed by templui v0.98.0
+// templui component textarea - version: v1.0.0 installed by templui v1.0.0
+// 📚 Documentation: https://templui.io/docs/components/textarea
 package textarea
 
 import (
@@ -17,7 +18,6 @@ type Props struct {
 	Rows        int
 	AutoResize  bool
 	Disabled    bool
-	Required    bool
 	Readonly    bool
 	HasError    bool
 }
@@ -46,7 +46,6 @@ templ Textarea(props ...Props) {
 			rows={ strconv.Itoa(p.Rows) }
 		}
 		disabled?={ p.Disabled }
-		required?={ p.Required }
 		readonly?={ p.Readonly }
 		if p.HasError {
 			aria-invalid="true"

@@ -1,6 +1,6 @@
 module gowatch
 
-go 1.25.3
+go 1.25.5
 
 require (
 	github.com/Oudwins/tailwind-merge-go v0.2.1

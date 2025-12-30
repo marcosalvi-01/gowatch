@@ -228,7 +228,6 @@ templ createListFormFields() {
 				}
 				@input.Input(input.Props{
 					ID:          "add-list-input",
-					Required:    true,
 					Placeholder: "A cool name",
 					Name:        "title",
 				})
@@ -241,7 +240,6 @@ templ createListFormFields() {
 			@textarea.Textarea(textarea.Props{
 				ID:          "add-list-description-input",
 				Placeholder: "A list of funny movies",
-				Required:    false,
 				Name:        "description",
 			})
 		</div>

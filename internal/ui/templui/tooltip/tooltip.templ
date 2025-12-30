@@ -1,4 +1,5 @@
-// templui component tooltip - version: v0.98.0 installed by templui v0.98.0
+// templui component tooltip - version: v1.0.0 installed by templui v1.0.0
+// 📚 Documentation: https://templui.io/docs/components/tooltip
 package tooltip
 
 import (
@@ -65,6 +66,8 @@ templ Trigger(props ...TriggerProps) {
 	}
 	@popover.Trigger(popover.TriggerProps{
 		ID:          p.ID,
+		Class:       p.Class,
+		Attributes:  p.Attributes,
 		TriggerType: popover.TriggerTypeHover,
 		For:         p.For,
 	}) {
