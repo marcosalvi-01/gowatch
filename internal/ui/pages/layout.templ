@@ -70,6 +70,26 @@ templ Layout() {
 	</html>
 }
 
+templ AuthLayout() {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>Gowatch</title>
+			<link rel="stylesheet" href="/static/css/output.css"/>
+			@Scripts()
+			@Favicons()
+		</head>
+		<body class="bg-background min-h-screen flex items-center justify-center">
+			<div class="w-full max-w-md p-4">
+				{ children... }
+			</div>
+			<div id="toast"></div>
+		</body>
+	</html>
+}
+
 templ mainContentLoading() {
 	<div id="main-content-loading" class="htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none">
 		<div class="flex flex-col justify-center items-center h-full p-8">
@@ -243,7 +263,7 @@ templ Favicons() {
 templ skeletonDashboard() {
 	<div>
 		<div class="grid gap-6 md:grid-cols-3">
-			for i := 0; i < 3; i++ {
+			for _ = range 3 {
 				<div class="p-4">
 					@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-20 mb-2"})
 					@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-24 mb-4"})

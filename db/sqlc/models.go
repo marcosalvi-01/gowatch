@@ -44,6 +44,7 @@ type List struct {
 	Name         string
 	CreationDate string
 	Description  *string
+	UserID       *int64
 }
 
 type ListMovie struct {
@@ -88,8 +89,24 @@ type Person struct {
 	UpdatedAt          *time.Time
 }
 
+type Session struct {
+	ID        string
+	UserID    int64
+	ExpiresAt time.Time
+	CreatedAt *time.Time
+}
+
+type User struct {
+	ID           int64
+	Email        string
+	PasswordHash string
+	Name         string
+	CreatedAt    *time.Time
+}
+
 type Watched struct {
 	MovieID          int64
 	WatchedDate      time.Time
 	WatchedInTheater bool
+	UserID           *int64
 }

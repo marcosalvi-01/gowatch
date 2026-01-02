@@ -4,7 +4,6 @@ package middleware
 import (
 	"net/http"
 	"strings"
-	"time"
 
 	"gowatch/logging"
 )
@@ -30,18 +29,18 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 
 func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
+		// start := time.Now()
 		rw := &responseWriter{ResponseWriter: w, status: 200}
 		next.ServeHTTP(rw, r)
-		duration := time.Since(start)
+		// duration := time.Since(start)
 		log.Info("http request",
 			"method", r.Method,
 			"path", r.URL.Path,
 			"query", r.URL.RawQuery,
 			"status", rw.status,
-			"size", rw.size,
-			"duration_ms", duration.Milliseconds(),
-			"remote_addr", r.RemoteAddr,
+			// "size", rw.size,
+			// "duration_ms", duration.Milliseconds(),
+			// "remote_addr", r.RemoteAddr,
 		)
 	})
 }

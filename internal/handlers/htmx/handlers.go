@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"gowatch/internal/common"
 	"gowatch/internal/services"
 	"gowatch/internal/ui/components/addtolistdialog"
 	"gowatch/internal/ui/components/oobwrapper"
@@ -28,13 +29,15 @@ type Handlers struct {
 	watchedService *services.WatchedService
 	listService    *services.ListService
 	homeService    *services.HomeService
+	authService    *services.AuthService
 }
 
-func NewHandlers(watchedService *services.WatchedService, listService *services.ListService, homeService *services.HomeService) *Handlers {
+func NewHandlers(watchedService *services.WatchedService, listService *services.ListService, homeService *services.HomeService, authService *services.AuthService) *Handlers {
 	return &Handlers{
 		watchedService: watchedService,
 		listService:    listService,
 		homeService:    homeService,
+		authService:    authService,
 	}
 }
 
@@ -56,7 +59,7 @@ func (h *Handlers) RenderAddToListDialogContent(w http.ResponseWriter, r *http.R
 	lists, err := h.listService.GetAllLists(r.Context())
 	if err != nil {
 		log.Error("failed to get all lists for dialog", "error", err)
-		h.renderErrorToast(w, r, "Failed to Load Lists", "An unexpected error occurred while fetching your lists.", 0)
+		RenderErrorToast(w, r, "Failed to Load Lists", "An unexpected error occurred while fetching your lists.", 0)
 		return
 	}
 
@@ -86,23 +89,32 @@ func (h *Handlers) GetSidebar(w http.ResponseWriter, r *http.Request) {
 	count, err := h.watchedService.GetWatchedCount(r.Context())
 	if err != nil {
 		log.Error("failed to get watched count for sidebar", "error", err)
-		h.renderErrorToast(w, r, "Sidebar Error", "Could not load watched count.", 0)
+		RenderErrorToast(w, r, "Sidebar Error", "Could not load watched count.", 0)
 		return
 	}
 
 	lists, err := h.listService.GetAllLists(r.Context())
 	if err != nil {
 		log.Error("failed to get all lists for sidebar", "error", err)
-		h.renderErrorToast(w, r, "Sidebar Error", "Could not load lists.", 0)
+		RenderErrorToast(w, r, "Sidebar Error", "Could not load lists.", 0)
 		return
 	}
 
-	if err := sidebar.Sidebar(sidebar.Props{
+	user, err := common.GetUser(r.Context())
+	if err != nil {
+		log.Error("user not found in context", "error", err)
+		http.Error(w, "User not authenticated", http.StatusUnauthorized)
+		return
+	}
+
+	err = sidebar.Sidebar(sidebar.Props{
 		CurrentPage:  currentURL,
 		Collapsed:    collapsed,
 		WatchedCount: count,
 		Lists:        lists,
-	}).Render(r.Context(), w); err != nil {
+		User:         user,
+	}).Render(r.Context(), w)
+	if err != nil {
 		log.Error("failed to render sidebar", "error", err)
 		http.Error(w, "Failed to render sidebar", http.StatusInternalServerError)
 		return
@@ -116,27 +128,27 @@ func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
 	movieID, err := strconv.Atoi(movieIDParam)
 	if err != nil {
 		log.Error("invalid movie ID parameter", "movieID", movieIDParam, "error", err)
-		h.renderErrorToast(w, r, "Invalid Movie ID", "The movie ID provided is not valid. Please try again.", 4000)
+		RenderErrorToast(w, r, "Invalid Movie ID", "The movie ID provided is not valid. Please try again.", 4000)
 		return
 	}
 
 	watchedDateParam := r.FormValue("watched_date")
 	if watchedDateParam == "" {
 		log.Error("missing watched_date parameter")
-		h.renderErrorToast(w, r, "Missing Date", "Please select the date when you watched the movie.", 4000)
+		RenderErrorToast(w, r, "Missing Date", "Please select the date when you watched the movie.", 4000)
 		return
 	}
 
 	watchedDate, err := time.Parse("2006-01-02", watchedDateParam)
 	if err != nil {
 		log.Error("invalid watched_date parameter", "watchedDate", watchedDateParam, "error", err)
-		h.renderErrorToast(w, r, "Invalid Date Format", "The date format is invalid. Please select a valid date.", 4000)
+		RenderErrorToast(w, r, "Invalid Date Format", "The date format is invalid. Please select a valid date.", 4000)
 		return
 	}
 
 	if watchedDate.After(time.Now()) {
 		log.Error("watched date is in the future", "watchedDate", watchedDate)
-		h.renderErrorToast(w, r, "Future Date Not Allowed", "You cannot mark a movie as watched for a future date.", 4000)
+		RenderErrorToast(w, r, "Future Date Not Allowed", "You cannot mark a movie as watched for a future date.", 4000)
 		return
 	}
 
@@ -147,7 +159,7 @@ func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
 	err = h.watchedService.AddWatched(r.Context(), int64(movieID), watchedDate, watchedAtTheater)
 	if err != nil {
 		log.Error("failed to add new watched movie", "movieID", movieID, "watchedDate", watchedDate, "theater", watchedAtTheater, "error", err)
-		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
+		RenderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
 		return
 	}
 
@@ -156,7 +168,7 @@ func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
 	successMessage := fmt.Sprintf("Movie marked as watched on %s", watchedDate.Format("Jan 2, 2006"))
 
 	w.Header().Add("HX-Trigger", "refreshSidebar")
-	h.renderSuccessToast(w, r, "Movie Added Successfully", successMessage, 0)
+	RenderSuccessToast(w, r, "Movie Added Successfully", successMessage, 0)
 }
 
 func (h *Handlers) CreateList(w http.ResponseWriter, r *http.Request) {
@@ -166,7 +178,7 @@ func (h *Handlers) CreateList(w http.ResponseWriter, r *http.Request) {
 	sanitizedTitle, err := utils.TrimAndValidateString(title, 100)
 	if err != nil {
 		log.Error("invalid list title", "title", title, "error", err)
-		h.renderErrorToast(w, r, "Invalid Title", "Please provide a valid title for your list.", 4000)
+		RenderErrorToast(w, r, "Invalid Title", "Please provide a valid title for your list.", 4000)
 		return
 	}
 
@@ -181,14 +193,14 @@ func (h *Handlers) CreateList(w http.ResponseWriter, r *http.Request) {
 	_, err = h.listService.CreateList(r.Context(), sanitizedTitle, descPtr)
 	if err != nil {
 		log.Error("failed to create list", "title", sanitizedTitle, "description", sanitizedDescription, "error", err)
-		h.renderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred, please try again.", 0)
+		RenderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred, please try again.", 0)
 		return
 	}
 
 	log.Info("successfully created list", "title", sanitizedTitle)
 
 	w.Header().Add("HX-Trigger", "refreshLists, refreshSidebar")
-	h.renderSuccessToast(w, r, "List Created Successfully", fmt.Sprintf("List \"%s\" has been created.", sanitizedTitle), 0)
+	RenderSuccessToast(w, r, "List Created Successfully", fmt.Sprintf("List \"%s\" has been created.", sanitizedTitle), 0)
 }
 
 func (h *Handlers) AddMovieToList(w http.ResponseWriter, r *http.Request) {
@@ -206,14 +218,14 @@ func (h *Handlers) AddMovieToList(w http.ResponseWriter, r *http.Request) {
 	listID, err := strconv.ParseInt(listIDStr, 10, 64)
 	if err != nil {
 		log.Error("invalid list ID", "listID", listIDStr, "error", err)
-		h.renderErrorToast(w, r, "Invalid List", "Please select a valid list", 0)
+		RenderErrorToast(w, r, "Invalid List", "Please select a valid list", 0)
 		return
 	}
 
 	movieID, err := strconv.ParseInt(movieIDStr, 10, 64)
 	if err != nil {
 		log.Error("invalid movie ID", "movieID", movieIDStr, "error", err)
-		h.renderErrorToast(w, r, "Invalid Movie", "Movie not found", 0)
+		RenderErrorToast(w, r, "Invalid Movie", "Movie not found", 0)
 		return
 	}
 
@@ -227,17 +239,17 @@ func (h *Handlers) AddMovieToList(w http.ResponseWriter, r *http.Request) {
 		log.Error("failed to add movie to list", "listID", listID, "movieID", movieID, "error", err)
 
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
-			h.renderWarningToast(w, r, "Movie Already in List", "This movie is already in this list", 4000)
+			RenderWarningToast(w, r, "Movie Already in List", "This movie is already in this list", 4000)
 			return
 		}
 
-		h.renderErrorToast(w, r, "Failed to Add Movie", "An unexpected error occurred while adding the movie to your list", 0)
+		RenderErrorToast(w, r, "Failed to Add Movie", "An unexpected error occurred while adding the movie to your list", 0)
 		return
 	}
 
 	log.Info("successfully added movie to list", "listID", listID, "movieID", movieID)
 
-	h.renderSuccessToast(w, r, "Added to List", "Movie has been added to the list", 0)
+	RenderSuccessToast(w, r, "Added to List", "Movie has been added to the list", 0)
 }
 
 func (h *Handlers) DeleteList(w http.ResponseWriter, r *http.Request) {
@@ -245,7 +257,7 @@ func (h *Handlers) DeleteList(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(listIDstr, 10, 64)
 	if err != nil {
 		log.Error("failed to parse list id to int", "listID", listIDstr, "error", err)
-		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
+		RenderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
 		return
 	}
 
@@ -254,7 +266,7 @@ func (h *Handlers) DeleteList(w http.ResponseWriter, r *http.Request) {
 	err = h.listService.DeleteList(r.Context(), id)
 	if err != nil {
 		log.Error("failed to delete list from db", "listID", id, "error", err)
-		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
+		RenderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
 		return
 	}
 
@@ -266,7 +278,7 @@ func (h *Handlers) DeleteList(w http.ResponseWriter, r *http.Request) {
 	homeData, err := h.homeService.GetHomeData(ctx)
 	if err != nil {
 		log.Error("failed to retrieve home data", "error", err)
-		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
+		RenderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
 		return
 	}
 
@@ -274,22 +286,29 @@ func (h *Handlers) DeleteList(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("HX-Push-Url", "/home")
 	w.Header().Add("HX-Trigger", "refreshSidebar")
 
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		log.Error("failed to retrieve user from context", "error", err)
+		RenderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
+		return
+	}
+
 	var buf bytes.Buffer
-	err = templ.RenderFragments(r.Context(), &buf, pages.Home(*homeData), "content")
+	err = templ.RenderFragments(r.Context(), &buf, pages.Home(user.Name, *homeData), "content")
 	if err != nil {
 		log.Error("failed to render home fragment", "error", err)
-		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
+		RenderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
 		return
 	}
 
 	oobCtx := templ.WithChildren(r.Context(), templ.Raw(buf.String()))
 	if err := oobwrapper.OOBWrapper("innerHTML:#main-content").Render(oobCtx, w); err != nil {
 		log.Error("failed to render OOB wrapper", "error", err)
-		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
+		RenderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
 		return
 	}
 
-	h.renderSuccessToast(w, r, "List Deleted Successfully", "The list has been deleted.", 2000)
+	RenderSuccessToast(w, r, "List Deleted Successfully", "The list has been deleted.", 2000)
 }
 
 func (h *Handlers) GetTopLists(w http.ResponseWriter, r *http.Request) {
@@ -323,14 +342,14 @@ func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {
 	listID, err := strconv.ParseInt(listIDstr, 10, 64)
 	if err != nil {
 		log.Error("failed to parse list id to int", "listID", listIDstr, "error", err)
-		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
+		RenderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
 		return
 	}
 
 	movieID, err := strconv.ParseInt(movieIDstr, 10, 64)
 	if err != nil {
 		log.Error("failed to parse movie id to int", "movieID", movieIDstr, "error", err)
-		h.renderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
+		RenderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
 		return
 	}
 
@@ -339,7 +358,7 @@ func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {
 	err = h.listService.DeleteMovieFromList(r.Context(), listID, movieID)
 	if err != nil {
 		log.Error("failed to delete movie from list", "listID", listID, "movieID", movieID, "error", err)
-		h.renderErrorToast(w, r, "Failed to Remove Movie", "An unexpected error occurred while removing the movie from the list", 0)
+		RenderErrorToast(w, r, "Failed to Remove Movie", "An unexpected error occurred while removing the movie from the list", 0)
 		return
 	}
 
@@ -348,7 +367,7 @@ func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {
 	list, err := h.listService.GetListDetails(r.Context(), listID)
 	if err != nil {
 		log.Error("failed to get list details after delete", "listID", listID, "error", err)
-		h.renderErrorToast(w, r, "Failed to Refresh List", "An unexpected error occurred while refreshing the list", 0)
+		RenderErrorToast(w, r, "Failed to Refresh List", "An unexpected error occurred while refreshing the list", 0)
 		return
 	}
 
@@ -356,24 +375,24 @@ func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {
 	err = templ.RenderFragments(r.Context(), &buf, pages.List(list), "content")
 	if err != nil {
 		log.Error("failed to render list fragment", "error", err)
-		h.renderErrorToast(w, r, "Failed to Refresh List", "An unexpected error occurred while refreshing the list", 0)
+		RenderErrorToast(w, r, "Failed to Refresh List", "An unexpected error occurred while refreshing the list", 0)
 		return
 	}
 	ctx := templ.WithChildren(r.Context(), templ.Raw(buf.String()))
 	if err := oobwrapper.OOBWrapper("innerHTML:#main-content").Render(ctx, w); err != nil {
 		log.Error("failed to render OOB wrapper", "error", err)
-		h.renderErrorToast(w, r, "Failed to Refresh List", "An unexpected error occurred while refreshing the list", 0)
+		RenderErrorToast(w, r, "Failed to Refresh List", "An unexpected error occurred while refreshing the list", 0)
 		return
 	}
 
-	h.renderSuccessToast(w, r, "Removed from List", "Movie has been removed from the list", 0)
+	RenderSuccessToast(w, r, "Removed from List", "Movie has been removed from the list", 0)
 }
 
 func (h *Handlers) HomeLists(w http.ResponseWriter, r *http.Request) {
 	lists, err := h.listService.GetAllLists(r.Context())
 	if err != nil {
 		log.Error("failed to get all lists for dialog", "error", err)
-		h.renderErrorToast(w, r, "Failed to Load Lists", "An unexpected error occurred while fetching your lists.", 0)
+		RenderErrorToast(w, r, "Failed to Load Lists", "An unexpected error occurred while fetching your lists.", 0)
 		return
 	}
 

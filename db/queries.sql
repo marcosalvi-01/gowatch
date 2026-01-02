@@ -85,9 +85,9 @@ SET
 
 -- name: InsertWatched :one
 INSERT INTO
-    watched (movie_id, watched_date, watched_in_theater)
+    watched (movie_id, watched_date, watched_in_theater, user_id)
 VALUES
-    (?, ?, ?)
+    (?, ?, ?, ?)
 RETURNING
     *;
 
@@ -105,7 +105,9 @@ SELECT
     sqlc.embed(watched)
 FROM
     watched
-    JOIN movie ON watched.movie_id = movie.id;
+    JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.user_id = ?;
 
 -- name: UpsertPerson :exec
 INSERT INTO
@@ -212,7 +214,8 @@ FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
 WHERE
-    watched.movie_id = ?
+    watched.user_id = ?
+    AND watched.movie_id = ?
 ORDER BY
     watched.watched_date DESC;
 
@@ -221,10 +224,11 @@ INSERT INTO
     list (
         name,
         creation_date,
-        description
+        description,
+        user_id
     )
 VALUES
-    (?, ?, ?)
+    (?, ?, ?, ?)
 RETURNING
     id;
 
@@ -238,7 +242,8 @@ FROM
     JOIN list_movie ON list_movie.list_id = list.id
     JOIN movie ON movie.id = list_movie.movie_id
 WHERE
-    list.id = ?;
+    list.user_id = ?
+    AND list.id = ?;
 
 -- name: AddMovieToList :exec
 INSERT INTO
@@ -249,20 +254,33 @@ INSERT INTO
         position,
         note
     )
-VALUES
-    (?, ?, ?, ?, ?);
+SELECT
+    ?,
+    ?,
+    ?,
+    ?,
+    ?
+FROM
+    list
+WHERE
+    list.id = ?
+    AND list.user_id = ?;
 
 -- name: GetAllLists :many
 SELECT
     *
 FROM
-    list;
+    list
+WHERE
+    user_id = ?;
 
 -- name: GetWatchedCount :one
 SELECT
     COUNT(*) AS count
 FROM
-    watched;
+    watched
+WHERE
+    user_id = ?;
 
 -- name: GetListByID :one
 SELECT
@@ -270,20 +288,31 @@ SELECT
 FROM
     list
 WHERE
-    id = ?;
+    user_id = ?
+    AND id = ?;
 
 -- name: DeleteListByID :exec
 DELETE FROM
     list
 WHERE
-    id = ?;
+    user_id = ?
+    AND id = ?;
 
 -- name: DeleteMovieFromList :exec
 DELETE FROM
     list_movie
 WHERE
     list_id = ?
-    AND movie_id = ?;
+    AND movie_id = ?
+    AND EXISTS (
+        SELECT
+            1
+        FROM
+            list
+        WHERE
+            list.id = list_id
+            AND list.user_id = ?
+    );
 
 -- name: GetWatchedPerMonthLastYear :many
 SELECT
@@ -293,6 +322,7 @@ FROM
 WHERE
     watched_date >= date('now', 'start of month', '-12 months')
     AND watched_date < date('now', 'start of month')
+    AND user_id = ?
 ORDER BY
     watched_date;
 
@@ -301,6 +331,8 @@ SELECT
     watched_date
 FROM
     watched
+WHERE
+    user_id = ?
 ORDER BY
     watched_date;
 
@@ -313,6 +345,8 @@ FROM
     JOIN movie ON watched.movie_id = movie.id
     JOIN genre_movie ON movie.id = genre_movie.movie_id
     JOIN genre ON genre_movie.genre_id = genre.id
+WHERE
+    watched.user_id = ?
 GROUP BY
     genre.id,
     genre.name
@@ -325,6 +359,8 @@ SELECT
     COUNT(*) AS count
 FROM
     watched
+WHERE
+    user_id = ?
 GROUP BY
     watched_in_theater;
 
@@ -337,6 +373,8 @@ SELECT
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.user_id = ?
 GROUP BY
     movie.id,
     movie.title,
@@ -350,7 +388,9 @@ LIMIT
 SELECT
     watched_date
 FROM
-    watched;
+    watched
+WHERE
+    user_id = ?;
 
 -- name: GetMostWatchedMaleActors :many
 SELECT
@@ -365,6 +405,7 @@ FROM
     JOIN person ON "cast".person_id = person.id
 WHERE
     person.gender = 2
+    AND watched.user_id = ?
 GROUP BY
     person.id,
     person.name,
@@ -388,6 +429,7 @@ FROM
     JOIN person ON "cast".person_id = person.id
 WHERE
     person.gender = 1
+    AND watched.user_id = ?
 GROUP BY
     person.id,
     person.name,
@@ -405,13 +447,16 @@ SELECT
 FROM
     watched
 WHERE
-    watched_date IS NOT NULL;
+    watched_date IS NOT NULL
+    AND user_id = ?;
 
 -- name: GetWatchedDates :many
 SELECT
     watched_date
 FROM
     watched
+WHERE
+    user_id = ?
 ORDER BY
     watched_date;
 
@@ -422,6 +467,8 @@ SELECT
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.user_id = ?
 ORDER BY
     watched.watched_date DESC
 LIMIT
@@ -438,6 +485,7 @@ WHERE
     watched.watched_date >= date('now', 'start of month', '-12 months')
     AND watched.watched_date < date('now', 'start of month')
     AND movie.runtime > 0
+    AND watched.user_id = ?
 ORDER BY
     watched.watched_date;
 
@@ -448,7 +496,8 @@ FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
 WHERE
-    movie.runtime > 0;
+    movie.runtime > 0
+    AND watched.user_id = ?;
 
 -- name: GetMonthlyGenreBreakdown :many
 SELECT
@@ -462,9 +511,84 @@ FROM
     JOIN genre ON genre_movie.genre_id = genre.id
 WHERE
     watched.watched_date >= date('now', 'start of month', '-12 months')
+    AND watched.user_id = ?
 GROUP BY
     watched.watched_date,
     genre_name
 ORDER BY
     watched.watched_date,
     movie_count DESC;
+
+-- name: CreateSession :exec
+INSERT INTO
+    session (id, user_id, expires_at)
+VALUES
+    (?, ?, ?);
+
+-- name: GetSession :one
+SELECT
+    user_id,
+    expires_at
+FROM
+    session
+WHERE
+    id = ?
+    AND expires_at > datetime('now');
+
+-- name: DeleteSession :exec
+DELETE FROM
+    session
+WHERE
+    id = ?;
+
+-- name: DeleteExpiredSessions :exec
+DELETE FROM
+    session
+WHERE
+    expires_at <= datetime('now');
+
+-- name: CreateUser :one
+INSERT INTO
+    user (email, name, password_hash, created_at)
+VALUES
+    (?, ?, ?, datetime('now'))
+RETURNING
+    id;
+
+-- name: GetUserByEmail :one
+SELECT
+    *
+FROM
+    user
+WHERE
+    email = ?;
+
+-- name: GetUserByID :one
+SELECT
+    *
+FROM
+    user
+WHERE
+    id = ?;
+
+-- name: CountUsers :one
+SELECT
+    COUNT(*)
+FROM
+    user;
+
+-- name: AssignNilUserWatched :exec
+UPDATE
+    watched
+SET
+    user_id = ?
+WHERE
+    user_id IS NULL;
+
+-- name: AssignNilUserLists :exec
+UPDATE
+    list
+SET
+    user_id = ?
+WHERE
+    user_id IS NULL;

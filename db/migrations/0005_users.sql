@@ -1,0 +1,39 @@
+-- +goose Up
+CREATE TABLE user (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    name TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE session (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE
+    watched
+ADD
+    COLUMN user_id INTEGER REFERENCES user(id) ON DELETE CASCADE;
+
+ALTER TABLE
+    list
+ADD
+    COLUMN user_id INTEGER REFERENCES user(id) ON DELETE CASCADE;
+
+-- +goose Down
+ALTER TABLE
+    list_movie DROP COLUMN user_id;
+
+ALTER TABLE
+    list DROP COLUMN user_id;
+
+ALTER TABLE
+    watched DROP COLUMN user_id;
+
+DROP TABLE IF EXISTS session;
+
+DROP TABLE IF EXISTS user;

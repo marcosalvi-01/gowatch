@@ -6,8 +6,22 @@ import (
 	"time"
 
 	"gowatch/db"
+	"gowatch/internal/common"
 	"gowatch/internal/models"
 )
+
+func setupTestUser(t *testing.T, testDB db.DB) context.Context {
+	ctx := context.Background()
+	userID, err := testDB.CreateUser(ctx, "test@example.com", "Test User", "hash")
+	if err != nil {
+		t.Fatal(err)
+	}
+	user, err := testDB.GetUserByID(ctx, userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return context.WithValue(ctx, common.UserKey, *user)
+}
 
 func TestListService_CRUD(t *testing.T) {
 	testDB, err := db.NewTestDB()
@@ -19,7 +33,7 @@ func TestListService_CRUD(t *testing.T) {
 	movieService := NewMovieService(testDB, nil, time.Hour)
 	listService := NewListService(testDB, movieService)
 
-	ctx := context.Background()
+	ctx := setupTestUser(t, testDB)
 
 	// Insert a movie
 	movie := &models.MovieDetails{
@@ -90,7 +104,7 @@ func TestListService_CreateList_EmptyName(t *testing.T) {
 	movieService := NewMovieService(testDB, nil, time.Hour)
 	listService := NewListService(testDB, movieService)
 
-	ctx := context.Background()
+	ctx := setupTestUser(t, testDB)
 
 	// Try to create list with empty name
 	desc := "desc"
@@ -110,7 +124,7 @@ func TestListService_AddMovieToList_InvalidIDs(t *testing.T) {
 	movieService := NewMovieService(testDB, nil, time.Hour)
 	listService := NewListService(testDB, movieService)
 
-	ctx := context.Background()
+	ctx := setupTestUser(t, testDB)
 
 	// Try to add movie to non-existent list
 	err = listService.AddMovieToList(ctx, 999, 1, nil)

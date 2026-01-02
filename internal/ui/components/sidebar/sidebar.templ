@@ -4,10 +4,12 @@ package sidebar
 import (
 	"fmt"
 	"gowatch/internal/models"
+	"gowatch/internal/ui/templui/avatar"
 	"gowatch/internal/ui/templui/badge"
 	"gowatch/internal/ui/templui/button"
 	"gowatch/internal/ui/templui/collapsible"
 	"gowatch/internal/ui/templui/dialog"
+	"gowatch/internal/ui/templui/dropdown"
 	"gowatch/internal/ui/templui/form"
 	"gowatch/internal/ui/templui/icon"
 	"gowatch/internal/ui/templui/input"
@@ -21,6 +23,7 @@ type Props struct {
 	Collapsed    bool
 	WatchedCount int64
 	Lists        []models.ListEntry
+	User         *models.User
 }
 
 // Sidebar is the sidebar for the application. It manages state of the page using a script.
@@ -41,6 +44,49 @@ templ Sidebar(props Props) {
 					@statsMenuItem(props.CurrentPage)
 					@sidebar.Separator()
 					@listsSection(props.Lists, props.CurrentPage)
+				}
+			}
+		}
+		@sidebar.Footer() {
+			@sidebar.Menu() {
+				@sidebar.MenuItem() {
+					@dropdown.Dropdown() {
+						@dropdown.Trigger() {
+							@sidebar.MenuButton(sidebar.MenuButtonProps{
+								Size: sidebar.MenuButtonSizeLg,
+							}) {
+								@avatar.Avatar(avatar.Props{Class: "size-8 rounded-lg"}) {
+									@avatar.Image(avatar.ImageProps{
+										Src: "/static/favicon.svg",
+									})
+								}
+								<div class="grid flex-1 text-left text-sm leading-tight">
+									<span class="truncate text-xs">{ props.User.Name }</span>
+								</div>
+								@icon.ChevronsUpDown(icon.Props{Class: "ml-auto size-4"})
+							}
+						}
+						@dropdown.Content(dropdown.ContentProps{
+							Class:     "w-56",
+							Placement: dropdown.PlacementTopStart,
+						}) {
+							@dropdown.Label() {
+								{ props.User.Email }
+							}
+							@dropdown.Separator()
+							@dropdown.Item(
+								dropdown.ItemProps{
+									Attributes: templ.Attributes{
+										"hx-post": "/logout",
+									},
+								}) {
+								<span class="flex items-center">
+									@icon.LogOut(icon.Props{Size: 16, Class: "mr-2"})
+									Log out
+								</span>
+							}
+						}
+					}
 				}
 			}
 		}

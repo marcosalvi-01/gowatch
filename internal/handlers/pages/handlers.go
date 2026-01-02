@@ -4,7 +4,11 @@ package pages
 import (
 	"net/http"
 	"strconv"
+	"unicode"
 
+	"gowatch/internal/common"
+	"gowatch/internal/handlers/htmx"
+	"gowatch/internal/middleware"
 	"gowatch/internal/services"
 	"gowatch/internal/ui/pages"
 	"gowatch/internal/utils"
@@ -23,6 +27,7 @@ type Handlers struct {
 	watchedService *services.WatchedService
 	listService    *services.ListService
 	homeService    *services.HomeService
+	authService    *services.AuthService
 }
 
 func NewHandlers(
@@ -30,12 +35,14 @@ func NewHandlers(
 	watchedService *services.WatchedService,
 	listService *services.ListService,
 	homeService *services.HomeService,
+	authService *services.AuthService,
 ) *Handlers {
 	return &Handlers{
 		tmdbService:    tmdbService,
 		watchedService: watchedService,
 		listService:    listService,
 		homeService:    homeService,
+		authService:    authService,
 	}
 }
 
@@ -45,12 +52,23 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/home", http.StatusFound)
 	})
-	r.Get("/watched", h.WatchedPage)
-	r.Get("/home", h.HomePage)
-	r.Get("/search", h.SearchPage)
-	r.Get("/movie/{id}", h.MoviePage)
-	r.Get("/list/{id}", h.ListPage)
-	r.Get("/stats", h.StatsPage)
+
+	r.Get("/login", h.LoginPage)
+	r.Get("/register", h.RegisterPage)
+	r.Post("/register", h.RegisterPost)
+	r.Post("/login", h.LoginPost)
+
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware(*h.authService))
+
+		r.Get("/watched", h.WatchedPage)
+		r.Get("/home", h.HomePage)
+		r.Get("/search", h.SearchPage)
+		r.Get("/movie/{id}", h.MoviePage)
+		r.Get("/list/{id}", h.ListPage)
+		r.Get("/stats", h.StatsPage)
+		r.Post("/logout", h.LogoutPost)
+	})
 }
 
 func (h *Handlers) HomePage(w http.ResponseWriter, r *http.Request) {
@@ -64,10 +82,17 @@ func (h *Handlers) HomePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		log.Error("failed to retrieve user from context", "error", err)
+		render500Error(w, r)
+		return
+	}
+
 	if r.Header.Get("HX-Request") == htmxRequestHeaderValue {
-		templ.Handler(pages.Home(*homeData), templ.WithFragments("content")).ServeHTTP(w, r)
+		templ.Handler(pages.Home(user.Name, *homeData), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
-		templ.Handler(pages.Home(*homeData)).ServeHTTP(w, r)
+		templ.Handler(pages.Home(user.Name, *homeData)).ServeHTTP(w, r)
 	}
 
 	log.Info("home page served successfully")
@@ -212,4 +237,202 @@ func (h *Handlers) StatsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("stats page served successfully")
+}
+
+func (h *Handlers) LoginPage(w http.ResponseWriter, r *http.Request) {
+	log.Debug("serving login page")
+
+	templ.Handler(pages.Login()).ServeHTTP(w, r)
+}
+
+func (h *Handlers) RegisterPage(w http.ResponseWriter, r *http.Request) {
+	log.Debug("serving registration page")
+
+	templ.Handler(pages.Register()).ServeHTTP(w, r)
+}
+
+func (h *Handlers) LoginPost(w http.ResponseWriter, r *http.Request) {
+	log.Debug("processing login request")
+	email := r.FormValue("email")
+	password := r.FormValue("password")
+
+	if email == "" || password == "" {
+		htmx.RenderErrorToast(w, r, "Missing fields", "Please fill in all fields", 0)
+		return
+	}
+
+	user, err := h.authService.AuthenticateUser(r.Context(), email, password)
+	if err != nil {
+		log.Error("Authentication failed", "error", err)
+		htmx.RenderErrorToast(w, r, "Login failed", "Invalid email or password", 0)
+		return
+	}
+
+	log.Info("user authenticated successfully", "userID", user.ID)
+
+	sessionID, err := h.authService.CreateSession(r.Context(), user.ID)
+	if err != nil {
+		log.Error("Failed to create session", "error", err)
+		htmx.RenderErrorToast(w, r, "Login failed", "Please try logging in manually", 0)
+		return
+	}
+
+	log.Info("login session created", "userID", user.ID)
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_id",
+		Value:    sessionID,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false, // TODO Set to true in production with HTTPS
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	w.Header().Add("HX-Redirect", "/home")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handlers) RegisterPost(w http.ResponseWriter, r *http.Request) {
+	log.Debug("processing registration request")
+	email := r.FormValue("email")
+	name := r.FormValue("name")
+	password := r.FormValue("password")
+	confirmPassword := r.FormValue("confirm_password")
+
+	if email == "" || name == "" || password == "" || confirmPassword == "" {
+		htmx.RenderErrorToast(w, r, "Missing fields", "Please fill in all fields", 0)
+		return
+	}
+
+	if password != confirmPassword {
+		htmx.RenderErrorToast(w, r, "Passwords don't match", "Please make sure both passwords are the same", 0)
+		return
+	}
+
+	if ok, why := ValidatePassword(password); !ok {
+		htmx.RenderErrorToast(w, r, "Password is too weak", why, 0)
+		return
+	}
+
+	userID, err := h.authService.CreateUser(r.Context(), email, name, password)
+	if err != nil {
+		log.Error("Failed to create user", "error", err)
+		htmx.RenderErrorToast(w, r, "Registration failed", "This email might already be registered", 0)
+		return
+	}
+
+	log.Info("user registered successfully", "userID", userID)
+
+	// Check if this is the first user and assign any existing nil user data to them
+	count, err := h.authService.CountUsers(r.Context())
+	if err != nil {
+		log.Error("failed to count users", "error", err, "userID", userID)
+		// Continue with registration even if we can't check user count
+		// The user is already created, so we shouldn't fail here
+	} else if count <= 1 {
+		// This is the first user, attempt to migrate any existing nil user data
+		err := h.authService.AssignNilUserLists(r.Context(), &userID)
+		if err != nil {
+			log.Error("failed to assign nil user lists to first user", "error", err, "userID", userID)
+			htmx.RenderErrorToast(w, r, "Data migration warning", "Your account was created but some data may not have transferred correctly", 0)
+			return
+		}
+		log.Info("successfully assigned nil user lists to first user", "userID", userID)
+
+		err = h.authService.AssignNilUserWatched(r.Context(), &userID)
+		if err != nil {
+			log.Error("failed to assign nil user watched items to first user", "error", err, "userID", userID)
+			htmx.RenderErrorToast(w, r, "Data migration warning", "Your account was created but watched items may not have transferred correctly", 0)
+			return
+		}
+		log.Info("successfully assigned nil user watched items to first user", "userID", userID)
+	}
+
+	sessionID, err := h.authService.CreateSession(r.Context(), userID)
+	if err != nil {
+		log.Error("Failed to create session", "error", err)
+		htmx.RenderErrorToast(w, r, "Login failed", "Please try logging in manually", 0)
+		return
+	}
+
+	log.Info("registration session created", "userID", userID)
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_id",
+		Value:    sessionID,
+		Path:     "/",
+		MaxAge:   int(h.authService.SessionExpiry),
+		HttpOnly: true,
+		Secure:   h.authService.HTTPS,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	w.Header().Add("HX-Redirect", "/home")
+	w.WriteHeader(http.StatusOK)
+}
+
+func ValidatePassword(password string) (bool, string) {
+	var (
+		hasUpper  bool
+		hasLower  bool
+		hasNumber bool
+	)
+
+	if len(password) < 8 {
+		return false, "Password must be at least 8 characters long"
+	}
+
+	for _, char := range password {
+		switch {
+		case unicode.IsUpper(char):
+			hasUpper = true
+		case unicode.IsLower(char):
+			hasLower = true
+		case unicode.IsNumber(char):
+			hasNumber = true
+		}
+	}
+
+	if !hasUpper {
+		return false, "Password must contain at least one uppercase letter"
+	}
+	if !hasLower {
+		return false, "Password must contain at least one lowercase letter"
+	}
+	if !hasNumber {
+		return false, "Password must contain at least one number"
+	}
+
+	return true, "Password is valid"
+}
+
+func (h *Handlers) LogoutPost(w http.ResponseWriter, r *http.Request) {
+	log.Debug("processing logout request")
+
+	cookie, err := r.Cookie("session_id")
+	if err != nil {
+		log.Warn("no session cookie found during logout")
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+
+	err = h.authService.Logout(r.Context(), cookie.Value)
+	if err != nil {
+		log.Error("failed to logout", "error", err)
+		// Continue with logout even if deletion fails
+	}
+
+	// Clear the session cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_id",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   h.authService.HTTPS,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	w.Header().Add("HX-Redirect", "/login")
+	w.WriteHeader(http.StatusOK)
 }

@@ -6,7 +6,7 @@ import (
 	"gowatch/internal/ui/templui/toast"
 )
 
-func (h *Handlers) renderErrorToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
+func RenderErrorToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
 	if duration == 0 {
 		duration = 4000
 	}
@@ -26,7 +26,7 @@ func (h *Handlers) renderErrorToast(w http.ResponseWriter, r *http.Request, titl
 	}
 }
 
-func (h *Handlers) renderSuccessToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
+func RenderSuccessToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
 	if duration == 0 {
 		duration = 2000
 	}
@@ -46,7 +46,7 @@ func (h *Handlers) renderSuccessToast(w http.ResponseWriter, r *http.Request, ti
 	}
 }
 
-func (h *Handlers) renderWarningToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
+func RenderWarningToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
 	if duration == 0 {
 		duration = 3000
 	}

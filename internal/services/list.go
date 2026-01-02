@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"gowatch/db"
+	"gowatch/internal/common"
 	"gowatch/internal/models"
 	"gowatch/logging"
 )
@@ -31,7 +32,13 @@ func NewListService(db db.DB, tmdb *MovieService) *ListService {
 func (s *ListService) GetAllLists(ctx context.Context) ([]models.ListEntry, error) {
 	s.log.Debug("retrieving all lists")
 
-	results, err := s.db.GetAllLists(ctx)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get userID", "error", err)
+		return nil, err
+	}
+
+	results, err := s.db.GetAllLists(ctx, user.ID)
 	if err != nil {
 		s.log.Error("failed to fetch lists from database", "error", err)
 		return nil, fmt.Errorf("failed to get all lists: %w", err)
@@ -57,7 +64,14 @@ func (s *ListService) CreateList(ctx context.Context, name string, description *
 	}
 	s.log.Debug("creating new list", "name", name)
 
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get userID", "error", err)
+		return nil, err
+	}
+
 	id, err := s.db.InsertList(ctx, db.InsertList{
+		UserID:      user.ID,
 		Name:        name,
 		Description: description,
 	})
@@ -66,7 +80,7 @@ func (s *ListService) CreateList(ctx context.Context, name string, description *
 		return nil, fmt.Errorf("failed to create list: %w", err)
 	}
 
-	list, err := s.db.GetList(ctx, id)
+	list, err := s.db.GetList(ctx, user.ID, id)
 	if err != nil {
 		s.log.Error("failed to retrieve created list", "id", id, "error", err)
 		return nil, fmt.Errorf("failed to retrieve created list: %w", err)
@@ -76,7 +90,7 @@ func (s *ListService) CreateList(ctx context.Context, name string, description *
 	return list, nil
 }
 
-func (s *ListService) AddMovieToList(ctx context.Context, listID int64, movieID int64, note *string) error {
+func (s *ListService) AddMovieToList(ctx context.Context, listID, movieID int64, note *string) error {
 	if listID <= 0 {
 		return fmt.Errorf("invalid list ID")
 	}
@@ -85,7 +99,13 @@ func (s *ListService) AddMovieToList(ctx context.Context, listID int64, movieID 
 	}
 	s.log.Debug("adding movie to list", "listID", listID, "movieID", movieID)
 
-	err := s.db.AddMovieToList(ctx, db.InsertMovieList{
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get userID", "error", err)
+		return err
+	}
+
+	err = s.db.AddMovieToList(ctx, user.ID, db.InsertMovieList{
 		MovieID:   movieID,
 		ListID:    listID,
 		DateAdded: time.Now(),
@@ -104,7 +124,13 @@ func (s *ListService) AddMovieToList(ctx context.Context, listID int64, movieID 
 func (s *ListService) GetListDetails(ctx context.Context, listID int64) (*models.List, error) {
 	s.log.Debug("getting list details", "listID", listID)
 
-	list, err := s.db.GetList(ctx, listID)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get userID", "error", err)
+		return nil, err
+	}
+
+	list, err := s.db.GetList(ctx, user.ID, listID)
 	if err != nil {
 		s.log.Error("failed to get list details", "listID", listID, "error", err)
 		return nil, fmt.Errorf("failed to get list with id '%d' from db: %w", listID, err)
@@ -117,7 +143,13 @@ func (s *ListService) GetListDetails(ctx context.Context, listID int64) (*models
 func (s *ListService) DeleteList(ctx context.Context, id int64) error {
 	s.log.Debug("deleting list", "listID", id)
 
-	err := s.db.DeleteListByID(ctx, id)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get userID", "error", err)
+		return err
+	}
+
+	err = s.db.DeleteListByID(ctx, user.ID, id)
 	if err != nil {
 		s.log.Error("failed to delete list", "listID", id, "error", err)
 		return fmt.Errorf("failed to delete list from db: %w", err)
@@ -130,7 +162,13 @@ func (s *ListService) DeleteList(ctx context.Context, id int64) error {
 func (s *ListService) DeleteMovieFromList(ctx context.Context, listID, movieID int64) error {
 	s.log.Debug("removing movie from list", "listID", listID, "movieID", movieID)
 
-	err := s.db.DeleteMovieFromList(ctx, listID, movieID)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get userID", "error", err)
+		return err
+	}
+
+	err = s.db.DeleteMovieFromList(ctx, user.ID, listID, movieID)
 	if err != nil {
 		s.log.Error("failed to remove movie from list", "listID", listID, "movieID", movieID, "error", err)
 		return fmt.Errorf("failed to delete movie for list from db: %w", err)

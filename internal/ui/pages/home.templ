@@ -11,11 +11,11 @@ import (
 	"gowatch/internal/ui/templui/skeleton"
 )
 
-templ Home(data models.HomeData) {
+templ Home(userName string, data models.HomeData) {
 	@Layout() {
 		@templ.Fragment("content") {
 			<div class="space-y-8 pb-5">
-				@homeHeader()
+				@homeHeader(userName)
 				@homeStats(data.Stats)
 				@homeRecentActivity(data.RecentMovies)
 				<div hx-get="/htmx/lists/home-lists" hx-trigger="load, refreshLists from:body" hx-indicator="#lists-loading"></div>
@@ -147,10 +147,10 @@ templ homeStatsMetric(label, value string, iconFunc func(...icon.Props) templ.Co
 	</div>
 }
 
-templ homeHeader() {
+templ homeHeader(name string) {
 	<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 		<div>
-			<h1 class="text-3xl font-bold">Welcome back</h1>
+			<h1 class="text-3xl font-bold">Welcome back { name }</h1>
 			<p class="text-muted-foreground">Here's what's happening with your movies</p>
 		</div>
 	</div>
