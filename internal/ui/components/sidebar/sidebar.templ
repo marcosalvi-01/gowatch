@@ -77,6 +77,9 @@ templ Sidebar(props Props) {
 							@dropdown.Separator()
 							@dialog.Trigger(dialog.TriggerProps{
 								For: "import-movies-dialog",
+								Attributes: templ.Attributes{
+									"data-sidebar-import-btn": "true",
+								},
 							}) {
 								@dropdown.Item() {
 									<span class="flex items-center">

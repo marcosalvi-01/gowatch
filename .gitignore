@@ -7,3 +7,4 @@ db.db
 .sqlc-generated
 test.http
 gowatch
+test.json
