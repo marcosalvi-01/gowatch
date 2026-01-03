@@ -3,7 +3,10 @@ package htmx
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -11,6 +14,7 @@ import (
 	"time"
 
 	"gowatch/internal/common"
+	"gowatch/internal/models"
 	"gowatch/internal/services"
 	"gowatch/internal/ui/components/addtolistdialog"
 	"gowatch/internal/ui/components/oobwrapper"
@@ -43,6 +47,7 @@ func NewHandlers(watchedService *services.WatchedService, listService *services.
 
 func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Post("/movies/watched", h.AddWatchedMovie)
+	r.Post("/movies/import", h.ImportWatched)
 	r.Post("/lists", h.CreateList)
 	r.Delete("/lists", h.DeleteList)
 
@@ -401,6 +406,59 @@ func (h *Handlers) HomeLists(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to render sidebar", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *Handlers) ImportWatched(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseMultipartForm(32 << 20) // 32 MB
+	if err != nil {
+		log.Error("failed to parse multipart form", "error", err)
+		RenderErrorToast(w, r, "Invalid Request", "Failed to process the upload.", 4000)
+		return
+	}
+
+	file, _, err := r.FormFile("import-file")
+	if err != nil {
+		log.Error("failed to get file", "error", err)
+		RenderErrorToast(w, r, "No File Selected", "Please select a file to import.", 4000)
+		return
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Error("failed to close uploaded file", "error", err)
+		}
+	}()
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		log.Error("failed to read file", "error", err)
+		RenderErrorToast(w, r, "File Read Error", "Failed to read the uploaded file.", 4000)
+		return
+	}
+
+	var importLog models.ImportWatchedMoviesLog
+	err = json.Unmarshal(data, &importLog)
+	if err != nil {
+		log.Error("failed to parse JSON", "error", err)
+		RenderErrorToast(w, r, "Invalid File Format", "The file must be valid JSON matching the expected format.", 4000)
+		return
+	}
+
+	if len(importLog) == 0 {
+		RenderErrorToast(w, r, "Empty File", "The file contains no movies to import.", 4000)
+		return
+	}
+
+	ctx := context.WithoutCancel(r.Context())
+	go func() {
+		log.Info("HTMX import job started")
+		if err := h.watchedService.ImportWatched(ctx, importLog); err != nil {
+			log.Error("HTMX import job failed", "error", err)
+			return
+		}
+		log.Info("HTMX import job finished successfully")
+	}()
+
+	RenderSuccessToast(w, r, "Import Started", "Your movies are being imported. This may take a few moments.", 0)
 }
 
 func getFirstPathElement(urlStr string) string {

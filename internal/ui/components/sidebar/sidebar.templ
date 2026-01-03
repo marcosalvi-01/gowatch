@@ -31,6 +31,7 @@ type Props struct {
 templ Sidebar(props Props) {
 	// Dialog must be at top level for proper portal rendering
 	@CreateListDialog()
+	@ImportMoviesDialog()
 	@sidebar.Sidebar(sidebar.Props{
 		ID:        "sidebar",
 		Collapsed: props.Collapsed,
@@ -74,12 +75,22 @@ templ Sidebar(props Props) {
 								{ props.User.Email }
 							}
 							@dropdown.Separator()
-							@dropdown.Item(
-								dropdown.ItemProps{
-									Attributes: templ.Attributes{
-										"hx-post": "/logout",
-									},
-								}) {
+							@dialog.Trigger(dialog.TriggerProps{
+								For: "import-movies-dialog",
+							}) {
+								@dropdown.Item() {
+									<span class="flex items-center">
+										@icon.Import(icon.Props{Size: 16, Class: "mr-2"})
+										Import movies
+									</span>
+								}
+							}
+							@dropdown.Separator()
+							@dropdown.Item(dropdown.ItemProps{
+								Attributes: templ.Attributes{
+									"hx-post": "/logout",
+								},
+							}) {
 								<span class="flex items-center">
 									@icon.LogOut(icon.Props{Size: 16, Class: "mr-2"})
 									Log out
@@ -306,6 +317,71 @@ templ createListDialogFooter() {
 				Type: button.TypeSubmit,
 			}) {
 				Create List
+			}
+		}
+	}
+}
+
+templ ImportMoviesDialog() {
+	@dialog.Dialog(dialog.Props{
+		ID: "import-movies-dialog",
+	}) {
+		<form
+			hx-post="/htmx/movies/import"
+			hx-target="#toast"
+			hx-encoding="multipart/form-data"
+		>
+			@dialog.Content(dialog.ContentProps{
+				Class: "max-w-md",
+			}) {
+				@dialog.Header() {
+					@dialog.Title() {
+						Import Watched Movies
+					}
+					@dialog.Description() {
+						Upload a JSON file of your watched movies to import them.
+					}
+				}
+				@importMoviesFormFields()
+				@importMoviesDialogFooter()
+			}
+		</form>
+	}
+}
+
+templ importMoviesFormFields() {
+	<div class="space-y-4">
+		@form.Item() {
+			@form.Label(form.LabelProps{
+				For: "import-file-input",
+			}) {
+				Select JSON File
+			}
+			@input.Input(input.Props{
+				ID:          "import-file-input",
+				Type:        input.TypeFile,
+				Name:        "import-file",
+				FileAccept:  ".json",
+				Placeholder: "test",
+			})
+		}
+	</div>
+}
+
+templ importMoviesDialogFooter() {
+	@dialog.Footer() {
+		@dialog.Close() {
+			@button.Button(button.Props{
+				Variant: button.VariantOutline,
+			}) {
+				Cancel
+			}
+		}
+		@dialog.Close() {
+			@button.Button(button.Props{
+				Type: button.TypeSubmit,
+			}) {
+				Import Movies
 			}
 		}
 	}

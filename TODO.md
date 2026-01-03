@@ -17,6 +17,7 @@
 - improve the watched page when empty
 - import from file button or something to allow importing now that it needs auth
 - package it as a cli so that it can be installed with `go install`
+- add admin stuff
 
 # optimizations:
 
