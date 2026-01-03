@@ -1455,7 +1455,7 @@ func ListLoading() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		for i := 0; i < 4; i++ {
+		for range 4 {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 68, "<div class=\"text-center sm:text-left\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -1493,7 +1493,7 @@ func ListLoading() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		for i := 0; i < 12; i++ {
+		for range 12 {
 			templ_7745c5c3_Err = skeleton.Skeleton(skeleton.Props{Class: "h-56 w-40 rounded"}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err

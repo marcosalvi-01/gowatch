@@ -690,12 +690,7 @@ func isKeyCrew(job string) bool {
 		"Editor",
 		"Production Designer",
 	}
-	for _, keyJob := range keyJobs {
-		if job == keyJob {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(keyJobs, job)
 }
 
 func sortCrewByImportance(crew []models.Crew) []models.Crew {
@@ -798,7 +793,7 @@ templ MovieLoading() {
 				<div>
 					@skeleton.Skeleton(skeleton.Props{Class: "h-5 w-16 mb-3 rounded-lg"})
 					<div class="flex gap-2">
-						for i := 0; i < 3; i++ {
+						for range 3 {
 							@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-16 rounded-full"})
 						}
 					</div>
@@ -809,7 +804,7 @@ templ MovieLoading() {
 					<div class="space-y-6">
 						// Activity stats
 						<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-							for i := 0; i < 4; i++ {
+							for range 4 {
 								<div class="text-center space-y-2">
 									@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-12 mx-auto rounded-lg"})
 									@skeleton.Skeleton(skeleton.Props{Class: "h-3 w-16 mx-auto rounded-lg"})
@@ -821,7 +816,7 @@ templ MovieLoading() {
 						<div>
 							@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-24 mb-3 rounded-lg"})
 							<div class="space-y-2">
-								for i := 0; i < 3; i++ {
+								for range 3 {
 									@skeleton.Skeleton(skeleton.Props{Class: "h-12 w-full rounded-lg"})
 								}
 							</div>
@@ -832,7 +827,7 @@ templ MovieLoading() {
 				<div>
 					@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-16 mb-4 rounded-lg"})
 					<div class="space-y-2">
-						for i := 0; i < 6; i++ {
+						for range 6 {
 							<div class="flex">
 								@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-1/4 rounded-lg"})
 								@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-1/2 ml-4 rounded-lg"})
@@ -844,7 +839,7 @@ templ MovieLoading() {
 				<div>
 					@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-12 mb-4 rounded-lg"})
 					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-						for i := 0; i < 9; i++ {
+						for range 9 {
 							@skeleton.Skeleton(skeleton.Props{Class: "h-16 w-full rounded-lg"})
 						}
 					</div>
@@ -853,7 +848,7 @@ templ MovieLoading() {
 				<div>
 					@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-20 mb-4 rounded-lg"})
 					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-						for i := 0; i < 6; i++ {
+						for range 6 {
 							<div class="space-y-1">
 								@skeleton.Skeleton(skeleton.Props{Class: "h-3 w-20 rounded-lg"})
 								@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-24 rounded-lg"})

@@ -286,7 +286,7 @@ func SearchLoading() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		for i := 0; i < 20; i++ {
+		for range 20 {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<div class=\"flex flex-col space-y-4 p-2\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err

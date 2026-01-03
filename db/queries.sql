@@ -321,7 +321,6 @@ FROM
     watched
 WHERE
     watched_date >= date('now', 'start of month', '-12 months')
-    AND watched_date < date('now', 'start of month')
     AND user_id = ?
 ORDER BY
     watched_date;
@@ -483,7 +482,6 @@ FROM
     JOIN movie ON watched.movie_id = movie.id
 WHERE
     watched.watched_date >= date('now', 'start of month', '-12 months')
-    AND watched.watched_date < date('now', 'start of month')
     AND movie.runtime > 0
     AND watched.user_id = ?
 ORDER BY

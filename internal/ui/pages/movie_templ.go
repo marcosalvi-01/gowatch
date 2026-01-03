@@ -2885,12 +2885,7 @@ func isKeyCrew(job string) bool {
 		"Editor",
 		"Production Designer",
 	}
-	for _, keyJob := range keyJobs {
-		if job == keyJob {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(keyJobs, job)
 }
 
 func sortCrewByImportance(crew []models.Crew) []models.Crew {
@@ -3033,7 +3028,7 @@ func MovieLoading() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		for i := 0; i < 3; i++ {
+		for range 3 {
 			templ_7745c5c3_Err = skeleton.Skeleton(skeleton.Props{Class: "h-6 w-16 rounded-full"}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -3051,7 +3046,7 @@ func MovieLoading() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		for i := 0; i < 4; i++ {
+		for range 4 {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 138, "<div class=\"text-center space-y-2\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -3089,7 +3084,7 @@ func MovieLoading() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		for i := 0; i < 3; i++ {
+		for range 3 {
 			templ_7745c5c3_Err = skeleton.Skeleton(skeleton.Props{Class: "h-12 w-full rounded-lg"}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -3107,7 +3102,7 @@ func MovieLoading() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		for i := 0; i < 6; i++ {
+		for range 6 {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 145, "<div class=\"flex\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -3137,7 +3132,7 @@ func MovieLoading() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		for i := 0; i < 9; i++ {
+		for range 9 {
 			templ_7745c5c3_Err = skeleton.Skeleton(skeleton.Props{Class: "h-16 w-full rounded-lg"}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -3155,7 +3150,7 @@ func MovieLoading() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		for i := 0; i < 6; i++ {
+		for range 6 {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 151, "<div class=\"space-y-1\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err

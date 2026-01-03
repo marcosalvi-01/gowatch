@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -16,6 +15,7 @@ func TestWatchedService_AddWatched(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
 
 	movieService := NewMovieService(testDB, nil, time.Hour) // No TMDB for test
 	watchedService := NewWatchedService(testDB, movieService)
@@ -27,7 +27,6 @@ func TestWatchedService_AddWatched(t *testing.T) {
 			Title: "Test Movie",
 		},
 	}
-	ctx := context.Background()
 	if err := testDB.UpsertMovie(ctx, movie); err != nil {
 		t.Fatal(err)
 	}
@@ -54,11 +53,10 @@ func TestWatchedService_ImportExportWatched(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
 
 	movieService := NewMovieService(testDB, nil, time.Hour)
 	watchedService := NewWatchedService(testDB, movieService)
-
-	ctx := context.Background()
 
 	// Insert movies
 	for i := 1; i <= 2; i++ {
@@ -122,11 +120,10 @@ func TestWatchedService_GetWatchedStats(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
 
 	movieService := NewMovieService(testDB, nil, time.Hour)
 	watchedService := NewWatchedService(testDB, movieService)
-
-	ctx := context.Background()
 
 	// Insert movie with genres
 	movie := &models.MovieDetails{
@@ -168,11 +165,10 @@ func TestWatchedService_AddWatched_InvalidMovie(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
 
 	movieService := NewMovieService(testDB, nil, time.Hour)
 	watchedService := NewWatchedService(testDB, movieService)
-
-	ctx := context.Background()
 
 	// Try to add watched for non-existent movie
 	date := time.Date(2023, 10, 1, 0, 0, 0, 0, time.UTC)
@@ -188,11 +184,10 @@ func TestWatchedService_ImportExport_Empty(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
 
 	movieService := NewMovieService(testDB, nil, time.Hour)
 	watchedService := NewWatchedService(testDB, movieService)
-
-	ctx := context.Background()
 
 	// Import empty data
 	importData := models.ImportWatchedMoviesLog{}

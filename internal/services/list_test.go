@@ -20,7 +20,7 @@ func setupTestUser(t *testing.T, testDB db.DB) context.Context {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return context.WithValue(ctx, common.UserKey, *user)
+	return context.WithValue(ctx, common.UserKey, user)
 }
 
 func TestListService_CRUD(t *testing.T) {

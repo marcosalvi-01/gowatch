@@ -666,7 +666,7 @@ func HomeLoading() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		for _ = range 3 {
+		for range 3 {
 			templ_7745c5c3_Var22 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
@@ -744,7 +744,7 @@ func HomeLoading() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		for _ = range 6 {
+		for range 6 {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "<div class=\"flex-shrink-0 w-[120px] md:w-[160px]\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -774,7 +774,7 @@ func HomeLoading() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		for _ = range 6 {
+		for range 6 {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "<div class=\"flex-shrink-0 w-[120px] md:w-[160px]\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -829,7 +829,7 @@ func ListsLoading() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		for _ = range 6 {
+		for range 6 {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 53, "<div class=\"flex-shrink-0 w-[120px] md:w-[160px]\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err

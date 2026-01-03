@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"time"
 
 	"gowatch/internal/common"
 	"gowatch/internal/models"
@@ -184,7 +185,7 @@ func (s *WatchedService) getAverages(ctx context.Context, total int64) (float64,
 		s.log.Error("failed to retrieve watched date range", "error", err)
 		return 0, 0, 0, fmt.Errorf("failed to get date range: %w", err)
 	}
-	avgPerDay, avgPerWeek, avgPerMonth := s.calculateAverages(total, dateRange)
+	avgPerDay, avgPerWeek, avgPerMonth := s.calculateAverages(total, dateRange, time.Now())
 	return avgPerDay, avgPerWeek, avgPerMonth, nil
 }
 
@@ -251,25 +252,49 @@ func (s *WatchedService) getHoursAverages(ctx context.Context, totalHours float6
 		s.log.Error("failed to retrieve watched date range", "error", err)
 		return 0, 0, 0, fmt.Errorf("failed to get date range: %w", err)
 	}
-	avgHoursPerDay, avgHoursPerWeek, avgHoursPerMonth := s.calculateHoursAverages(totalHours, dateRange)
+	avgHoursPerDay, avgHoursPerWeek, avgHoursPerMonth := s.calculateHoursAverages(totalHours, dateRange, time.Now())
 	return avgHoursPerDay, avgHoursPerWeek, avgHoursPerMonth, nil
 }
 
-func (s *WatchedService) calculateHoursAverages(totalHours float64, dateRange *models.DateRange) (avgPerDay, avgPerWeek, avgPerMonth float64) {
+func (s *WatchedService) calculateHoursAverages(totalHours float64, dateRange *models.DateRange, now time.Time) (avgPerDay, avgPerWeek, avgPerMonth float64) {
 	if dateRange == nil || dateRange.MinDate == nil || dateRange.MaxDate == nil {
 		return 0, 0, 0
 	}
-	days := dateRange.MaxDate.Sub(*dateRange.MinDate).Hours()/24 + 1
+
+	// Use the provided now time as the end date if it's later than the max watched date
+	// to account for gaps in activity.
+	endDate := *dateRange.MaxDate
+	if now.After(endDate) {
+		endDate = now
+	}
+
+	days := endDate.Sub(*dateRange.MinDate).Hours()/24 + 1
 	avgPerDay = totalHours / days
-	avgPerWeek = totalHours / (days / 7)
-	avgPerMonth = totalHours / (days / 30)
+
+	// Use a minimum divisor to avoid extreme projections for small datasets
+	weekDivisor := days / 7
+	if weekDivisor < 1 {
+		weekDivisor = 1
+	}
+	avgPerWeek = totalHours / weekDivisor
+
+	monthDivisor := days / 30
+	if monthDivisor < 1 {
+		monthDivisor = 1
+	}
+	avgPerMonth = totalHours / monthDivisor
+
 	s.log.Debug("calculated hours averages", "avgPerDay", avgPerDay, "avgPerWeek", avgPerWeek, "avgPerMonth", avgPerMonth)
 	return avgPerDay, avgPerWeek, avgPerMonth
 }
 
 func (s *WatchedService) calculateMonthlyHoursTrend(monthlyHours []models.PeriodHours) (direction models.TrendDirection, value float64) {
-	if len(monthlyHours) < 2 {
+	if len(monthlyHours) == 0 {
 		return models.TrendNeutral, 0
+	}
+
+	if len(monthlyHours) == 1 {
+		return models.TrendUp, monthlyHours[0].Hours
 	}
 
 	// Sort by period for chronological order
@@ -296,8 +321,12 @@ func (s *WatchedService) calculateMonthlyHoursTrend(monthlyHours []models.Period
 }
 
 func (s *WatchedService) calculateMonthlyMoviesTrend(monthlyMovies []models.PeriodCount) (direction models.TrendDirection, value int64) {
-	if len(monthlyMovies) < 2 {
+	if len(monthlyMovies) == 0 {
 		return models.TrendNeutral, 0
+	}
+
+	if len(monthlyMovies) == 1 {
+		return models.TrendUp, monthlyMovies[0].Count
 	}
 
 	// Sort by period for chronological order
@@ -398,14 +427,34 @@ func (s *WatchedService) aggregateGenres(genreData []models.GenreCount, maxDispl
 	return genres
 }
 
-func (s *WatchedService) calculateAverages(total int64, dateRange *models.DateRange) (avgPerDay, avgPerWeek, avgPerMonth float64) {
+func (s *WatchedService) calculateAverages(total int64, dateRange *models.DateRange, now time.Time) (avgPerDay, avgPerWeek, avgPerMonth float64) {
 	if dateRange == nil || dateRange.MinDate == nil || dateRange.MaxDate == nil {
 		return 0, 0, 0
 	}
-	days := dateRange.MaxDate.Sub(*dateRange.MinDate).Hours()/24 + 1
+
+	// Use the provided now time as the end date if it's later than the max watched date
+	// to account for gaps in activity.
+	endDate := *dateRange.MaxDate
+	if now.After(endDate) {
+		endDate = now
+	}
+
+	days := endDate.Sub(*dateRange.MinDate).Hours()/24 + 1
 	avgPerDay = float64(total) / days
-	avgPerWeek = float64(total) / (days / 7)
-	avgPerMonth = float64(total) / (days / 30)
+
+	// Use a minimum divisor to avoid extreme projections for small datasets
+	weekDivisor := days / 7
+	if weekDivisor < 1 {
+		weekDivisor = 1
+	}
+	avgPerWeek = float64(total) / weekDivisor
+
+	monthDivisor := days / 30
+	if monthDivisor < 1 {
+		monthDivisor = 1
+	}
+	avgPerMonth = float64(total) / monthDivisor
+
 	s.log.Debug("calculated averages", "avgPerDay", avgPerDay, "avgPerWeek", avgPerWeek, "avgPerMonth", avgPerMonth)
 	return avgPerDay, avgPerWeek, avgPerMonth
 }

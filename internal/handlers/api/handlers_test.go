@@ -10,9 +10,22 @@ import (
 	"time"
 
 	"gowatch/db"
+	"gowatch/internal/common"
 	"gowatch/internal/models"
 	"gowatch/internal/services"
 )
+
+func getTestCtx() context.Context {
+	return context.WithValue(context.Background(), common.UserKey, &models.User{ID: 1})
+}
+
+func setupTestUser(t *testing.T, testDB db.DB) {
+	ctx := context.Background()
+	_, err := testDB.CreateUser(ctx, "test@example.com", "Test User", "hash")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestHandlers_HealthCheck(t *testing.T) {
 	testDB, err := db.NewTestDB()
@@ -48,6 +61,7 @@ func TestHandlers_ExportWatched(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = testDB.Close() }()
+	setupTestUser(t, testDB)
 
 	movieService := services.NewMovieService(testDB, nil, time.Hour)
 	watchedService := services.NewWatchedService(testDB, movieService)
@@ -60,7 +74,7 @@ func TestHandlers_ExportWatched(t *testing.T) {
 			Title: "Test Movie",
 		},
 	}
-	ctx := context.Background()
+	ctx := getTestCtx()
 	if err := testDB.UpsertMovie(ctx, movie); err != nil {
 		t.Fatal(err)
 	}
@@ -69,6 +83,7 @@ func TestHandlers_ExportWatched(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/movies/export", nil)
+	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	handlers.exportWatched(w, req)
@@ -113,12 +128,15 @@ func TestHandlers_ExportWatched_Empty(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = testDB.Close() }()
+	setupTestUser(t, testDB)
 
 	movieService := services.NewMovieService(testDB, nil, time.Hour)
 	watchedService := services.NewWatchedService(testDB, movieService)
 	handlers := NewHandlers(testDB, watchedService)
 
+	ctx := getTestCtx()
 	req := httptest.NewRequest("GET", "/movies/export", nil)
+	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	handlers.exportWatched(w, req)
