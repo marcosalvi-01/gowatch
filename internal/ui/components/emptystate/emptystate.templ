@@ -1,0 +1,49 @@
+package emptystate
+
+import (
+	"gowatch/internal/ui/templui/card"
+	"gowatch/internal/ui/templui/dialog"
+	"gowatch/internal/ui/templui/icon"
+)
+
+type Props struct {
+	Title             string
+	Description       string
+	Instruction       string
+	ImportTitle       string
+	ImportDescription string
+}
+
+templ EmptyState(props Props) {
+	<div class="flex flex-col items-center justify-center py-12 px-4 text-center space-y-6 max-w-2xl mx-auto">
+		<img src="/static/favicon.svg" alt="Gowatch" class="w-32 h-auto mb-4"/>
+		<div class="space-y-2">
+			<h1 class="text-3xl font-bold tracking-tight text-foreground/80 text-balance">{ props.Title }</h1>
+			<p class="text-muted-foreground text-lg text-pretty">
+				{ props.Description }
+			</p>
+		</div>
+		if props.Instruction != "" {
+			<p class="text-sm text-muted-foreground bg-muted/50 px-4 py-2 rounded-lg">
+				{ props.Instruction }
+			</p>
+		}
+		<div class="grid grid-cols-1 gap-4 w-full max-w-md mx-auto pt-4">
+			@dialog.Trigger(dialog.TriggerProps{
+				For: "import-movies-dialog",
+			}) {
+				@card.Card(card.Props{
+					Class: "flex flex-col items-center p-8 space-y-4 cursor-pointer hover:bg-muted transition-all group",
+				}) {
+					<div class="p-3 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors text-primary">
+						@icon.FileUp(icon.Props{Size: 28})
+					</div>
+					<div class="space-y-1">
+						<h3 class="font-bold text-lg">{ props.ImportTitle }</h3>
+						<p class="text-sm text-muted-foreground">{ props.ImportDescription }</p>
+					</div>
+				}
+			}
+		</div>
+	</div>
+}

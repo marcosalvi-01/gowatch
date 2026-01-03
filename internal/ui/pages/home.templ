@@ -6,6 +6,7 @@ import (
 	"gowatch/internal/ui/components/listcard"
 	"gowatch/internal/ui/components/moviecard"
 	"gowatch/internal/ui/components/sidebar"
+	"gowatch/internal/ui/components/emptystate"
 	"gowatch/internal/ui/templui/card"
 	"gowatch/internal/ui/templui/dialog"
 	"gowatch/internal/ui/templui/icon"
@@ -19,7 +20,13 @@ templ Home(userName string, data models.HomeData) {
 			<div class="space-y-8 pb-5">
 				if data.Stats.TotalWatched == 0 && len(data.RecentMovies) == 0 {
 					@sidebar.ImportMoviesDialog()
-					@homeEmptyState(userName)
+					@emptystate.EmptyState(emptystate.Props{
+						Title:             fmt.Sprintf("Welcome to Gowatch, %s!", userName),
+						Description:       "You haven't tracked any movies yet. Let's start building your collection!",
+						Instruction:       "Use the search bar at the top to find and add movies, or import your existing history below.",
+						ImportTitle:       "Import History",
+						ImportDescription: "Already have a list? Import your movie history here.",
+					})
 				} else {
 					@homeHeader(userName)
 					@homeStats(data.Stats)
@@ -31,39 +38,6 @@ templ Home(userName string, data models.HomeData) {
 	}
 }
 
-templ homeEmptyState(userName string) {
-	<div class="flex flex-col items-center justify-center py-12 px-4 text-center space-y-6 max-w-2xl mx-auto">
-		<img src="/static/favicon.svg" alt="Gowatch" class="w-30 h-auto"/>
-		<div class="space-y-2">
-			<h1 class="text-3xl font-bold tracking-tight">Welcome to Gowatch, { userName }!</h1>
-			<p class="text-muted-foreground text-lg">
-				You haven't tracked any movies yet. Let's start building your collection!
-			</p>
-		</div>
-		<p class="text-muted-foreground">Use the search bar at the top to find and add movies to your collection.</p>
-		<div class="grid grid-cols-1 gap-4 w-full max-w-md mx-auto">
-			@dialog.Trigger(dialog.TriggerProps{
-				For: "import-movies-dialog",
-				Attributes: templ.Attributes{
-					"data-sidebar-import-btn": "true",
-				},
-			}) {
-				@card.Card(card.Props{
-					Class: "flex flex-col items-center p-6 space-y-3 cursor-pointer hover:bg-muted transition-colors",
-					Attributes: templ.Attributes{
-						"onclick": "document.querySelector('[data-sidebar-import-btn]')?.click()",
-					},
-				}) {
-					@icon.FileUp(icon.Props{Size: 24, Class: "text-primary"})
-					<div class="space-y-1">
-						<h3 class="font-semibold">Import History</h3>
-						<p class="text-sm text-muted-foreground">Already have a list? Import your movie history here.</p>
-					</div>
-				}
-			}
-		</div>
-	</div>
-}
 
 templ homeStats(stats models.HomeStatsSummary) {
 	<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
