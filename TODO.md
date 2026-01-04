@@ -1,7 +1,7 @@
 # bugs:
 
 - fix addtolistdialog to return full dialog content with buttons and handle empty lists and add loading indicator
-- fix avg per week and avg per month in the stats showing wrong values when having only small data
+- fix home page and admin page layout not being adaptive horizontally (it probably is not considering the sidebar in its width for some reason? it works for the other layouts)
 
 # feats:
 

@@ -43,6 +43,9 @@ templ Sidebar(props Props) {
 					@homeMenuItem(props.CurrentPage)
 					@watchedMenuItem(props.CurrentPage, props.WatchedCount)
 					@statsMenuItem(props.CurrentPage)
+					if props.User != nil && props.User.Admin {
+						@adminMenuItem(props.CurrentPage)
+					}
 					@sidebar.Separator()
 					@listsSection(props.Lists, props.CurrentPage)
 				}
@@ -438,5 +441,26 @@ templ watchedSkeletonItem(collapsed bool) {
 				</div>
 			}
 		</div>
+	}
+}
+
+templ adminMenuItem(currentPage string) {
+	@sidebar.MenuItem() {
+		@sidebar.MenuButton(sidebar.MenuButtonProps{
+			Tooltip:  "Admin",
+			IsActive: currentPage == "admin",
+			Attributes: templ.Attributes{
+				"data-nav-url": "/admin/users",
+				"hx-get":       "/admin/users",
+				"hx-target":    "#main-content",
+				"hx-swap":      "innerHTML show:#main-scroll-container:top",
+				"hx-push-url":  "true",
+				"hx-indicator": "#admin-loading",
+			},
+			Class: "cursor-pointer",
+		}) {
+			@icon.Settings(icon.Props{Class: "size-4 text-primary"})
+			<span>Admin</span>
+		}
 	}
 }

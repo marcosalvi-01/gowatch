@@ -1,0 +1,178 @@
+package pages
+
+import (
+	"fmt"
+	"gowatch/internal/models"
+	"gowatch/internal/ui/templui/badge"
+	"gowatch/internal/ui/templui/button"
+	"gowatch/internal/ui/templui/card"
+	"gowatch/internal/ui/templui/dialog"
+	"gowatch/internal/ui/templui/icon"
+	"gowatch/internal/ui/templui/table"
+	"gowatch/internal/ui/templui/tooltip"
+)
+
+templ AdminUsers(users []models.UserWithStats) {
+	@Layout() {
+		@templ.Fragment("content") {
+			<div class="container mx-auto py-6 space-y-6">
+				<div class="flex items-center justify-between">
+					<h1 class="text-3xl font-bold tracking-tight">User Management</h1>
+				</div>
+				@card.Card() {
+					@card.Content() {
+						@table.Table() {
+							@table.Header() {
+								@table.Row() {
+									@table.Head() {
+										Name 
+									}
+									@table.Head() {
+										Email 
+									}
+									@table.Head() {
+										Joined 
+									}
+									@table.Head(table.HeadProps{Class: "text-center"}) {
+										Watched 
+									}
+									@table.Head(table.HeadProps{Class: "text-center"}) {
+										Lists 
+									}
+									@table.Head(table.HeadProps{Class: "text-right"}) {
+										Actions 
+									}
+								}
+							}
+							@table.Body() {
+								for _, u := range users {
+									@table.Row(table.RowProps{ID: fmt.Sprintf("user-row-%d", u.ID)}) {
+										@table.Cell() {
+											<div class="flex items-center gap-2">
+												{ u.Name }
+												if u.Admin {
+													@badge.Badge(badge.Props{Variant: badge.VariantSecondary, Class: "gap-1"}) {
+														@icon.ShieldCheck(icon.Props{Class: "size-3"})
+														Admin
+													}
+												}
+											</div>
+										}
+										@table.Cell(table.CellProps{Class: "text-muted-foreground"}) {
+											{ u.Email }
+										}
+										@table.Cell(table.CellProps{Class: "text-muted-foreground"}) {
+											if u.CreatedAt != nil {
+												{ u.CreatedAt.Format("2006-01-02") }
+											} else {
+												-
+											}
+										}
+										@table.Cell(table.CellProps{Class: "text-center"}) {
+											{ fmt.Sprintf("%d", u.WatchedCount) }
+										}
+										@table.Cell(table.CellProps{Class: "text-center"}) {
+											{ fmt.Sprintf("%d", u.ListCount) }
+										}
+										@table.Cell(table.CellProps{Class: "flex items-center justify-end gap-2"}) {
+											@dialog.Dialog() {
+												@tooltip.Tooltip() {
+													@tooltip.Trigger() {
+														@dialog.Trigger() {
+															@button.Button(button.Props{
+																Size:    button.SizeSm,
+																Variant: button.VariantOutline,
+															}) {
+																@icon.Key(icon.Props{Size: 16})
+															}
+														}
+													}
+													@tooltip.Content() {
+														Reset Password 
+													}
+												}
+												@dialog.Content() {
+													@dialog.Header() {
+														@dialog.Title() {
+															Reset Password 
+														}
+														@dialog.Description() {
+															Are you sure you want to reset the password for <strong>{ u.Name }</strong>?
+														}
+													}
+													@dialog.Footer() {
+														@dialog.Close() {
+															@button.Button(button.Props{Variant: button.VariantOutline}) {
+																Cancel 
+															}
+														}
+														@button.Button(button.Props{
+															Attributes: templ.Attributes{
+																"hx-post":              fmt.Sprintf("/admin/users/%d/reset-password", u.ID),
+																"hx-target":            "#toast",
+																"hx-on::after-request": "if(event.detail.successful) this.closest('[data-tui-dialog]').querySelector('[data-tui-dialog-close]').click()",
+															},
+														}) {
+															Confirm Reset 
+														}
+													}
+												}
+											}
+											if !u.Admin {
+												@dialog.Dialog() {
+													@tooltip.Tooltip() {
+														@tooltip.Trigger() {
+															@dialog.Trigger() {
+																@button.Button(button.Props{
+																	Size:    button.SizeSm,
+																	Variant: button.VariantDestructive,
+																}) {
+																	@icon.Trash(icon.Props{Size: 16})
+																}
+															}
+														}
+														@tooltip.Content() {
+															Delete User 
+														}
+													}
+													@dialog.Content() {
+														@dialog.Header() {
+															@dialog.Title() {
+																Delete User 
+															}
+															@dialog.Description() {
+																Are you sure you want to delete user <strong>{ u.Name }</strong>? This action cannot be undone.
+															}
+														}
+														@dialog.Footer() {
+															@dialog.Close() {
+																@button.Button(button.Props{Variant: button.VariantOutline}) {
+																	Cancel 
+																}
+															}
+															@button.Button(button.Props{
+																Variant: button.VariantDestructive,
+																Attributes: templ.Attributes{
+																	"hx-delete":            fmt.Sprintf("/admin/users/%d", u.ID),
+																	"hx-target":            fmt.Sprintf("#user-row-%d", u.ID),
+																	"hx-swap":              "outerHTML",
+																	"hx-on::after-request": "if(event.detail.successful) this.closest('[data-tui-dialog]').querySelector('[data-tui-dialog-close]').click()",
+																},
+															}) {
+																Delete User 
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			</div>
+		}
+	}
+}

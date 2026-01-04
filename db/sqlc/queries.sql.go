@@ -207,6 +207,18 @@ func (q *Queries) DeleteSession(ctx context.Context, id string) error {
 	return err
 }
 
+const deleteUser = `-- name: DeleteUser :exec
+DELETE FROM
+    user
+WHERE
+    id = ?
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteUser, id)
+	return err
+}
+
 const getAllLists = `-- name: GetAllLists :many
 SELECT
     id, name, creation_date, description, user_id
@@ -231,6 +243,76 @@ func (q *Queries) GetAllLists(ctx context.Context, userID *int64) ([]List, error
 			&i.CreationDate,
 			&i.Description,
 			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllUsersWithStats = `-- name: GetAllUsersWithStats :many
+SELECT
+    u.id,
+    u.email,
+    u.name,
+    u.created_at,
+    u.admin,
+    (
+        SELECT
+            COUNT(*)
+        FROM
+            watched w
+        WHERE
+            w.user_id = u.id
+    ) AS watched_count,
+    (
+        SELECT
+            COUNT(*)
+        FROM
+            list l
+        WHERE
+            l.user_id = u.id
+    ) AS list_count
+FROM
+    user u
+ORDER BY
+    u.created_at DESC
+`
+
+type GetAllUsersWithStatsRow struct {
+	ID           int64
+	Email        string
+	Name         string
+	CreatedAt    *time.Time
+	Admin        bool
+	WatchedCount int64
+	ListCount    int64
+}
+
+func (q *Queries) GetAllUsersWithStats(ctx context.Context) ([]GetAllUsersWithStatsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAllUsersWithStats)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllUsersWithStatsRow
+	for rows.Next() {
+		var i GetAllUsersWithStatsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.Name,
+			&i.CreatedAt,
+			&i.Admin,
+			&i.WatchedCount,
+			&i.ListCount,
 		); err != nil {
 			return nil, err
 		}
@@ -970,7 +1052,7 @@ func (q *Queries) GetTotalHoursWatched(ctx context.Context, userID *int64) (*flo
 
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT
-    id, email, password_hash, name, created_at
+    id, email, password_hash, name, created_at, admin, password_reset_required
 FROM
     user
 WHERE
@@ -986,13 +1068,15 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.PasswordHash,
 		&i.Name,
 		&i.CreatedAt,
+		&i.Admin,
+		&i.PasswordResetRequired,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
 SELECT
-    id, email, password_hash, name, created_at
+    id, email, password_hash, name, created_at, admin, password_reset_required
 FROM
     user
 WHERE
@@ -1008,6 +1092,8 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.PasswordHash,
 		&i.Name,
 		&i.CreatedAt,
+		&i.Admin,
+		&i.PasswordResetRequired,
 	)
 	return i, err
 }
@@ -1134,7 +1220,7 @@ func (q *Queries) GetWatchedDates(ctx context.Context, userID *int64) ([]time.Ti
 const getWatchedJoinMovie = `-- name: GetWatchedJoinMovie :many
 SELECT
     movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
-    watched.movie_id, watched.watched_date, watched.watched_in_theater, watched.user_id
+    watched.id, watched.movie_id, watched.user_id, watched.watched_date, watched.watched_in_theater
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
@@ -1176,10 +1262,11 @@ func (q *Queries) GetWatchedJoinMovie(ctx context.Context, userID *int64) ([]Get
 			&i.Movie.Status,
 			&i.Movie.Tagline,
 			&i.Movie.UpdatedAt,
+			&i.Watched.ID,
 			&i.Watched.MovieID,
+			&i.Watched.UserID,
 			&i.Watched.WatchedDate,
 			&i.Watched.WatchedInTheater,
-			&i.Watched.UserID,
 		); err != nil {
 			return nil, err
 		}
@@ -1197,7 +1284,7 @@ func (q *Queries) GetWatchedJoinMovie(ctx context.Context, userID *int64) ([]Get
 const getWatchedJoinMovieByID = `-- name: GetWatchedJoinMovieByID :many
 SELECT
     movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
-    watched.movie_id, watched.watched_date, watched.watched_in_theater, watched.user_id
+    watched.id, watched.movie_id, watched.user_id, watched.watched_date, watched.watched_in_theater
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
@@ -1247,10 +1334,11 @@ func (q *Queries) GetWatchedJoinMovieByID(ctx context.Context, arg GetWatchedJoi
 			&i.Movie.Status,
 			&i.Movie.Tagline,
 			&i.Movie.UpdatedAt,
+			&i.Watched.ID,
 			&i.Watched.MovieID,
+			&i.Watched.UserID,
 			&i.Watched.WatchedDate,
 			&i.Watched.WatchedInTheater,
-			&i.Watched.UserID,
 		); err != nil {
 			return nil, err
 		}
@@ -1416,7 +1504,7 @@ INSERT INTO
 VALUES
     (?, ?, ?, ?)
 RETURNING
-    movie_id, watched_date, watched_in_theater, user_id
+    id, movie_id, user_id, watched_date, watched_in_theater
 `
 
 type InsertWatchedParams struct {
@@ -1435,12 +1523,65 @@ func (q *Queries) InsertWatched(ctx context.Context, arg InsertWatchedParams) (W
 	)
 	var i Watched
 	err := row.Scan(
+		&i.ID,
 		&i.MovieID,
+		&i.UserID,
 		&i.WatchedDate,
 		&i.WatchedInTheater,
-		&i.UserID,
 	)
 	return i, err
+}
+
+const setAdmin = `-- name: SetAdmin :exec
+UPDATE
+    user
+SET
+    admin = TRUE
+WHERE
+    id = ?
+`
+
+func (q *Queries) SetAdmin(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, setAdmin, id)
+	return err
+}
+
+const updatePasswordResetRequired = `-- name: UpdatePasswordResetRequired :exec
+UPDATE
+    user
+SET
+    password_reset_required = ?
+WHERE
+    id = ?
+`
+
+type UpdatePasswordResetRequiredParams struct {
+	PasswordResetRequired bool
+	ID                    int64
+}
+
+func (q *Queries) UpdatePasswordResetRequired(ctx context.Context, arg UpdatePasswordResetRequiredParams) error {
+	_, err := q.db.ExecContext(ctx, updatePasswordResetRequired, arg.PasswordResetRequired, arg.ID)
+	return err
+}
+
+const updateUserPassword = `-- name: UpdateUserPassword :exec
+UPDATE
+    user
+SET
+    password_hash = ?
+WHERE
+    id = ?
+`
+
+type UpdateUserPasswordParams struct {
+	PasswordHash string
+	ID           int64
+}
+
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
+	_, err := q.db.ExecContext(ctx, updateUserPassword, arg.PasswordHash, arg.ID)
+	return err
 }
 
 const upsertCast = `-- name: UpsertCast :exec

@@ -11,7 +11,7 @@ type DB interface {
 	Close() error
 	Health() error
 
-	GetMovieDetailsByID(ctx context.Context, id int64) (*models.MovieDetails, error)
+	GetMovieDetailsByID(ctx context.Context, movieID int64) (*models.MovieDetails, error)
 	UpsertMovie(ctx context.Context, movie *models.MovieDetails) error
 
 	InsertWatched(ctx context.Context, watched InsertWatched) error
@@ -35,24 +35,30 @@ type DB interface {
 
 	InsertList(ctx context.Context, list InsertList) (int64, error)
 
-	GetList(ctx context.Context, userID, id int64) (*models.List, error)
+	GetList(ctx context.Context, userID, listID int64) (*models.List, error)
 	GetAllLists(ctx context.Context, userID int64) ([]InsertList, error)
 	AddMovieToList(ctx context.Context, userID int64, insertMovieList InsertMovieList) error
-	DeleteListByID(ctx context.Context, userID, id int64) error
+	DeleteListByID(ctx context.Context, userID, listID int64) error
 	DeleteMovieFromList(ctx context.Context, userID, listID, movieID int64) error
 
-	CreateSession(ctx context.Context, id string, userID int64, expiresAt time.Time) error
-	GetSession(ctx context.Context, id string) (*models.Session, error)
-	DeleteSession(ctx context.Context, id string) error
+	CreateSession(ctx context.Context, sessionID string, userID int64, expiresAt time.Time) error
+	GetSession(ctx context.Context, sessionID string) (*models.Session, error)
+	DeleteSession(ctx context.Context, sessionID string) error
 	CleanupExpiredSessions(ctx context.Context) error
 
 	CreateUser(ctx context.Context, email, name, passwordHash string) (int64, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
-	GetUserByID(ctx context.Context, id int64) (*models.User, error)
+	GetUserByID(ctx context.Context, userID int64) (*models.User, error)
 
 	AssignNilUserLists(ctx context.Context, userID *int64) error
 	AssignNilUserWatched(ctx context.Context, userID *int64) error
 	CountUsers(ctx context.Context) (int64, error)
+
+	SetAdmin(ctx context.Context, userID int64) error
+	GetAllUsersWithStats(ctx context.Context) ([]models.UserWithStats, error)
+	DeleteUser(ctx context.Context, userID int64) error
+	UpdateUserPassword(ctx context.Context, userID int64, passwordHash string) error
+	UpdatePasswordResetRequired(ctx context.Context, userID int64, reset bool) error
 }
 
 type InsertList struct {

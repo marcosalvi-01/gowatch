@@ -21,16 +21,17 @@ import (
 var log = logging.Get("app")
 
 type Config struct {
-	Port             string        `env:"PORT" envDefault:"8080"`
-	Timeout          time.Duration `env:"REQUEST_TIMEOUT" envDefault:"30s"`
-	DBPath           string        `env:"DB_PATH" envDefault:"/var/lib/gowatch"`
-	DBName           string        `env:"DB_NAME" envDefault:"db.db"`
-	TMDBAPIKey       string        `env:"TMDB_API_KEY"`
-	TMDBPosterPrefix string        `env:"TMDB_POSTER_PREFIX" envDefault:"https://image.tmdb.org/t/p/w500"`
-	CacheTTL         time.Duration `env:"CACHE_TTL" envDefault:"168h"`
-	SessionExpiry    time.Duration `env:"SESSION_EXPIRY" envDefault:"24h"`
-	ShutdownTimeout  time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
-	HTTPS            bool          `env:"HTTPS" envDefault:"false"`
+	Port                 string        `env:"PORT" envDefault:"8080"`
+	Timeout              time.Duration `env:"REQUEST_TIMEOUT" envDefault:"30s"`
+	DBPath               string        `env:"DB_PATH" envDefault:"/var/lib/gowatch"`
+	DBName               string        `env:"DB_NAME" envDefault:"db.db"`
+	TMDBAPIKey           string        `env:"TMDB_API_KEY"`
+	TMDBPosterPrefix     string        `env:"TMDB_POSTER_PREFIX" envDefault:"https://image.tmdb.org/t/p/w500"`
+	CacheTTL             time.Duration `env:"CACHE_TTL" envDefault:"168h"`
+	SessionExpiry        time.Duration `env:"SESSION_EXPIRY" envDefault:"24h"`
+	ShutdownTimeout      time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
+	HTTPS                bool          `env:"HTTPS" envDefault:"false"`
+	AdminDefaultPassword string        `env:"ADMIN_DEFAULT_PASSWORD" envDefault:"Welcome123!"`
 }
 
 func main() {
@@ -67,7 +68,7 @@ func main() {
 	movieService := services.NewMovieService(db, tmdb, cfg.CacheTTL)
 	watchedService := services.NewWatchedService(db, movieService)
 	listService := services.NewListService(db, movieService)
-	authService := services.NewAuthService(db, cfg.SessionExpiry, cfg.HTTPS)
+	authService := services.NewAuthService(db, cfg.SessionExpiry, cfg.HTTPS, cfg.AdminDefaultPassword)
 
 	router := routes.NewRouter(db, movieService, watchedService, listService, authService)
 

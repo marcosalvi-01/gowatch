@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"gowatch/db"
@@ -16,20 +17,22 @@ import (
 )
 
 type AuthService struct {
-	db            db.DB
-	log           *slog.Logger
-	SessionExpiry time.Duration
-	HTTPS         bool
+	db                   db.DB
+	log                  *slog.Logger
+	SessionExpiry        time.Duration
+	HTTPS                bool
+	DefaultAdminPassword string
 }
 
-func NewAuthService(db db.DB, sessionExpiry time.Duration, https bool) *AuthService {
+func NewAuthService(db db.DB, sessionExpiry time.Duration, https bool, defaultAdminPassword string) *AuthService {
 	log := logging.Get("auth service")
 	log.Debug("creating new AuthService instance")
 	return &AuthService{
-		db:            db,
-		log:           log,
-		SessionExpiry: sessionExpiry,
-		HTTPS:         https,
+		db:                   db,
+		log:                  log,
+		SessionExpiry:        sessionExpiry,
+		HTTPS:                https,
+		DefaultAdminPassword: defaultAdminPassword,
 	}
 }
 
@@ -110,7 +113,7 @@ func (a *AuthService) CreateUser(ctx context.Context, email, name, password stri
 func (a *AuthService) CountUsers(ctx context.Context) (int64, error) {
 	count, err := a.db.CountUsers(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("TODO: %w", err)
+		return 0, fmt.Errorf("failed to count users: %w", err)
 	}
 
 	return count, nil
@@ -119,7 +122,7 @@ func (a *AuthService) CountUsers(ctx context.Context) (int64, error) {
 func (a *AuthService) AssignNilUserWatched(ctx context.Context, userID *int64) error {
 	err := a.db.AssignNilUserWatched(ctx, userID)
 	if err != nil {
-		return fmt.Errorf("TODO: %w", err)
+		return fmt.Errorf("failed to assign nil user to watched records for user %d: %w", *userID, err)
 	}
 	return nil
 }
@@ -127,7 +130,78 @@ func (a *AuthService) AssignNilUserWatched(ctx context.Context, userID *int64) e
 func (a *AuthService) AssignNilUserLists(ctx context.Context, userID *int64) error {
 	err := a.db.AssignNilUserLists(ctx, userID)
 	if err != nil {
-		return fmt.Errorf("TODO: %w", err)
+		return fmt.Errorf("failed to assign nil user to list records for user %d: %w", *userID, err)
+	}
+	return nil
+}
+
+func (a *AuthService) SetUserAsAdmin(ctx context.Context, userID int64) error {
+	err := a.db.SetAdmin(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to set user %d as admin: %w", userID, err)
+	}
+	return nil
+}
+
+func (a *AuthService) GetAllUsersWithStats(ctx context.Context) ([]models.UserWithStats, error) {
+	users, err := a.db.GetAllUsersWithStats(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all users with stats: %w", err)
+	}
+	return users, nil
+}
+
+func (a *AuthService) DeleteUser(ctx context.Context, userID int64) error {
+	err := a.db.DeleteUser(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete user %d: %w", userID, err)
+	}
+	return nil
+}
+
+// UpdateUserPassword updates the password of an user.
+//
+// The password should be passed as plain text, this function will hash it before updating the database
+func (a *AuthService) UpdateUserPassword(ctx context.Context, userID int64, password string) error {
+	hash, err := hashPassword(password)
+	if err != nil {
+		return fmt.Errorf("failed to hash password for user %d: %w", userID, err)
+	}
+
+	err = a.db.UpdateUserPassword(ctx, userID, hash)
+	if err != nil {
+		return fmt.Errorf("failed to update password for user %d: %w", userID, err)
+	}
+	return nil
+}
+
+// RequirePasswordReset resets the password of an user to the default email prefix + . + name, returns it and set the flag to reset the password for the user
+func (a *AuthService) RequirePasswordReset(ctx context.Context, userID int64) (string, error) {
+	user, err := a.GetUserByID(ctx, userID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get user for password reset: %w", err)
+	}
+
+	// email prefix + . + name (john@example.com + doe = john.doe)
+	newPass := fmt.Sprintf("%s.%s", strings.Split(user.Email, "@")[0], user.Name)
+
+	err = a.UpdateUserPassword(ctx, userID, newPass)
+	if err != nil {
+		return "", fmt.Errorf("failed to update password during reset: %w", err)
+	}
+
+	err = a.db.UpdatePasswordResetRequired(ctx, userID, true)
+	if err != nil {
+		return "", fmt.Errorf("failed to set password reset flag: %w", err)
+	}
+
+	return newPass, nil
+}
+
+func (a *AuthService) ClearPasswordResetRequired(ctx context.Context, userID int64) error {
+	err := a.db.UpdatePasswordResetRequired(ctx, userID, false)
+	if err != nil {
+		return fmt.Errorf("failed to clear password reset flag: %w", err)
 	}
 	return nil
 }

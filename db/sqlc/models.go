@@ -97,16 +97,19 @@ type Session struct {
 }
 
 type User struct {
-	ID           int64
-	Email        string
-	PasswordHash string
-	Name         string
-	CreatedAt    *time.Time
+	ID                    int64
+	Email                 string
+	PasswordHash          string
+	Name                  string
+	CreatedAt             *time.Time
+	Admin                 bool
+	PasswordResetRequired bool
 }
 
 type Watched struct {
+	ID               int64
 	MovieID          int64
+	UserID           *int64
 	WatchedDate      time.Time
 	WatchedInTheater bool
-	UserID           *int64
 }

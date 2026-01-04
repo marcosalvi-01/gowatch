@@ -8,8 +8,17 @@ type Session struct {
 }
 
 type User struct {
-	Email        string
-	Name         string
-	PasswordHash string
-	ID           int64
+	ID                    int64
+	Email                 string
+	Name                  string
+	PasswordHash          string
+	Admin                 bool
+	CreatedAt             *time.Time
+	PasswordResetRequired bool
+}
+
+type UserWithStats struct {
+	User
+	WatchedCount int64
+	ListCount    int64
 }

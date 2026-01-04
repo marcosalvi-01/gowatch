@@ -590,3 +590,61 @@ SET
     user_id = ?
 WHERE
     user_id IS NULL;
+
+-- name: SetAdmin :exec
+UPDATE
+    user
+SET
+    admin = TRUE
+WHERE
+    id = ?;
+
+-- name: GetAllUsersWithStats :many
+SELECT
+    u.id,
+    u.email,
+    u.name,
+    u.created_at,
+    u.admin,
+    (
+        SELECT
+            COUNT(*)
+        FROM
+            watched w
+        WHERE
+            w.user_id = u.id
+    ) AS watched_count,
+    (
+        SELECT
+            COUNT(*)
+        FROM
+            list l
+        WHERE
+            l.user_id = u.id
+    ) AS list_count
+FROM
+    user u
+ORDER BY
+    u.created_at DESC;
+
+-- name: DeleteUser :exec
+DELETE FROM
+    user
+WHERE
+    id = ?;
+
+-- name: UpdateUserPassword :exec
+UPDATE
+    user
+SET
+    password_hash = ?
+WHERE
+    id = ?;
+
+-- name: UpdatePasswordResetRequired :exec
+UPDATE
+    user
+SET
+    password_reset_required = ?
+WHERE
+    id = ?;

@@ -942,10 +942,13 @@ func (d *SqliteDB) GetUserByEmail(ctx context.Context, email string) (*models.Us
 
 	log.Debug("successfully retrieved user", "email", email, "user_id", user.ID)
 	return &models.User{
-		Email:        user.Email,
-		Name:         user.Name,
-		PasswordHash: user.PasswordHash,
-		ID:           user.ID,
+		ID:                    user.ID,
+		Email:                 user.Email,
+		Name:                  user.Name,
+		PasswordHash:          user.PasswordHash,
+		Admin:                 user.Admin,
+		CreatedAt:             user.CreatedAt,
+		PasswordResetRequired: user.PasswordResetRequired,
 	}, nil
 }
 
@@ -960,48 +963,138 @@ func (d *SqliteDB) GetUserByID(ctx context.Context, id int64) (*models.User, err
 
 	log.Debug("successfully retrieved user", "userID", id, "email", user.Email)
 	return &models.User{
-		Email:        user.Email,
-		Name:         user.Name,
-		PasswordHash: user.PasswordHash,
-		ID:           user.ID,
+		ID:                    user.ID,
+		Email:                 user.Email,
+		Name:                  user.Name,
+		PasswordHash:          user.PasswordHash,
+		Admin:                 user.Admin,
+		CreatedAt:             user.CreatedAt,
+		PasswordResetRequired: user.PasswordResetRequired,
 	}, nil
 }
 
 func (d *SqliteDB) CountUsers(ctx context.Context) (int64, error) {
-	log.Debug("TODO")
+	log.Debug("counting users")
 
 	count, err := d.queries.CountUsers(ctx)
 	if err != nil {
-		log.Error("TODO")
-		return 0, fmt.Errorf("TODO: %w", err)
+		log.Error("failed to count users", "error", err)
+		return 0, fmt.Errorf("failed to count users: %w", err)
 	}
 
-	log.Debug("TODO")
+	log.Debug("retrieved user count", "count", count)
 	return count, nil
 }
 
 func (d *SqliteDB) AssignNilUserWatched(ctx context.Context, userID *int64) error {
-	log.Debug("TODO")
+	log.Debug("assigning nil user to watched records", "userID", userID)
 
 	err := d.queries.AssignNilUserWatched(ctx, userID)
 	if err != nil {
-		log.Error("TODO")
-		return fmt.Errorf("TODO: %w", err)
+		log.Error("failed to assign nil user to watched", "userID", userID, "error", err)
+		return fmt.Errorf("failed to assign nil user to watched: %w", err)
 	}
 
-	log.Debug("TODO")
+	log.Debug("assigned nil user to watched records", "userID", userID)
 	return nil
 }
 
 func (d *SqliteDB) AssignNilUserLists(ctx context.Context, userID *int64) error {
-	log.Debug("TODO")
+	log.Debug("assigning nil user to list records", "userID", userID)
 
 	err := d.queries.AssignNilUserLists(ctx, userID)
 	if err != nil {
-		log.Error("TODO")
-		return fmt.Errorf("TODO: %w", err)
+		log.Error("failed to assign nil user to lists", "userID", userID, "error", err)
+		return fmt.Errorf("failed to assign nil user to lists: %w", err)
 	}
 
-	log.Debug("TODO")
+	log.Debug("assigned nil user to list records", "userID", userID)
+	return nil
+}
+
+func (d *SqliteDB) SetAdmin(ctx context.Context, userID int64) error {
+	log.Debug("setting user as admin", "userID", userID)
+
+	err := d.queries.SetAdmin(ctx, userID)
+	if err != nil {
+		log.Error("failed to set user as admin", "userID", userID, "error", err)
+		return fmt.Errorf("failed to set user as admin: %w", err)
+	}
+
+	log.Debug("set user as admin", "userID", userID)
+	return nil
+}
+
+func (d *SqliteDB) GetAllUsersWithStats(ctx context.Context) ([]models.UserWithStats, error) {
+	log.Debug("retrieving all users with stats")
+
+	rows, err := d.queries.GetAllUsersWithStats(ctx)
+	if err != nil {
+		log.Error("failed to fetch users with stats", "error", err)
+		return nil, fmt.Errorf("failed to fetch users with stats: %w", err)
+	}
+
+	users := make([]models.UserWithStats, len(rows))
+	for i, r := range rows {
+		users[i] = models.UserWithStats{
+			User: models.User{
+				ID:           r.ID,
+				Email:        r.Email,
+				Name:         r.Name,
+				Admin:        r.Admin,
+				CreatedAt:    r.CreatedAt,
+				PasswordHash: "", // Don't expose this in stats
+			},
+			WatchedCount: r.WatchedCount,
+			ListCount:    r.ListCount,
+		}
+	}
+
+	log.Debug("retrieved users with stats", "count", len(users))
+	return users, nil
+}
+
+func (d *SqliteDB) DeleteUser(ctx context.Context, userID int64) error {
+	log.Debug("deleting user", "userID", userID)
+
+	err := d.queries.DeleteUser(ctx, userID)
+	if err != nil {
+		log.Error("failed to delete user", "userID", userID, "error", err)
+		return fmt.Errorf("failed to delete user %d: %w", userID, err)
+	}
+
+	log.Debug("successfully deleted user", "userID", userID)
+	return nil
+}
+
+func (d *SqliteDB) UpdateUserPassword(ctx context.Context, userID int64, passwordHash string) error {
+	log.Debug("updating user password", "userID", userID)
+
+	err := d.queries.UpdateUserPassword(ctx, sqlc.UpdateUserPasswordParams{
+		PasswordHash: passwordHash,
+		ID:           userID,
+	})
+	if err != nil {
+		log.Error("failed to update user password", "userID", userID, "error", err)
+		return fmt.Errorf("failed to update password for user %d: %w", userID, err)
+	}
+
+	log.Debug("successfully updated user password", "userID", userID)
+	return nil
+}
+
+func (d *SqliteDB) UpdatePasswordResetRequired(ctx context.Context, userID int64, reset bool) error {
+	log.Debug("updating password reset required", "userID", userID)
+
+	err := d.queries.UpdatePasswordResetRequired(ctx, sqlc.UpdatePasswordResetRequiredParams{
+		PasswordResetRequired: reset,
+		ID:                    userID,
+	})
+	if err != nil {
+		log.Error("failed to update password reset required", "userID", userID, "error", err)
+		return fmt.Errorf("failed to update password reset required for user %d: %w", userID, err)
+	}
+
+	log.Debug("successfully updated password reset required", "userID", userID)
 	return nil
 }

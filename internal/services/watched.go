@@ -38,13 +38,13 @@ func (s *WatchedService) AddWatched(ctx context.Context, movieID int64, date tim
 	if movieID <= 0 {
 		return fmt.Errorf("AddWatched: invalid movie ID")
 	}
-	s.log.Debug("AddWatched: adding watched movie", "movieID", movieID, "date", date, "inTheaters", inTheaters)
-
 	user, err := common.GetUser(ctx)
 	if err != nil {
 		s.log.Error("AddWatched: failed to get user", "error", err)
 		return fmt.Errorf("AddWatched: failed to get user: %w", err)
 	}
+
+	s.log.Debug("AddWatched: adding watched movie", "movieID", movieID, "date", date, "inTheaters", inTheaters, "userID", user.ID)
 
 	err = s.db.InsertWatched(ctx, db.InsertWatched{
 		UserID:     user.ID,
@@ -53,11 +53,11 @@ func (s *WatchedService) AddWatched(ctx context.Context, movieID int64, date tim
 		InTheaters: inTheaters,
 	})
 	if err != nil {
-		s.log.Error("AddWatched: failed to insert watched entry", "movieID", movieID, "error", err)
+		s.log.Error("AddWatched: failed to insert watched entry", "movieID", movieID, "error", err, "userID", user.ID)
 		return fmt.Errorf("AddWatched: failed to record watched entry: %w", err)
 	}
 
-	s.log.Info("AddWatched: successfully added watched movie", "movieID", movieID)
+	s.log.Info("AddWatched: successfully added watched movie", "movieID", movieID, "userID", user.ID)
 	return nil
 }
 
