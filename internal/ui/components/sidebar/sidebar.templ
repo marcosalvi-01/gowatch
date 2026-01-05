@@ -186,7 +186,7 @@ templ listsSection(lists []models.ListEntry, currentPage string) {
 		@sidebar.Menu() {
 			@sidebar.MenuItem() {
 				@collapsible.Collapsible(collapsible.Props{
-					Open:  true,
+					Open:  false,
 					Class: "group/collapsible w-full",
 				}) {
 					@listsCollapsibleTrigger()
@@ -395,10 +395,18 @@ templ importMoviesDialogFooter() {
 
 templ header() {
 	@sidebar.Header(sidebar.HeaderProps{
-		Class: "flex flex-row items-center text-lg font-semibold leading-none tracking-tight gap-8",
+		Class: "flex flex-row items-center text-lg font-semibold leading-none tracking-tight",
 	}) {
-		<img src="/static/favicon.svg" alt="Gowatch" class="w-20 h-20"/>
-		Gowatch
+		<div
+			hx-get="/home"
+			hx-target="#main-content"
+			hx-swap="innerHTML show:#main-scroll-container:top"
+			hx-push-url="true"
+			class="cursor-pointer flex items-center gap-8"
+		>
+			<img src="/static/favicon.svg" alt="Gowatch" class="w-20 h-20"/>
+			Gowatch
+		</div>
 	}
 }
 

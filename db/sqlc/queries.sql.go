@@ -903,7 +903,7 @@ func (q *Queries) GetPerson(ctx context.Context, id int64) (Person, error) {
 const getRecentWatchedMovies = `-- name: GetRecentWatchedMovies :many
 SELECT
     movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
-    watched.watched_in_theater AS in_theaters
+    watched.id, watched.movie_id, watched.user_id, watched.watched_date, watched.watched_in_theater, watched.rating
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
@@ -921,8 +921,8 @@ type GetRecentWatchedMoviesParams struct {
 }
 
 type GetRecentWatchedMoviesRow struct {
-	Movie      Movie
-	InTheaters bool
+	Movie   Movie
+	Watched Watched
 }
 
 func (q *Queries) GetRecentWatchedMovies(ctx context.Context, arg GetRecentWatchedMoviesParams) ([]GetRecentWatchedMoviesRow, error) {
@@ -954,7 +954,12 @@ func (q *Queries) GetRecentWatchedMovies(ctx context.Context, arg GetRecentWatch
 			&i.Movie.Status,
 			&i.Movie.Tagline,
 			&i.Movie.UpdatedAt,
-			&i.InTheaters,
+			&i.Watched.ID,
+			&i.Watched.MovieID,
+			&i.Watched.UserID,
+			&i.Watched.WatchedDate,
+			&i.Watched.WatchedInTheater,
+			&i.Watched.Rating,
 		); err != nil {
 			return nil, err
 		}
@@ -1220,7 +1225,7 @@ func (q *Queries) GetWatchedDates(ctx context.Context, userID *int64) ([]time.Ti
 const getWatchedJoinMovie = `-- name: GetWatchedJoinMovie :many
 SELECT
     movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
-    watched.id, watched.movie_id, watched.user_id, watched.watched_date, watched.watched_in_theater
+    watched.id, watched.movie_id, watched.user_id, watched.watched_date, watched.watched_in_theater, watched.rating
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
@@ -1267,6 +1272,7 @@ func (q *Queries) GetWatchedJoinMovie(ctx context.Context, userID *int64) ([]Get
 			&i.Watched.UserID,
 			&i.Watched.WatchedDate,
 			&i.Watched.WatchedInTheater,
+			&i.Watched.Rating,
 		); err != nil {
 			return nil, err
 		}
@@ -1284,7 +1290,7 @@ func (q *Queries) GetWatchedJoinMovie(ctx context.Context, userID *int64) ([]Get
 const getWatchedJoinMovieByID = `-- name: GetWatchedJoinMovieByID :many
 SELECT
     movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
-    watched.id, watched.movie_id, watched.user_id, watched.watched_date, watched.watched_in_theater
+    watched.id, watched.movie_id, watched.user_id, watched.watched_date, watched.watched_in_theater, watched.rating
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
@@ -1339,6 +1345,7 @@ func (q *Queries) GetWatchedJoinMovieByID(ctx context.Context, arg GetWatchedJoi
 			&i.Watched.UserID,
 			&i.Watched.WatchedDate,
 			&i.Watched.WatchedInTheater,
+			&i.Watched.Rating,
 		); err != nil {
 			return nil, err
 		}
@@ -1500,11 +1507,11 @@ func (q *Queries) InsertList(ctx context.Context, arg InsertListParams) (int64, 
 
 const insertWatched = `-- name: InsertWatched :one
 INSERT INTO
-    watched (movie_id, watched_date, watched_in_theater, user_id)
+    watched (movie_id, watched_date, watched_in_theater, user_id, rating)
 VALUES
-    (?, ?, ?, ?)
+    (?, ?, ?, ?, ?)
 RETURNING
-    id, movie_id, user_id, watched_date, watched_in_theater
+    id, movie_id, user_id, watched_date, watched_in_theater, rating
 `
 
 type InsertWatchedParams struct {
@@ -1512,6 +1519,7 @@ type InsertWatchedParams struct {
 	WatchedDate      time.Time
 	WatchedInTheater bool
 	UserID           *int64
+	Rating           *float64
 }
 
 func (q *Queries) InsertWatched(ctx context.Context, arg InsertWatchedParams) (Watched, error) {
@@ -1520,6 +1528,7 @@ func (q *Queries) InsertWatched(ctx context.Context, arg InsertWatchedParams) (W
 		arg.WatchedDate,
 		arg.WatchedInTheater,
 		arg.UserID,
+		arg.Rating,
 	)
 	var i Watched
 	err := row.Scan(
@@ -1528,6 +1537,7 @@ func (q *Queries) InsertWatched(ctx context.Context, arg InsertWatchedParams) (W
 		&i.UserID,
 		&i.WatchedDate,
 		&i.WatchedInTheater,
+		&i.Rating,
 	)
 	return i, err
 }

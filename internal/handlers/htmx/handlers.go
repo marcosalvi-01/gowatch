@@ -159,18 +159,41 @@ func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
 
 	watchedAtTheater := r.FormValue("watched_at_theater") != ""
 
-	log.Debug("adding watched movie", "movieID", movieID, "watchedDate", watchedDate, "theater", watchedAtTheater)
+	ratingParam := r.FormValue("rating")
+	var rating *float64
+	if ratingParam != "" {
+		parsedRating, err := strconv.ParseFloat(ratingParam, 64)
+		if err != nil {
+			log.Error("invalid rating parameter", "rating", ratingParam, "error", err)
+			RenderErrorToast(w, r, "Invalid Rating", "The rating provided is not a valid number.", 4000)
+			return
+		}
+		if parsedRating < 0 || parsedRating > 5 {
+			log.Error("rating out of range", "rating", parsedRating)
+			RenderErrorToast(w, r, "Invalid Rating", "Rating must be between 0 and 5.", 4000)
+			return
+		}
+		rating = &parsedRating
+	}
+	if *rating == 0 {
+		rating = nil
+	}
 
-	err = h.watchedService.AddWatched(r.Context(), int64(movieID), watchedDate, watchedAtTheater)
+	log.Debug("adding watched movie", "movieID", movieID, "watchedDate", watchedDate, "theater", watchedAtTheater, "rating", rating)
+
+	err = h.watchedService.AddWatched(r.Context(), int64(movieID), watchedDate, watchedAtTheater, rating)
 	if err != nil {
 		log.Error("failed to add new watched movie", "movieID", movieID, "watchedDate", watchedDate, "theater", watchedAtTheater, "error", err)
 		RenderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
 		return
 	}
 
-	log.Info("successfully added watched movie", "movieID", movieID)
+	log.Info("successfully added watched movie", "movieID", movieID, "rating", rating)
 
 	successMessage := fmt.Sprintf("Movie marked as watched on %s", watchedDate.Format("Jan 2, 2006"))
+	if rating != nil {
+		successMessage += fmt.Sprintf(" with rating %.1f/5", *rating)
+	}
 
 	w.Header().Add("HX-Trigger", "refreshSidebar")
 	RenderSuccessToast(w, r, "Movie Added Successfully", successMessage, 0)

@@ -295,6 +295,7 @@ func (h *Handlers) LoginPost(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   h.authService.HTTPS,
 		SameSite: http.SameSiteLaxMode,
+		MaxAge:   int(h.authService.SessionExpiry),
 	})
 
 	if user.PasswordResetRequired {

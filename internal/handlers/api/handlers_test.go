@@ -78,7 +78,7 @@ func TestHandlers_ExportWatched(t *testing.T) {
 	if err := testDB.UpsertMovie(ctx, movie); err != nil {
 		t.Fatal(err)
 	}
-	if err := watchedService.AddWatched(ctx, 1, time.Now(), true); err != nil {
+	if err := watchedService.AddWatched(ctx, 1, time.Now(), true, nil); err != nil {
 		t.Fatal(err)
 	}
 

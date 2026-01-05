@@ -1,4 +1,4 @@
-// templui component calendar - version: v1.0.0 installed by templui v1.0.0
+// templui component calendar - version: v1.1.0 installed by templui v1.1.0
 // 📚 Documentation: https://templui.io/docs/components/calendar
 package calendar
 
@@ -136,11 +136,12 @@ templ Calendar(props ...Props) {
 				</button>
 				<div class="flex gap-2 flex-1 min-w-0">
 					<!-- Month Select -->
+					<!-- Add bg-card to fix rendering in dark mode Chrome -->
 					<div class="relative flex-1 has-[:focus]:border-ring border border-input shadow-xs has-[:focus]:ring-ring/50 has-[:focus]:ring-[3px] rounded-md">
 						<select
 							id={ p.ID + "-month-select" }
 							data-tui-calendar-month-select
-							class="absolute inset-0 opacity-0 cursor-pointer w-full"
+							class="absolute inset-0 opacity-0 cursor-pointer w-full bg-card"
 							aria-label="Choose the Month"
 						>
 							for i := 0; i < 12; i++ {
@@ -155,11 +156,12 @@ templ Calendar(props ...Props) {
 						</span>
 					</div>
 					<!-- Year Select -->
+					<!-- Add bg-card to fix rendering in dark mode Chrome -->
 					<div class="relative flex-1 has-[:focus]:border-ring border border-input shadow-xs has-[:focus]:ring-ring/50 has-[:focus]:ring-[3px] rounded-md">
 						<select
 							id={ p.ID + "-year-select" }
 							data-tui-calendar-year-select
-							class="absolute inset-0 opacity-0 cursor-pointer w-full"
+							class="absolute inset-0 opacity-0 cursor-pointer w-full bg-card"
 							aria-label="Choose the Year"
 						>
 							for year := 2100; year >= 1900; year-- {

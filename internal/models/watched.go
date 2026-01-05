@@ -16,6 +16,7 @@ type WatchedMovie struct {
 	MovieDetails MovieDetails
 	Date         time.Time
 	InTheaters   bool
+	Rating       *float64
 }
 
 // WatchedMoviesInDay represents a day and all the movies watched in that day.
@@ -28,11 +29,13 @@ type WatchedMoviesInDay struct {
 type WatchedMovieInDay struct {
 	MovieDetails MovieDetails
 	InTheaters   bool
+	Rating       *float64
 }
 
 type WatchedMovieRecord struct {
 	Date       time.Time
 	InTheaters bool
+	Rating     *float64
 }
 
 type WatchedMovieRecords struct {

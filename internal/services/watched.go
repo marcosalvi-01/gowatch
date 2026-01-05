@@ -34,9 +34,12 @@ func NewWatchedService(db db.DB, tmdb *MovieService) *WatchedService {
 	}
 }
 
-func (s *WatchedService) AddWatched(ctx context.Context, movieID int64, date time.Time, inTheaters bool) error {
+func (s *WatchedService) AddWatched(ctx context.Context, movieID int64, date time.Time, inTheaters bool, rating *float64) error {
 	if movieID <= 0 {
 		return fmt.Errorf("AddWatched: invalid movie ID")
+	}
+	if rating != nil && (*rating < 0 || *rating > 5) {
+		return fmt.Errorf("AddWatched: rating must be between 0 and 5")
 	}
 	user, err := common.GetUser(ctx)
 	if err != nil {
@@ -44,13 +47,14 @@ func (s *WatchedService) AddWatched(ctx context.Context, movieID int64, date tim
 		return fmt.Errorf("AddWatched: failed to get user: %w", err)
 	}
 
-	s.log.Debug("AddWatched: adding watched movie", "movieID", movieID, "date", date, "inTheaters", inTheaters, "userID", user.ID)
+	s.log.Debug("AddWatched: adding watched movie", "movieID", movieID, "date", date, "inTheaters", inTheaters, "rating", rating, "userID", user.ID)
 
 	err = s.db.InsertWatched(ctx, db.InsertWatched{
 		UserID:     user.ID,
 		MovieID:    movieID,
 		Date:       date,
 		InTheaters: inTheaters,
+		Rating:     rating,
 	})
 	if err != nil {
 		s.log.Error("AddWatched: failed to insert watched entry", "movieID", movieID, "error", err, "userID", user.ID)
@@ -91,6 +95,7 @@ func (s *WatchedService) GetAllWatchedMoviesInDay(ctx context.Context) ([]models
 		out[len(out)-1].Movies = append(out[len(out)-1].Movies, models.WatchedMovieInDay{
 			MovieDetails: m.MovieDetails,
 			InTheaters:   m.InTheaters,
+			Rating:       m.Rating,
 		})
 	}
 
@@ -114,7 +119,7 @@ func (s *WatchedService) ImportWatched(ctx context.Context, movies models.Import
 				return fmt.Errorf("ImportWatched: failed to fetch movie details: %w", err)
 			}
 
-			err = s.AddWatched(ctx, int64(movieRef.MovieID), importMovie.Date, movieRef.InTheaters)
+			err = s.AddWatched(ctx, int64(movieRef.MovieID), importMovie.Date, movieRef.InTheaters, nil)
 			if err != nil {
 				s.log.Error("ImportWatched: failed to import movie", "movieID", movieRef.MovieID, "date", importMovie.Date, "error", err)
 				return fmt.Errorf("ImportWatched: failed to import movie: %w", err)
@@ -185,6 +190,7 @@ func (s *WatchedService) GetWatchedMovieRecordsByID(ctx context.Context, movieID
 		rec.Records = append(rec.Records, models.WatchedMovieRecord{
 			Date:       r.Date,
 			InTheaters: r.InTheaters,
+			Rating:     r.Rating,
 		})
 	}
 

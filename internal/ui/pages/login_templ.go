@@ -227,7 +227,7 @@ func Login() templ.Component {
 							ID:               "password",
 							Name:             "password",
 							Placeholder:      "••••••••",
-							NoTogglePassword: true,
+							NoTogglePassword: false,
 						}).Render(ctx, templ_7745c5c3_Buffer)
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err

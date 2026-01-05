@@ -154,6 +154,7 @@ func (d *SqliteDB) InsertWatched(ctx context.Context, watched InsertWatched) err
 		MovieID:          watched.MovieID,
 		WatchedDate:      watched.Date,
 		WatchedInTheater: watched.InTheaters,
+		Rating:           watched.Rating,
 	})
 	if err != nil {
 		log.Error("failed to insert watched record", "movieID", watched.MovieID, "error", err)
@@ -298,6 +299,7 @@ func (d *SqliteDB) GetWatchedJoinMovie(ctx context.Context, userID int64) ([]mod
 			MovieDetails: toModelsMovieDetails(result.Movie),
 			Date:         result.Watched.WatchedDate,
 			InTheaters:   result.Watched.WatchedInTheater,
+			Rating:       result.Watched.Rating,
 		}
 	}
 
@@ -320,6 +322,7 @@ func (d *SqliteDB) GetWatchedJoinMovieByID(ctx context.Context, userID, movieID 
 			MovieDetails: toModelsMovieDetails(r.Movie),
 			Date:         r.Watched.WatchedDate,
 			InTheaters:   r.Watched.WatchedInTheater,
+			Rating:       r.Watched.Rating,
 		}
 	}
 
@@ -339,7 +342,8 @@ func (d *SqliteDB) GetRecentWatchedMovies(ctx context.Context, userID int64, lim
 	for i, row := range rows {
 		result[i] = models.WatchedMovieInDay{
 			MovieDetails: toModelsMovieDetails(row.Movie),
-			InTheaters:   row.InTheaters,
+			InTheaters:   row.Watched.WatchedInTheater,
+			Rating:       row.Watched.Rating,
 		}
 	}
 

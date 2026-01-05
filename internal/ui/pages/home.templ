@@ -97,14 +97,14 @@ templ homeRecentActivity(movies []models.WatchedMovieInDay) {
 										@icon.Calendar(icon.Props{Size: 12})
 										<p class="ml-2 text-xs opacity-90">{ movie.MovieDetails.Movie.ReleaseDate.Format("2006") }</p>
 									</div>
-									if movie.MovieDetails.Movie.VoteAverage > 0 {
+									if movie.Rating != nil {
 										<div class="flex items-center">
 											@icon.Star(icon.Props{
 												Size:   12,
 												Fill:   "orange",
 												Stroke: "orange",
 											})
-											<span class="ml-1 text-xs">{ fmt.Sprintf("%.1f", movie.MovieDetails.Movie.VoteAverage) }</span>
+											<span class="ml-1 text-xs">{ fmt.Sprintf("%.1f", *movie.Rating) }</span>
 										</div>
 									}
 								</div>

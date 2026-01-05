@@ -13,6 +13,7 @@ import (
 	"gowatch/internal/ui/templui/dialog"
 	"gowatch/internal/ui/templui/form"
 	"gowatch/internal/ui/templui/icon"
+	"gowatch/internal/ui/templui/rating"
 	"gowatch/internal/ui/templui/separator"
 	"gowatch/internal/ui/templui/skeleton"
 	"gowatch/internal/ui/templui/table"
@@ -206,6 +207,29 @@ templ actionButtons(movieID int64) {
 								HasError: false,
 								Value:    time.Now(),
 							})
+						</div>
+						<div class="space-y-2">
+							@form.Label(form.LabelProps{
+								For: "rating-input",
+							}) {
+								Your rating (optional)
+							}
+							@rating.Rating(rating.Props{
+								Value:     0,
+								ReadOnly:  false,
+								Precision: 0.5,
+								Name:      "rating",
+								ID:        "rating-input",
+							}) {
+								@rating.Group() {
+									for i := 1; i <= 5; i++ {
+										@rating.Item(rating.ItemProps{
+											Value: i,
+											Style: rating.StyleStar,
+										})
+									}
+								}
+							}
 						</div>
 						<div class="flex items-start space-x-3">
 							@checkbox.Checkbox(checkbox.Props{
@@ -521,10 +545,11 @@ templ userActivitySection(watchRecords []models.WatchedMovieRecord) {
 }
 
 templ activityStats(records []models.WatchedMovieRecord) {
-	<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+	<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
 		@activityStat("Times Watched", fmt.Sprintf("%d", len(records)))
 		@activityStat("In Theater", fmt.Sprintf("%d", countTheaterWatches(records)))
 		@activityStat("At Home", fmt.Sprintf("%d", len(records)-countTheaterWatches(records)))
+		@activityStat("Your Avg Rating", calculateAverageRating(records))
 		if len(records) > 0 {
 			@activityStat("Last Watched", getLastWatchDate(records).Format("Jan 2006"))
 		}
@@ -563,9 +588,29 @@ templ watchHistoryItem(record models.WatchedMovieRecord) {
 				</div>
 				<div class="text-xs text-muted-foreground">{ record.Date.Format("January 2, 2006") }</div>
 			</div>
+			if record.Rating != nil {
+				<div class="flex items-center ml-4">
+					@rating.Rating(rating.Props{
+						Value:     (*record.Rating),
+						ReadOnly:  true,
+						Precision: 0.5,
+					}) {
+						@rating.Group() {
+							for i := 1; i <= 5; i++ {
+								@rating.Item(rating.ItemProps{
+									Value: i,
+									Style: rating.StyleStar,
+								})
+							}
+						}
+					}
+				</div>
+			}
 		</div>
-		<div class="text-xs text-muted-foreground">
-			{ formatTimeAgo(record.Date) }
+		<div class="flex items-center space-x-2">
+			<div class="text-xs text-muted-foreground">
+				{ formatTimeAgo(record.Date) }
+			</div>
 		</div>
 	</div>
 }
@@ -640,6 +685,21 @@ func getLastWatchDate(records []models.WatchedMovieRecord) time.Time {
 		}
 	}
 	return latest
+}
+
+func calculateAverageRating(records []models.WatchedMovieRecord) string {
+	var sum float64
+	var count int
+	for _, record := range records {
+		if record.Rating != nil {
+			sum += *record.Rating
+			count++
+		}
+	}
+	if count == 0 {
+		return "N/A"
+	}
+	return fmt.Sprintf("%.1f/5", sum/float64(count))
 }
 
 func sortCast(cast []models.Cast) []models.Cast {

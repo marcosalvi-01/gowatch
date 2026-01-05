@@ -280,7 +280,7 @@ func Register() templ.Component {
 							ID:               "password",
 							Name:             "password",
 							Placeholder:      "••••••••",
-							NoTogglePassword: true,
+							NoTogglePassword: false,
 						}).Render(ctx, templ_7745c5c3_Buffer)
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
@@ -334,7 +334,7 @@ func Register() templ.Component {
 							ID:               "confirm-password",
 							Name:             "confirm_password",
 							Placeholder:      "••••••••",
-							NoTogglePassword: true,
+							NoTogglePassword: false,
 						}).Render(ctx, templ_7745c5c3_Buffer)
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err

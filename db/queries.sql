@@ -85,9 +85,9 @@ SET
 
 -- name: InsertWatched :one
 INSERT INTO
-    watched (movie_id, watched_date, watched_in_theater, user_id)
+    watched (movie_id, watched_date, watched_in_theater, user_id, rating)
 VALUES
-    (?, ?, ?, ?)
+    (?, ?, ?, ?, ?)
 RETURNING
     *;
 
@@ -462,7 +462,7 @@ ORDER BY
 -- name: GetRecentWatchedMovies :many
 SELECT
     sqlc.embed(movie),
-    watched.watched_in_theater AS in_theaters
+    sqlc.embed(watched)
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id

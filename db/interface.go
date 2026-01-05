@@ -81,4 +81,5 @@ type InsertWatched struct {
 	MovieID    int64
 	Date       time.Time
 	InTheaters bool
+	Rating     *float64
 }

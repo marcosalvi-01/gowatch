@@ -16,12 +16,14 @@ import (
 	"gowatch/internal/ui/templui/button"
 	"gowatch/internal/ui/templui/calendar"
 	"gowatch/internal/ui/templui/chart"
+	"gowatch/internal/ui/templui/checkbox"
 	"gowatch/internal/ui/templui/collapsible"
 	"gowatch/internal/ui/templui/datepicker"
 	"gowatch/internal/ui/templui/dialog"
 	"gowatch/internal/ui/templui/icon"
 	"gowatch/internal/ui/templui/input"
 	"gowatch/internal/ui/templui/popover"
+	"gowatch/internal/ui/templui/rating"
 	"gowatch/internal/ui/templui/selectbox"
 	templSidebar "gowatch/internal/ui/templui/sidebar"
 	"gowatch/internal/ui/templui/skeleton"
@@ -448,6 +450,18 @@ func Scripts() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = selectbox.Script().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = input.Script().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = checkbox.Script().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = rating.Script().Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

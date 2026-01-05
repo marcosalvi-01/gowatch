@@ -924,7 +924,7 @@ func listsSection(lists []models.ListEntry, currentPage string) templ.Component 
 						return nil
 					})
 					templ_7745c5c3_Err = collapsible.Collapsible(collapsible.Props{
-						Open:  true,
+						Open:  false,
 						Class: "group/collapsible w-full",
 					}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var35), templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
@@ -2025,14 +2025,14 @@ func header() templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "<img src=\"/static/favicon.svg\" alt=\"Gowatch\" class=\"w-20 h-20\"> Gowatch")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "<div hx-get=\"/home\" hx-target=\"#main-content\" hx-swap=\"innerHTML show:#main-scroll-container:top\" hx-push-url=\"true\" class=\"cursor-pointer flex items-center gap-8\"><img src=\"/static/favicon.svg\" alt=\"Gowatch\" class=\"w-20 h-20\"> Gowatch</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
 		templ_7745c5c3_Err = sidebar.Header(sidebar.HeaderProps{
-			Class: "flex flex-row items-center text-lg font-semibold leading-none tracking-tight gap-8",
+			Class: "flex flex-row items-center text-lg font-semibold leading-none tracking-tight",
 		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var81), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

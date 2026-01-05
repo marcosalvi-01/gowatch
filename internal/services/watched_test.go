@@ -33,7 +33,7 @@ func TestWatchedService_AddWatched(t *testing.T) {
 
 	// Add watched
 	date := time.Date(2023, 10, 1, 0, 0, 0, 0, time.UTC)
-	if err := watchedService.AddWatched(ctx, 1, date, true); err != nil {
+	if err := watchedService.AddWatched(ctx, 1, date, true, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -138,7 +138,7 @@ func TestWatchedService_GetWatchedStats(t *testing.T) {
 
 	// Add watched
 	date := time.Date(2023, 10, 1, 0, 0, 0, 0, time.UTC)
-	if err := watchedService.AddWatched(ctx, 1, date, true); err != nil {
+	if err := watchedService.AddWatched(ctx, 1, date, true, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -172,7 +172,7 @@ func TestWatchedService_AddWatched_InvalidMovie(t *testing.T) {
 
 	// Try to add watched for non-existent movie
 	date := time.Date(2023, 10, 1, 0, 0, 0, 0, time.UTC)
-	err = watchedService.AddWatched(ctx, 999, date, true)
+	err = watchedService.AddWatched(ctx, 999, date, true, nil)
 	if err == nil {
 		t.Error("expected error for invalid movie ID")
 	}

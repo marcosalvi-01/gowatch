@@ -1,4 +1,4 @@
-// templui component icon - version: v1.0.0 installed by templui v1.0.0
+// templui component icon - version: v1.1.0 installed by templui v1.1.0
 // 📚 Documentation: https://templui.io/docs/components/icon
 package icon
 

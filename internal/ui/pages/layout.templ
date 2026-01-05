@@ -7,12 +7,14 @@ import (
 	"gowatch/internal/ui/templui/button"
 	"gowatch/internal/ui/templui/calendar"
 	"gowatch/internal/ui/templui/chart"
+	"gowatch/internal/ui/templui/checkbox"
 	"gowatch/internal/ui/templui/collapsible"
 	"gowatch/internal/ui/templui/datepicker"
 	"gowatch/internal/ui/templui/dialog"
 	"gowatch/internal/ui/templui/icon"
 	"gowatch/internal/ui/templui/input"
 	"gowatch/internal/ui/templui/popover"
+	"gowatch/internal/ui/templui/rating"
 	"gowatch/internal/ui/templui/selectbox"
 	templSidebar "gowatch/internal/ui/templui/sidebar"
 	"gowatch/internal/ui/templui/skeleton"
@@ -168,6 +170,9 @@ templ Scripts() {
 	@textarea.Script()
 	@chart.Script()
 	@selectbox.Script()
+	@input.Script()
+	@checkbox.Script()
+	@rating.Script()
 }
 
 templ SidebarNavigationScript() {

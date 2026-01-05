@@ -112,4 +112,5 @@ type Watched struct {
 	UserID           *int64
 	WatchedDate      time.Time
 	WatchedInTheater bool
+	Rating           *float64
 }
