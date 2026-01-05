@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
 type DB interface {

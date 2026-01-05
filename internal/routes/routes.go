@@ -5,14 +5,14 @@
 package routes
 
 import (
-	"gowatch/db"
-	"gowatch/internal/handlers/api"
-	"gowatch/internal/handlers/htmx"
-	"gowatch/internal/handlers/pages"
-	"gowatch/internal/handlers/static"
-	"gowatch/internal/middleware"
-	"gowatch/internal/services"
-	"gowatch/logging"
+	"github.com/marcosalvi-01/gowatch/db"
+	"github.com/marcosalvi-01/gowatch/internal/handlers/api"
+	"github.com/marcosalvi-01/gowatch/internal/handlers/htmx"
+	"github.com/marcosalvi-01/gowatch/internal/handlers/pages"
+	"github.com/marcosalvi-01/gowatch/internal/handlers/static"
+	"github.com/marcosalvi-01/gowatch/internal/middleware"
+	"github.com/marcosalvi-01/gowatch/internal/services"
+	"github.com/marcosalvi-01/gowatch/logging"
 
 	"github.com/go-chi/chi/v5"
 )

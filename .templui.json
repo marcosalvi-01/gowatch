@@ -1,7 +1,7 @@
 {
   "componentsDir": "internal/ui/templui",
   "utilsDir": "internal/ui/utils",
-  "moduleName": "gowatch",
+  "moduleName": "github.com/marcosalvi-01/gowatch",
   "jsDir": "internal/handlers/static/static/js",
   "jsPublicPath": "/static/js"
 }

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"gowatch/db/sqlc"
-	"gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/db/sqlc"
+	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
 func TestToModelsMovieDetails(t *testing.T) {

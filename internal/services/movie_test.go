@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"gowatch/db"
-	"gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/db"
+	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
 func TestMovieService_GetMovieDetails_CacheHit(t *testing.T) {

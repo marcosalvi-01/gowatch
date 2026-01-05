@@ -11,10 +11,10 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"gowatch/internal/models"
-	"gowatch/internal/ui/templui/card"
-	"gowatch/internal/ui/templui/label"
-	"gowatch/internal/ui/templui/radio"
+	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/label"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/radio"
 	"strconv"
 )
 

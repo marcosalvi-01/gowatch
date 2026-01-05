@@ -12,7 +12,7 @@ package card
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-import "gowatch/internal/ui/utils"
+import "github.com/marcosalvi-01/gowatch/internal/ui/utils"
 
 type Props struct {
 	ID         string

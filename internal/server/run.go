@@ -9,10 +9,10 @@ import (
 	"syscall"
 	"time"
 
-	"gowatch/db"
-	"gowatch/internal/routes"
-	"gowatch/internal/services"
-	"gowatch/logging"
+	"github.com/marcosalvi-01/gowatch/db"
+	"github.com/marcosalvi-01/gowatch/internal/routes"
+	"github.com/marcosalvi-01/gowatch/internal/services"
+	"github.com/marcosalvi-01/gowatch/logging"
 
 	tmdb "github.com/cyruzin/golang-tmdb"
 )

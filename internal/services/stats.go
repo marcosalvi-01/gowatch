@@ -9,8 +9,8 @@ import (
 	"sort"
 	"time"
 
-	"gowatch/internal/common"
-	"gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/common"
+	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
 func (s *WatchedService) getTotalWatched(ctx context.Context) (int64, error) {

@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"gowatch/db"
-	"gowatch/internal/common"
-	"gowatch/internal/models"
-	"gowatch/internal/services"
+	"github.com/marcosalvi-01/gowatch/db"
+	"github.com/marcosalvi-01/gowatch/internal/common"
+	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/services"
 )
 
 func getTestCtx() context.Context {

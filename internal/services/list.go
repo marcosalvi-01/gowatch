@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"time"
 
-	"gowatch/db"
-	"gowatch/internal/common"
-	"gowatch/internal/models"
-	"gowatch/logging"
+	"github.com/marcosalvi-01/gowatch/db"
+	"github.com/marcosalvi-01/gowatch/internal/common"
+	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/logging"
 )
 
 // ListService handles user's custom movie lists

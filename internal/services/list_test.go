@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"gowatch/db"
-	"gowatch/internal/common"
-	"gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/db"
+	"github.com/marcosalvi-01/gowatch/internal/common"
+	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
 func setupTestUser(t *testing.T, testDB db.DB) context.Context {

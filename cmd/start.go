@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"gowatch/internal/server"
+	"github.com/marcosalvi-01/gowatch/internal/server"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

@@ -13,8 +13,8 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"gowatch/internal/ui/templui/label"
-	"gowatch/internal/ui/utils"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/label"
+	"github.com/marcosalvi-01/gowatch/internal/ui/utils"
 )
 
 type MessageVariant string

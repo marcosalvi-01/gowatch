@@ -9,9 +9,9 @@ import (
 	"log/slog"
 	"time"
 
-	"gowatch/db"
-	"gowatch/internal/models"
-	"gowatch/logging"
+	"github.com/marcosalvi-01/gowatch/db"
+	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/logging"
 
 	tmdb "github.com/cyruzin/golang-tmdb"
 )

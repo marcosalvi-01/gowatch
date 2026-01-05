@@ -10,13 +10,13 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"fmt"
-	"gowatch/internal/models"
-	"gowatch/internal/ui/components/emptystate"
-	"gowatch/internal/ui/components/moviecard"
-	"gowatch/internal/ui/components/sidebar"
-	"gowatch/internal/ui/templui/badge"
-	"gowatch/internal/ui/templui/icon"
-	"gowatch/internal/ui/templui/skeleton"
+	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/emptystate"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/moviecard"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/sidebar"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
 	"strconv"
 )
 

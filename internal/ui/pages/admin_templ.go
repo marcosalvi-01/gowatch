@@ -10,14 +10,14 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"fmt"
-	"gowatch/internal/models"
-	"gowatch/internal/ui/templui/badge"
-	"gowatch/internal/ui/templui/button"
-	"gowatch/internal/ui/templui/card"
-	"gowatch/internal/ui/templui/dialog"
-	"gowatch/internal/ui/templui/icon"
-	"gowatch/internal/ui/templui/table"
-	"gowatch/internal/ui/templui/tooltip"
+	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/table"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/tooltip"
 )
 
 func AdminUsers(users []models.UserWithStats) templ.Component {

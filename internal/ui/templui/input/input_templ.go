@@ -13,9 +13,9 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"gowatch/internal/ui/templui/button"
-	"gowatch/internal/ui/templui/icon"
-	"gowatch/internal/ui/utils"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/utils"
 )
 
 type Type string

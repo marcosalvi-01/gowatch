@@ -2,7 +2,7 @@
 
 [![Build](https://img.shields.io/github/actions/workflow/status/marcosalvi-01/gowatch/docker-build.yaml)](https://github.com/marcosalvi-01/gowatch/actions)
 [![Docker Image](https://img.shields.io/badge/docker-ghcr.io%2Fmarcosalvi--01%2Fgowatch-blue)](https://ghcr.io/marcosalvi-01/gowatch)
-[![Go Version](https://img.shields.io/badge/Go-1.25.3+-00ADD8?style=flat&logo=go)](https://golang.org/)
+[![Go Version](https://img.shields.io/badge/Go-1.25.5+-00ADD8?style=flat&logo=go)](https://golang.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 A self-hosted web application for tracking movies you've watched, creating custom watchlists, and viewing detailed statistics. Built with Go and integrated with The Movie Database (TMDB) API.

@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"gowatch/db/sqlc"
-	"gowatch/logging"
+	"github.com/marcosalvi-01/gowatch/db/sqlc"
+	"github.com/marcosalvi-01/gowatch/logging"
 
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"

@@ -3,7 +3,7 @@ package htmx
 import (
 	"net/http"
 
-	"gowatch/internal/ui/templui/toast"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/toast"
 )
 
 func RenderErrorToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"gowatch/logging"
+	"github.com/marcosalvi-01/gowatch/logging"
 )
 
 var log = logging.Get("http")

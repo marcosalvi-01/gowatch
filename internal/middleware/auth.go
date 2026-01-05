@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"gowatch/internal/common"
-	"gowatch/internal/services"
+	"github.com/marcosalvi-01/gowatch/internal/common"
+	"github.com/marcosalvi-01/gowatch/internal/services"
 )
 
 func AuthMiddleware(authService services.AuthService) func(next http.Handler) http.Handler {

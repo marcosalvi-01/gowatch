@@ -13,11 +13,11 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import "context"
-import "gowatch/internal/ui/utils"
-import "gowatch/internal/ui/templui/icon"
-import "gowatch/internal/ui/templui/button"
-import "gowatch/internal/ui/templui/sheet"
-import "gowatch/internal/ui/templui/tooltip"
+import "github.com/marcosalvi-01/gowatch/internal/ui/utils"
+import "github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+import "github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
+import "github.com/marcosalvi-01/gowatch/internal/ui/templui/sheet"
+import "github.com/marcosalvi-01/gowatch/internal/ui/templui/tooltip"
 
 type contextKey string
 

@@ -15,11 +15,11 @@ import templruntime "github.com/a-h/templ/runtime"
 import (
 	"context"
 	"fmt"
-	"gowatch/internal/ui/templui/button"
-	"gowatch/internal/ui/templui/icon"
-	"gowatch/internal/ui/templui/input"
-	"gowatch/internal/ui/templui/popover"
-	"gowatch/internal/ui/utils"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/input"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/popover"
+	"github.com/marcosalvi-01/gowatch/internal/ui/utils"
 	"strconv"
 )
 

@@ -8,8 +8,8 @@ import (
 	"sort"
 	"time"
 
-	"gowatch/db/sqlc"
-	"gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/db/sqlc"
+	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
 // UpsertMovie adds a new movie to the database

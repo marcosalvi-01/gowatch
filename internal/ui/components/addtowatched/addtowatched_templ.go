@@ -9,8 +9,8 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"gowatch/internal/ui/templui/button"
-	"gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
 )
 
 func AddToWatched(movieID int64, isInWatchlist bool) templ.Component {

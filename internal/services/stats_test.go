@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
 func TestAggregateGenres(t *testing.T) {

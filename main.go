@@ -1,7 +1,7 @@
 package main
 
 import (
-	"gowatch/cmd"
+	"github.com/marcosalvi-01/gowatch/cmd"
 )
 
 func main() {

@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"io/fs"
 
-	"gowatch/db/sqlc"
+	"github.com/marcosalvi-01/gowatch/db/sqlc"
 
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"

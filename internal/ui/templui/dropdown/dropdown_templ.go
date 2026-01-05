@@ -14,8 +14,8 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"context"
-	"gowatch/internal/ui/templui/popover"
-	"gowatch/internal/ui/utils"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/popover"
+	"github.com/marcosalvi-01/gowatch/internal/ui/utils"
 )
 
 type Placement = popover.Placement
