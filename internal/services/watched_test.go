@@ -78,13 +78,13 @@ func TestWatchedService_ImportExportWatched(t *testing.T) {
 		{
 			Date: time.Date(2023, 10, 1, 0, 0, 0, 0, time.UTC),
 			Movies: []models.ImportWatchedMovieRef{
-				{MovieID: 1, InTheaters: true},
+				{MovieID: 1, InTheaters: true, Rating: nil},
 			},
 		},
 		{
 			Date: time.Date(2023, 10, 2, 0, 0, 0, 0, time.UTC),
 			Movies: []models.ImportWatchedMovieRef{
-				{MovieID: 2, InTheaters: false},
+				{MovieID: 2, InTheaters: false, Rating: nil},
 			},
 		},
 	}

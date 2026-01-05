@@ -93,6 +93,12 @@ templ Sidebar(props Props) {
 									</span>
 								}
 							}
+							@dropdown.Item() {
+								<a href="/api/v1/movies/export" download="watched_movies.json" class="flex items-center w-full">
+									@icon.Download(icon.Props{Size: 16, Class: "mr-2"})
+									Export watched
+								</a>
+							}
 							@dropdown.Separator()
 							@dropdown.Item(dropdown.ItemProps{
 								Attributes: templ.Attributes{

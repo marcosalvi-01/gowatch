@@ -39,6 +39,7 @@ func NewRouter(
 	log.Debug("registering API routes")
 	apiHandlers := api.NewHandlers(db, watchedService)
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware(*authService))
 		r.Use(middleware.JSONMiddleware)
 		apiHandlers.RegisterRoutes(r)
 	})

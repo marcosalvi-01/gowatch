@@ -127,7 +127,7 @@ func (s *WatchedService) ImportWatched(ctx context.Context, movies models.Import
 				return fmt.Errorf("ImportWatched: failed to fetch movie details: %w", err)
 			}
 
-			err = s.AddWatched(ctx, int64(movieRef.MovieID), importMovie.Date, movieRef.InTheaters, nil)
+			err = s.AddWatched(ctx, int64(movieRef.MovieID), importMovie.Date, movieRef.InTheaters, movieRef.Rating)
 			if err != nil {
 				s.log.Error("ImportWatched: failed to import movie", "movieID", movieRef.MovieID, "date", importMovie.Date, "error", err)
 				return fmt.Errorf("ImportWatched: failed to import movie: %w", err)
@@ -159,6 +159,7 @@ func (s *WatchedService) ExportWatched(ctx context.Context) (models.ImportWatche
 			ids[j] = models.ImportWatchedMovieRef{
 				MovieID:    int(movieDetails.MovieDetails.Movie.ID),
 				InTheaters: movieDetails.InTheaters,
+				Rating:     movieDetails.Rating,
 			}
 		}
 		totalMovies += len(w.Movies)
