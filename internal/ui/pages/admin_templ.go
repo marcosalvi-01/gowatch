@@ -65,7 +65,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 					}()
 				}
 				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"container mx-auto py-6 space-y-6\"><div class=\"flex items-center justify-between\"><h1 class=\"text-3xl font-bold tracking-tight\">User Management</h1></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"py-6 space-y-6\"><div class=\"flex items-center justify-between\"><h1 class=\"text-3xl font-bold tracking-tight\">User Management</h1></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

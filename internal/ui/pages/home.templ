@@ -3,10 +3,10 @@ package pages
 import (
 	"fmt"
 	"gowatch/internal/models"
+	"gowatch/internal/ui/components/emptystate"
 	"gowatch/internal/ui/components/listcard"
 	"gowatch/internal/ui/components/moviecard"
 	"gowatch/internal/ui/components/sidebar"
-	"gowatch/internal/ui/components/emptystate"
 	"gowatch/internal/ui/templui/card"
 	"gowatch/internal/ui/templui/dialog"
 	"gowatch/internal/ui/templui/icon"
@@ -37,7 +37,6 @@ templ Home(userName string, data models.HomeData) {
 		}
 	}
 }
-
 
 templ homeStats(stats models.HomeStatsSummary) {
 	<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -76,34 +75,38 @@ templ homeRecentActivity(movies []models.WatchedMovieInDay) {
 					Recent Activity
 				</h2>
 			</div>
-			<div class="flex gap-4 overflow-x-auto pb-4 -mx-1 px-1 scrollbar-hide">
-				for _, movie := range movies {
-					{{
-						moviecardProps := moviecard.Props{
-							Title:      movie.MovieDetails.Movie.Title,
-							Href:       "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
-							PosterPath: movie.MovieDetails.Movie.PosterPath,
-							Hoverable:  true,
-						}
-						if movie.InTheaters {
-							moviecardProps.TopHoverComponent = movieCardTopHover(movie.InTheaters)
-						}
-					}}
-					@moviecard.MovieCard(moviecardProps) {
-						<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight">{ movie.MovieDetails.Movie.Title }</h3>
-						<div class="flex items-center justify-between">
-							<div class="flex items-center">
-								@icon.Calendar(icon.Props{Size: 12})
-								<p class="ml-2 text-xs opacity-90">{ movie.MovieDetails.Movie.ReleaseDate.Format("2006") }</p>
-							</div>
-							if movie.MovieDetails.Movie.VoteAverage > 0 {
-								<div class="flex items-center">
-									@icon.Star(icon.Props{
-										Size:   12,
-										Fill:   "orange",
-										Stroke: "orange",
-									})
-									<span class="ml-1 text-xs">{ fmt.Sprintf("%.1f", movie.MovieDetails.Movie.VoteAverage) }</span>
+			<div class="flex gap-4 overflow-x-auto pb-4 px-1 scrollbar-hide">
+				for i, movie := range movies {
+					if i < 5 {
+						<div class={ "flex-shrink-0", getActivityClass(i) }>
+							{{
+								moviecardProps := moviecard.Props{
+									Title:      movie.MovieDetails.Movie.Title,
+									Href:       "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+									PosterPath: movie.MovieDetails.Movie.PosterPath,
+									Hoverable:  true,
+								}
+								if movie.InTheaters {
+									moviecardProps.TopHoverComponent = movieCardTopHover(movie.InTheaters)
+								}
+							}}
+							@moviecard.MovieCard(moviecardProps) {
+								<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight">{ movie.MovieDetails.Movie.Title }</h3>
+								<div class="flex items-center justify-between">
+									<div class="flex items-center">
+										@icon.Calendar(icon.Props{Size: 12})
+										<p class="ml-2 text-xs opacity-90">{ movie.MovieDetails.Movie.ReleaseDate.Format("2006") }</p>
+									</div>
+									if movie.MovieDetails.Movie.VoteAverage > 0 {
+										<div class="flex items-center">
+											@icon.Star(icon.Props{
+												Size:   12,
+												Fill:   "orange",
+												Stroke: "orange",
+											})
+											<span class="ml-1 text-xs">{ fmt.Sprintf("%.1f", movie.MovieDetails.Movie.VoteAverage) }</span>
+										</div>
+									}
 								</div>
 							}
 						</div>
@@ -128,6 +131,19 @@ templ homeRecentActivity(movies []models.WatchedMovieInDay) {
 				</div>
 			</div>
 		</div>
+	}
+}
+
+func getActivityClass(i int) string {
+	switch {
+	case i >= 4:
+		return "hidden xl:block"
+	case i == 3:
+		return "hidden lg:block"
+	case i == 2:
+		return "hidden md:block"
+	default:
+		return ""
 	}
 }
 
