@@ -1448,7 +1448,7 @@ func statsCharts(stats *models.WatchedStats) templ.Component {
 				}
 				ctx = templ.InitializeContext(ctx)
 				templ_7745c5c3_Err = chart.Chart(chart.Props{
-					Variant:    chart.VariantPie,
+					Variant:    chart.VariantDoughnut,
 					Data:       prepareTheaterData(stats.TheaterVsHome),
 					Options:    chart.Options{Responsive: true, Legend: true},
 					ShowLegend: true,

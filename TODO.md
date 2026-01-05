@@ -30,7 +30,7 @@
 - [ ] jellyfin watched integration
 - [ ] change/modify watched data (in case of errors when adding or jellyfin is wrong?)
 - [x] add rating capabilities to watched movies
-- [ ] custom ad-hoc watchlist (separate from lists)
+- [x] custom ad-hoc watchlist (separate from lists)
 - [ ] sharable lists
 
 # optimizations:
