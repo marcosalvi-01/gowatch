@@ -1,0 +1,3 @@
+port: "9090"
+db_path: "/tmp/gowatch"
+db_name: "test.db"

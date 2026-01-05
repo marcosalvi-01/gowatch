@@ -15,4 +15,4 @@ USER appuser
 
 EXPOSE 8080
 
-CMD ["./gowatch"]
+CMD ["./gowatch", "start"]

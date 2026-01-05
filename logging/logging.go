@@ -34,7 +34,7 @@ func init() {
 			return
 		}
 	} else {
-		slog.Warn("env variable LOG_LEVEL not set, falling back to INFO")
+		// slog.Warn("env variable LOG_LEVEL not set, falling back to INFO")
 		return
 	}
 	fmt.Printf("setting up logging with level %s\n", v)
