@@ -18,7 +18,8 @@ func TestWatchedService_AddWatched(t *testing.T) {
 	ctx := setupTestUser(t, testDB)
 
 	movieService := NewMovieService(testDB, nil, time.Hour) // No TMDB for test
-	watchedService := NewWatchedService(testDB, movieService)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
 
 	// Insert a movie
 	movie := &models.MovieDetails{
@@ -56,7 +57,8 @@ func TestWatchedService_ImportExportWatched(t *testing.T) {
 	ctx := setupTestUser(t, testDB)
 
 	movieService := NewMovieService(testDB, nil, time.Hour)
-	watchedService := NewWatchedService(testDB, movieService)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
 
 	// Insert movies
 	for i := 1; i <= 2; i++ {
@@ -123,7 +125,8 @@ func TestWatchedService_GetWatchedStats(t *testing.T) {
 	ctx := setupTestUser(t, testDB)
 
 	movieService := NewMovieService(testDB, nil, time.Hour)
-	watchedService := NewWatchedService(testDB, movieService)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
 
 	// Insert movie with genres
 	movie := &models.MovieDetails{
@@ -168,7 +171,8 @@ func TestWatchedService_AddWatched_InvalidMovie(t *testing.T) {
 	ctx := setupTestUser(t, testDB)
 
 	movieService := NewMovieService(testDB, nil, time.Hour)
-	watchedService := NewWatchedService(testDB, movieService)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
 
 	// Try to add watched for non-existent movie
 	date := time.Date(2023, 10, 1, 0, 0, 0, 0, time.UTC)
@@ -187,7 +191,8 @@ func TestWatchedService_ImportExport_Empty(t *testing.T) {
 	ctx := setupTestUser(t, testDB)
 
 	movieService := NewMovieService(testDB, nil, time.Hour)
-	watchedService := NewWatchedService(testDB, movieService)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
 
 	// Import empty data
 	importData := models.ImportWatchedMoviesLog{}

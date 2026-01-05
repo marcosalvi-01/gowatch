@@ -77,4 +77,4 @@ check: fmt vet lint test
 
 # Run tests
 test:
-	go test ./... -v
+	go test ./...

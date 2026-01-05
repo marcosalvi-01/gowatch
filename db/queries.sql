@@ -225,10 +225,11 @@ INSERT INTO
         name,
         creation_date,
         description,
-        user_id
+        user_id,
+		is_watchlist
     )
 VALUES
-    (?, ?, ?, ?)
+    (?, ?, ?, ?, ?)
 RETURNING
     id;
 
@@ -273,6 +274,15 @@ FROM
     list
 WHERE
     user_id = ?;
+
+-- name: GetWatchlistID :one
+SELECT
+    id
+FROM
+    list
+WHERE
+    user_id = ?
+    AND is_watchlist = TRUE;
 
 -- name: GetWatchedCount :one
 SELECT
@@ -551,7 +561,7 @@ INSERT INTO
 VALUES
     (?, ?, ?, datetime('now'))
 RETURNING
-    id;
+    *;
 
 -- name: GetUserByEmail :one
 SELECT

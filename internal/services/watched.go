@@ -19,18 +19,20 @@ const MaxGenresDisplayed = 11
 
 // WatchedService handles user's watched movie tracking
 type WatchedService struct {
-	db   db.DB
-	tmdb *MovieService
-	log  *slog.Logger
+	db          db.DB
+	listService *ListService
+	tmdb        *MovieService
+	log         *slog.Logger
 }
 
-func NewWatchedService(db db.DB, tmdb *MovieService) *WatchedService {
+func NewWatchedService(db db.DB, listService *ListService, tmdb *MovieService) *WatchedService {
 	log := logging.Get("watched service")
 	log.Debug("creating new WatchedService instance")
 	return &WatchedService{
-		db:   db,
-		tmdb: tmdb,
-		log:  log,
+		db:          db,
+		listService: listService,
+		tmdb:        tmdb,
+		log:         log,
 	}
 }
 
@@ -59,6 +61,12 @@ func (s *WatchedService) AddWatched(ctx context.Context, movieID int64, date tim
 	if err != nil {
 		s.log.Error("AddWatched: failed to insert watched entry", "movieID", movieID, "error", err, "userID", user.ID)
 		return fmt.Errorf("AddWatched: failed to record watched entry: %w", err)
+	}
+
+	err = s.listService.RemoveMovieFromWatchlist(ctx, movieID)
+	if err != nil {
+		s.log.Warn("AddWatched: failed to auto-remove movie from watchlist after marking as watched", "movieID", movieID, "error", err)
+		// don't stop on fail
 	}
 
 	s.log.Info("AddWatched: successfully added watched movie", "movieID", movieID, "userID", user.ID)

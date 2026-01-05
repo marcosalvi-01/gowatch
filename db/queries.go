@@ -359,6 +359,7 @@ func (d *SqliteDB) InsertList(ctx context.Context, list InsertList) (int64, erro
 		Name:         list.Name,
 		CreationDate: time.Now().Format("2006-01-02 15:04:05.999999999 -0700 MST"),
 		Description:  list.Description,
+		IsWatchlist:  list.IsWatchlist,
 	})
 	if err != nil {
 		log.Error("failed to insert list", "name", list.Name, "error", err)
@@ -407,6 +408,7 @@ func (d *SqliteDB) GetList(ctx context.Context, userID, id int64) (*models.List,
 			Name:         list.Name,
 			CreationDate: creationDate,
 			Description:  list.Description,
+			IsWatchlist:  list.IsWatchlist,
 			Movies:       []models.MovieItem{},
 		}, nil
 	}
@@ -446,6 +448,7 @@ func (d *SqliteDB) GetList(ctx context.Context, userID, id int64) (*models.List,
 		Name:         list.Name,
 		CreationDate: creationDate,
 		Description:  list.Description,
+		IsWatchlist:  list.IsWatchlist,
 		Movies:       movies,
 	}, nil
 }
@@ -493,6 +496,7 @@ func (d *SqliteDB) GetAllLists(ctx context.Context, userID int64) ([]InsertList,
 			ID:          result.ID,
 			Name:        result.Name,
 			Description: result.Description,
+			IsWatchlist: result.IsWatchlist,
 		}
 	}
 
@@ -541,6 +545,19 @@ func (d *SqliteDB) DeleteMovieFromList(ctx context.Context, userID, listID, movi
 
 	log.Debug("successfully deleted movie from list", "listID", listID, "movieID", movieID)
 	return nil
+}
+
+func (d *SqliteDB) GetWatchlistID(ctx context.Context, userID int64) (int64, error) {
+	log.Debug("getting watchlist ID", "userID", userID)
+
+	id, err := d.queries.GetWatchlistID(ctx, &userID)
+	if err != nil {
+		log.Error("failed to get watchlist ID", "userID", userID, "error", err)
+		return 0, fmt.Errorf("failed to get watchlist ID for user %d: %w", userID, err)
+	}
+
+	log.Debug("retrieved watchlist ID", "userID", userID, "watchlistID", id)
+	return id, nil
 }
 
 func (d *SqliteDB) aggregateWatchedByPeriod(data []time.Time, format string) []models.PeriodCount {
@@ -918,21 +935,29 @@ func (d *SqliteDB) CleanupExpiredSessions(ctx context.Context) error {
 	return nil
 }
 
-func (d *SqliteDB) CreateUser(ctx context.Context, email, name, passwordHash string) (int64, error) {
+func (d *SqliteDB) CreateUser(ctx context.Context, email, name, passwordHash string) (*models.User, error) {
 	log.Debug("creating new user", "email", email)
 
-	userID, err := d.queries.CreateUser(ctx, sqlc.CreateUserParams{
+	user, err := d.queries.CreateUser(ctx, sqlc.CreateUserParams{
 		Email:        email,
 		Name:         name,
 		PasswordHash: passwordHash,
 	})
 	if err != nil {
 		log.Error("failed to create user in database", "email", email, "error", err)
-		return 0, fmt.Errorf("failed to create user %s: %w", email, err)
+		return nil, fmt.Errorf("failed to create user %s: %w", email, err)
 	}
 
-	log.Debug("successfully created user", "user_id", userID, "email", email)
-	return userID, nil
+	log.Debug("successfully created user", "user_id", user.ID, "email", email)
+	return &models.User{
+		ID:                    user.ID,
+		Email:                 user.Email,
+		Name:                  user.Name,
+		PasswordHash:          user.PasswordHash,
+		Admin:                 user.Admin,
+		CreatedAt:             user.CreatedAt,
+		PasswordResetRequired: user.PasswordResetRequired,
+	}, nil
 }
 
 func (d *SqliteDB) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {

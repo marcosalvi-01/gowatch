@@ -1,10 +1,12 @@
 # bugs:
 
 - [ ] fix addtolistdialog to return full dialog content with buttons and handle empty lists and add loading indicator
+- [ ] we need to keep track of the selected item on the sidebar in a cookie or something so that the backend can render the sidebar with the correct state (should also simplify the sidebar script?). this is to fix removing a movie from the watchlist removing the selection on the watchlist item in the sidebar when refreshing it
 
 # feats:
 
 - [ ] show lists containing the movie in movie details
+- [ ] different switchable view for the watched timeline
 - [ ] add people search support
 - [ ] add tests
 - [ ] create README documentation
@@ -28,7 +30,7 @@
 - [ ] jellyfin watched integration
 - [ ] change/modify watched data (in case of errors when adding or jellyfin is wrong?)
 - [x] add rating capabilities to watched movies
-- [ ] custom ad- [ ]hoc watchlist (separate from lists)
+- [ ] custom ad-hoc watchlist (separate from lists)
 - [ ] sharable lists
 
 # optimizations:

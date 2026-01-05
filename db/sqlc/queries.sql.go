@@ -121,7 +121,7 @@ INSERT INTO
 VALUES
     (?, ?, ?, datetime('now'))
 RETURNING
-    id
+    id, email, password_hash, name, created_at, admin, password_reset_required
 `
 
 type CreateUserParams struct {
@@ -130,11 +130,19 @@ type CreateUserParams struct {
 	PasswordHash string
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, error) {
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRowContext(ctx, createUser, arg.Email, arg.Name, arg.PasswordHash)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.CreatedAt,
+		&i.Admin,
+		&i.PasswordResetRequired,
+	)
+	return i, err
 }
 
 const deleteExpiredSessions = `-- name: DeleteExpiredSessions :exec
@@ -221,7 +229,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 
 const getAllLists = `-- name: GetAllLists :many
 SELECT
-    id, name, creation_date, description, user_id
+    id, name, creation_date, description, user_id, is_watchlist
 FROM
     list
 WHERE
@@ -243,6 +251,7 @@ func (q *Queries) GetAllLists(ctx context.Context, userID *int64) ([]List, error
 			&i.CreationDate,
 			&i.Description,
 			&i.UserID,
+			&i.IsWatchlist,
 		); err != nil {
 			return nil, err
 		}
@@ -408,7 +417,7 @@ func (q *Queries) GetCrewByMovieID(ctx context.Context, movieID int64) ([]Crew, 
 
 const getListByID = `-- name: GetListByID :one
 SELECT
-    id, name, creation_date, description, user_id
+    id, name, creation_date, description, user_id, is_watchlist
 FROM
     list
 WHERE
@@ -430,6 +439,7 @@ func (q *Queries) GetListByID(ctx context.Context, arg GetListByIDParams) (List,
 		&i.CreationDate,
 		&i.Description,
 		&i.UserID,
+		&i.IsWatchlist,
 	)
 	return i, err
 }
@@ -438,7 +448,7 @@ const getListJoinMovieByID = `-- name: GetListJoinMovieByID :many
 SELECT
     movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
     list_movie.movie_id, list_movie.list_id, list_movie.date_added, list_movie.position, list_movie.note,
-    list.id, list.name, list.creation_date, list.description, list.user_id
+    list.id, list.name, list.creation_date, list.description, list.user_id, list.is_watchlist
 FROM
     list
     JOIN list_movie ON list_movie.list_id = list.id
@@ -498,6 +508,7 @@ func (q *Queries) GetListJoinMovieByID(ctx context.Context, arg GetListJoinMovie
 			&i.List.CreationDate,
 			&i.List.Description,
 			&i.List.UserID,
+			&i.List.IsWatchlist,
 		); err != nil {
 			return nil, err
 		}
@@ -1472,16 +1483,34 @@ func (q *Queries) GetWatchedRuntimesLastYear(ctx context.Context, userID *int64)
 	return items, nil
 }
 
+const getWatchlistID = `-- name: GetWatchlistID :one
+SELECT
+    id
+FROM
+    list
+WHERE
+    user_id = ?
+    AND is_watchlist = TRUE
+`
+
+func (q *Queries) GetWatchlistID(ctx context.Context, userID *int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getWatchlistID, userID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const insertList = `-- name: InsertList :one
 INSERT INTO
     list (
         name,
         creation_date,
         description,
-        user_id
+        user_id,
+		is_watchlist
     )
 VALUES
-    (?, ?, ?, ?)
+    (?, ?, ?, ?, ?)
 RETURNING
     id
 `
@@ -1491,6 +1520,7 @@ type InsertListParams struct {
 	CreationDate string
 	Description  *string
 	UserID       *int64
+	IsWatchlist  bool
 }
 
 func (q *Queries) InsertList(ctx context.Context, arg InsertListParams) (int64, error) {
@@ -1499,6 +1529,7 @@ func (q *Queries) InsertList(ctx context.Context, arg InsertListParams) (int64, 
 		arg.CreationDate,
 		arg.Description,
 		arg.UserID,
+		arg.IsWatchlist,
 	)
 	var id int64
 	err := row.Scan(&id)

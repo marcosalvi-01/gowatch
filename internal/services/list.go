@@ -29,6 +29,8 @@ func NewListService(db db.DB, tmdb *MovieService) *ListService {
 	}
 }
 
+// GetAllLists retrieves all user lists EXCEPT the watchlist
+// The watchlist is managed separately and not included in normal list operations
 func (s *ListService) GetAllLists(ctx context.Context) ([]models.ListEntry, error) {
 	s.log.Debug("retrieving all lists")
 
@@ -44,10 +46,18 @@ func (s *ListService) GetAllLists(ctx context.Context) ([]models.ListEntry, erro
 		return nil, fmt.Errorf("failed to get all lists: %w", err)
 	}
 
-	s.log.Debug("fetched lists from database", "count", len(results))
+	s.log.Debug("fetched lists from database", "totalCount", len(results))
 
-	lists := make([]models.ListEntry, len(results))
-	for i, result := range results {
+	// Filter out the watchlist from the results
+	var filteredResults []db.InsertList
+	for _, result := range results {
+		if !result.IsWatchlist {
+			filteredResults = append(filteredResults, result)
+		}
+	}
+
+	lists := make([]models.ListEntry, len(filteredResults))
+	for i, result := range filteredResults {
 		lists[i] = models.ListEntry{
 			ID:   result.ID,
 			Name: result.Name,
@@ -58,7 +68,7 @@ func (s *ListService) GetAllLists(ctx context.Context) ([]models.ListEntry, erro
 	return lists, nil
 }
 
-func (s *ListService) CreateList(ctx context.Context, name string, description *string) (*models.List, error) {
+func (s *ListService) CreateList(ctx context.Context, name string, description *string, isWatchlist bool) (*models.List, error) {
 	if name == "" {
 		return nil, fmt.Errorf("list name cannot be empty")
 	}
@@ -74,6 +84,7 @@ func (s *ListService) CreateList(ctx context.Context, name string, description *
 		UserID:      user.ID,
 		Name:        name,
 		Description: description,
+		IsWatchlist: isWatchlist,
 	})
 	if err != nil {
 		s.log.Error("failed to create list", "name", name, "error", err)
@@ -143,6 +154,12 @@ func (s *ListService) GetListDetails(ctx context.Context, listID int64) (*models
 func (s *ListService) DeleteList(ctx context.Context, id int64) error {
 	s.log.Debug("deleting list", "listID", id)
 
+	// Check if this list can be deleted
+	if s.IsWatchlist(ctx, id) {
+		s.log.Warn("attempted to delete watchlist", "listID", id)
+		return fmt.Errorf("cannot delete watchlist")
+	}
+
 	user, err := common.GetUser(ctx)
 	if err != nil {
 		s.log.Error("failed to get userID", "error", err)
@@ -176,4 +193,107 @@ func (s *ListService) DeleteMovieFromList(ctx context.Context, listID, movieID i
 	s.log.Info("successfully removed movie from list", "listID", listID, "movieID", movieID)
 
 	return nil
+}
+
+// GetWatchlist retrieves the user's watchlist
+func (s *ListService) GetWatchlist(ctx context.Context) (*models.List, error) {
+	s.log.Debug("getting watchlist")
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get userID", "error", err)
+		return nil, err
+	}
+
+	watchlistID, err := s.db.GetWatchlistID(ctx, user.ID)
+	if err != nil {
+		s.log.Error("failed to get watchlist ID", "error", err)
+		return nil, fmt.Errorf("failed to get watchlist ID: %w", err)
+	}
+
+	watchlist, err := s.db.GetList(ctx, user.ID, watchlistID)
+	if err != nil {
+		s.log.Error("failed to get watchlist details", "watchlistID", watchlistID, "error", err)
+		return nil, fmt.Errorf("failed to get watchlist: %w", err)
+	}
+
+	s.log.Debug("successfully retrieved watchlist", "watchlistID", watchlistID, "movieCount", len(watchlist.Movies))
+	return watchlist, nil
+}
+
+// EnsureWatchlistExists creates a watchlist if one doesn't exist for the user
+func (s *ListService) EnsureWatchlistExists(ctx context.Context) error {
+	s.log.Debug("ensuring watchlist exists")
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get userID", "error", err)
+		return err
+	}
+
+	s.log.Debug("checking if watchlist exists", "userID", user.ID)
+
+	_, err = s.db.GetWatchlistID(ctx, user.ID)
+	if err == nil {
+		s.log.Debug("watchlist already exists", "userID", user.ID)
+		return nil
+	}
+
+	s.log.Info("watchlist doesn't exist, creating it", "userID", user.ID)
+
+	description := "Your personal watchlist"
+	listID, err := s.CreateList(ctx, "Watchlist", &description, true)
+	if err != nil {
+		s.log.Error("failed to create watchlist", "userID", user.ID, "error", err)
+		return fmt.Errorf("failed to create watchlist: %w", err)
+	}
+
+	s.log.Info("successfully created watchlist", "userID", user.ID, "listID", listID)
+	return nil
+}
+
+// RemoveMovieFromWatchlist removes a movie from the user's watchlist
+func (s *ListService) RemoveMovieFromWatchlist(ctx context.Context, movieID int64) error {
+	s.log.Debug("removing movie from watchlist", "movieID", movieID)
+
+	watchlist, err := s.GetWatchlist(ctx)
+	if err != nil {
+		s.log.Error("failed to get watchlist", "error", err)
+		return fmt.Errorf("failed to get watchlist: %w", err)
+	}
+
+	return s.DeleteMovieFromList(ctx, watchlist.ID, movieID)
+}
+
+// IsWatchlist returns true if the list is a watchlist (protected)
+func (s *ListService) IsWatchlist(ctx context.Context, listID int64) bool {
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get userID", "error", err)
+		return false
+	}
+
+	watchlistID, err := s.db.GetWatchlistID(ctx, user.ID)
+	if err != nil {
+		s.log.Error("failed to get watchlist", "userID", user.ID, "error", err)
+		return false
+	}
+
+	return listID == watchlistID
+}
+
+// IsMovieInWatchlist checks if the given movie is in the user's watchlist
+func (s *ListService) IsMovieInWatchlist(ctx context.Context, movieID int64) bool {
+	watchlist, err := s.GetWatchlist(ctx)
+	if err != nil {
+		s.log.Error("failed to get watchlist for movie check", "movieID", movieID, "error", err)
+		return false
+	}
+
+	for _, movie := range watchlist.Movies {
+		if movie.MovieDetails.Movie.ID == movieID {
+			return true
+		}
+	}
+	return false
 }

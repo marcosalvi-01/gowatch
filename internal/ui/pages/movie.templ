@@ -24,27 +24,27 @@ import (
 	"time"
 )
 
-templ Movie(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) {
+templ Movie(movie models.MovieDetails, watchRecords models.WatchedMovieRecords, isInWatchlist bool) {
 	@Layout() {
 		@templ.Fragment("content") {
-			@movieHero(movie)
+			@movieHero(movie, isInWatchlist)
 			@movieContent(movie, watchRecords)
 		}
 	}
 }
 
-templ movieHero(movie models.MovieDetails) {
+templ movieHero(movie models.MovieDetails, isInWatchlist bool) {
 	<div class="relative -m-4 mb-6">
 		if movie.Movie.BackdropPath != "" {
-			@backdropHero(movie)
+			@backdropHero(movie, isInWatchlist)
 		} else {
-			@fallbackHero(movie)
+			@fallbackHero(movie, isInWatchlist)
 		}
 		@separator.Separator()
 	</div>
 }
 
-templ backdropHero(movie models.MovieDetails) {
+templ backdropHero(movie models.MovieDetails, isInWatchlist bool) {
 	<div class="relative w-full h-[40vh] min-h-[350px] max-h-[500px] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] overflow-hidden">
 		<!-- Background Image -->
 		<img
@@ -60,25 +60,25 @@ templ backdropHero(movie models.MovieDetails) {
 		<div class="absolute inset-0 flex items-center">
 			<div class="w-full p-4 sm:p-6 md:p-8 lg:p-10">
 				<div class="max-w-6xl mx-auto w-full">
-					@heroContent(movie, true)
+					@heroContent(movie, true, isInWatchlist)
 				</div>
 			</div>
 		</div>
 	</div>
 }
 
-templ fallbackHero(movie models.MovieDetails) {
+templ fallbackHero(movie models.MovieDetails, isInWatchlist bool) {
 	<div class="p-4 sm:p-6 md:p-8 lg:p-10 bg-muted/20">
 		<div class="max-w-6xl mx-auto">
-			@heroContent(movie, false)
+			@heroContent(movie, false, isInWatchlist)
 		</div>
 	</div>
 }
 
-templ heroContent(movie models.MovieDetails, isDark bool) {
+templ heroContent(movie models.MovieDetails, isDark, isInWatchlist bool) {
 	<div class="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start">
 		@posterSection(movie, isDark)
-		@movieInfo(movie, isDark)
+		@movieInfo(movie, isDark, isInWatchlist)
 	</div>
 }
 
@@ -98,7 +98,7 @@ templ posterSection(movie models.MovieDetails, isDark bool) {
 	}
 }
 
-templ movieInfo(movie models.MovieDetails, isDark bool) {
+templ movieInfo(movie models.MovieDetails, isDark, isInWatchlist bool) {
 	<div class="flex-1 min-w-0 space-y-3 sm:space-y-4">
 		<!-- Title -->
 		<div>
@@ -162,6 +162,13 @@ templ movieInfo(movie models.MovieDetails, isDark bool) {
 		}
 		<!-- Action Buttons -->
 		@actionButtons(movie.Movie.ID)
+		// TODO: improve button layout/style? Maybe move it somewhere else/change its text?
+		<div
+			hx-get={fmt.Sprintf("/htmx/watchlist/%d", movie.Movie.ID)}
+			hx-trigger="load, refreshWatchlist from:body"
+			hx-swap="innerHTML"
+			hx-target="this"
+		></div>
 	</div>
 }
 

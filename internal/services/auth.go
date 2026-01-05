@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"gowatch/db"
+	"gowatch/internal/common"
 	"gowatch/internal/models"
 	"gowatch/logging"
 
@@ -18,17 +19,19 @@ import (
 
 type AuthService struct {
 	db                   db.DB
+	listService          *ListService
 	log                  *slog.Logger
 	SessionExpiry        time.Duration
 	HTTPS                bool
 	DefaultAdminPassword string
 }
 
-func NewAuthService(db db.DB, sessionExpiry time.Duration, https bool, defaultAdminPassword string) *AuthService {
+func NewAuthService(db db.DB, listService *ListService, sessionExpiry time.Duration, https bool, defaultAdminPassword string) *AuthService {
 	log := logging.Get("auth service")
 	log.Debug("creating new AuthService instance")
 	return &AuthService{
 		db:                   db,
+		listService:          listService,
 		log:                  log,
 		SessionExpiry:        sessionExpiry,
 		HTTPS:                https,
@@ -102,12 +105,25 @@ func (a *AuthService) CreateUser(ctx context.Context, email, name, password stri
 		return 0, fmt.Errorf("failed to hash password for user %s: %w", email, err)
 	}
 
-	userID, err := a.db.CreateUser(ctx, email, name, hash)
+	user, err := a.db.CreateUser(ctx, email, name, hash)
 	if err != nil {
+		a.log.Error("failed to create user in database", "email", email, "error", err)
 		return 0, fmt.Errorf("failed to create user %s: %w", email, err)
 	}
 
-	return userID, nil
+	ctx = context.WithValue(ctx, common.UserKey, user)
+
+	a.log.Info("user created, now creating watchlist", "userID", user.ID)
+
+	// CRITICAL: Ensure watchlist exists. Failure prevents account creation
+	err = a.listService.EnsureWatchlistExists(ctx)
+	if err != nil {
+		a.log.Error("failed to create watchlist for new user", "userID", user.ID, "email", email, "error", err)
+		return 0, fmt.Errorf("failed to initialize user account (watchlist creation failed): %w", err)
+	}
+
+	a.log.Info("successfully created user account with watchlist", "userID", user.ID, "email", email)
+	return user.ID, nil
 }
 
 func (a *AuthService) CountUsers(ctx context.Context) (int64, error) {

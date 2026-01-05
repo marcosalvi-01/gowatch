@@ -41,12 +41,14 @@ type DB interface {
 	DeleteListByID(ctx context.Context, userID, listID int64) error
 	DeleteMovieFromList(ctx context.Context, userID, listID, movieID int64) error
 
+	GetWatchlistID(ctx context.Context, userID int64) (int64, error)
+
 	CreateSession(ctx context.Context, sessionID string, userID int64, expiresAt time.Time) error
 	GetSession(ctx context.Context, sessionID string) (*models.Session, error)
 	DeleteSession(ctx context.Context, sessionID string) error
 	CleanupExpiredSessions(ctx context.Context) error
 
-	CreateUser(ctx context.Context, email, name, passwordHash string) (int64, error)
+	CreateUser(ctx context.Context, email, name, passwordHash string) (*models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	GetUserByID(ctx context.Context, userID int64) (*models.User, error)
 
@@ -66,6 +68,7 @@ type InsertList struct {
 	ID          int64
 	Name        string
 	Description *string
+	IsWatchlist bool
 }
 
 type InsertMovieList struct {

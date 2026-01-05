@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"sync"
+	"time"
 )
 
 var (
@@ -56,6 +57,18 @@ func initBase() {
 
 	handler := slog.NewJSONHandler(writer, &slog.HandlerOptions{
 		Level: level,
+		// Format time to second precision only
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.TimeKey {
+				if t, ok := a.Value.Any().(time.Time); ok {
+					return slog.Attr{
+						Key:   slog.TimeKey,
+						Value: slog.StringValue(t.Format("2006-01-02T15:04:05Z07:00")),
+					}
+				}
+			}
+			return a
+		},
 	})
 	base = slog.New(handler)
 	slog.SetDefault(base.With("component", "default"))

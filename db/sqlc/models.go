@@ -45,6 +45,7 @@ type List struct {
 	CreationDate string
 	Description  *string
 	UserID       *int64
+	IsWatchlist  bool
 }
 
 type ListMovie struct {

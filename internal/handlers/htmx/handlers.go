@@ -17,6 +17,7 @@ import (
 	"gowatch/internal/models"
 	"gowatch/internal/services"
 	"gowatch/internal/ui/components/addtolistdialog"
+	"gowatch/internal/ui/components/addtowatched"
 	"gowatch/internal/ui/components/oobwrapper"
 	"gowatch/internal/ui/components/sidebar"
 	"gowatch/internal/ui/pages"
@@ -54,6 +55,9 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Post("/lists/items", h.AddMovieToList)
 	r.Delete("/lists/items", h.DeleteMovieFromList)
 
+	r.Post("/watchlist/add", h.AddToWatchlist)
+	r.Get("/watchlist/{id}", h.RenderAddToWatchlistButton)
+
 	r.Get("/sidebar", h.GetSidebar)
 	r.Get("/lists/add-movie-dialog", h.RenderAddToListDialogContent)
 	r.Get("/stats/top-lists", h.GetTopLists)
@@ -83,6 +87,8 @@ func (h *Handlers) GetSidebar(w http.ResponseWriter, r *http.Request) {
 	}
 	location := getFirstPathElement(currentURL)
 
+	ctx := r.Context()
+
 	log.Debug("getting sidebar", "location", location)
 
 	cookie, err := r.Cookie("sidebar_state")
@@ -91,25 +97,33 @@ func (h *Handlers) GetSidebar(w http.ResponseWriter, r *http.Request) {
 	}
 	collapsed := cookie != nil && cookie.Value == "false"
 
-	count, err := h.watchedService.GetWatchedCount(r.Context())
+	count, err := h.watchedService.GetWatchedCount(ctx)
 	if err != nil {
 		log.Error("failed to get watched count for sidebar", "error", err)
 		RenderErrorToast(w, r, "Sidebar Error", "Could not load watched count.", 0)
 		return
 	}
 
-	lists, err := h.listService.GetAllLists(r.Context())
-	if err != nil {
-		log.Error("failed to get all lists for sidebar", "error", err)
-		RenderErrorToast(w, r, "Sidebar Error", "Could not load lists.", 0)
-		return
-	}
-
-	user, err := common.GetUser(r.Context())
+	user, err := common.GetUser(ctx)
 	if err != nil {
 		log.Error("user not found in context", "error", err)
 		http.Error(w, "User not authenticated", http.StatusUnauthorized)
 		return
+	}
+
+	lists, err := h.listService.GetAllLists(ctx)
+	if err != nil {
+		log.Error("failed to get all lists for sidebar", "userID", user.ID, "error", err)
+		RenderErrorToast(w, r, "Sidebar Error", "Could not load lists.", 0)
+		return
+	}
+
+	log.Debug("retrieved lists for sidebar", "userID", user.ID, "listCount", len(lists))
+
+	watchlist, err := h.listService.GetWatchlist(ctx)
+	if err != nil {
+		log.Warn("failed to get watchlist for sidebar", "userID", user.ID, "error", err)
+		RenderErrorToast(w, r, "Sidebar Error", "Could not load watchlist.", 0)
 	}
 
 	err = sidebar.Sidebar(sidebar.Props{
@@ -117,8 +131,9 @@ func (h *Handlers) GetSidebar(w http.ResponseWriter, r *http.Request) {
 		Collapsed:    collapsed,
 		WatchedCount: count,
 		Lists:        lists,
+		Watchlist:    watchlist,
 		User:         user,
-	}).Render(r.Context(), w)
+	}).Render(ctx, w)
 	if err != nil {
 		log.Error("failed to render sidebar", "error", err)
 		http.Error(w, "Failed to render sidebar", http.StatusInternalServerError)
@@ -218,7 +233,7 @@ func (h *Handlers) CreateList(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("creating new list", "title", sanitizedTitle, "descriptionLength", len(sanitizedDescription))
 
-	_, err = h.listService.CreateList(r.Context(), sanitizedTitle, descPtr)
+	_, err = h.listService.CreateList(r.Context(), sanitizedTitle, descPtr, false)
 	if err != nil {
 		log.Error("failed to create list", "title", sanitizedTitle, "description", sanitizedDescription, "error", err)
 		RenderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred, please try again.", 0)
@@ -339,6 +354,40 @@ func (h *Handlers) DeleteList(w http.ResponseWriter, r *http.Request) {
 	RenderSuccessToast(w, r, "List Deleted Successfully", "The list has been deleted.", 2000)
 }
 
+func (h *Handlers) AddToWatchlist(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	movieIDStr := r.FormValue("movie_id")
+	movieID, err := strconv.ParseInt(movieIDStr, 10, 64)
+	if err != nil {
+		log.Error("invalid movie ID for watchlist", "movieID", movieIDStr, "error", err)
+		RenderErrorToast(w, r, "Invalid Request", "Invalid movie ID.", 3000)
+		return
+	}
+
+	watchlist, err := h.listService.GetWatchlist(ctx)
+	if err != nil {
+		log.Error("failed to get watchlist", "error", err)
+		RenderErrorToast(w, r, "Watchlist Error", "Could not access your watchlist.", 3000)
+		return
+	}
+
+	err = h.listService.AddMovieToList(ctx, watchlist.ID, movieID, nil)
+	if err != nil {
+		log.Error("failed to add movie to watchlist", "movieID", movieID, "error", err)
+		// Check if it's a duplicate
+		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "UNIQUE constraint") {
+			RenderErrorToast(w, r, "Already in Watchlist", "This movie is already in your watchlist.", 3000)
+		} else {
+			RenderErrorToast(w, r, "Failed to Add", "Could not add movie to watchlist.", 3000)
+		}
+		return
+	}
+
+	log.Info("successfully added movie to watchlist", "movieID", movieID)
+	w.Header().Add("HX-Trigger", "refreshSidebar, refreshWatchlist")
+	RenderSuccessToast(w, r, "Added to Watchlist", "Movie added to your watchlist.", 2000)
+}
+
 func (h *Handlers) GetTopLists(w http.ResponseWriter, r *http.Request) {
 	const maxLimit = 100
 	limitStr := r.URL.Query().Get("limit")
@@ -398,6 +447,8 @@ func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {
 		RenderErrorToast(w, r, "Failed to Refresh List", "An unexpected error occurred while refreshing the list", 0)
 		return
 	}
+
+	w.Header().Add("HX-Trigger", "refreshSidebar")
 
 	var buf bytes.Buffer
 	err = templ.RenderFragments(r.Context(), &buf, pages.List(list), "content")
@@ -482,6 +533,27 @@ func (h *Handlers) ImportWatched(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	RenderSuccessToast(w, r, "Import Started", "Your movies are being imported. This may take a few moments.", 0)
+}
+
+func (h *Handlers) RenderAddToWatchlistButton(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	movieIDParam := chi.URLParam(r, "id")
+
+	movieID, err := strconv.ParseInt(movieIDParam, 10, 64)
+	if err != nil {
+		log.Error("invalid list ID", "id", movieIDParam, "error", err)
+		http.Error(w, "Invalid list ID", http.StatusBadRequest)
+		return
+	}
+
+	isMovieInWatchlist := h.listService.IsMovieInWatchlist(ctx, movieID)
+
+	if err := addtowatched.AddToWatched(movieID, isMovieInWatchlist).Render(r.Context(), w); err != nil {
+		log.Error("failed to render add to list dialog", "error", err)
+		http.Error(w, "Failed to render dialog", http.StatusInternalServerError)
+		return
+	}
 }
 
 func getFirstPathElement(urlStr string) string {

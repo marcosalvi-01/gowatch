@@ -66,9 +66,9 @@ func main() {
 
 	log.Debug("initializing services")
 	movieService := services.NewMovieService(db, tmdb, cfg.CacheTTL)
-	watchedService := services.NewWatchedService(db, movieService)
 	listService := services.NewListService(db, movieService)
-	authService := services.NewAuthService(db, cfg.SessionExpiry, cfg.HTTPS, cfg.AdminDefaultPassword)
+	watchedService := services.NewWatchedService(db, listService, movieService)
+	authService := services.NewAuthService(db, listService, cfg.SessionExpiry, cfg.HTTPS, cfg.AdminDefaultPassword)
 
 	router := routes.NewRouter(db, movieService, watchedService, listService, authService)
 

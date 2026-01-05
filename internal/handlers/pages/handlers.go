@@ -67,6 +67,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 		r.Get("/search", h.SearchPage)
 		r.Get("/movie/{id}", h.MoviePage)
 		r.Get("/list/{id}", h.ListPage)
+		r.Get("/watchlist", h.Watchlist)
 		r.Get("/stats", h.StatsPage)
 		r.Post("/logout", h.LogoutPost)
 		r.Get("/change-password", h.ChangePasswordPage)
@@ -155,10 +156,12 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	isInWatchlist := h.listService.IsMovieInWatchlist(ctx, id)
+
 	if r.Header.Get("HX-Request") == htmxRequestHeaderValue {
-		templ.Handler(pages.Movie(*movie, rec), templ.WithFragments("content")).ServeHTTP(w, r)
+		templ.Handler(pages.Movie(*movie, rec, isInWatchlist), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
-		templ.Handler(pages.Movie(*movie, rec)).ServeHTTP(w, r)
+		templ.Handler(pages.Movie(*movie, rec, isInWatchlist)).ServeHTTP(w, r)
 	}
 
 	log.Info("movie page served successfully", "movieID", id, "title", movie.Movie.Title)
@@ -624,4 +627,33 @@ func (h *Handlers) ChangePasswordPost(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("HX-Redirect", "/home")
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handlers) Watchlist(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	log.Debug("serving watchlist page")
+
+	userID, err := common.GetUser(ctx)
+	if err != nil {
+		log.Error("failed to retrieve user from context", "error", err)
+		render500Error(w, r)
+		return
+	}
+
+	list, err := h.listService.GetWatchlist(ctx)
+	if err != nil {
+		log.Error("failed to get list details", "userID", userID, "error", err)
+		render500Error(w, r)
+		return
+	}
+	log.Debug("fetched watchlist details", "userID", userID, "movieCount", len(list.Movies))
+
+	if r.Header.Get("HX-Request") == htmxRequestHeaderValue {
+		templ.Handler(pages.Watchlist(list), templ.WithFragments("content")).ServeHTTP(w, r)
+	} else {
+		templ.Handler(pages.Watchlist(list)).ServeHTTP(w, r)
+	}
+
+	log.Info("watchlist page served successfully", "userID", userID, "movieCount", len(list.Movies))
 }

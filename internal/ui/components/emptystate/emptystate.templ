@@ -12,6 +12,7 @@ type Props struct {
 	Instruction       string
 	ImportTitle       string
 	ImportDescription string
+	ShowImport        bool
 }
 
 templ EmptyState(props Props) {
@@ -28,22 +29,24 @@ templ EmptyState(props Props) {
 				{ props.Instruction }
 			</p>
 		}
-		<div class="grid grid-cols-1 gap-4 w-full max-w-md mx-auto pt-4">
-			@dialog.Trigger(dialog.TriggerProps{
-				For: "import-movies-dialog",
-			}) {
-				@card.Card(card.Props{
-					Class: "flex flex-col items-center p-8 space-y-4 cursor-pointer hover:bg-muted transition-all group",
+		if props.ShowImport {
+			<div class="grid grid-cols-1 gap-4 w-full max-w-md mx-auto pt-4">
+				@dialog.Trigger(dialog.TriggerProps{
+					For: "import-movies-dialog",
 				}) {
-					<div class="p-3 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors text-primary">
-						@icon.FileUp(icon.Props{Size: 28})
-					</div>
-					<div class="space-y-1">
-						<h3 class="font-bold text-lg">{ props.ImportTitle }</h3>
-						<p class="text-sm text-muted-foreground">{ props.ImportDescription }</p>
-					</div>
+					@card.Card(card.Props{
+						Class: "flex flex-col items-center p-8 space-y-4 cursor-pointer hover:bg-muted transition-all group",
+					}) {
+						<div class="p-3 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors text-primary">
+							@icon.FileUp(icon.Props{Size: 28})
+						</div>
+						<div class="space-y-1">
+							<h3 class="font-bold text-lg">{ props.ImportTitle }</h3>
+							<p class="text-sm text-muted-foreground">{ props.ImportDescription }</p>
+						</div>
+					}
 				}
-			}
-		</div>
+			</div>
+		}
 	</div>
 }

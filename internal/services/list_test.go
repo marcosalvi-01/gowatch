@@ -12,11 +12,7 @@ import (
 
 func setupTestUser(t *testing.T, testDB db.DB) context.Context {
 	ctx := context.Background()
-	userID, err := testDB.CreateUser(ctx, "test@example.com", "Test User", "hash")
-	if err != nil {
-		t.Fatal(err)
-	}
-	user, err := testDB.GetUserByID(ctx, userID)
+	user, err := testDB.CreateUser(ctx, "test@example.com", "Test User", "hash")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +44,7 @@ func TestListService_CRUD(t *testing.T) {
 
 	// Create list
 	desc := "A test list"
-	if _, err := listService.CreateList(ctx, "Test List", &desc); err != nil {
+	if _, err := listService.CreateList(ctx, "Test List", &desc, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -108,7 +104,7 @@ func TestListService_CreateList_EmptyName(t *testing.T) {
 
 	// Try to create list with empty name
 	desc := "desc"
-	_, err = listService.CreateList(ctx, "", &desc)
+	_, err = listService.CreateList(ctx, "", &desc, false)
 	if err == nil {
 		t.Error("expected error for empty list name")
 	}
@@ -134,7 +130,7 @@ func TestListService_AddMovieToList_InvalidIDs(t *testing.T) {
 
 	// Create list
 	desc := ""
-	_, err = listService.CreateList(ctx, "Test", &desc)
+	_, err = listService.CreateList(ctx, "Test", &desc, false)
 	if err != nil {
 		t.Fatal(err)
 	}

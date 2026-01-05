@@ -23,6 +23,7 @@ type Props struct {
 	Collapsed    bool
 	WatchedCount int64
 	Lists        []models.ListEntry
+	Watchlist    *models.List
 	User         *models.User
 }
 
@@ -42,6 +43,7 @@ templ Sidebar(props Props) {
 				@sidebar.Menu() {
 					@homeMenuItem(props.CurrentPage)
 					@watchedMenuItem(props.CurrentPage, props.WatchedCount)
+					@watchlistMenuItem(props.Watchlist, props.CurrentPage)
 					@statsMenuItem(props.CurrentPage)
 					if props.User != nil && props.User.Admin {
 						@adminMenuItem(props.CurrentPage)
@@ -177,6 +179,36 @@ templ statsMenuItem(currentPage string) {
 		}) {
 			@icon.ChartBar(icon.Props{Class: "size-4"})
 			<span>Stats</span>
+		}
+	}
+}
+
+templ watchlistMenuItem(watchlist *models.List, currentPage string) {
+	if watchlist != nil {
+		@sidebar.MenuItem() {
+			@sidebar.MenuButton(sidebar.MenuButtonProps{
+				Tooltip:  "Your Watchlist",
+				IsActive: currentPage == "watchlist",
+				Attributes: templ.Attributes{
+					"data-nav-url": "/watchlist",
+					"hx-get":       "/watchlist",
+					"hx-target":    "#main-content",
+					"hx-swap":      "innerHTML show:#main-scroll-container:top",
+					"hx-push-url":  "true",
+				},
+				Class: "cursor-pointer",
+			}) {
+				@icon.Bookmark(icon.Props{Class: "size-4"})
+				<span>Watchlist</span>
+				if len(watchlist.Movies) > 0 {
+					@badge.Badge(badge.Props{
+						Variant: badge.VariantSecondary,
+						Class:   "ml-auto",
+					}) {
+						{ fmt.Sprintf("%d", len(watchlist.Movies)) }
+					}
+				}
+			}
 		}
 	}
 }

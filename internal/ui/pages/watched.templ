@@ -30,6 +30,7 @@ templ Watched(days []models.WatchedMoviesInDay) {
 						Instruction:       "Use the search bar at the top to find and add movies, or import your existing history below.",
 						ImportTitle:       "Import Movie History",
 						ImportDescription: "Upload a JSON file to see all your movies here instantly.",
+						ShowImport:        true,
 					})
 				} else {
 					@watchedHeader(watchedCount)
@@ -44,7 +45,7 @@ templ Watched(days []models.WatchedMoviesInDay) {
 										{ strconv.Itoa(len(day.Movies)) }
 									}
 								</div>
-								<div class="flex flex-wrap gap-4">
+								<div class="flex flex-wrap gap-4 justify-center">
 									for _, movie := range day.Movies {
 										{{
 											moviecardProps := moviecard.Props{
