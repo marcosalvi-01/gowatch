@@ -150,10 +150,6 @@ func Layout() templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = ListLoading().Render(ctx, templ_7745c5c3_Buffer)
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div id=\"main-scroll-container\" class=\"flex flex-1 flex-col overflow-auto w-full\"><div id=\"main-content\" class=\"p-4 w-full max-w-full\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err

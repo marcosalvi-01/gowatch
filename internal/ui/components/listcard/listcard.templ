@@ -17,7 +17,6 @@ templ ListCard(props Props) {
 		hx-target="#main-content"
 		hx-push-url="true"
 		hx-swap="innerHTML show:#main-scroll-container:top"
-		hx-indicator="#list-loading"
 		class="cursor-pointer"
 	>
 		@card.Card(card.Props{

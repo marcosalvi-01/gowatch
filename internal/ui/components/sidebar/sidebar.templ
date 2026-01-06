@@ -267,7 +267,6 @@ templ listItems(lists []models.ListEntry, currentPage string) {
 					"hx-target":    "#main-content",
 					"hx-swap":      "innerHTML show:#main-scroll-container:top",
 					"hx-push-url":  "true",
-					"hx-indicator": "#list-loading",
 				},
 			}) {
 				<span>{ list.Name }</span>

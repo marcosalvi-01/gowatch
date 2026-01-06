@@ -1240,7 +1240,7 @@ func listItems(lists []models.ListEntry, currentPage string) templ.Component {
 					var templ_7745c5c3_Var50 string
 					templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(list.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 273, Col: 21}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 272, Col: 21}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 					if templ_7745c5c3_Err != nil {
@@ -1261,7 +1261,6 @@ func listItems(lists []models.ListEntry, currentPage string) templ.Component {
 						"hx-target":    "#main-content",
 						"hx-swap":      "innerHTML show:#main-scroll-container:top",
 						"hx-push-url":  "true",
-						"hx-indicator": "#list-loading",
 					},
 				}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var49), templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {

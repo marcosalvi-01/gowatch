@@ -18,6 +18,8 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/services"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/addtolistdialog"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/addtowatched"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/listgrid"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/liststats"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/oobwrapper"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/sidebar"
 	"github.com/marcosalvi-01/gowatch/internal/ui/pages"
@@ -60,8 +62,10 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 
 	r.Get("/sidebar", h.GetSidebar)
 	r.Get("/lists/add-movie-dialog", h.RenderAddToListDialogContent)
-	r.Get("/stats/top-lists", h.GetTopLists)
 	r.Get("/lists/home-lists", h.HomeLists)
+	r.Get("/stats/top-lists", h.GetTopLists)
+	r.Get("/lists/{id}/movie-grid", h.ListMovieGrid)
+	r.Get("/lists/{id}/stats", h.ListStats)
 }
 
 func (h *Handlers) RenderAddToListDialogContent(w http.ResponseWriter, r *http.Request) {
@@ -441,28 +445,7 @@ func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {
 
 	log.Info("successfully removed movie from list", "listID", listID, "movieID", movieID)
 
-	list, err := h.listService.GetListDetails(r.Context(), listID)
-	if err != nil {
-		log.Error("failed to get list details after delete", "listID", listID, "error", err)
-		RenderErrorToast(w, r, "Failed to Refresh List", "An unexpected error occurred while refreshing the list", 0)
-		return
-	}
-
-	w.Header().Add("HX-Trigger", "refreshSidebar")
-
-	var buf bytes.Buffer
-	err = templ.RenderFragments(r.Context(), &buf, pages.List(list), "content")
-	if err != nil {
-		log.Error("failed to render list fragment", "error", err)
-		RenderErrorToast(w, r, "Failed to Refresh List", "An unexpected error occurred while refreshing the list", 0)
-		return
-	}
-	ctx := templ.WithChildren(r.Context(), templ.Raw(buf.String()))
-	if err := oobwrapper.OOBWrapper("innerHTML:#main-content").Render(ctx, w); err != nil {
-		log.Error("failed to render OOB wrapper", "error", err)
-		RenderErrorToast(w, r, "Failed to Refresh List", "An unexpected error occurred while refreshing the list", 0)
-		return
-	}
+	w.Header().Add("HX-Trigger", "refreshSidebar, refreshListGrid, refreshListStats")
 
 	RenderSuccessToast(w, r, "Removed from List", "Movie has been removed from the list", 0)
 }
@@ -552,6 +535,62 @@ func (h *Handlers) RenderAddToWatchlistButton(w http.ResponseWriter, r *http.Req
 	if err := addtowatched.AddToWatched(movieID, isMovieInWatchlist).Render(r.Context(), w); err != nil {
 		log.Error("failed to render add to list dialog", "error", err)
 		http.Error(w, "Failed to render dialog", http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *Handlers) ListMovieGrid(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	listIDStr := chi.URLParam(r, "id")
+
+	log.Debug("rendering list movie grid", "listID", listIDStr)
+
+	listID, err := strconv.ParseInt(listIDStr, 10, 64)
+	if err != nil {
+		log.Error("invalid list ID", "id", listIDStr, "error", err)
+		RenderErrorToast(w, r, "Invalid List", "Invalid list ID.", 0)
+		return
+	}
+
+	list, err := h.listService.GetListDetails(ctx, listID)
+	if err != nil {
+		log.Error("failed to get list details", "listID", listIDStr, "error", err)
+		RenderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred, please try again.", 0)
+		return
+	}
+
+	if err := listgrid.ListGrid(*list).Render(ctx, w); err != nil {
+		log.Error("failed to render list grid", "listID", listIDStr, "error", err)
+		RenderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred, please try again.", 0)
+		return
+	}
+}
+
+func (h *Handlers) ListStats(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	listIDStr := chi.URLParam(r, "id")
+
+	log.Debug("rendering list stats", "listID", listIDStr)
+
+	listID, err := strconv.ParseInt(listIDStr, 10, 64)
+	if err != nil {
+		log.Error("invalid list ID", "id", listIDStr, "error", err)
+		RenderErrorToast(w, r, "Invalid List", "Invalid list ID.", 0)
+		return
+	}
+
+	list, err := h.listService.GetListDetails(ctx, listID)
+	if err != nil {
+		log.Error("failed to get list details", "listID", listIDStr, "error", err)
+		RenderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred, please try again.", 0)
+		return
+	}
+
+	if err := liststats.ListStats(*list).Render(ctx, w); err != nil {
+		log.Error("failed to render list stats", "listID", listIDStr, "error", err)
+		RenderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred, please try again.", 0)
 		return
 	}
 }
