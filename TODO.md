@@ -42,6 +42,7 @@
 - [ ] better mobile ui (change the hover stuff to click?)
 - [ ] have an enum with all the possible htmx events instead of using raw strings
 - [ ] faster stats generation
+- [ ] faster import of movies
 
 # security:
 

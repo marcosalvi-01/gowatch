@@ -326,24 +326,43 @@ WHERE
 
 -- name: GetWatchedPerMonthLastYear :many
 SELECT
-    watched_date
+    CAST(strftime('%Y-%m', watched_date) AS TEXT) AS month,
+    COUNT(*) AS count
 FROM
     watched
 WHERE
     watched_date >= date('now', 'start of month', '-12 months')
     AND user_id = ?
+GROUP BY
+    month
 ORDER BY
-    watched_date;
+    month;
 
 -- name: GetWatchedPerYear :many
 SELECT
-    watched_date
+    CAST(strftime('%Y', watched_date) AS TEXT) AS year,
+    COUNT(*) AS count
 FROM
     watched
 WHERE
     user_id = ?
+GROUP BY
+    year
 ORDER BY
-    watched_date;
+    year;
+
+-- name: GetWeekdayDistribution :many
+SELECT
+    CAST(strftime('%w', watched_date) AS INTEGER) AS weekday_index,
+    COUNT(*) AS count
+FROM
+    watched
+WHERE
+    user_id = ?
+GROUP BY
+    weekday_index
+ORDER BY
+    weekday_index;
 
 -- name: GetWatchedByGenre :many
 SELECT
@@ -393,13 +412,19 @@ ORDER BY
 LIMIT
     ?;
 
--- name: GetMostWatchedDay :many
+-- name: GetMostWatchedDay :one
 SELECT
-    watched_date
+    watched_date,
+    COUNT(*) AS count
 FROM
     watched
 WHERE
-    user_id = ?;
+    user_id = ?
+GROUP BY
+    watched_date
+ORDER BY
+    count DESC
+LIMIT 1;
 
 -- name: GetMostWatchedMaleActors :many
 SELECT

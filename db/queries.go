@@ -561,22 +561,6 @@ func (d *SqliteDB) GetWatchlistID(ctx context.Context, userID int64) (int64, err
 	return id, nil
 }
 
-func (d *SqliteDB) aggregateWatchedByPeriod(data []date.Date, format string) []models.PeriodCount {
-	counts := make(map[string]int64)
-	for _, t := range data {
-		period := t.Format(format)
-		counts[period]++
-	}
-	result := make([]models.PeriodCount, 0, len(counts))
-	for period, count := range counts {
-		result = append(result, models.PeriodCount{Period: period, Count: count})
-	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Period < result[j].Period
-	})
-	return result
-}
-
 func (d *SqliteDB) GetWatchedPerMonthLastYear(ctx context.Context, userID int64) ([]models.PeriodCount, error) {
 	log.Debug("getting watched per month last year")
 
@@ -585,7 +569,14 @@ func (d *SqliteDB) GetWatchedPerMonthLastYear(ctx context.Context, userID int64)
 		log.Error("failed to get monthly data", "error", err)
 		return nil, fmt.Errorf("failed to get monthly data: %w", err)
 	}
-	result := d.aggregateWatchedByPeriod(data, "2006-01")
+
+	result := make([]models.PeriodCount, len(data))
+	for i, item := range data {
+		result[i] = models.PeriodCount{
+			Period: item.Month,
+			Count:  item.Count,
+		}
+	}
 
 	log.Debug("retrieved monthly data", "periodCount", len(result))
 	return result, nil
@@ -599,7 +590,14 @@ func (d *SqliteDB) GetWatchedPerYear(ctx context.Context, userID int64) ([]model
 		log.Error("failed to get yearly data", "error", err)
 		return nil, fmt.Errorf("failed to get yearly data: %w", err)
 	}
-	result := d.aggregateWatchedByPeriod(data, "2006")
+
+	result := make([]models.PeriodCount, len(data))
+	for i, item := range data {
+		result[i] = models.PeriodCount{
+			Period: item.Year,
+			Count:  item.Count,
+		}
+	}
 
 	log.Debug("retrieved yearly data", "periodCount", len(result))
 	return result, nil
@@ -608,26 +606,49 @@ func (d *SqliteDB) GetWatchedPerYear(ctx context.Context, userID int64) ([]model
 func (d *SqliteDB) GetWeekdayDistribution(ctx context.Context, userID int64) ([]models.PeriodCount, error) {
 	log.Debug("getting weekday distribution")
 
-	data, err := d.queries.GetWatchedDates(ctx, &userID)
+	data, err := d.queries.GetWeekdayDistribution(ctx, &userID)
 	if err != nil {
-		log.Error("failed to get watched dates", "error", err)
-		return nil, fmt.Errorf("failed to get watched dates: %w", err)
+		log.Error("failed to get weekday distribution", "error", err)
+		return nil, fmt.Errorf("failed to get weekday distribution: %w", err)
 	}
 
-	counts := make(map[string]int64)
-	for _, t := range data {
-		weekday := t.Weekday().String()
-		counts[weekday]++
-	}
-
-	weekdays := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
+	weekdays := []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 	result := make([]models.PeriodCount, len(weekdays))
-	for i, day := range weekdays {
-		result[i] = models.PeriodCount{Period: day, Count: counts[day]}
+
+	// Initialize map for quick lookup
+	counts := make(map[int]int64)
+	for _, item := range data {
+		// item.WeekdayIndex is int64, convert to int for usage
+		counts[int(item.WeekdayIndex)] = item.Count
 	}
 
-	log.Debug("retrieved weekday distribution", "dayCount", len(result))
-	return result, nil
+	for i, day := range weekdays {
+		result[i] = models.PeriodCount{
+			Period: day,
+			Count:  counts[i],
+		}
+	}
+
+	// Shift Sunday to end to match original behavior (Mon-Sun)?
+	// Original Go implementation used time.Weekday().String() which relies on standard order.
+	// Standard order is Sunday(0) to Saturday(6).
+	// The previous implementation constructed:
+	// weekdays := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
+	// result := make([]models.PeriodCount, len(weekdays))
+	// for i, day := range weekdays { ... }
+
+	// So I need to match that output structure.
+
+	output := make([]models.PeriodCount, 0, 7)
+	// Monday (1) to Saturday (6)
+	for i := 1; i <= 6; i++ {
+		output = append(output, models.PeriodCount{Period: weekdays[i], Count: counts[i]})
+	}
+	// Sunday (0)
+	output = append(output, models.PeriodCount{Period: weekdays[0], Count: counts[0]})
+
+	log.Debug("retrieved weekday distribution", "dayCount", len(output))
+	return output, nil
 }
 
 func (d *SqliteDB) GetWatchedByGenre(ctx context.Context, userID int64) ([]models.GenreCount, error) {
@@ -684,37 +705,18 @@ func (d *SqliteDB) GetMostWatchedMovies(ctx context.Context, userID int64, limit
 func (d *SqliteDB) GetMostWatchedDay(ctx context.Context, userID int64) (*models.MostWatchedDay, error) {
 	log.Debug("getting most watched day")
 
-	data, err := d.queries.GetMostWatchedDay(ctx, &userID)
+	result, err := d.queries.GetMostWatchedDay(ctx, &userID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Debug("no watched days found")
+			return nil, sql.ErrNoRows
+		}
 		log.Error("failed to get most watched day", "error", err)
 		return nil, fmt.Errorf("failed to get most watched day: %w", err)
 	}
-	if len(data) == 0 {
-		log.Debug("no watched days found")
-		return nil, sql.ErrNoRows
-	}
-	counts := make(map[string]int64)
-	for _, t := range data {
-		day := t.Format("2006-01-02")
-		counts[day]++
-	}
-	var maxDay string
-	var maxCount int64
-	for day, count := range counts {
-		if count > maxCount {
-			maxCount = count
-			maxDay = day
-		}
-	}
 
-	t, err := time.Parse("2006-01-02", maxDay)
-	if err != nil {
-		log.Error("failed to parse most watched day", "error", err, "day", maxDay)
-		return nil, fmt.Errorf("failed to parse most watched day: %w", err)
-	}
-
-	log.Debug("retrieved most watched day", "date", t, "count", maxCount)
-	return &models.MostWatchedDay{Date: t, Count: maxCount}, nil
+	log.Debug("retrieved most watched day", "date", result.WatchedDate.Time, "count", result.Count)
+	return &models.MostWatchedDay{Date: result.WatchedDate.Time, Count: result.Count}, nil
 }
 
 func (d *SqliteDB) GetMostWatchedMaleActors(ctx context.Context, userID int64, limit int) ([]models.TopActor, error) {

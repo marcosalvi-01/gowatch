@@ -575,36 +575,31 @@ func (q *Queries) GetMonthlyGenreBreakdown(ctx context.Context, userID *int64) (
 	return items, nil
 }
 
-const getMostWatchedDay = `-- name: GetMostWatchedDay :many
+const getMostWatchedDay = `-- name: GetMostWatchedDay :one
 SELECT
-    watched_date
+    watched_date,
+    COUNT(*) AS count
 FROM
     watched
 WHERE
     user_id = ?
+GROUP BY
+    watched_date
+ORDER BY
+    count DESC
+LIMIT 1
 `
 
-func (q *Queries) GetMostWatchedDay(ctx context.Context, userID *int64) ([]date.Date, error) {
-	rows, err := q.db.QueryContext(ctx, getMostWatchedDay, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []date.Date
-	for rows.Next() {
-		var watched_date date.Date
-		if err := rows.Scan(&watched_date); err != nil {
-			return nil, err
-		}
-		items = append(items, watched_date)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type GetMostWatchedDayRow struct {
+	WatchedDate date.Date
+	Count       int64
+}
+
+func (q *Queries) GetMostWatchedDay(ctx context.Context, userID *int64) (GetMostWatchedDayRow, error) {
+	row := q.db.QueryRowContext(ctx, getMostWatchedDay, userID)
+	var i GetMostWatchedDayRow
+	err := row.Scan(&i.WatchedDate, &i.Count)
+	return i, err
 }
 
 const getMostWatchedFemaleActors = `-- name: GetMostWatchedFemaleActors :many
@@ -1375,29 +1370,37 @@ func (q *Queries) GetWatchedJoinMovieByID(ctx context.Context, arg GetWatchedJoi
 
 const getWatchedPerMonthLastYear = `-- name: GetWatchedPerMonthLastYear :many
 SELECT
-    watched_date
+    CAST(strftime('%Y-%m', watched_date) AS TEXT) AS month,
+    COUNT(*) AS count
 FROM
     watched
 WHERE
     watched_date >= date('now', 'start of month', '-12 months')
     AND user_id = ?
+GROUP BY
+    month
 ORDER BY
-    watched_date
+    month
 `
 
-func (q *Queries) GetWatchedPerMonthLastYear(ctx context.Context, userID *int64) ([]date.Date, error) {
+type GetWatchedPerMonthLastYearRow struct {
+	Month string
+	Count int64
+}
+
+func (q *Queries) GetWatchedPerMonthLastYear(ctx context.Context, userID *int64) ([]GetWatchedPerMonthLastYearRow, error) {
 	rows, err := q.db.QueryContext(ctx, getWatchedPerMonthLastYear, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []date.Date
+	var items []GetWatchedPerMonthLastYearRow
 	for rows.Next() {
-		var watched_date date.Date
-		if err := rows.Scan(&watched_date); err != nil {
+		var i GetWatchedPerMonthLastYearRow
+		if err := rows.Scan(&i.Month, &i.Count); err != nil {
 			return nil, err
 		}
-		items = append(items, watched_date)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -1410,28 +1413,36 @@ func (q *Queries) GetWatchedPerMonthLastYear(ctx context.Context, userID *int64)
 
 const getWatchedPerYear = `-- name: GetWatchedPerYear :many
 SELECT
-    watched_date
+    CAST(strftime('%Y', watched_date) AS TEXT) AS year,
+    COUNT(*) AS count
 FROM
     watched
 WHERE
     user_id = ?
+GROUP BY
+    year
 ORDER BY
-    watched_date
+    year
 `
 
-func (q *Queries) GetWatchedPerYear(ctx context.Context, userID *int64) ([]date.Date, error) {
+type GetWatchedPerYearRow struct {
+	Year  string
+	Count int64
+}
+
+func (q *Queries) GetWatchedPerYear(ctx context.Context, userID *int64) ([]GetWatchedPerYearRow, error) {
 	rows, err := q.db.QueryContext(ctx, getWatchedPerYear, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []date.Date
+	var items []GetWatchedPerYearRow
 	for rows.Next() {
-		var watched_date date.Date
-		if err := rows.Scan(&watched_date); err != nil {
+		var i GetWatchedPerYearRow
+		if err := rows.Scan(&i.Year, &i.Count); err != nil {
 			return nil, err
 		}
-		items = append(items, watched_date)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -1500,6 +1511,48 @@ func (q *Queries) GetWatchlistID(ctx context.Context, userID *int64) (int64, err
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const getWeekdayDistribution = `-- name: GetWeekdayDistribution :many
+SELECT
+    CAST(strftime('%w', watched_date) AS INTEGER) AS weekday_index,
+    COUNT(*) AS count
+FROM
+    watched
+WHERE
+    user_id = ?
+GROUP BY
+    weekday_index
+ORDER BY
+    weekday_index
+`
+
+type GetWeekdayDistributionRow struct {
+	WeekdayIndex int64
+	Count        int64
+}
+
+func (q *Queries) GetWeekdayDistribution(ctx context.Context, userID *int64) ([]GetWeekdayDistributionRow, error) {
+	rows, err := q.db.QueryContext(ctx, getWeekdayDistribution, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetWeekdayDistributionRow
+	for rows.Next() {
+		var i GetWeekdayDistributionRow
+		if err := rows.Scan(&i.WeekdayIndex, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertList = `-- name: InsertList :one
