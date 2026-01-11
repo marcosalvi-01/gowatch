@@ -8,6 +8,8 @@ package sqlc
 import (
 	"context"
 	"time"
+
+	"github.com/marcosalvi-01/gowatch/db/types/date"
 )
 
 const addMovieToList = `-- name: AddMovieToList :exec
@@ -545,7 +547,7 @@ ORDER BY
 `
 
 type GetMonthlyGenreBreakdownRow struct {
-	WatchedDate time.Time
+	WatchedDate date.Date
 	GenreName   string
 	MovieCount  int64
 }
@@ -582,15 +584,15 @@ WHERE
     user_id = ?
 `
 
-func (q *Queries) GetMostWatchedDay(ctx context.Context, userID *int64) ([]time.Time, error) {
+func (q *Queries) GetMostWatchedDay(ctx context.Context, userID *int64) ([]date.Date, error) {
 	rows, err := q.db.QueryContext(ctx, getMostWatchedDay, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []time.Time
+	var items []date.Date
 	for rows.Next() {
-		var watched_date time.Time
+		var watched_date date.Date
 		if err := rows.Scan(&watched_date); err != nil {
 			return nil, err
 		}
@@ -1210,15 +1212,15 @@ ORDER BY
     watched_date
 `
 
-func (q *Queries) GetWatchedDates(ctx context.Context, userID *int64) ([]time.Time, error) {
+func (q *Queries) GetWatchedDates(ctx context.Context, userID *int64) ([]date.Date, error) {
 	rows, err := q.db.QueryContext(ctx, getWatchedDates, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []time.Time
+	var items []date.Date
 	for rows.Next() {
-		var watched_date time.Time
+		var watched_date date.Date
 		if err := rows.Scan(&watched_date); err != nil {
 			return nil, err
 		}
@@ -1383,15 +1385,15 @@ ORDER BY
     watched_date
 `
 
-func (q *Queries) GetWatchedPerMonthLastYear(ctx context.Context, userID *int64) ([]time.Time, error) {
+func (q *Queries) GetWatchedPerMonthLastYear(ctx context.Context, userID *int64) ([]date.Date, error) {
 	rows, err := q.db.QueryContext(ctx, getWatchedPerMonthLastYear, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []time.Time
+	var items []date.Date
 	for rows.Next() {
-		var watched_date time.Time
+		var watched_date date.Date
 		if err := rows.Scan(&watched_date); err != nil {
 			return nil, err
 		}
@@ -1417,15 +1419,15 @@ ORDER BY
     watched_date
 `
 
-func (q *Queries) GetWatchedPerYear(ctx context.Context, userID *int64) ([]time.Time, error) {
+func (q *Queries) GetWatchedPerYear(ctx context.Context, userID *int64) ([]date.Date, error) {
 	rows, err := q.db.QueryContext(ctx, getWatchedPerYear, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []time.Time
+	var items []date.Date
 	for rows.Next() {
-		var watched_date time.Time
+		var watched_date date.Date
 		if err := rows.Scan(&watched_date); err != nil {
 			return nil, err
 		}
@@ -1456,7 +1458,7 @@ ORDER BY
 `
 
 type GetWatchedRuntimesLastYearRow struct {
-	WatchedDate time.Time
+	WatchedDate date.Date
 	Runtime     int64
 }
 
@@ -1547,7 +1549,7 @@ RETURNING
 
 type InsertWatchedParams struct {
 	MovieID          int64
-	WatchedDate      time.Time
+	WatchedDate      date.Date
 	WatchedInTheater bool
 	UserID           *int64
 	Rating           *float64
@@ -1819,7 +1821,7 @@ type UpsertMovieParams struct {
 	OriginalTitle    string
 	OriginalLanguage string
 	Overview         string
-	ReleaseDate      *time.Time
+	ReleaseDate      date.Date
 	PosterPath       string
 	BackdropPath     string
 	Popularity       float64

@@ -8,3 +8,9 @@ sql:
         package: "sqlc"
         out: "db/sqlc"
         emit_pointers_for_null_types: true
+        overrides:
+          - db_type: "DATE"
+            go_type: "github.com/marcosalvi-01/gowatch/db/types/date.Date"
+          - db_type: "DATE"
+            go_type: "github.com/marcosalvi-01/gowatch/db/types/date.Date"
+            nullable: true

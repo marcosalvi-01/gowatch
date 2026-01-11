@@ -2,6 +2,7 @@
 
 - [ ] fix addtolistdialog to return full dialog content with buttons and handle empty lists and add loading indicator
 - [ ] we need to keep track of the selected item on the sidebar in a cookie or something so that the backend can render the sidebar with the correct state (should also simplify the sidebar script?). this is to fix removing a movie from the watchlist removing the selection on the watchlist item in the sidebar when refreshing it. also we should keep track of the state of the lists collapsible item in a cookie for the same reason
+- [ ] use a correct sqlite supported date type in the db instead of just the go time as a string
 
 # feats:
 
@@ -40,6 +41,7 @@
 - [ ] add proxy and cache for poster images
 - [ ] better mobile ui (change the hover stuff to click?)
 - [ ] have an enum with all the possible htmx events instead of using raw strings
+- [ ] faster stats generation
 
 # security:
 

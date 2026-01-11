@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/marcosalvi-01/gowatch/db/sqlc"
+	"github.com/marcosalvi-01/gowatch/db/types/date"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
@@ -31,7 +32,7 @@ func (d *SqliteDB) UpsertMovie(ctx context.Context, movie *models.MovieDetails) 
 		OriginalTitle:    movie.Movie.OriginalTitle,
 		OriginalLanguage: movie.Movie.OriginalLanguage,
 		Overview:         movie.Movie.Overview,
-		ReleaseDate:      movie.Movie.ReleaseDate,
+		ReleaseDate:      date.NewFromPtr(movie.Movie.ReleaseDate),
 		PosterPath:       movie.Movie.PosterPath,
 		BackdropPath:     movie.Movie.BackdropPath,
 		Popularity:       float64(movie.Movie.Popularity),
@@ -152,7 +153,7 @@ func (d *SqliteDB) InsertWatched(ctx context.Context, watched InsertWatched) err
 	_, err := d.queries.InsertWatched(ctx, sqlc.InsertWatchedParams{
 		UserID:           &watched.UserID,
 		MovieID:          watched.MovieID,
-		WatchedDate:      watched.Date,
+		WatchedDate:      date.New(watched.Date),
 		WatchedInTheater: watched.InTheaters,
 		Rating:           watched.Rating,
 	})
@@ -297,7 +298,7 @@ func (d *SqliteDB) GetWatchedJoinMovie(ctx context.Context, userID int64) ([]mod
 	for i, result := range results {
 		watched[i] = models.WatchedMovie{
 			MovieDetails: toModelsMovieDetails(result.Movie),
-			Date:         result.Watched.WatchedDate,
+			Date:         result.Watched.WatchedDate.Time,
 			InTheaters:   result.Watched.WatchedInTheater,
 			Rating:       result.Watched.Rating,
 		}
@@ -320,7 +321,7 @@ func (d *SqliteDB) GetWatchedJoinMovieByID(ctx context.Context, userID, movieID 
 	for i, r := range rows {
 		watched[i] = models.WatchedMovie{
 			MovieDetails: toModelsMovieDetails(r.Movie),
-			Date:         r.Watched.WatchedDate,
+			Date:         r.Watched.WatchedDate.Time,
 			InTheaters:   r.Watched.WatchedInTheater,
 			Rating:       r.Watched.Rating,
 		}
@@ -560,7 +561,7 @@ func (d *SqliteDB) GetWatchlistID(ctx context.Context, userID int64) (int64, err
 	return id, nil
 }
 
-func (d *SqliteDB) aggregateWatchedByPeriod(data []time.Time, format string) []models.PeriodCount {
+func (d *SqliteDB) aggregateWatchedByPeriod(data []date.Date, format string) []models.PeriodCount {
 	counts := make(map[string]int64)
 	for _, t := range data {
 		period := t.Format(format)
@@ -769,10 +770,14 @@ func (d *SqliteDB) GetWatchedDateRange(ctx context.Context, userID int64) (*mode
 			log.Error("unexpected type for MinDate", "type", fmt.Sprintf("%T", data.MinDate))
 			return nil, fmt.Errorf("unexpected type for MinDate: %T", data.MinDate)
 		}
-		parsed, err := time.Parse("2006-01-02 15:04:05 -0700 MST", minStr)
+		parsed, err := time.Parse(date.Layout, minStr)
 		if err != nil {
-			log.Error("failed to parse min date", "date", minStr, "error", err)
-			return nil, fmt.Errorf("failed to parse min date %q: %w", minStr, err)
+			// fallback for backward compatibility
+			parsed, err = time.Parse("2006-01-02 15:04:05 -0700 MST", minStr)
+			if err != nil {
+				log.Error("failed to parse min date", "date", minStr, "error", err)
+				return nil, fmt.Errorf("failed to parse min date %q: %w", minStr, err)
+			}
 		}
 		min = &parsed
 	}
@@ -782,10 +787,14 @@ func (d *SqliteDB) GetWatchedDateRange(ctx context.Context, userID int64) (*mode
 			log.Error("unexpected type for MaxDate", "type", fmt.Sprintf("%T", data.MaxDate))
 			return nil, fmt.Errorf("unexpected type for MaxDate: %T", data.MaxDate)
 		}
-		parsed, err := time.Parse("2006-01-02 15:04:05 -0700 MST", maxStr)
+		parsed, err := time.Parse(date.Layout, maxStr)
 		if err != nil {
-			log.Error("failed to parse max date", "date", maxStr, "error", err)
-			return nil, fmt.Errorf("failed to parse max date %q: %w", maxStr, err)
+			// fallback for backward compatibility
+			parsed, err = time.Parse("2006-01-02 15:04:05 -0700 MST", maxStr)
+			if err != nil {
+				log.Error("failed to parse max date", "date", maxStr, "error", err)
+				return nil, fmt.Errorf("failed to parse max date %q: %w", maxStr, err)
+			}
 		}
 		max = &parsed
 	}
