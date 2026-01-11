@@ -324,26 +324,47 @@ WHERE
             AND list.user_id = ?
     );
 
--- name: GetWatchedPerMonthLastYear :many
+-- name: GetWatchedStatsPerMonthLastYear :many
 SELECT
-    watched_date
+    CAST(strftime('%Y-%m', watched_date) AS TEXT) AS month,
+    COUNT(*) AS count,
+    SUM(movie.runtime) AS total_runtime
 FROM
     watched
+    JOIN movie ON watched.movie_id = movie.id
 WHERE
     watched_date >= date('now', 'start of month', '-12 months')
-    AND user_id = ?
+    AND watched.user_id = ?
+GROUP BY
+    month
 ORDER BY
-    watched_date;
+    month;
 
 -- name: GetWatchedPerYear :many
 SELECT
-    watched_date
+    CAST(strftime('%Y', watched_date) AS TEXT) AS year,
+    COUNT(*) AS count
 FROM
     watched
 WHERE
     user_id = ?
+GROUP BY
+    year
 ORDER BY
-    watched_date;
+    year;
+
+-- name: GetWeekdayDistribution :many
+SELECT
+    CAST(strftime('%w', watched_date) AS INTEGER) AS weekday_index,
+    COUNT(*) AS count
+FROM
+    watched
+WHERE
+    user_id = ?
+GROUP BY
+    weekday_index
+ORDER BY
+    weekday_index;
 
 -- name: GetWatchedByGenre :many
 SELECT
@@ -393,39 +414,21 @@ ORDER BY
 LIMIT
     ?;
 
--- name: GetMostWatchedDay :many
+-- name: GetMostWatchedDay :one
 SELECT
-    watched_date
+    watched_date,
+    COUNT(*) AS count
 FROM
     watched
 WHERE
-    user_id = ?;
-
--- name: GetMostWatchedMaleActors :many
-SELECT
-    person.name,
-    person.id,
-    person.profile_path,
-    person.gender,
-    COUNT(*) AS watch_count
-FROM
-    watched
-    JOIN "cast" ON watched.movie_id = "cast".movie_id
-    JOIN person ON "cast".person_id = person.id
-WHERE
-    person.gender = 2
-    AND watched.user_id = ?
+    user_id = ?
 GROUP BY
-    person.id,
-    person.name,
-    person.profile_path,
-    person.gender
+    watched_date
 ORDER BY
-    watch_count DESC
-LIMIT
-    ?;
+    count DESC
+LIMIT 1;
 
--- name: GetMostWatchedFemaleActors :many
+-- name: GetMostWatchedActorsByGender :many
 SELECT
     person.name,
     person.id,
@@ -437,7 +440,7 @@ FROM
     JOIN "cast" ON watched.movie_id = "cast".movie_id
     JOIN person ON "cast".person_id = person.id
 WHERE
-    person.gender = 1
+    person.gender = ?
     AND watched.user_id = ?
 GROUP BY
     person.id,
@@ -483,29 +486,15 @@ ORDER BY
 LIMIT
     ?;
 
--- name: GetWatchedRuntimesLastYear :many
+-- name: GetTotalWatchedStats :one
 SELECT
-    watched.watched_date,
-    movie.runtime
+    COUNT(*) AS count,
+    SUM(movie.runtime) AS total_runtime
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
 WHERE
-    watched.watched_date >= date('now', 'start of month', '-12 months')
-    AND movie.runtime > 0
-    AND watched.user_id = ?
-ORDER BY
-    watched.watched_date;
-
--- name: GetTotalHoursWatched :one
-SELECT
-    SUM(movie.runtime) AS total_minutes
-FROM
-    watched
-    JOIN movie ON watched.movie_id = movie.id
-WHERE
-    movie.runtime > 0
-    AND watched.user_id = ?;
+    watched.user_id = ?;
 
 -- name: GetMonthlyGenreBreakdown :many
 SELECT

@@ -84,6 +84,17 @@ type PeriodHours struct {
 	Hours  float64
 }
 
+type PeriodStats struct {
+	Period string
+	Count  int64
+	Hours  float64
+}
+
+type TotalStats struct {
+	Count int64
+	Hours float64
+}
+
 type GenreCount struct {
 	Name  string
 	Count int64

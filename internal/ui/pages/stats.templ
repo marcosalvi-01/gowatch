@@ -46,13 +46,13 @@ templ Stats(stats *models.WatchedStats, limit int) {
 				@statsHeader()
 				@statsMetrics(stats)
 				@statsCharts(stats)
-				@topListsSection(limit)
+				@topListsSection(stats, limit)
 			</div>
 		}
 	}
 }
 
-templ topListsSection(limit int) {
+templ topListsSection(stats *models.WatchedStats, limit int) {
 	<div class="space-y-8">
 		<div>
 			<h2 class="flex items-center justify-between mb-2">
@@ -104,7 +104,9 @@ templ topListsSection(limit int) {
 					}
 				</form>
 			</h2>
-			<div id="top-lists" hx-get={ templ.SafeURL(fmt.Sprintf("/htmx/stats/top-lists?limit=%d", limit)) } hx-trigger="load"></div>
+			<div id="top-lists">
+				@TopLists(stats, limit)
+			</div>
 		</div>
 	</div>
 }

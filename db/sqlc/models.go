@@ -6,6 +6,8 @@ package sqlc
 
 import (
 	"time"
+
+	"github.com/marcosalvi-01/gowatch/db/types/date"
 )
 
 type Cast struct {
@@ -62,7 +64,7 @@ type Movie struct {
 	OriginalTitle    string
 	OriginalLanguage string
 	Overview         string
-	ReleaseDate      *time.Time
+	ReleaseDate      date.Date
 	PosterPath       string
 	BackdropPath     string
 	Popularity       float64
@@ -111,7 +113,7 @@ type Watched struct {
 	ID               int64
 	MovieID          int64
 	UserID           *int64
-	WatchedDate      time.Time
+	WatchedDate      date.Date
 	WatchedInTheater bool
 	Rating           *float64
 }

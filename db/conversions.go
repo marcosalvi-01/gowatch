@@ -15,7 +15,7 @@ func toModelsMovieDetails(movie sqlc.Movie) models.MovieDetails {
 			OriginalTitle:    movie.OriginalTitle,
 			OriginalLanguage: movie.OriginalLanguage,
 			Overview:         movie.Overview,
-			ReleaseDate:      movie.ReleaseDate,
+			ReleaseDate:      movie.ReleaseDate.ToTimePtr(),
 			PosterPath:       movie.PosterPath,
 			BackdropPath:     movie.BackdropPath,
 			Popularity:       float32(movie.Popularity),

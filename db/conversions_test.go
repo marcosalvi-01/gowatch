@@ -6,11 +6,13 @@ import (
 	"time"
 
 	"github.com/marcosalvi-01/gowatch/db/sqlc"
+	"github.com/marcosalvi-01/gowatch/db/types/date"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
-func TestToModelsMovieDetails(t *testing.T) {
-	releaseDate := time.Date(2023, 5, 15, 0, 0, 0, 0, time.UTC)
+func TestToModelsMovie(t *testing.T) {
+	updatedAt := time.Date(2023, 10, 27, 0, 0, 0, 0, time.UTC)
+	releaseDate := time.Date(2023, 10, 26, 0, 0, 0, 0, time.UTC)
 
 	tests := []struct {
 		name     string
@@ -20,63 +22,64 @@ func TestToModelsMovieDetails(t *testing.T) {
 		{
 			name: "full movie details",
 			input: sqlc.Movie{
-				ID:               123,
+				ID:               1,
 				Title:            "Test Movie",
-				OriginalTitle:    "Original Test",
+				OriginalTitle:    "Test Movie Original",
 				OriginalLanguage: "en",
-				Overview:         "A test movie",
-				ReleaseDate:      &releaseDate,
+				Overview:         "Test overview",
+				ReleaseDate:      date.New(releaseDate),
 				PosterPath:       "/poster.jpg",
 				BackdropPath:     "/backdrop.jpg",
-				Popularity:       7.5,
+				Popularity:       10.5,
 				VoteCount:        100,
-				VoteAverage:      8.0,
+				VoteAverage:      7.5,
 				Budget:           1000000,
-				Homepage:         "http://example.com",
+				Homepage:         "https://example.com",
 				ImdbID:           "tt1234567",
-				Revenue:          5000000,
+				Revenue:          2000000,
 				Runtime:          120,
 				Status:           "Released",
-				Tagline:          "A tagline",
-				UpdatedAt:        &releaseDate,
+				Tagline:          "Test tagline",
+				UpdatedAt:        &updatedAt,
 			},
 			expected: models.MovieDetails{
 				Movie: models.Movie{
-					ID:               123,
+					ID:               1,
 					Title:            "Test Movie",
-					OriginalTitle:    "Original Test",
+					OriginalTitle:    "Test Movie Original",
 					OriginalLanguage: "en",
-					Overview:         "A test movie",
+					Overview:         "Test overview",
 					ReleaseDate:      &releaseDate,
 					PosterPath:       "/poster.jpg",
 					BackdropPath:     "/backdrop.jpg",
-					Popularity:       7.5,
+					Popularity:       10.5,
 					VoteCount:        100,
-					VoteAverage:      8.0,
-					UpdatedAt:        releaseDate,
+					VoteAverage:      7.5,
+					UpdatedAt:        updatedAt,
 				},
 				Budget:   1000000,
-				Homepage: "http://example.com",
+				Homepage: "https://example.com",
 				IMDbID:   "tt1234567",
-				Revenue:  5000000,
+				Revenue:  2000000,
 				Runtime:  120,
 				Status:   "Released",
-				Tagline:  "A tagline",
+				Tagline:  "Test tagline",
 			},
 		},
 		{
-			name: "nil release date",
+			name: "minimal movie details",
 			input: sqlc.Movie{
-				ID:          456,
-				Title:       "No Release",
-				ReleaseDate: nil,
-				UpdatedAt:   &releaseDate,
+				ID:          1,
+				Title:       "Test Movie",
+				ReleaseDate: date.Date{},
+				UpdatedAt:   &updatedAt,
 			},
 			expected: models.MovieDetails{
 				Movie: models.Movie{
-					ID:        456,
-					Title:     "No Release",
-					UpdatedAt: releaseDate,
+					ID:          1,
+					Title:       "Test Movie",
+					ReleaseDate: nil,
+					UpdatedAt:   updatedAt,
 				},
 			},
 		},

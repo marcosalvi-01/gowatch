@@ -13,7 +13,10 @@ import (
 
 // NewTestDB creates an in-memory SQLite database for testing, with migrations applied.
 func NewTestDB() (*SqliteDB, error) {
-	db, err := sql.Open("sqlite", ":memory:")
+	// file::memory:?cache=shared ensures that parallel tests
+	// sharing the same connection pool see the same in-memory database,
+	// preventing "no such table" errors during concurrent execution.
+	db, err := sql.Open("sqlite", "file::memory:?cache=shared")
 	if err != nil {
 		return nil, err
 	}
