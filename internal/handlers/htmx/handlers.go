@@ -492,15 +492,28 @@ func (h *Handlers) ImportWatched(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var importLog models.ImportWatchedMoviesLog
-	err = json.Unmarshal(data, &importLog)
-	if err != nil {
-		log.Error("failed to parse JSON", "error", err)
-		RenderErrorToast(w, r, "Invalid File Format", "The file must be valid JSON matching the expected format.", 4000)
-		return
+	// First try to decode as combined format
+	var allData models.ImportAllData
+	if err := json.Unmarshal(data, &allData); err != nil {
+		// If that fails, try legacy watched-only format
+		var watchedData models.ImportWatchedMoviesLog
+		if err := json.Unmarshal(data, &watchedData); err != nil {
+			log.Error("failed to parse JSON", "error", err)
+			RenderErrorToast(w, r, "Invalid File Format", "The file must be valid JSON matching the expected format.", 4000)
+			return
+		}
+		allData.Watched = watchedData
 	}
 
-	if len(importLog) == 0 {
+	totalMovies := len(allData.Watched)
+	for _, importMovie := range allData.Watched {
+		totalMovies += len(importMovie.Movies)
+	}
+	for _, list := range allData.Lists {
+		totalMovies += len(list.Movies)
+	}
+
+	if totalMovies == 0 {
 		RenderErrorToast(w, r, "Empty File", "The file contains no movies to import.", 4000)
 		return
 	}
@@ -508,14 +521,16 @@ func (h *Handlers) ImportWatched(w http.ResponseWriter, r *http.Request) {
 	ctx := context.WithoutCancel(r.Context())
 	go func() {
 		log.Info("HTMX import job started")
-		if err := h.watchedService.ImportWatched(ctx, importLog); err != nil {
+		if err := h.watchedService.ImportAll(ctx, allData); err != nil {
 			log.Error("HTMX import job failed", "error", err)
-			return
+			// Note: Cannot send toast from goroutine, error is logged only
+		} else {
+			log.Info("HTMX import job finished successfully")
+			// Note: Cannot send toast from goroutine, success is logged only
 		}
-		log.Info("HTMX import job finished successfully")
 	}()
 
-	RenderSuccessToast(w, r, "Import Started", "Your movies are being imported. This may take a few moments.", 0)
+	RenderSuccessToast(w, r, "Import Started", "Your data is being imported. This may take a few moments.", 0)
 }
 
 func (h *Handlers) RenderAddToWatchlistButton(w http.ResponseWriter, r *http.Request) {

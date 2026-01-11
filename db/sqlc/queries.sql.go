@@ -268,6 +268,79 @@ func (q *Queries) GetAllLists(ctx context.Context, userID *int64) ([]List, error
 	return items, nil
 }
 
+const getAllListsWithMovies = `-- name: GetAllListsWithMovies :many
+SELECT
+    list.id, list.name, list.creation_date, list.description, list.user_id, list.is_watchlist,
+    movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
+    list_movie.movie_id, list_movie.list_id, list_movie.date_added, list_movie.position, list_movie.note
+FROM
+    list
+    LEFT JOIN list_movie ON list_movie.list_id = list.id
+    LEFT JOIN movie ON movie.id = list_movie.movie_id
+WHERE
+    list.user_id = ?
+`
+
+type GetAllListsWithMoviesRow struct {
+	List      List
+	Movie     Movie
+	ListMovie ListMovie
+}
+
+func (q *Queries) GetAllListsWithMovies(ctx context.Context, userID *int64) ([]GetAllListsWithMoviesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAllListsWithMovies, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllListsWithMoviesRow
+	for rows.Next() {
+		var i GetAllListsWithMoviesRow
+		if err := rows.Scan(
+			&i.List.ID,
+			&i.List.Name,
+			&i.List.CreationDate,
+			&i.List.Description,
+			&i.List.UserID,
+			&i.List.IsWatchlist,
+			&i.Movie.ID,
+			&i.Movie.Title,
+			&i.Movie.OriginalTitle,
+			&i.Movie.OriginalLanguage,
+			&i.Movie.Overview,
+			&i.Movie.ReleaseDate,
+			&i.Movie.PosterPath,
+			&i.Movie.BackdropPath,
+			&i.Movie.Popularity,
+			&i.Movie.VoteCount,
+			&i.Movie.VoteAverage,
+			&i.Movie.Budget,
+			&i.Movie.Homepage,
+			&i.Movie.ImdbID,
+			&i.Movie.Revenue,
+			&i.Movie.Runtime,
+			&i.Movie.Status,
+			&i.Movie.Tagline,
+			&i.Movie.UpdatedAt,
+			&i.ListMovie.MovieID,
+			&i.ListMovie.ListID,
+			&i.ListMovie.DateAdded,
+			&i.ListMovie.Position,
+			&i.ListMovie.Note,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAllUsersWithStats = `-- name: GetAllUsersWithStats :many
 SELECT
     u.id,

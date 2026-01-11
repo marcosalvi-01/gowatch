@@ -647,3 +647,15 @@ SET
     password_reset_required = ?
 WHERE
     id = ?;
+
+-- name: GetAllListsWithMovies :many
+SELECT
+    sqlc.embed(list),
+    sqlc.embed(movie),
+    sqlc.embed(list_movie)
+FROM
+    list
+    LEFT JOIN list_movie ON list_movie.list_id = list.id
+    LEFT JOIN movie ON movie.id = list_movie.movie_id
+WHERE
+    list.user_id = ?;
