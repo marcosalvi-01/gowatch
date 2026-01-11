@@ -2,7 +2,7 @@
 
 - [ ] fix addtolistdialog to return full dialog content with buttons and handle empty lists and add loading indicator
 - [ ] we need to keep track of the selected item on the sidebar in a cookie or something so that the backend can render the sidebar with the correct state (should also simplify the sidebar script?). this is to fix removing a movie from the watchlist removing the selection on the watchlist item in the sidebar when refreshing it. also we should keep track of the state of the lists collapsible item in a cookie for the same reason
-- [ ] use a correct sqlite supported date type in the db instead of just the go time as a string
+- [x] use a correct sqlite supported date type in the db instead of just the go time as a string
 
 # feats:
 
@@ -13,7 +13,7 @@
 - [ ] create README documentation
 - [ ] better search handling with automatic search and debounce
 - [ ] shortcut to search
-- [ ] package it as a cli so that it can be installed with `go install`
+- [x] package it as a cli so that it can be installed with `go install`
 - [ ] more stats
   - [ ] rewatches
   - [ ] longest streak
@@ -33,6 +33,7 @@
 - [x] add rating capabilities to watched movies
 - [x] custom ad-hoc watchlist (separate from lists)
 - [ ] sharable lists
+- [ ] jellyseer integration
 
 # optimizations:
 
@@ -41,7 +42,7 @@
 - [ ] add proxy and cache for poster images
 - [ ] better mobile ui (change the hover stuff to click?)
 - [ ] have an enum with all the possible htmx events instead of using raw strings
-- [ ] faster stats generation
+- [x] faster stats generation
 - [ ] faster import of movies
 
 # security:
