@@ -19,8 +19,17 @@ INSERT INTO
         position,
         note
     )
-VALUES
-    (?, ?, ?, ?, ?)
+SELECT
+    ?,
+    ?,
+    ?,
+    ?,
+    ?
+FROM
+    list
+WHERE
+    list.id = ?
+    AND list.user_id = ?
 `
 
 type AddMovieToListParams struct {
@@ -29,6 +38,8 @@ type AddMovieToListParams struct {
 	DateAdded string
 	Position  *int64
 	Note      *string
+	ID        int64
+	UserID    *int64
 }
 
 func (q *Queries) AddMovieToList(ctx context.Context, arg AddMovieToListParams) error {
@@ -38,7 +49,111 @@ func (q *Queries) AddMovieToList(ctx context.Context, arg AddMovieToListParams) 
 		arg.DateAdded,
 		arg.Position,
 		arg.Note,
+		arg.ID,
+		arg.UserID,
 	)
+	return err
+}
+
+const assignNilUserLists = `-- name: AssignNilUserLists :exec
+UPDATE
+    list
+SET
+    user_id = ?
+WHERE
+    user_id IS NULL
+`
+
+func (q *Queries) AssignNilUserLists(ctx context.Context, userID *int64) error {
+	_, err := q.db.ExecContext(ctx, assignNilUserLists, userID)
+	return err
+}
+
+const assignNilUserWatched = `-- name: AssignNilUserWatched :exec
+UPDATE
+    watched
+SET
+    user_id = ?
+WHERE
+    user_id IS NULL
+`
+
+func (q *Queries) AssignNilUserWatched(ctx context.Context, userID *int64) error {
+	_, err := q.db.ExecContext(ctx, assignNilUserWatched, userID)
+	return err
+}
+
+const countUsers = `-- name: CountUsers :one
+SELECT
+    COUNT(*)
+FROM
+    user
+`
+
+func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countUsers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const createSession = `-- name: CreateSession :exec
+INSERT INTO
+    session (id, user_id, expires_at)
+VALUES
+    (?, ?, ?)
+`
+
+type CreateSessionParams struct {
+	ID        string
+	UserID    int64
+	ExpiresAt time.Time
+}
+
+func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) error {
+	_, err := q.db.ExecContext(ctx, createSession, arg.ID, arg.UserID, arg.ExpiresAt)
+	return err
+}
+
+const createUser = `-- name: CreateUser :one
+INSERT INTO
+    user (email, name, password_hash, created_at)
+VALUES
+    (?, ?, ?, datetime('now'))
+RETURNING
+    id, email, password_hash, name, created_at, admin, password_reset_required
+`
+
+type CreateUserParams struct {
+	Email        string
+	Name         string
+	PasswordHash string
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, createUser, arg.Email, arg.Name, arg.PasswordHash)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.CreatedAt,
+		&i.Admin,
+		&i.PasswordResetRequired,
+	)
+	return i, err
+}
+
+const deleteExpiredSessions = `-- name: DeleteExpiredSessions :exec
+DELETE FROM
+    session
+WHERE
+    expires_at <= datetime('now')
+`
+
+func (q *Queries) DeleteExpiredSessions(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, deleteExpiredSessions)
 	return err
 }
 
@@ -46,11 +161,17 @@ const deleteListByID = `-- name: DeleteListByID :exec
 DELETE FROM
     list
 WHERE
-    id = ?
+    user_id = ?
+    AND id = ?
 `
 
-func (q *Queries) DeleteListByID(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteListByID, id)
+type DeleteListByIDParams struct {
+	UserID *int64
+	ID     int64
+}
+
+func (q *Queries) DeleteListByID(ctx context.Context, arg DeleteListByIDParams) error {
+	_, err := q.db.ExecContext(ctx, deleteListByID, arg.UserID, arg.ID)
 	return err
 }
 
@@ -60,27 +181,63 @@ DELETE FROM
 WHERE
     list_id = ?
     AND movie_id = ?
+    AND EXISTS (
+        SELECT
+            1
+        FROM
+            list
+        WHERE
+            list.id = list_id
+            AND list.user_id = ?
+    )
 `
 
 type DeleteMovieFromListParams struct {
 	ListID  int64
 	MovieID int64
+	UserID  *int64
 }
 
 func (q *Queries) DeleteMovieFromList(ctx context.Context, arg DeleteMovieFromListParams) error {
-	_, err := q.db.ExecContext(ctx, deleteMovieFromList, arg.ListID, arg.MovieID)
+	_, err := q.db.ExecContext(ctx, deleteMovieFromList, arg.ListID, arg.MovieID, arg.UserID)
+	return err
+}
+
+const deleteSession = `-- name: DeleteSession :exec
+DELETE FROM
+    session
+WHERE
+    id = ?
+`
+
+func (q *Queries) DeleteSession(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteSession, id)
+	return err
+}
+
+const deleteUser = `-- name: DeleteUser :exec
+DELETE FROM
+    user
+WHERE
+    id = ?
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteUser, id)
 	return err
 }
 
 const getAllLists = `-- name: GetAllLists :many
 SELECT
-    id, name, creation_date, description
+    id, name, creation_date, description, user_id, is_watchlist
 FROM
     list
+WHERE
+    user_id = ?
 `
 
-func (q *Queries) GetAllLists(ctx context.Context) ([]List, error) {
-	rows, err := q.db.QueryContext(ctx, getAllLists)
+func (q *Queries) GetAllLists(ctx context.Context, userID *int64) ([]List, error) {
+	rows, err := q.db.QueryContext(ctx, getAllLists, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -93,6 +250,78 @@ func (q *Queries) GetAllLists(ctx context.Context) ([]List, error) {
 			&i.Name,
 			&i.CreationDate,
 			&i.Description,
+			&i.UserID,
+			&i.IsWatchlist,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllUsersWithStats = `-- name: GetAllUsersWithStats :many
+SELECT
+    u.id,
+    u.email,
+    u.name,
+    u.created_at,
+    u.admin,
+    (
+        SELECT
+            COUNT(*)
+        FROM
+            watched w
+        WHERE
+            w.user_id = u.id
+    ) AS watched_count,
+    (
+        SELECT
+            COUNT(*)
+        FROM
+            list l
+        WHERE
+            l.user_id = u.id
+    ) AS list_count
+FROM
+    user u
+ORDER BY
+    u.created_at DESC
+`
+
+type GetAllUsersWithStatsRow struct {
+	ID           int64
+	Email        string
+	Name         string
+	CreatedAt    *time.Time
+	Admin        bool
+	WatchedCount int64
+	ListCount    int64
+}
+
+func (q *Queries) GetAllUsersWithStats(ctx context.Context) ([]GetAllUsersWithStatsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAllUsersWithStats)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllUsersWithStatsRow
+	for rows.Next() {
+		var i GetAllUsersWithStatsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.Name,
+			&i.CreatedAt,
+			&i.Admin,
+			&i.WatchedCount,
+			&i.ListCount,
 		); err != nil {
 			return nil, err
 		}
@@ -188,21 +417,29 @@ func (q *Queries) GetCrewByMovieID(ctx context.Context, movieID int64) ([]Crew, 
 
 const getListByID = `-- name: GetListByID :one
 SELECT
-    id, name, creation_date, description
+    id, name, creation_date, description, user_id, is_watchlist
 FROM
     list
 WHERE
-    id = ?
+    user_id = ?
+    AND id = ?
 `
 
-func (q *Queries) GetListByID(ctx context.Context, id int64) (List, error) {
-	row := q.db.QueryRowContext(ctx, getListByID, id)
+type GetListByIDParams struct {
+	UserID *int64
+	ID     int64
+}
+
+func (q *Queries) GetListByID(ctx context.Context, arg GetListByIDParams) (List, error) {
+	row := q.db.QueryRowContext(ctx, getListByID, arg.UserID, arg.ID)
 	var i List
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.CreationDate,
 		&i.Description,
+		&i.UserID,
+		&i.IsWatchlist,
 	)
 	return i, err
 }
@@ -211,14 +448,20 @@ const getListJoinMovieByID = `-- name: GetListJoinMovieByID :many
 SELECT
     movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
     list_movie.movie_id, list_movie.list_id, list_movie.date_added, list_movie.position, list_movie.note,
-    list.id, list.name, list.creation_date, list.description
+    list.id, list.name, list.creation_date, list.description, list.user_id, list.is_watchlist
 FROM
     list
     JOIN list_movie ON list_movie.list_id = list.id
     JOIN movie ON movie.id = list_movie.movie_id
 WHERE
-    list.id = ?
+    list.user_id = ?
+    AND list.id = ?
 `
+
+type GetListJoinMovieByIDParams struct {
+	UserID *int64
+	ID     int64
+}
 
 type GetListJoinMovieByIDRow struct {
 	Movie     Movie
@@ -226,8 +469,8 @@ type GetListJoinMovieByIDRow struct {
 	List      List
 }
 
-func (q *Queries) GetListJoinMovieByID(ctx context.Context, id int64) ([]GetListJoinMovieByIDRow, error) {
-	rows, err := q.db.QueryContext(ctx, getListJoinMovieByID, id)
+func (q *Queries) GetListJoinMovieByID(ctx context.Context, arg GetListJoinMovieByIDParams) ([]GetListJoinMovieByIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, getListJoinMovieByID, arg.UserID, arg.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -264,6 +507,8 @@ func (q *Queries) GetListJoinMovieByID(ctx context.Context, id int64) ([]GetList
 			&i.List.Name,
 			&i.List.CreationDate,
 			&i.List.Description,
+			&i.List.UserID,
+			&i.List.IsWatchlist,
 		); err != nil {
 			return nil, err
 		}
@@ -290,6 +535,7 @@ FROM
     JOIN genre ON genre_movie.genre_id = genre.id
 WHERE
     watched.watched_date >= date('now', 'start of month', '-12 months')
+    AND watched.user_id = ?
 GROUP BY
     watched.watched_date,
     genre_name
@@ -304,8 +550,8 @@ type GetMonthlyGenreBreakdownRow struct {
 	MovieCount  int64
 }
 
-func (q *Queries) GetMonthlyGenreBreakdown(ctx context.Context) ([]GetMonthlyGenreBreakdownRow, error) {
-	rows, err := q.db.QueryContext(ctx, getMonthlyGenreBreakdown)
+func (q *Queries) GetMonthlyGenreBreakdown(ctx context.Context, userID *int64) ([]GetMonthlyGenreBreakdownRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMonthlyGenreBreakdown, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -332,10 +578,12 @@ SELECT
     watched_date
 FROM
     watched
+WHERE
+    user_id = ?
 `
 
-func (q *Queries) GetMostWatchedDay(ctx context.Context) ([]time.Time, error) {
-	rows, err := q.db.QueryContext(ctx, getMostWatchedDay)
+func (q *Queries) GetMostWatchedDay(ctx context.Context, userID *int64) ([]time.Time, error) {
+	rows, err := q.db.QueryContext(ctx, getMostWatchedDay, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -370,6 +618,7 @@ FROM
     JOIN person ON "cast".person_id = person.id
 WHERE
     person.gender = 1
+    AND watched.user_id = ?
 GROUP BY
     person.id,
     person.name,
@@ -381,6 +630,11 @@ LIMIT
     ?
 `
 
+type GetMostWatchedFemaleActorsParams struct {
+	UserID *int64
+	Limit  int64
+}
+
 type GetMostWatchedFemaleActorsRow struct {
 	Name        string
 	ID          int64
@@ -389,8 +643,8 @@ type GetMostWatchedFemaleActorsRow struct {
 	WatchCount  int64
 }
 
-func (q *Queries) GetMostWatchedFemaleActors(ctx context.Context, limit int64) ([]GetMostWatchedFemaleActorsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getMostWatchedFemaleActors, limit)
+func (q *Queries) GetMostWatchedFemaleActors(ctx context.Context, arg GetMostWatchedFemaleActorsParams) ([]GetMostWatchedFemaleActorsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMostWatchedFemaleActors, arg.UserID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -431,6 +685,7 @@ FROM
     JOIN person ON "cast".person_id = person.id
 WHERE
     person.gender = 2
+    AND watched.user_id = ?
 GROUP BY
     person.id,
     person.name,
@@ -442,6 +697,11 @@ LIMIT
     ?
 `
 
+type GetMostWatchedMaleActorsParams struct {
+	UserID *int64
+	Limit  int64
+}
+
 type GetMostWatchedMaleActorsRow struct {
 	Name        string
 	ID          int64
@@ -450,8 +710,8 @@ type GetMostWatchedMaleActorsRow struct {
 	WatchCount  int64
 }
 
-func (q *Queries) GetMostWatchedMaleActors(ctx context.Context, limit int64) ([]GetMostWatchedMaleActorsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getMostWatchedMaleActors, limit)
+func (q *Queries) GetMostWatchedMaleActors(ctx context.Context, arg GetMostWatchedMaleActorsParams) ([]GetMostWatchedMaleActorsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMostWatchedMaleActors, arg.UserID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -488,6 +748,8 @@ SELECT
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.user_id = ?
 GROUP BY
     movie.id,
     movie.title,
@@ -498,6 +760,11 @@ LIMIT
     ?
 `
 
+type GetMostWatchedMoviesParams struct {
+	UserID *int64
+	Limit  int64
+}
+
 type GetMostWatchedMoviesRow struct {
 	Title      string
 	ID         int64
@@ -505,8 +772,8 @@ type GetMostWatchedMoviesRow struct {
 	WatchCount int64
 }
 
-func (q *Queries) GetMostWatchedMovies(ctx context.Context, limit int64) ([]GetMostWatchedMoviesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getMostWatchedMovies, limit)
+func (q *Queries) GetMostWatchedMovies(ctx context.Context, arg GetMostWatchedMoviesParams) ([]GetMostWatchedMoviesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMostWatchedMovies, arg.UserID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -647,23 +914,30 @@ func (q *Queries) GetPerson(ctx context.Context, id int64) (Person, error) {
 const getRecentWatchedMovies = `-- name: GetRecentWatchedMovies :many
 SELECT
     movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
-    watched.watched_in_theater AS in_theaters
+    watched.id, watched.movie_id, watched.user_id, watched.watched_date, watched.watched_in_theater, watched.rating
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.user_id = ?
 ORDER BY
     watched.watched_date DESC
 LIMIT
     ?
 `
 
-type GetRecentWatchedMoviesRow struct {
-	Movie      Movie
-	InTheaters bool
+type GetRecentWatchedMoviesParams struct {
+	UserID *int64
+	Limit  int64
 }
 
-func (q *Queries) GetRecentWatchedMovies(ctx context.Context, limit int64) ([]GetRecentWatchedMoviesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getRecentWatchedMovies, limit)
+type GetRecentWatchedMoviesRow struct {
+	Movie   Movie
+	Watched Watched
+}
+
+func (q *Queries) GetRecentWatchedMovies(ctx context.Context, arg GetRecentWatchedMoviesParams) ([]GetRecentWatchedMoviesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRecentWatchedMovies, arg.UserID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -691,7 +965,12 @@ func (q *Queries) GetRecentWatchedMovies(ctx context.Context, limit int64) ([]Ge
 			&i.Movie.Status,
 			&i.Movie.Tagline,
 			&i.Movie.UpdatedAt,
-			&i.InTheaters,
+			&i.Watched.ID,
+			&i.Watched.MovieID,
+			&i.Watched.UserID,
+			&i.Watched.WatchedDate,
+			&i.Watched.WatchedInTheater,
+			&i.Watched.Rating,
 		); err != nil {
 			return nil, err
 		}
@@ -706,12 +985,37 @@ func (q *Queries) GetRecentWatchedMovies(ctx context.Context, limit int64) ([]Ge
 	return items, nil
 }
 
+const getSession = `-- name: GetSession :one
+SELECT
+    user_id,
+    expires_at
+FROM
+    session
+WHERE
+    id = ?
+    AND expires_at > datetime('now')
+`
+
+type GetSessionRow struct {
+	UserID    int64
+	ExpiresAt time.Time
+}
+
+func (q *Queries) GetSession(ctx context.Context, id string) (GetSessionRow, error) {
+	row := q.db.QueryRowContext(ctx, getSession, id)
+	var i GetSessionRow
+	err := row.Scan(&i.UserID, &i.ExpiresAt)
+	return i, err
+}
+
 const getTheaterVsHomeCount = `-- name: GetTheaterVsHomeCount :many
 SELECT
     watched_in_theater,
     COUNT(*) AS count
 FROM
     watched
+WHERE
+    user_id = ?
 GROUP BY
     watched_in_theater
 `
@@ -721,8 +1025,8 @@ type GetTheaterVsHomeCountRow struct {
 	Count            int64
 }
 
-func (q *Queries) GetTheaterVsHomeCount(ctx context.Context) ([]GetTheaterVsHomeCountRow, error) {
-	rows, err := q.db.QueryContext(ctx, getTheaterVsHomeCount)
+func (q *Queries) GetTheaterVsHomeCount(ctx context.Context, userID *int64) ([]GetTheaterVsHomeCountRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTheaterVsHomeCount, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -752,13 +1056,62 @@ FROM
     JOIN movie ON watched.movie_id = movie.id
 WHERE
     movie.runtime > 0
+    AND watched.user_id = ?
 `
 
-func (q *Queries) GetTotalHoursWatched(ctx context.Context) (*float64, error) {
-	row := q.db.QueryRowContext(ctx, getTotalHoursWatched)
+func (q *Queries) GetTotalHoursWatched(ctx context.Context, userID *int64) (*float64, error) {
+	row := q.db.QueryRowContext(ctx, getTotalHoursWatched, userID)
 	var total_minutes *float64
 	err := row.Scan(&total_minutes)
 	return total_minutes, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT
+    id, email, password_hash, name, created_at, admin, password_reset_required
+FROM
+    user
+WHERE
+    email = ?
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.CreatedAt,
+		&i.Admin,
+		&i.PasswordResetRequired,
+	)
+	return i, err
+}
+
+const getUserByID = `-- name: GetUserByID :one
+SELECT
+    id, email, password_hash, name, created_at, admin, password_reset_required
+FROM
+    user
+WHERE
+    id = ?
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.CreatedAt,
+		&i.Admin,
+		&i.PasswordResetRequired,
+	)
+	return i, err
 }
 
 const getWatchedByGenre = `-- name: GetWatchedByGenre :many
@@ -770,6 +1123,8 @@ FROM
     JOIN movie ON watched.movie_id = movie.id
     JOIN genre_movie ON movie.id = genre_movie.movie_id
     JOIN genre ON genre_movie.genre_id = genre.id
+WHERE
+    watched.user_id = ?
 GROUP BY
     genre.id,
     genre.name
@@ -782,8 +1137,8 @@ type GetWatchedByGenreRow struct {
 	Count int64
 }
 
-func (q *Queries) GetWatchedByGenre(ctx context.Context) ([]GetWatchedByGenreRow, error) {
-	rows, err := q.db.QueryContext(ctx, getWatchedByGenre)
+func (q *Queries) GetWatchedByGenre(ctx context.Context, userID *int64) ([]GetWatchedByGenreRow, error) {
+	rows, err := q.db.QueryContext(ctx, getWatchedByGenre, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -810,10 +1165,12 @@ SELECT
     COUNT(*) AS count
 FROM
     watched
+WHERE
+    user_id = ?
 `
 
-func (q *Queries) GetWatchedCount(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getWatchedCount)
+func (q *Queries) GetWatchedCount(ctx context.Context, userID *int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getWatchedCount, userID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -827,6 +1184,7 @@ FROM
     watched
 WHERE
     watched_date IS NOT NULL
+    AND user_id = ?
 `
 
 type GetWatchedDateRangeRow struct {
@@ -834,8 +1192,8 @@ type GetWatchedDateRangeRow struct {
 	MaxDate interface{}
 }
 
-func (q *Queries) GetWatchedDateRange(ctx context.Context) (GetWatchedDateRangeRow, error) {
-	row := q.db.QueryRowContext(ctx, getWatchedDateRange)
+func (q *Queries) GetWatchedDateRange(ctx context.Context, userID *int64) (GetWatchedDateRangeRow, error) {
+	row := q.db.QueryRowContext(ctx, getWatchedDateRange, userID)
 	var i GetWatchedDateRangeRow
 	err := row.Scan(&i.MinDate, &i.MaxDate)
 	return i, err
@@ -846,12 +1204,14 @@ SELECT
     watched_date
 FROM
     watched
+WHERE
+    user_id = ?
 ORDER BY
     watched_date
 `
 
-func (q *Queries) GetWatchedDates(ctx context.Context) ([]time.Time, error) {
-	rows, err := q.db.QueryContext(ctx, getWatchedDates)
+func (q *Queries) GetWatchedDates(ctx context.Context, userID *int64) ([]time.Time, error) {
+	rows, err := q.db.QueryContext(ctx, getWatchedDates, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -876,10 +1236,12 @@ func (q *Queries) GetWatchedDates(ctx context.Context) ([]time.Time, error) {
 const getWatchedJoinMovie = `-- name: GetWatchedJoinMovie :many
 SELECT
     movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
-    watched.movie_id, watched.watched_date, watched.watched_in_theater
+    watched.id, watched.movie_id, watched.user_id, watched.watched_date, watched.watched_in_theater, watched.rating
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.user_id = ?
 `
 
 type GetWatchedJoinMovieRow struct {
@@ -887,8 +1249,8 @@ type GetWatchedJoinMovieRow struct {
 	Watched Watched
 }
 
-func (q *Queries) GetWatchedJoinMovie(ctx context.Context) ([]GetWatchedJoinMovieRow, error) {
-	rows, err := q.db.QueryContext(ctx, getWatchedJoinMovie)
+func (q *Queries) GetWatchedJoinMovie(ctx context.Context, userID *int64) ([]GetWatchedJoinMovieRow, error) {
+	rows, err := q.db.QueryContext(ctx, getWatchedJoinMovie, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -916,9 +1278,12 @@ func (q *Queries) GetWatchedJoinMovie(ctx context.Context) ([]GetWatchedJoinMovi
 			&i.Movie.Status,
 			&i.Movie.Tagline,
 			&i.Movie.UpdatedAt,
+			&i.Watched.ID,
 			&i.Watched.MovieID,
+			&i.Watched.UserID,
 			&i.Watched.WatchedDate,
 			&i.Watched.WatchedInTheater,
+			&i.Watched.Rating,
 		); err != nil {
 			return nil, err
 		}
@@ -936,23 +1301,29 @@ func (q *Queries) GetWatchedJoinMovie(ctx context.Context) ([]GetWatchedJoinMovi
 const getWatchedJoinMovieByID = `-- name: GetWatchedJoinMovieByID :many
 SELECT
     movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
-    watched.movie_id, watched.watched_date, watched.watched_in_theater
+    watched.id, watched.movie_id, watched.user_id, watched.watched_date, watched.watched_in_theater, watched.rating
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
 WHERE
-    watched.movie_id = ?
+    watched.user_id = ?
+    AND watched.movie_id = ?
 ORDER BY
     watched.watched_date DESC
 `
+
+type GetWatchedJoinMovieByIDParams struct {
+	UserID  *int64
+	MovieID int64
+}
 
 type GetWatchedJoinMovieByIDRow struct {
 	Movie   Movie
 	Watched Watched
 }
 
-func (q *Queries) GetWatchedJoinMovieByID(ctx context.Context, movieID int64) ([]GetWatchedJoinMovieByIDRow, error) {
-	rows, err := q.db.QueryContext(ctx, getWatchedJoinMovieByID, movieID)
+func (q *Queries) GetWatchedJoinMovieByID(ctx context.Context, arg GetWatchedJoinMovieByIDParams) ([]GetWatchedJoinMovieByIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, getWatchedJoinMovieByID, arg.UserID, arg.MovieID)
 	if err != nil {
 		return nil, err
 	}
@@ -980,9 +1351,12 @@ func (q *Queries) GetWatchedJoinMovieByID(ctx context.Context, movieID int64) ([
 			&i.Movie.Status,
 			&i.Movie.Tagline,
 			&i.Movie.UpdatedAt,
+			&i.Watched.ID,
 			&i.Watched.MovieID,
+			&i.Watched.UserID,
 			&i.Watched.WatchedDate,
 			&i.Watched.WatchedInTheater,
+			&i.Watched.Rating,
 		); err != nil {
 			return nil, err
 		}
@@ -1004,13 +1378,13 @@ FROM
     watched
 WHERE
     watched_date >= date('now', 'start of month', '-12 months')
-    AND watched_date < date('now', 'start of month')
+    AND user_id = ?
 ORDER BY
     watched_date
 `
 
-func (q *Queries) GetWatchedPerMonthLastYear(ctx context.Context) ([]time.Time, error) {
-	rows, err := q.db.QueryContext(ctx, getWatchedPerMonthLastYear)
+func (q *Queries) GetWatchedPerMonthLastYear(ctx context.Context, userID *int64) ([]time.Time, error) {
+	rows, err := q.db.QueryContext(ctx, getWatchedPerMonthLastYear, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -1037,12 +1411,14 @@ SELECT
     watched_date
 FROM
     watched
+WHERE
+    user_id = ?
 ORDER BY
     watched_date
 `
 
-func (q *Queries) GetWatchedPerYear(ctx context.Context) ([]time.Time, error) {
-	rows, err := q.db.QueryContext(ctx, getWatchedPerYear)
+func (q *Queries) GetWatchedPerYear(ctx context.Context, userID *int64) ([]time.Time, error) {
+	rows, err := q.db.QueryContext(ctx, getWatchedPerYear, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -1073,8 +1449,8 @@ FROM
     JOIN movie ON watched.movie_id = movie.id
 WHERE
     watched.watched_date >= date('now', 'start of month', '-12 months')
-    AND watched.watched_date < date('now', 'start of month')
     AND movie.runtime > 0
+    AND watched.user_id = ?
 ORDER BY
     watched.watched_date
 `
@@ -1084,8 +1460,8 @@ type GetWatchedRuntimesLastYearRow struct {
 	Runtime     int64
 }
 
-func (q *Queries) GetWatchedRuntimesLastYear(ctx context.Context) ([]GetWatchedRuntimesLastYearRow, error) {
-	rows, err := q.db.QueryContext(ctx, getWatchedRuntimesLastYear)
+func (q *Queries) GetWatchedRuntimesLastYear(ctx context.Context, userID *int64) ([]GetWatchedRuntimesLastYearRow, error) {
+	rows, err := q.db.QueryContext(ctx, getWatchedRuntimesLastYear, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -1107,15 +1483,34 @@ func (q *Queries) GetWatchedRuntimesLastYear(ctx context.Context) ([]GetWatchedR
 	return items, nil
 }
 
+const getWatchlistID = `-- name: GetWatchlistID :one
+SELECT
+    id
+FROM
+    list
+WHERE
+    user_id = ?
+    AND is_watchlist = TRUE
+`
+
+func (q *Queries) GetWatchlistID(ctx context.Context, userID *int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getWatchlistID, userID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const insertList = `-- name: InsertList :one
 INSERT INTO
     list (
         name,
         creation_date,
-        description
+        description,
+        user_id,
+		is_watchlist
     )
 VALUES
-    (?, ?, ?)
+    (?, ?, ?, ?, ?)
 RETURNING
     id
 `
@@ -1124,10 +1519,18 @@ type InsertListParams struct {
 	Name         string
 	CreationDate string
 	Description  *string
+	UserID       *int64
+	IsWatchlist  bool
 }
 
 func (q *Queries) InsertList(ctx context.Context, arg InsertListParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertList, arg.Name, arg.CreationDate, arg.Description)
+	row := q.db.QueryRowContext(ctx, insertList,
+		arg.Name,
+		arg.CreationDate,
+		arg.Description,
+		arg.UserID,
+		arg.IsWatchlist,
+	)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -1135,24 +1538,91 @@ func (q *Queries) InsertList(ctx context.Context, arg InsertListParams) (int64, 
 
 const insertWatched = `-- name: InsertWatched :one
 INSERT INTO
-    watched (movie_id, watched_date, watched_in_theater)
+    watched (movie_id, watched_date, watched_in_theater, user_id, rating)
 VALUES
-    (?, ?, ?)
+    (?, ?, ?, ?, ?)
 RETURNING
-    movie_id, watched_date, watched_in_theater
+    id, movie_id, user_id, watched_date, watched_in_theater, rating
 `
 
 type InsertWatchedParams struct {
 	MovieID          int64
 	WatchedDate      time.Time
 	WatchedInTheater bool
+	UserID           *int64
+	Rating           *float64
 }
 
 func (q *Queries) InsertWatched(ctx context.Context, arg InsertWatchedParams) (Watched, error) {
-	row := q.db.QueryRowContext(ctx, insertWatched, arg.MovieID, arg.WatchedDate, arg.WatchedInTheater)
+	row := q.db.QueryRowContext(ctx, insertWatched,
+		arg.MovieID,
+		arg.WatchedDate,
+		arg.WatchedInTheater,
+		arg.UserID,
+		arg.Rating,
+	)
 	var i Watched
-	err := row.Scan(&i.MovieID, &i.WatchedDate, &i.WatchedInTheater)
+	err := row.Scan(
+		&i.ID,
+		&i.MovieID,
+		&i.UserID,
+		&i.WatchedDate,
+		&i.WatchedInTheater,
+		&i.Rating,
+	)
 	return i, err
+}
+
+const setAdmin = `-- name: SetAdmin :exec
+UPDATE
+    user
+SET
+    admin = TRUE
+WHERE
+    id = ?
+`
+
+func (q *Queries) SetAdmin(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, setAdmin, id)
+	return err
+}
+
+const updatePasswordResetRequired = `-- name: UpdatePasswordResetRequired :exec
+UPDATE
+    user
+SET
+    password_reset_required = ?
+WHERE
+    id = ?
+`
+
+type UpdatePasswordResetRequiredParams struct {
+	PasswordResetRequired bool
+	ID                    int64
+}
+
+func (q *Queries) UpdatePasswordResetRequired(ctx context.Context, arg UpdatePasswordResetRequiredParams) error {
+	_, err := q.db.ExecContext(ctx, updatePasswordResetRequired, arg.PasswordResetRequired, arg.ID)
+	return err
+}
+
+const updateUserPassword = `-- name: UpdateUserPassword :exec
+UPDATE
+    user
+SET
+    password_hash = ?
+WHERE
+    id = ?
+`
+
+type UpdateUserPasswordParams struct {
+	PasswordHash string
+	ID           int64
+}
+
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
+	_, err := q.db.ExecContext(ctx, updateUserPassword, arg.PasswordHash, arg.ID)
+	return err
 }
 
 const upsertCast = `-- name: UpsertCast :exec

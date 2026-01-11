@@ -3,7 +3,7 @@ package pages
 import (
 	"net/http"
 
-	"gowatch/internal/ui/pages"
+	"github.com/marcosalvi-01/gowatch/internal/ui/pages"
 
 	"github.com/a-h/templ"
 )

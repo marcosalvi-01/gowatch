@@ -1,0 +1,41 @@
+package pages
+
+import (
+	"fmt"
+	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/separator"
+)
+
+templ Watchlist(list *models.List) {
+	@Layout() {
+		@templ.Fragment("content") {
+			@watchlistHeader(list)
+			@separator.Separator()
+			<div
+				hx-get={ fmt.Sprintf("/htmx/lists/%d/movie-grid", list.ID) }
+				hx-trigger="load, refreshListGrid from:body"
+				hx-swap="innerHTML"
+				hx-target="this"
+			></div>
+		}
+	}
+}
+
+templ watchlistHeader(list *models.List) {
+	<div class="space-y-4 mb-8">
+		<div class="space-y-2">
+			<div class="flex items-center gap-2">
+				@icon.List(icon.Props{Size: 28, Class: "text-primary"})
+				<h1 class="text-2xl sm:text-3xl font-bold">My Watchlist</h1>
+			</div>
+			<p class="text-muted-foreground text-sm sm:text-base">Plan your next cinematic adventures</p>
+		</div>
+		<div
+			id="list-stats"
+			hx-get={ fmt.Sprintf("/htmx/lists/%d/stats", list.ID) }
+			hx-trigger="load, refreshListStats from:body"
+			hx-swap="innerHTML"
+		></div>
+	</div>
+}

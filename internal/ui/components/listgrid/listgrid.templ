@@ -1,0 +1,218 @@
+package listgrid
+
+import (
+	"fmt"
+	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/emptystate"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/moviecard"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+	"strconv"
+	"time"
+)
+
+templ ListGrid(list models.List) {
+	if len(list.Movies) == 0 {
+		if list.IsWatchlist {
+			@emptystate.EmptyState(emptystate.Props{
+				Title:       "Ready to start your movie marathon?",
+				Description: "Start building your watchlist by searching for movies you want to see.",
+				Instruction: "Use the search bar at the top to find and add movies.",
+				ShowImport:  false,
+			})
+		} else {
+			@emptystate.EmptyState(emptystate.Props{
+				Title:       "No movies in this list yet",
+				Description: "Start building your list by adding movies you want to watch or remember.",
+				Instruction: "Use the search bar at the top to find and add movies.",
+				ShowImport:  false,
+			})
+		}
+	} else {
+		<div class="space-y-6 pt-4">
+			<h2 class="text-xl font-semibold">Movies</h2>
+			<div class="flex flex-wrap gap-4 md:gap-6 w-full">
+				for _, movie := range list.Movies {
+					@listMovieItem(list.ID, movie, list.IsWatchlist)
+				}
+			</div>
+		</div>
+	}
+}
+
+templ listMovieItem(listID int64, movie models.MovieItem, isWatchlist bool) {
+	<div class="relative group">
+		{{
+			moviecardProps := moviecard.Props{
+				Title:             movie.MovieDetails.Movie.Title,
+				Href:              "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+				PosterPath:        movie.MovieDetails.Movie.PosterPath,
+				Hoverable:         true,
+				TopHoverComponent: listMovieCardTopHoverList(listID, movie, isWatchlist),
+			}
+		}}
+		@moviecard.MovieCard(moviecardProps) {
+			<div class="space-y-1">
+				<h3 class="text-xs sm:text-sm font-bold leading-tight line-clamp-2">
+					{ movie.MovieDetails.Movie.Title }
+				</h3>
+				<div class="flex items-center justify-between text-xs">
+					<div class="flex items-center text-muted-foreground">
+						@icon.Calendar(icon.Props{Size: 12})
+						<span class="ml-1">{ movie.MovieDetails.Movie.ReleaseDate.Format("2006") }</span>
+					</div>
+					if movie.MovieDetails.Movie.VoteAverage > 0 {
+						<div class="flex items-center">
+							@icon.Star(icon.Props{
+								Size:   12,
+								Fill:   "orange",
+								Stroke: "orange",
+							})
+							<span class="ml-1">{ fmt.Sprintf("%.1f", movie.MovieDetails.Movie.VoteAverage) }</span>
+						</div>
+					}
+				</div>
+			</div>
+		}
+		@listConfirmRemoveMovieDialog(listID, movie, isWatchlist)
+	</div>
+}
+
+templ listMovieCardTopHoverList(listID int64, movie models.MovieItem, isWatchlist bool) {
+	if isWatchlist {
+		<div class="flex items-center justify-between">
+			<span class="text-xs text-muted-foreground">Added { watchlistFormatTimeAgoShort(movie.DateAdded) }</span>
+			@dialog.Trigger(dialog.TriggerProps{
+				For: "list-movie-menu-" + strconv.Itoa(int(listID)) + "-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+			}) {
+				@button.Button(button.Props{
+					Size:    button.SizeSm,
+					Class:   "h-6 w-6 shrink-0",
+					Variant: button.VariantDestructive,
+				}) {
+					@icon.Trash()
+				}
+			}
+		</div>
+	} else {
+		<div class="flex items-start gap-2 justify-between">
+			<div class="flex flex-col min-h-[20px]">
+				if movie.Note != nil && *movie.Note != "" {
+					<p class="text-sm">Note:</p>
+					<p class="text-xs leading-relaxed max-w-xs">{ *movie.Note }</p>
+				} else {
+					<p class="text-sm text-gray-300 italic">No note set</p>
+				}
+			</div>
+			@dialog.Trigger(dialog.TriggerProps{
+				For: "list-movie-menu-" + strconv.Itoa(int(listID)) + "-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+			}) {
+				@button.Button(button.Props{
+					Variant: button.VariantDestructive,
+					Class:   "h-6 w-6 shrink-0",
+				}) {
+					@icon.Trash(icon.Props{Size: 12})
+				}
+			}
+		</div>
+	}
+}
+
+templ listConfirmRemoveMovieDialog(listID int64, movie models.MovieItem, isWatchlist bool) {
+	<form
+		hx-delete="/htmx/lists/items"
+		hx-target="#toast"
+	>
+		<input type="hidden" name="movie_id" value={ strconv.FormatInt(movie.MovieDetails.Movie.ID, 10) }/>
+		<input type="hidden" name="list_id" value={ strconv.FormatInt(listID, 10) }/>
+		@dialog.Dialog(dialog.Props{
+			ID: "list-movie-menu-" + strconv.Itoa(int(listID)) + "-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+		}) {
+			@dialog.Content(dialog.ContentProps{
+				Class: "max-w-md",
+			}) {
+				@dialog.Header() {
+					@dialog.Title() {
+						Remove Movie
+					}
+					{{
+						var listType string
+						if isWatchlist {
+							listType = "your watchlist"
+						} else {
+							listType = "this list"
+						}
+					}}
+					@dialog.Description() {
+						Are you sure you want to remove <strong>{ movie.MovieDetails.Movie.Title }</strong> from { listType }?
+					}
+				}
+				@dialog.Footer() {
+					@dialog.Close(dialog.CloseProps{
+						For: "list-movie-menu-" + strconv.Itoa(int(listID)) + "-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+					}) {
+						@button.Button(button.Props{
+							Variant: button.VariantOutline,
+							Type:    button.TypeButton,
+						}) {
+							Cancel
+						}
+					}
+					{{
+						var buttonText string
+						if isWatchlist {
+							buttonText = "Remove from Watchlist"
+						} else {
+							buttonText = "Remove from List"
+						}
+					}}
+					@dialog.Close(dialog.CloseProps{
+						For: "list-movie-menu-" + strconv.Itoa(int(listID)) + "-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+					}) {
+						@button.Button(button.Props{
+							Variant: button.VariantDestructive,
+							Type:    button.TypeSubmit,
+						}) {
+							{ buttonText }
+						}
+					}
+				}
+			}
+		}
+	</form>
+}
+
+func watchlistFormatTimeAgoShort(t time.Time) string {
+	now := time.Now()
+	diff := now.Sub(t)
+
+	switch {
+	case diff < 24*time.Hour:
+		return "today"
+	case diff < 7*24*time.Hour:
+		days := int(diff.Hours() / 24)
+		if days == 1 {
+			return "1 day ago"
+		}
+		return fmt.Sprintf("%d days ago", days)
+	case diff < 30*24*time.Hour:
+		weeks := int(diff.Hours() / (24 * 7))
+		if weeks == 1 {
+			return "1 week ago"
+		}
+		return fmt.Sprintf("%d weeks ago", weeks)
+	case diff < 365*24*time.Hour:
+		months := int(diff.Hours() / (24 * 30))
+		if months == 1 {
+			return "1 month ago"
+		}
+		return fmt.Sprintf("%d months ago", months)
+	default:
+		years := int(diff.Hours() / (24 * 365))
+		if years == 1 {
+			return "1 year ago"
+		}
+		return fmt.Sprintf("%d years ago", years)
+	}
+}

@@ -7,13 +7,20 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"time"
 
-	"gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/common"
+	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
 func (s *WatchedService) getTotalWatched(ctx context.Context) (int64, error) {
 	s.log.Debug("retrieving total watched count")
-	total, err := s.db.GetWatchedCount(ctx)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return 0, err
+	}
+	total, err := s.db.GetWatchedCount(ctx, user.ID)
 	if err != nil {
 		s.log.Error("failed to retrieve total watched count", "error", err)
 		return 0, fmt.Errorf("failed to get total watched: %w", err)
@@ -23,7 +30,12 @@ func (s *WatchedService) getTotalWatched(ctx context.Context) (int64, error) {
 
 func (s *WatchedService) getTheaterVsHome(ctx context.Context) ([]models.TheaterCount, error) {
 	s.log.Debug("retrieving theater vs home counts")
-	data, err := s.db.GetTheaterVsHomeCount(ctx)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+	data, err := s.db.GetTheaterVsHomeCount(ctx, user.ID)
 	if err != nil {
 		s.log.Error("failed to retrieve theater vs home counts", "error", err)
 		return nil, fmt.Errorf("failed to get theater vs home: %w", err)
@@ -33,7 +45,12 @@ func (s *WatchedService) getTheaterVsHome(ctx context.Context) ([]models.Theater
 
 func (s *WatchedService) getMonthlyLastYear(ctx context.Context) ([]models.PeriodCount, error) {
 	s.log.Debug("retrieving monthly watched data")
-	data, err := s.db.GetWatchedPerMonthLastYear(ctx)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+	data, err := s.db.GetWatchedPerMonthLastYear(ctx, user.ID)
 	if err != nil {
 		s.log.Error("failed to retrieve monthly watched data", "error", err)
 		return nil, fmt.Errorf("failed to get monthly data: %w", err)
@@ -43,7 +60,12 @@ func (s *WatchedService) getMonthlyLastYear(ctx context.Context) ([]models.Perio
 
 func (s *WatchedService) getYearlyAllTime(ctx context.Context) ([]models.PeriodCount, error) {
 	s.log.Debug("retrieving yearly watched data")
-	data, err := s.db.GetWatchedPerYear(ctx)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+	data, err := s.db.GetWatchedPerYear(ctx, user.ID)
 	if err != nil {
 		s.log.Error("failed to retrieve yearly watched data", "error", err)
 		return nil, fmt.Errorf("failed to get yearly data: %w", err)
@@ -53,7 +75,12 @@ func (s *WatchedService) getYearlyAllTime(ctx context.Context) ([]models.PeriodC
 
 func (s *WatchedService) getWeekdayDistribution(ctx context.Context) ([]models.PeriodCount, error) {
 	s.log.Debug("retrieving weekday distribution")
-	data, err := s.db.GetWeekdayDistribution(ctx)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+	data, err := s.db.GetWeekdayDistribution(ctx, user.ID)
 	if err != nil {
 		s.log.Error("failed to retrieve weekday distribution", "error", err)
 		return nil, fmt.Errorf("failed to get weekday distribution: %w", err)
@@ -63,7 +90,12 @@ func (s *WatchedService) getWeekdayDistribution(ctx context.Context) ([]models.P
 
 func (s *WatchedService) getGenres(ctx context.Context) ([]models.GenreCount, error) {
 	s.log.Debug("retrieving watched by genre data")
-	genreData, err := s.db.GetWatchedByGenre(ctx)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+	genreData, err := s.db.GetWatchedByGenre(ctx, user.ID)
 	if err != nil {
 		s.log.Error("failed to retrieve watched by genre data", "error", err)
 		return nil, fmt.Errorf("failed to get genre data: %w", err)
@@ -73,7 +105,12 @@ func (s *WatchedService) getGenres(ctx context.Context) ([]models.GenreCount, er
 
 func (s *WatchedService) getMostWatchedMovies(ctx context.Context, limit int) ([]models.TopMovie, error) {
 	s.log.Debug("retrieving most watched movies", "limit", limit)
-	data, err := s.db.GetMostWatchedMovies(ctx, limit)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+	data, err := s.db.GetMostWatchedMovies(ctx, user.ID, limit)
 	if err != nil {
 		s.log.Error("failed to retrieve most watched movies", "error", err)
 		return nil, fmt.Errorf("failed to get most watched movies: %w", err)
@@ -83,7 +120,12 @@ func (s *WatchedService) getMostWatchedMovies(ctx context.Context, limit int) ([
 
 func (s *WatchedService) getMostWatchedDay(ctx context.Context) (*models.MostWatchedDay, error) {
 	s.log.Debug("retrieving most watched day")
-	dayData, err := s.db.GetMostWatchedDay(ctx)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+	dayData, err := s.db.GetMostWatchedDay(ctx, user.ID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			s.log.Debug("no watched days found")
@@ -98,13 +140,18 @@ func (s *WatchedService) getMostWatchedDay(ctx context.Context) (*models.MostWat
 func (s *WatchedService) getMostWatchedActors(ctx context.Context, limit int) ([]models.TopActor, error) {
 	s.log.Debug("retrieving most watched actors", "limit", limit)
 
-	maleActors, err := s.db.GetMostWatchedMaleActors(ctx, limit)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+	maleActors, err := s.db.GetMostWatchedMaleActors(ctx, user.ID, limit)
 	if err != nil {
 		s.log.Error("failed to retrieve most watched male actors", "error", err)
 		return nil, fmt.Errorf("failed to get most watched male actors: %w", err)
 	}
 
-	femaleActors, err := s.db.GetMostWatchedFemaleActors(ctx, limit)
+	femaleActors, err := s.db.GetMostWatchedFemaleActors(ctx, user.ID, limit)
 	if err != nil {
 		s.log.Error("failed to retrieve most watched female actors", "error", err)
 		return nil, fmt.Errorf("failed to get most watched female actors: %w", err)
@@ -124,7 +171,12 @@ func (s *WatchedService) getMostWatchedActors(ctx context.Context, limit int) ([
 
 func (s *WatchedService) getAverages(ctx context.Context, total int64) (float64, float64, float64, error) {
 	s.log.Debug("retrieving watched date range for average calculations")
-	dateRange, err := s.db.GetWatchedDateRange(ctx)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return 0, 0, 0, err
+	}
+	dateRange, err := s.db.GetWatchedDateRange(ctx, user.ID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			s.log.Debug("no valid watched dates found, skipping average calculations")
@@ -133,13 +185,18 @@ func (s *WatchedService) getAverages(ctx context.Context, total int64) (float64,
 		s.log.Error("failed to retrieve watched date range", "error", err)
 		return 0, 0, 0, fmt.Errorf("failed to get date range: %w", err)
 	}
-	avgPerDay, avgPerWeek, avgPerMonth := s.calculateAverages(total, dateRange)
+	avgPerDay, avgPerWeek, avgPerMonth := s.calculateAverages(total, dateRange, time.Now())
 	return avgPerDay, avgPerWeek, avgPerMonth, nil
 }
 
 func (s *WatchedService) getTotalHoursWatched(ctx context.Context) (float64, error) {
 	s.log.Debug("retrieving total hours watched")
-	total, err := s.db.GetTotalHoursWatched(ctx)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return 0, err
+	}
+	total, err := s.db.GetTotalHoursWatched(ctx, user.ID)
 	if err != nil {
 		s.log.Error("failed to retrieve total hours watched", "error", err)
 		return 0, fmt.Errorf("failed to get total hours watched: %w", err)
@@ -149,7 +206,12 @@ func (s *WatchedService) getTotalHoursWatched(ctx context.Context) (float64, err
 
 func (s *WatchedService) getMonthlyHoursLastYear(ctx context.Context) ([]models.PeriodHours, error) {
 	s.log.Debug("retrieving monthly hours data")
-	data, err := s.db.GetWatchedHoursPerMonthLastYear(ctx)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+	data, err := s.db.GetWatchedHoursPerMonthLastYear(ctx, user.ID)
 	if err != nil {
 		s.log.Error("failed to retrieve monthly hours data", "error", err)
 		return nil, fmt.Errorf("failed to get monthly hours data: %w", err)
@@ -159,7 +221,12 @@ func (s *WatchedService) getMonthlyHoursLastYear(ctx context.Context) ([]models.
 
 func (s *WatchedService) getMonthlyGenreBreakdown(ctx context.Context) ([]models.MonthlyGenreBreakdown, error) {
 	s.log.Debug("retrieving monthly genre breakdown")
-	data, err := s.db.GetMonthlyGenreBreakdown(ctx)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+	data, err := s.db.GetMonthlyGenreBreakdown(ctx, user.ID)
 	if err != nil {
 		s.log.Error("failed to retrieve monthly genre breakdown", "error", err)
 		return nil, fmt.Errorf("failed to get monthly genre breakdown: %w", err)
@@ -171,7 +238,12 @@ func (s *WatchedService) getMonthlyGenreBreakdown(ctx context.Context) ([]models
 
 func (s *WatchedService) getHoursAverages(ctx context.Context, totalHours float64) (float64, float64, float64, error) {
 	s.log.Debug("retrieving watched date range for hours average calculations")
-	dateRange, err := s.db.GetWatchedDateRange(ctx)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return 0, 0, 0, err
+	}
+	dateRange, err := s.db.GetWatchedDateRange(ctx, user.ID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			s.log.Debug("no valid watched dates found, skipping hours average calculations")
@@ -180,25 +252,49 @@ func (s *WatchedService) getHoursAverages(ctx context.Context, totalHours float6
 		s.log.Error("failed to retrieve watched date range", "error", err)
 		return 0, 0, 0, fmt.Errorf("failed to get date range: %w", err)
 	}
-	avgHoursPerDay, avgHoursPerWeek, avgHoursPerMonth := s.calculateHoursAverages(totalHours, dateRange)
+	avgHoursPerDay, avgHoursPerWeek, avgHoursPerMonth := s.calculateHoursAverages(totalHours, dateRange, time.Now())
 	return avgHoursPerDay, avgHoursPerWeek, avgHoursPerMonth, nil
 }
 
-func (s *WatchedService) calculateHoursAverages(totalHours float64, dateRange *models.DateRange) (avgPerDay, avgPerWeek, avgPerMonth float64) {
+func (s *WatchedService) calculateHoursAverages(totalHours float64, dateRange *models.DateRange, now time.Time) (avgPerDay, avgPerWeek, avgPerMonth float64) {
 	if dateRange == nil || dateRange.MinDate == nil || dateRange.MaxDate == nil {
 		return 0, 0, 0
 	}
-	days := dateRange.MaxDate.Sub(*dateRange.MinDate).Hours()/24 + 1
+
+	// Use the provided now time as the end date if it's later than the max watched date
+	// to account for gaps in activity.
+	endDate := *dateRange.MaxDate
+	if now.After(endDate) {
+		endDate = now
+	}
+
+	days := endDate.Sub(*dateRange.MinDate).Hours()/24 + 1
 	avgPerDay = totalHours / days
-	avgPerWeek = totalHours / (days / 7)
-	avgPerMonth = totalHours / (days / 30)
+
+	// Use a minimum divisor to avoid extreme projections for small datasets
+	weekDivisor := days / 7
+	if weekDivisor < 1 {
+		weekDivisor = 1
+	}
+	avgPerWeek = totalHours / weekDivisor
+
+	monthDivisor := days / 30
+	if monthDivisor < 1 {
+		monthDivisor = 1
+	}
+	avgPerMonth = totalHours / monthDivisor
+
 	s.log.Debug("calculated hours averages", "avgPerDay", avgPerDay, "avgPerWeek", avgPerWeek, "avgPerMonth", avgPerMonth)
 	return avgPerDay, avgPerWeek, avgPerMonth
 }
 
 func (s *WatchedService) calculateMonthlyHoursTrend(monthlyHours []models.PeriodHours) (direction models.TrendDirection, value float64) {
-	if len(monthlyHours) < 2 {
+	if len(monthlyHours) == 0 {
 		return models.TrendNeutral, 0
+	}
+
+	if len(monthlyHours) == 1 {
+		return models.TrendUp, monthlyHours[0].Hours
 	}
 
 	// Sort by period for chronological order
@@ -225,8 +321,12 @@ func (s *WatchedService) calculateMonthlyHoursTrend(monthlyHours []models.Period
 }
 
 func (s *WatchedService) calculateMonthlyMoviesTrend(monthlyMovies []models.PeriodCount) (direction models.TrendDirection, value int64) {
-	if len(monthlyMovies) < 2 {
+	if len(monthlyMovies) == 0 {
 		return models.TrendNeutral, 0
+	}
+
+	if len(monthlyMovies) == 1 {
+		return models.TrendUp, monthlyMovies[0].Count
 	}
 
 	// Sort by period for chronological order
@@ -327,14 +427,34 @@ func (s *WatchedService) aggregateGenres(genreData []models.GenreCount, maxDispl
 	return genres
 }
 
-func (s *WatchedService) calculateAverages(total int64, dateRange *models.DateRange) (avgPerDay, avgPerWeek, avgPerMonth float64) {
+func (s *WatchedService) calculateAverages(total int64, dateRange *models.DateRange, now time.Time) (avgPerDay, avgPerWeek, avgPerMonth float64) {
 	if dateRange == nil || dateRange.MinDate == nil || dateRange.MaxDate == nil {
 		return 0, 0, 0
 	}
-	days := dateRange.MaxDate.Sub(*dateRange.MinDate).Hours()/24 + 1
+
+	// Use the provided now time as the end date if it's later than the max watched date
+	// to account for gaps in activity.
+	endDate := *dateRange.MaxDate
+	if now.After(endDate) {
+		endDate = now
+	}
+
+	days := endDate.Sub(*dateRange.MinDate).Hours()/24 + 1
 	avgPerDay = float64(total) / days
-	avgPerWeek = float64(total) / (days / 7)
-	avgPerMonth = float64(total) / (days / 30)
+
+	// Use a minimum divisor to avoid extreme projections for small datasets
+	weekDivisor := days / 7
+	if weekDivisor < 1 {
+		weekDivisor = 1
+	}
+	avgPerWeek = float64(total) / weekDivisor
+
+	monthDivisor := days / 30
+	if monthDivisor < 1 {
+		monthDivisor = 1
+	}
+	avgPerMonth = float64(total) / monthDivisor
+
 	s.log.Debug("calculated averages", "avgPerDay", avgPerDay, "avgPerWeek", avgPerWeek, "avgPerMonth", avgPerMonth)
 	return avgPerDay, avgPerWeek, avgPerMonth
 }

@@ -23,9 +23,12 @@ DB_DIR := db
 SQL_FILES := $(DB_DIR)/queries.sql $(DB_DIR)/migrations/*.sql
 SQLC_TIMESTAMP := $(DB_DIR)/sqlc/.sqlc-generated
 
+# Version for ldflags
+VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo dev)
+
 # Build target
 build: gen
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o $(BUILD_DIR)/gowatch .
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-X gowatch/cmd.Version=$(VERSION)" -o $(BUILD_DIR)/gowatch .
 
 # Generate all code (sqlc and templ)
 gen: 
@@ -77,4 +80,4 @@ check: fmt vet lint test
 
 # Run tests
 test:
-	go test ./... -v
+	go test ./...

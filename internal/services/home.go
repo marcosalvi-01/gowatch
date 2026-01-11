@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
-	"gowatch/internal/models"
-	"gowatch/logging"
+	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/logging"
 )
 
 const RecentMoviesLimit = 10

@@ -3,17 +3,19 @@ package sidebar
 
 import (
 	"fmt"
-	"gowatch/internal/models"
-	"gowatch/internal/ui/templui/badge"
-	"gowatch/internal/ui/templui/button"
-	"gowatch/internal/ui/templui/collapsible"
-	"gowatch/internal/ui/templui/dialog"
-	"gowatch/internal/ui/templui/form"
-	"gowatch/internal/ui/templui/icon"
-	"gowatch/internal/ui/templui/input"
-	"gowatch/internal/ui/templui/sidebar"
-	"gowatch/internal/ui/templui/skeleton"
-	"gowatch/internal/ui/templui/textarea"
+	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/avatar"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/collapsible"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dropdown"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/form"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/input"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/sidebar"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/textarea"
 )
 
 type Props struct {
@@ -21,6 +23,8 @@ type Props struct {
 	Collapsed    bool
 	WatchedCount int64
 	Lists        []models.ListEntry
+	Watchlist    *models.List
+	User         *models.User
 }
 
 // Sidebar is the sidebar for the application. It manages state of the page using a script.
@@ -28,6 +32,7 @@ type Props struct {
 templ Sidebar(props Props) {
 	// Dialog must be at top level for proper portal rendering
 	@CreateListDialog()
+	@ImportMoviesDialog()
 	@sidebar.Sidebar(sidebar.Props{
 		ID:        "sidebar",
 		Collapsed: props.Collapsed,
@@ -38,9 +43,75 @@ templ Sidebar(props Props) {
 				@sidebar.Menu() {
 					@homeMenuItem(props.CurrentPage)
 					@watchedMenuItem(props.CurrentPage, props.WatchedCount)
+					@watchlistMenuItem(props.Watchlist, props.CurrentPage)
 					@statsMenuItem(props.CurrentPage)
+					if props.User != nil && props.User.Admin {
+						@adminMenuItem(props.CurrentPage)
+					}
 					@sidebar.Separator()
 					@listsSection(props.Lists, props.CurrentPage)
+				}
+			}
+		}
+		@sidebar.Footer() {
+			@sidebar.Menu() {
+				@sidebar.MenuItem() {
+					@dropdown.Dropdown() {
+						@dropdown.Trigger() {
+							@sidebar.MenuButton(sidebar.MenuButtonProps{
+								Size: sidebar.MenuButtonSizeLg,
+							}) {
+								@avatar.Avatar(avatar.Props{Class: "size-8 rounded-lg"}) {
+									@avatar.Image(avatar.ImageProps{
+										Src: "/static/favicon.svg",
+									})
+								}
+								<div class="grid flex-1 text-left text-sm leading-tight">
+									<span class="truncate text-sm font-bold">{ props.User.Name }</span>
+								</div>
+								@icon.ChevronsUpDown(icon.Props{Class: "ml-auto size-4"})
+							}
+						}
+						@dropdown.Content(dropdown.ContentProps{
+							Class:     "w-56",
+							Placement: dropdown.PlacementTopStart,
+						}) {
+							@dropdown.Label() {
+								{ props.User.Email }
+							}
+							@dropdown.Separator()
+							@dialog.Trigger(dialog.TriggerProps{
+								For: "import-movies-dialog",
+								Attributes: templ.Attributes{
+									"data-sidebar-import-btn": "true",
+								},
+							}) {
+								@dropdown.Item() {
+									<span class="flex items-center">
+										@icon.Import(icon.Props{Size: 16, Class: "mr-2"})
+										Import movies
+									</span>
+								}
+							}
+							@dropdown.Item() {
+								<a href="/api/v1/movies/export" download="watched_movies.json" class="flex items-center w-full">
+									@icon.Download(icon.Props{Size: 16, Class: "mr-2"})
+									Export watched
+								</a>
+							}
+							@dropdown.Separator()
+							@dropdown.Item(dropdown.ItemProps{
+								Attributes: templ.Attributes{
+									"hx-post": "/logout",
+								},
+							}) {
+								<span class="flex items-center">
+									@icon.LogOut(icon.Props{Size: 16, Class: "mr-2"})
+									Log out
+								</span>
+							}
+						}
+					}
 				}
 			}
 		}
@@ -118,12 +189,42 @@ templ statsMenuItem(currentPage string) {
 	}
 }
 
+templ watchlistMenuItem(watchlist *models.List, currentPage string) {
+	if watchlist != nil {
+		@sidebar.MenuItem() {
+			@sidebar.MenuButton(sidebar.MenuButtonProps{
+				Tooltip:  "Your Watchlist",
+				IsActive: currentPage == "watchlist",
+				Attributes: templ.Attributes{
+					"data-nav-url": "/watchlist",
+					"hx-get":       "/watchlist",
+					"hx-target":    "#main-content",
+					"hx-swap":      "innerHTML show:#main-scroll-container:top",
+					"hx-push-url":  "true",
+				},
+				Class: "cursor-pointer",
+			}) {
+				@icon.Bookmark(icon.Props{Class: "size-4"})
+				<span>Watchlist</span>
+				if len(watchlist.Movies) > 0 {
+					@badge.Badge(badge.Props{
+						Variant: badge.VariantSecondary,
+						Class:   "ml-auto",
+					}) {
+						{ fmt.Sprintf("%d", len(watchlist.Movies)) }
+					}
+				}
+			}
+		}
+	}
+}
+
 templ listsSection(lists []models.ListEntry, currentPage string) {
 	@sidebar.Group() {
 		@sidebar.Menu() {
 			@sidebar.MenuItem() {
 				@collapsible.Collapsible(collapsible.Props{
-					Open:  true,
+					Open:  false,
 					Class: "group/collapsible w-full",
 				}) {
 					@listsCollapsibleTrigger()
@@ -166,7 +267,6 @@ templ listItems(lists []models.ListEntry, currentPage string) {
 					"hx-target":    "#main-content",
 					"hx-swap":      "innerHTML show:#main-scroll-container:top",
 					"hx-push-url":  "true",
-					"hx-indicator": "#list-loading",
 				},
 			}) {
 				<span>{ list.Name }</span>
@@ -265,12 +365,85 @@ templ createListDialogFooter() {
 	}
 }
 
+templ ImportMoviesDialog() {
+	@dialog.Dialog(dialog.Props{
+		ID: "import-movies-dialog",
+	}) {
+		<form
+			hx-post="/htmx/movies/import"
+			hx-target="#toast"
+			hx-encoding="multipart/form-data"
+		>
+			@dialog.Content(dialog.ContentProps{
+				Class: "max-w-md",
+			}) {
+				@dialog.Header() {
+					@dialog.Title() {
+						Import Watched Movies
+					}
+					@dialog.Description() {
+						Upload a JSON file of your watched movies to import them.
+					}
+				}
+				@importMoviesFormFields()
+				@importMoviesDialogFooter()
+			}
+		</form>
+	}
+}
+
+templ importMoviesFormFields() {
+	<div class="space-y-4">
+		@form.Item() {
+			@form.Label(form.LabelProps{
+				For: "import-file-input",
+			}) {
+				Select JSON File
+			}
+			@input.Input(input.Props{
+				ID:          "import-file-input",
+				Type:        input.TypeFile,
+				Name:        "import-file",
+				FileAccept:  ".json",
+				Placeholder: "test",
+			})
+		}
+	</div>
+}
+
+templ importMoviesDialogFooter() {
+	@dialog.Footer() {
+		@dialog.Close() {
+			@button.Button(button.Props{
+				Variant: button.VariantOutline,
+			}) {
+				Cancel
+			}
+		}
+		@dialog.Close() {
+			@button.Button(button.Props{
+				Type: button.TypeSubmit,
+			}) {
+				Import Movies
+			}
+		}
+	}
+}
+
 templ header() {
 	@sidebar.Header(sidebar.HeaderProps{
-		Class: "flex flex-row items-center text-lg font-semibold leading-none tracking-tight gap-8",
+		Class: "flex flex-row items-center text-lg font-semibold leading-none tracking-tight",
 	}) {
-		<img src="/static/favicon.svg" alt="Gowatch" class="w-20 h-20"/>
-		Gowatch
+		<div
+			hx-get="/home"
+			hx-target="#main-content"
+			hx-swap="innerHTML show:#main-scroll-container:top"
+			hx-push-url="true"
+			class="cursor-pointer flex items-center gap-8"
+		>
+			<img src="/static/favicon.svg" alt="Gowatch" class="w-20 h-20"/>
+			Gowatch
+		</div>
 	}
 }
 
@@ -313,5 +486,26 @@ templ watchedSkeletonItem(collapsed bool) {
 				</div>
 			}
 		</div>
+	}
+}
+
+templ adminMenuItem(currentPage string) {
+	@sidebar.MenuItem() {
+		@sidebar.MenuButton(sidebar.MenuButtonProps{
+			Tooltip:  "Admin",
+			IsActive: currentPage == "admin",
+			Attributes: templ.Attributes{
+				"data-nav-url": "/admin/users",
+				"hx-get":       "/admin/users",
+				"hx-target":    "#main-content",
+				"hx-swap":      "innerHTML show:#main-scroll-container:top",
+				"hx-push-url":  "true",
+				"hx-indicator": "#admin-loading",
+			},
+			Class: "cursor-pointer",
+		}) {
+			@icon.Settings(icon.Props{Class: "size-4 text-primary"})
+			<span>Admin</span>
+		}
 	}
 }

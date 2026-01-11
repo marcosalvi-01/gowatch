@@ -1,0 +1,86 @@
+package liststats
+
+import (
+	"fmt"
+	"github.com/marcosalvi-01/gowatch/internal/models"
+	"time"
+)
+
+templ ListStats(list models.List) {
+	<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+		if list.IsWatchlist {
+			@watchlistListStat("Movies", fmt.Sprintf("%d", len(list.Movies)))
+			if len(list.Movies) > 0 {
+				@watchlistListStat("Estimated Watch Time", watchlistCalculateTotalRuntime(list.Movies))
+			}
+		} else {
+			@listStat("Movies", fmt.Sprintf("%d", len(list.Movies)))
+			@listStat("Created", list.CreationDate.Format("Jan 2006"))
+			if len(list.Movies) > 0 {
+				@listStat("Latest Added", getLatestAddedDate(list.Movies).Format("Jan 2006"))
+				@listStat("Avg Rating", fmt.Sprintf("%.1f", getAverageRating(list.Movies)))
+			}
+		}
+	</div>
+}
+
+templ watchlistListStat(label, value string) {
+	<div class="text-center sm:text-left">
+		<div class="text-xl font-bold text-primary">{ value }</div>
+		<div class="text-xs text-muted-foreground">{ label }</div>
+	</div>
+}
+
+templ listStat(label, value string) {
+	<div class="text-center sm:text-left">
+		<div class="text-xl font-bold text-primary">{ value }</div>
+		<div class="text-xs text-muted-foreground">{ label }</div>
+	</div>
+}
+
+func watchlistCalculateTotalRuntime(movies []models.MovieItem) string {
+	totalMinutes := 0
+	for _, movie := range movies {
+		totalMinutes += movie.MovieDetails.Runtime
+	}
+	hours := totalMinutes / 60
+	minutes := totalMinutes % 60
+	if hours > 0 {
+		return fmt.Sprintf("%d hr %d min", hours, minutes)
+	}
+	return fmt.Sprintf("%d min", minutes)
+}
+
+func getLatestAddedDate(movies []models.MovieItem) time.Time {
+	if len(movies) == 0 {
+		return time.Time{}
+	}
+
+	latest := movies[0].DateAdded
+	for _, movie := range movies[1:] {
+		if movie.DateAdded.After(latest) {
+			latest = movie.DateAdded
+		}
+	}
+	return latest
+}
+
+func getAverageRating(movies []models.MovieItem) float32 {
+	if len(movies) == 0 {
+		return 0
+	}
+
+	var total float32 = 0.0
+	count := 0
+	for _, movie := range movies {
+		if movie.MovieDetails.Movie.VoteAverage > 0 {
+			total += movie.MovieDetails.Movie.VoteAverage
+			count++
+		}
+	}
+
+	if count == 0 {
+		return 0
+	}
+	return total / float32(count)
+}

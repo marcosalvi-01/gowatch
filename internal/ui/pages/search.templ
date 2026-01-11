@@ -2,10 +2,10 @@ package pages
 
 import (
 	"fmt"
-	"gowatch/internal/models"
-	"gowatch/internal/ui/components/moviecard"
-	"gowatch/internal/ui/templui/icon"
-	"gowatch/internal/ui/templui/skeleton"
+	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/moviecard"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
 	"strconv"
 )
 
@@ -85,7 +85,7 @@ templ SearchLoading() {
 	<div id="search-loading" class="htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none overflow-hidden">
 		<div class="p-4">
 			<div class="flex flex-wrap gap-4 md:gap-6 w-full">
-				for i := 0; i < 20; i++ {
+				for range 20 {
 					<div class="flex flex-col space-y-4 p-2">
 						@skeleton.Skeleton(skeleton.Props{Class: "h-56 w-40 rounded-lg"})
 						<div class="space-y-1">

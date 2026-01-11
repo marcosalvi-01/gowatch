@@ -9,10 +9,23 @@ import (
 	"testing"
 	"time"
 
-	"gowatch/db"
-	"gowatch/internal/models"
-	"gowatch/internal/services"
+	"github.com/marcosalvi-01/gowatch/db"
+	"github.com/marcosalvi-01/gowatch/internal/common"
+	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/services"
 )
+
+func getTestCtx() context.Context {
+	return context.WithValue(context.Background(), common.UserKey, &models.User{ID: 1})
+}
+
+func setupTestUser(t *testing.T, testDB db.DB) {
+	ctx := context.Background()
+	_, err := testDB.CreateUser(ctx, "test@example.com", "Test User", "hash")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestHandlers_HealthCheck(t *testing.T) {
 	testDB, err := db.NewTestDB()
@@ -21,7 +34,8 @@ func TestHandlers_HealthCheck(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	watchedService := services.NewWatchedService(testDB, nil)
+	listService := services.NewListService(testDB, nil)
+	watchedService := services.NewWatchedService(testDB, listService, nil)
 	handlers := NewHandlers(testDB, watchedService)
 
 	req := httptest.NewRequest("GET", "/health", nil)
@@ -48,9 +62,11 @@ func TestHandlers_ExportWatched(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = testDB.Close() }()
+	setupTestUser(t, testDB)
 
 	movieService := services.NewMovieService(testDB, nil, time.Hour)
-	watchedService := services.NewWatchedService(testDB, movieService)
+	listService := services.NewListService(testDB, movieService)
+	watchedService := services.NewWatchedService(testDB, listService, movieService)
 	handlers := NewHandlers(testDB, watchedService)
 
 	// Insert movie and watched
@@ -60,15 +76,16 @@ func TestHandlers_ExportWatched(t *testing.T) {
 			Title: "Test Movie",
 		},
 	}
-	ctx := context.Background()
+	ctx := getTestCtx()
 	if err := testDB.UpsertMovie(ctx, movie); err != nil {
 		t.Fatal(err)
 	}
-	if err := watchedService.AddWatched(ctx, 1, time.Now(), true); err != nil {
+	if err := watchedService.AddWatched(ctx, 1, time.Now(), true, nil); err != nil {
 		t.Fatal(err)
 	}
 
 	req := httptest.NewRequest("GET", "/movies/export", nil)
+	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	handlers.exportWatched(w, req)
@@ -93,7 +110,8 @@ func TestHandlers_ImportWatched_InvalidJSON(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	watchedService := services.NewWatchedService(testDB, nil)
+	listService := services.NewListService(testDB, nil)
+	watchedService := services.NewWatchedService(testDB, listService, nil)
 	handlers := NewHandlers(testDB, watchedService)
 
 	req := httptest.NewRequest("POST", "/movies/import", bytes.NewReader([]byte("invalid json")))
@@ -113,12 +131,16 @@ func TestHandlers_ExportWatched_Empty(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = testDB.Close() }()
+	setupTestUser(t, testDB)
 
 	movieService := services.NewMovieService(testDB, nil, time.Hour)
-	watchedService := services.NewWatchedService(testDB, movieService)
+	listService := services.NewListService(testDB, movieService)
+	watchedService := services.NewWatchedService(testDB, listService, movieService)
 	handlers := NewHandlers(testDB, watchedService)
 
+	ctx := getTestCtx()
 	req := httptest.NewRequest("GET", "/movies/export", nil)
+	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	handlers.exportWatched(w, req)

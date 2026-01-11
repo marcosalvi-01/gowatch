@@ -3,47 +3,48 @@ package pages
 import (
 	"cmp"
 	"fmt"
-	"gowatch/internal/models"
-	"gowatch/internal/ui/templui/avatar"
-	"gowatch/internal/ui/templui/badge"
-	"gowatch/internal/ui/templui/button"
-	"gowatch/internal/ui/templui/card"
-	"gowatch/internal/ui/templui/checkbox"
-	"gowatch/internal/ui/templui/datepicker"
-	"gowatch/internal/ui/templui/dialog"
-	"gowatch/internal/ui/templui/form"
-	"gowatch/internal/ui/templui/icon"
-	"gowatch/internal/ui/templui/separator"
-	"gowatch/internal/ui/templui/skeleton"
-	"gowatch/internal/ui/templui/table"
-	"gowatch/internal/ui/templui/textarea"
+	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/avatar"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/checkbox"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/datepicker"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/form"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/rating"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/separator"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/table"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/textarea"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 )
 
-templ Movie(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) {
+templ Movie(movie models.MovieDetails, watchRecords models.WatchedMovieRecords, isInWatchlist bool) {
 	@Layout() {
 		@templ.Fragment("content") {
-			@movieHero(movie)
+			@movieHero(movie, isInWatchlist)
 			@movieContent(movie, watchRecords)
 		}
 	}
 }
 
-templ movieHero(movie models.MovieDetails) {
+templ movieHero(movie models.MovieDetails, isInWatchlist bool) {
 	<div class="relative -m-4 mb-6">
 		if movie.Movie.BackdropPath != "" {
-			@backdropHero(movie)
+			@backdropHero(movie, isInWatchlist)
 		} else {
-			@fallbackHero(movie)
+			@fallbackHero(movie, isInWatchlist)
 		}
 		@separator.Separator()
 	</div>
 }
 
-templ backdropHero(movie models.MovieDetails) {
+templ backdropHero(movie models.MovieDetails, isInWatchlist bool) {
 	<div class="relative w-full h-[40vh] min-h-[350px] max-h-[500px] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] overflow-hidden">
 		<!-- Background Image -->
 		<img
@@ -59,25 +60,25 @@ templ backdropHero(movie models.MovieDetails) {
 		<div class="absolute inset-0 flex items-center">
 			<div class="w-full p-4 sm:p-6 md:p-8 lg:p-10">
 				<div class="max-w-6xl mx-auto w-full">
-					@heroContent(movie, true)
+					@heroContent(movie, true, isInWatchlist)
 				</div>
 			</div>
 		</div>
 	</div>
 }
 
-templ fallbackHero(movie models.MovieDetails) {
+templ fallbackHero(movie models.MovieDetails, isInWatchlist bool) {
 	<div class="p-4 sm:p-6 md:p-8 lg:p-10 bg-muted/20">
 		<div class="max-w-6xl mx-auto">
-			@heroContent(movie, false)
+			@heroContent(movie, false, isInWatchlist)
 		</div>
 	</div>
 }
 
-templ heroContent(movie models.MovieDetails, isDark bool) {
+templ heroContent(movie models.MovieDetails, isDark, isInWatchlist bool) {
 	<div class="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start">
 		@posterSection(movie, isDark)
-		@movieInfo(movie, isDark)
+		@movieInfo(movie, isDark, isInWatchlist)
 	</div>
 }
 
@@ -97,7 +98,7 @@ templ posterSection(movie models.MovieDetails, isDark bool) {
 	}
 }
 
-templ movieInfo(movie models.MovieDetails, isDark bool) {
+templ movieInfo(movie models.MovieDetails, isDark, isInWatchlist bool) {
 	<div class="flex-1 min-w-0 space-y-3 sm:space-y-4">
 		<!-- Title -->
 		<div>
@@ -161,6 +162,13 @@ templ movieInfo(movie models.MovieDetails, isDark bool) {
 		}
 		<!-- Action Buttons -->
 		@actionButtons(movie.Movie.ID)
+		// TODO: improve button layout/style? Maybe move it somewhere else/change its text?
+		<div
+			hx-get={fmt.Sprintf("/htmx/watchlist/%d", movie.Movie.ID)}
+			hx-trigger="load, refreshWatchlist from:body"
+			hx-swap="innerHTML"
+			hx-target="this"
+		></div>
 	</div>
 }
 
@@ -206,6 +214,29 @@ templ actionButtons(movieID int64) {
 								HasError: false,
 								Value:    time.Now(),
 							})
+						</div>
+						<div class="space-y-2">
+							@form.Label(form.LabelProps{
+								For: "rating-input",
+							}) {
+								Your rating (optional)
+							}
+							@rating.Rating(rating.Props{
+								Value:     0,
+								ReadOnly:  false,
+								Precision: 0.5,
+								Name:      "rating",
+								ID:        "rating-input",
+							}) {
+								@rating.Group() {
+									for i := 1; i <= 5; i++ {
+										@rating.Item(rating.ItemProps{
+											Value: i,
+											Style: rating.StyleStar,
+										})
+									}
+								}
+							}
 						</div>
 						<div class="flex items-start space-x-3">
 							@checkbox.Checkbox(checkbox.Props{
@@ -521,10 +552,11 @@ templ userActivitySection(watchRecords []models.WatchedMovieRecord) {
 }
 
 templ activityStats(records []models.WatchedMovieRecord) {
-	<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+	<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
 		@activityStat("Times Watched", fmt.Sprintf("%d", len(records)))
 		@activityStat("In Theater", fmt.Sprintf("%d", countTheaterWatches(records)))
 		@activityStat("At Home", fmt.Sprintf("%d", len(records)-countTheaterWatches(records)))
+		@activityStat("Your Avg Rating", calculateAverageRating(records))
 		if len(records) > 0 {
 			@activityStat("Last Watched", getLastWatchDate(records).Format("Jan 2006"))
 		}
@@ -563,9 +595,29 @@ templ watchHistoryItem(record models.WatchedMovieRecord) {
 				</div>
 				<div class="text-xs text-muted-foreground">{ record.Date.Format("January 2, 2006") }</div>
 			</div>
+			if record.Rating != nil {
+				<div class="flex items-center ml-4">
+					@rating.Rating(rating.Props{
+						Value:     (*record.Rating),
+						ReadOnly:  true,
+						Precision: 0.5,
+					}) {
+						@rating.Group() {
+							for i := 1; i <= 5; i++ {
+								@rating.Item(rating.ItemProps{
+									Value: i,
+									Style: rating.StyleStar,
+								})
+							}
+						}
+					}
+				</div>
+			}
 		</div>
-		<div class="text-xs text-muted-foreground">
-			{ formatTimeAgo(record.Date) }
+		<div class="flex items-center space-x-2">
+			<div class="text-xs text-muted-foreground">
+				{ formatTimeAgo(record.Date) }
+			</div>
 		</div>
 	</div>
 }
@@ -642,6 +694,21 @@ func getLastWatchDate(records []models.WatchedMovieRecord) time.Time {
 	return latest
 }
 
+func calculateAverageRating(records []models.WatchedMovieRecord) string {
+	var sum float64
+	var count int
+	for _, record := range records {
+		if record.Rating != nil {
+			sum += *record.Rating
+			count++
+		}
+	}
+	if count == 0 {
+		return "N/A"
+	}
+	return fmt.Sprintf("%.1f/5", sum/float64(count))
+}
+
 func sortCast(cast []models.Cast) []models.Cast {
 	slices.SortFunc(cast, func(a, b models.Cast) int {
 		return cmp.Compare(a.CastOrder, b.CastOrder)
@@ -690,12 +757,7 @@ func isKeyCrew(job string) bool {
 		"Editor",
 		"Production Designer",
 	}
-	for _, keyJob := range keyJobs {
-		if job == keyJob {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(keyJobs, job)
 }
 
 func sortCrewByImportance(crew []models.Crew) []models.Crew {
@@ -798,7 +860,7 @@ templ MovieLoading() {
 				<div>
 					@skeleton.Skeleton(skeleton.Props{Class: "h-5 w-16 mb-3 rounded-lg"})
 					<div class="flex gap-2">
-						for i := 0; i < 3; i++ {
+						for range 3 {
 							@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-16 rounded-full"})
 						}
 					</div>
@@ -809,7 +871,7 @@ templ MovieLoading() {
 					<div class="space-y-6">
 						// Activity stats
 						<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-							for i := 0; i < 4; i++ {
+							for range 4 {
 								<div class="text-center space-y-2">
 									@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-12 mx-auto rounded-lg"})
 									@skeleton.Skeleton(skeleton.Props{Class: "h-3 w-16 mx-auto rounded-lg"})
@@ -821,7 +883,7 @@ templ MovieLoading() {
 						<div>
 							@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-24 mb-3 rounded-lg"})
 							<div class="space-y-2">
-								for i := 0; i < 3; i++ {
+								for range 3 {
 									@skeleton.Skeleton(skeleton.Props{Class: "h-12 w-full rounded-lg"})
 								}
 							</div>
@@ -832,7 +894,7 @@ templ MovieLoading() {
 				<div>
 					@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-16 mb-4 rounded-lg"})
 					<div class="space-y-2">
-						for i := 0; i < 6; i++ {
+						for range 6 {
 							<div class="flex">
 								@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-1/4 rounded-lg"})
 								@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-1/2 ml-4 rounded-lg"})
@@ -844,7 +906,7 @@ templ MovieLoading() {
 				<div>
 					@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-12 mb-4 rounded-lg"})
 					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-						for i := 0; i < 9; i++ {
+						for range 9 {
 							@skeleton.Skeleton(skeleton.Props{Class: "h-16 w-full rounded-lg"})
 						}
 					</div>
@@ -853,7 +915,7 @@ templ MovieLoading() {
 				<div>
 					@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-20 mb-4 rounded-lg"})
 					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-						for i := 0; i < 6; i++ {
+						for range 6 {
 							<div class="space-y-1">
 								@skeleton.Skeleton(skeleton.Props{Class: "h-3 w-20 rounded-lg"})
 								@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-24 rounded-lg"})

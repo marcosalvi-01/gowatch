@@ -10,6 +10,7 @@ type ImportWatchedMoviesEntry struct {
 }
 
 type ImportWatchedMovieRef struct {
-	MovieID    int  `json:"movie_id"`
-	InTheaters bool `json:"in_theaters"`
+	MovieID    int      `json:"movie_id"`
+	InTheaters bool     `json:"in_theaters"`
+	Rating     *float64 `json:"rating,omitempty"`
 }

@@ -1,0 +1,34 @@
+package addtowatched
+
+import (
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+)
+
+templ AddToWatched(movieID int64, isInWatchlist bool) {
+	if isInWatchlist {
+		@button.Button(button.Props{
+			Variant: button.VariantOutline,
+			Class:   "flex gap-2 items-center",
+			// TODO: add redirect to watchlist
+			// Attributes: templ.Attributes{
+			// 	"hx-get": "",
+			// },
+		}) {
+			@icon.Check()
+			Movie is already in Watchlist
+		}
+	} else {
+		<form hx-post="/htmx/watchlist/add" hx-target="#toast">
+			<input type="hidden" name="movie_id" value={ movieID }/>
+			@button.Button(button.Props{
+				Class:   "flex gap-2 items-center",
+				Type:    button.TypeSubmit,
+				Variant: button.VariantSecondary,
+			}) {
+				@icon.Bookmark()
+				Add Movie to Watchlist
+			}
+		</form>
+	}
+}

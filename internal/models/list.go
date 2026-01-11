@@ -8,6 +8,7 @@ type List struct {
 	Name         string
 	CreationDate time.Time
 	Description  *string
+	IsWatchlist  bool
 
 	Movies []MovieItem
 }

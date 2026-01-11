@@ -11,9 +11,9 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"gowatch/internal/ui/templui/aspectratio"
-	"gowatch/internal/ui/templui/card"
-	"gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/aspectratio"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
 )
 
 const tmdbBase = "https://image.tmdb.org/t/p/w500"

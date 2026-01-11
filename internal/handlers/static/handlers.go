@@ -5,7 +5,7 @@ import (
 	"embed"
 	"net/http"
 
-	"gowatch/logging"
+	"github.com/marcosalvi-01/gowatch/logging"
 
 	"github.com/go-chi/chi/v5"
 )

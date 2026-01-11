@@ -8,10 +8,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"gowatch/db"
-	"gowatch/internal/models"
-	"gowatch/internal/services"
-	"gowatch/logging"
+	"github.com/marcosalvi-01/gowatch/db"
+	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/services"
+	"github.com/marcosalvi-01/gowatch/logging"
 
 	"github.com/go-chi/chi/v5"
 )

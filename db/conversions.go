@@ -2,8 +2,8 @@
 package db
 
 import (
-	"gowatch/db/sqlc"
-	"gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/db/sqlc"
+	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
 // toModelsMovie converts sqlc.Movie to models.Movie

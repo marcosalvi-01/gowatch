@@ -1,0 +1,81 @@
+package pages
+
+import (
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/form"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/input"
+)
+
+templ Login() {
+	@AuthLayout() {
+		<div class="w-full max-w-md space-y-6">
+			// Simple logo and title
+			<div class="text-center space-y-3">
+				<img src="/static/favicon.svg" alt="Gowatch Logo" class="h-30 mx-auto"/>
+				<h1 class="text-2xl font-bold">Gowatch</h1>
+				<p class="text-sm text-muted-foreground">Track what you watch</p>
+			</div>
+			// Sign in card
+			@card.Card() {
+				@card.Header() {
+					@card.Title(card.TitleProps{
+						Class: "flex items-center gap-2",
+					}) {
+						@icon.User(icon.Props{Size: 20})
+						Sign In
+					}
+				}
+				@card.Content() {
+					<form
+						hx-post="/login"
+						hx-target="#toast"
+						class="space-y-4"
+					>
+						@form.Item() {
+							@form.Label(form.LabelProps{For: "email"}) {
+								Email
+							}
+							@input.Input(input.Props{
+								Type:        input.TypeEmail,
+								ID:          "email",
+								Name:        "email",
+								Placeholder: "your@email.com",
+							})
+						}
+						@form.Item() {
+							@form.Label(form.LabelProps{For: "password"}) {
+								Password
+							}
+							@input.Input(input.Props{
+								Type:             input.TypePassword,
+								ID:               "password",
+								Name:             "password",
+								Placeholder:      "••••••••",
+								NoTogglePassword: false,
+							})
+						}
+						@button.Button(button.Props{
+							Type:    button.TypeSubmit,
+							Class:   "w-full",
+							Variant: button.VariantDefault,
+						}) {
+							Sign In
+						}
+					</form>
+					<div class="mt-4 text-center text-sm">
+						<span class="text-muted-foreground">No account? </span>
+						<a href="/register" class="text-primary hover:underline">
+							Sign up
+						</a>
+					</div>
+				}
+			}
+			// Simple footer
+			<p class="text-center text-xs text-muted-foreground">
+				🎬 It's just movies, not rocket science
+			</p>
+		</div>
+	}
+}

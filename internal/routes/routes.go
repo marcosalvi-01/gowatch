@@ -5,14 +5,14 @@
 package routes
 
 import (
-	"gowatch/db"
-	"gowatch/internal/handlers/api"
-	"gowatch/internal/handlers/htmx"
-	"gowatch/internal/handlers/pages"
-	"gowatch/internal/handlers/static"
-	"gowatch/internal/middleware"
-	"gowatch/internal/services"
-	"gowatch/logging"
+	"github.com/marcosalvi-01/gowatch/db"
+	"github.com/marcosalvi-01/gowatch/internal/handlers/api"
+	"github.com/marcosalvi-01/gowatch/internal/handlers/htmx"
+	"github.com/marcosalvi-01/gowatch/internal/handlers/pages"
+	"github.com/marcosalvi-01/gowatch/internal/handlers/static"
+	"github.com/marcosalvi-01/gowatch/internal/middleware"
+	"github.com/marcosalvi-01/gowatch/internal/services"
+	"github.com/marcosalvi-01/gowatch/logging"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -24,6 +24,7 @@ func NewRouter(
 	tmdbService *services.MovieService,
 	watchedService *services.WatchedService,
 	listService *services.ListService,
+	authService *services.AuthService,
 ) chi.Router {
 	log.Info("creating HTTP router")
 
@@ -38,12 +39,13 @@ func NewRouter(
 	log.Debug("registering API routes")
 	apiHandlers := api.NewHandlers(db, watchedService)
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware(*authService))
 		r.Use(middleware.JSONMiddleware)
 		apiHandlers.RegisterRoutes(r)
 	})
 
 	log.Debug("registering pages routes")
-	pagesHandlers := pages.NewHandlers(tmdbService, watchedService, listService, homeService)
+	pagesHandlers := pages.NewHandlers(tmdbService, watchedService, listService, homeService, authService)
 	r.Route("/", func(r chi.Router) {
 		r.Use(middleware.HTMLMiddleware)
 		pagesHandlers.RegisterRoutes(r)
@@ -56,8 +58,9 @@ func NewRouter(
 	})
 
 	log.Debug("registering HTMX routes")
-	htmxHandlers := htmx.NewHandlers(watchedService, listService, homeService)
+	htmxHandlers := htmx.NewHandlers(watchedService, listService, homeService, authService)
 	r.Route("/htmx", func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware(*authService))
 		r.Use(middleware.HTMLMiddleware)
 		htmxHandlers.RegisterRoutes(r)
 	})

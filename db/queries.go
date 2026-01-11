@@ -8,8 +8,8 @@ import (
 	"sort"
 	"time"
 
-	"gowatch/db/sqlc"
-	"gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/db/sqlc"
+	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
 // UpsertMovie adds a new movie to the database
@@ -150,9 +150,11 @@ func (d *SqliteDB) InsertWatched(ctx context.Context, watched InsertWatched) err
 	log.Debug("inserting watched record", "movieID", watched.MovieID, "date", watched.Date, "inTheaters", watched.InTheaters)
 
 	_, err := d.queries.InsertWatched(ctx, sqlc.InsertWatchedParams{
+		UserID:           &watched.UserID,
 		MovieID:          watched.MovieID,
 		WatchedDate:      watched.Date,
 		WatchedInTheater: watched.InTheaters,
+		Rating:           watched.Rating,
 	})
 	if err != nil {
 		log.Error("failed to insert watched record", "movieID", watched.MovieID, "error", err)
@@ -280,10 +282,10 @@ func (d *SqliteDB) GetMovieDetailsByID(ctx context.Context, id int64) (*models.M
 	return &movie, nil
 }
 
-func (d *SqliteDB) GetWatchedJoinMovie(ctx context.Context) ([]models.WatchedMovie, error) {
+func (d *SqliteDB) GetWatchedJoinMovie(ctx context.Context, userID int64) ([]models.WatchedMovie, error) {
 	log.Debug("retrieving all watched movies with details")
 
-	results, err := d.queries.GetWatchedJoinMovie(ctx)
+	results, err := d.queries.GetWatchedJoinMovie(ctx, &userID)
 	if err != nil {
 		log.Error("failed to get watched movies from database", "error", err)
 		return nil, fmt.Errorf("failed to get watched movies: %w", err)
@@ -297,6 +299,7 @@ func (d *SqliteDB) GetWatchedJoinMovie(ctx context.Context) ([]models.WatchedMov
 			MovieDetails: toModelsMovieDetails(result.Movie),
 			Date:         result.Watched.WatchedDate,
 			InTheaters:   result.Watched.WatchedInTheater,
+			Rating:       result.Watched.Rating,
 		}
 	}
 
@@ -304,10 +307,10 @@ func (d *SqliteDB) GetWatchedJoinMovie(ctx context.Context) ([]models.WatchedMov
 	return watched, nil
 }
 
-func (d *SqliteDB) GetWatchedJoinMovieByID(ctx context.Context, movieID int64) ([]models.WatchedMovie, error) {
+func (d *SqliteDB) GetWatchedJoinMovieByID(ctx context.Context, userID, movieID int64) ([]models.WatchedMovie, error) {
 	log.Debug("retrieving watched rows for movie", "movieID", movieID)
 
-	rows, err := d.queries.GetWatchedJoinMovieByID(ctx, movieID)
+	rows, err := d.queries.GetWatchedJoinMovieByID(ctx, sqlc.GetWatchedJoinMovieByIDParams{UserID: &userID, MovieID: movieID})
 	if err != nil {
 		log.Error("db query failed", "movieID", movieID, "error", err)
 		return nil, fmt.Errorf("get watched by id: %w", err)
@@ -319,16 +322,17 @@ func (d *SqliteDB) GetWatchedJoinMovieByID(ctx context.Context, movieID int64) (
 			MovieDetails: toModelsMovieDetails(r.Movie),
 			Date:         r.Watched.WatchedDate,
 			InTheaters:   r.Watched.WatchedInTheater,
+			Rating:       r.Watched.Rating,
 		}
 	}
 
 	return watched, nil
 }
 
-func (d *SqliteDB) GetRecentWatchedMovies(ctx context.Context, limit int) ([]models.WatchedMovieInDay, error) {
+func (d *SqliteDB) GetRecentWatchedMovies(ctx context.Context, userID int64, limit int) ([]models.WatchedMovieInDay, error) {
 	log.Debug("retrieving recent watched movies", "limit", limit)
 
-	rows, err := d.queries.GetRecentWatchedMovies(ctx, int64(limit))
+	rows, err := d.queries.GetRecentWatchedMovies(ctx, sqlc.GetRecentWatchedMoviesParams{UserID: &userID, Limit: int64(limit)})
 	if err != nil {
 		log.Error("failed to fetch recent watched movies from database", "error", err)
 		return nil, fmt.Errorf("failed to fetch recent watched movies: %w", err)
@@ -338,7 +342,8 @@ func (d *SqliteDB) GetRecentWatchedMovies(ctx context.Context, limit int) ([]mod
 	for i, row := range rows {
 		result[i] = models.WatchedMovieInDay{
 			MovieDetails: toModelsMovieDetails(row.Movie),
-			InTheaters:   row.InTheaters,
+			InTheaters:   row.Watched.WatchedInTheater,
+			Rating:       row.Watched.Rating,
 		}
 	}
 
@@ -350,9 +355,11 @@ func (d *SqliteDB) InsertList(ctx context.Context, list InsertList) (int64, erro
 	log.Debug("inserting new list into database", "name", list.Name)
 
 	id, err := d.queries.InsertList(ctx, sqlc.InsertListParams{
+		UserID:       &list.UserID,
 		Name:         list.Name,
 		CreationDate: time.Now().Format("2006-01-02 15:04:05.999999999 -0700 MST"),
 		Description:  list.Description,
+		IsWatchlist:  list.IsWatchlist,
 	})
 	if err != nil {
 		log.Error("failed to insert list", "name", list.Name, "error", err)
@@ -363,7 +370,7 @@ func (d *SqliteDB) InsertList(ctx context.Context, list InsertList) (int64, erro
 	return id, nil
 }
 
-func (d *SqliteDB) GetList(ctx context.Context, id int64) (*models.List, error) {
+func (d *SqliteDB) GetList(ctx context.Context, userID, id int64) (*models.List, error) {
 	log.Debug("retrieving list with movies", "listID", id)
 
 	tx, err := d.db.Begin()
@@ -375,7 +382,7 @@ func (d *SqliteDB) GetList(ctx context.Context, id int64) (*models.List, error) 
 
 	qtx := d.queries.WithTx(tx)
 
-	results, err := qtx.GetListJoinMovieByID(ctx, id)
+	results, err := qtx.GetListJoinMovieByID(ctx, sqlc.GetListJoinMovieByIDParams{UserID: &userID, ID: id})
 	if err != nil {
 		log.Error("failed to fetch list with movies", "listID", id, "error", err)
 		return nil, fmt.Errorf("failed to fetch list with ID %d: %w", id, err)
@@ -383,7 +390,7 @@ func (d *SqliteDB) GetList(ctx context.Context, id int64) (*models.List, error) 
 	if len(results) == 0 {
 		log.Debug("list has no movies associated to it", "listID", id)
 		// try to search for the list without joining in case it is empty
-		list, err := qtx.GetListByID(ctx, id)
+		list, err := qtx.GetListByID(ctx, sqlc.GetListByIDParams{UserID: &userID, ID: id})
 		if err != nil {
 			// no list with that id exists, return an error
 			return nil, fmt.Errorf("failed to get list by ID %d: %w", id, err)
@@ -401,6 +408,7 @@ func (d *SqliteDB) GetList(ctx context.Context, id int64) (*models.List, error) 
 			Name:         list.Name,
 			CreationDate: creationDate,
 			Description:  list.Description,
+			IsWatchlist:  list.IsWatchlist,
 			Movies:       []models.MovieItem{},
 		}, nil
 	}
@@ -440,19 +448,29 @@ func (d *SqliteDB) GetList(ctx context.Context, id int64) (*models.List, error) 
 		Name:         list.Name,
 		CreationDate: creationDate,
 		Description:  list.Description,
+		IsWatchlist:  list.IsWatchlist,
 		Movies:       movies,
 	}, nil
 }
 
-func (d *SqliteDB) AddMovieToList(ctx context.Context, insertMovieList InsertMovieList) error {
+func (d *SqliteDB) AddMovieToList(ctx context.Context, userID int64, insertMovieList InsertMovieList) error {
 	log.Debug("adding movie to list", "movieID", insertMovieList.MovieID, "position", insertMovieList.Position)
 
-	err := d.queries.AddMovieToList(ctx, sqlc.AddMovieToListParams{
+	// First verify the list exists and belongs to the user
+	_, err := d.queries.GetListByID(ctx, sqlc.GetListByIDParams{UserID: &userID, ID: insertMovieList.ListID})
+	if err != nil {
+		log.Error("failed to verify list ownership", "listID", insertMovieList.ListID, "userID", userID, "error", err)
+		return fmt.Errorf("failed to verify list ownership: %w", err)
+	}
+
+	err = d.queries.AddMovieToList(ctx, sqlc.AddMovieToListParams{
 		MovieID:   insertMovieList.MovieID,
 		ListID:    insertMovieList.ListID,
 		DateAdded: insertMovieList.DateAdded.Format("2006-01-02 15:04:05.999999999 -0700 MST"),
 		Position:  insertMovieList.Position,
 		Note:      insertMovieList.Note,
+		ID:        insertMovieList.ListID,
+		UserID:    &userID,
 	})
 	if err != nil {
 		log.Error("failed to add movie to list", "movieID", insertMovieList.MovieID, "error", err)
@@ -463,10 +481,10 @@ func (d *SqliteDB) AddMovieToList(ctx context.Context, insertMovieList InsertMov
 	return nil
 }
 
-func (d *SqliteDB) GetAllLists(ctx context.Context) ([]InsertList, error) {
+func (d *SqliteDB) GetAllLists(ctx context.Context, userID int64) ([]InsertList, error) {
 	log.Debug("retrieving all lists from database")
 
-	results, err := d.queries.GetAllLists(ctx)
+	results, err := d.queries.GetAllLists(ctx, &userID)
 	if err != nil {
 		log.Error("failed to get all lists", "error", err)
 		return nil, fmt.Errorf("failed to get all lists: %w", err)
@@ -478,6 +496,7 @@ func (d *SqliteDB) GetAllLists(ctx context.Context) ([]InsertList, error) {
 			ID:          result.ID,
 			Name:        result.Name,
 			Description: result.Description,
+			IsWatchlist: result.IsWatchlist,
 		}
 	}
 
@@ -485,10 +504,10 @@ func (d *SqliteDB) GetAllLists(ctx context.Context) ([]InsertList, error) {
 	return lists, nil
 }
 
-func (d *SqliteDB) GetWatchedCount(ctx context.Context) (int64, error) {
+func (d *SqliteDB) GetWatchedCount(ctx context.Context, userID int64) (int64, error) {
 	log.Debug("getting watched count")
 
-	count, err := d.queries.GetWatchedCount(ctx)
+	count, err := d.queries.GetWatchedCount(ctx, &userID)
 	if err != nil {
 		log.Error("failed to get watched count", "error", err)
 		return 0, fmt.Errorf("failed to get watched movie count: %w", err)
@@ -498,10 +517,10 @@ func (d *SqliteDB) GetWatchedCount(ctx context.Context) (int64, error) {
 	return count, nil
 }
 
-func (d *SqliteDB) DeleteListByID(ctx context.Context, id int64) error {
+func (d *SqliteDB) DeleteListByID(ctx context.Context, userID, id int64) error {
 	log.Debug("deleting list by ID", "listID", id)
 
-	err := d.queries.DeleteListByID(ctx, id)
+	err := d.queries.DeleteListByID(ctx, sqlc.DeleteListByIDParams{UserID: &userID, ID: id})
 	if err != nil {
 		log.Error("failed to delete list", "listID", id, "error", err)
 		return fmt.Errorf("failed to delete list with id '%d' in db: %w", id, err)
@@ -511,12 +530,13 @@ func (d *SqliteDB) DeleteListByID(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (d *SqliteDB) DeleteMovieFromList(ctx context.Context, listID, movieID int64) error {
+func (d *SqliteDB) DeleteMovieFromList(ctx context.Context, userID, listID, movieID int64) error {
 	log.Debug("deleting movie from list", "listID", listID, "movieID", movieID)
 
 	err := d.queries.DeleteMovieFromList(ctx, sqlc.DeleteMovieFromListParams{
 		ListID:  listID,
 		MovieID: movieID,
+		UserID:  &userID,
 	})
 	if err != nil {
 		log.Error("failed to delete movie from list", "listID", listID, "movieID", movieID, "error", err)
@@ -525,6 +545,19 @@ func (d *SqliteDB) DeleteMovieFromList(ctx context.Context, listID, movieID int6
 
 	log.Debug("successfully deleted movie from list", "listID", listID, "movieID", movieID)
 	return nil
+}
+
+func (d *SqliteDB) GetWatchlistID(ctx context.Context, userID int64) (int64, error) {
+	log.Debug("getting watchlist ID", "userID", userID)
+
+	id, err := d.queries.GetWatchlistID(ctx, &userID)
+	if err != nil {
+		log.Error("failed to get watchlist ID", "userID", userID, "error", err)
+		return 0, fmt.Errorf("failed to get watchlist ID for user %d: %w", userID, err)
+	}
+
+	log.Debug("retrieved watchlist ID", "userID", userID, "watchlistID", id)
+	return id, nil
 }
 
 func (d *SqliteDB) aggregateWatchedByPeriod(data []time.Time, format string) []models.PeriodCount {
@@ -543,10 +576,10 @@ func (d *SqliteDB) aggregateWatchedByPeriod(data []time.Time, format string) []m
 	return result
 }
 
-func (d *SqliteDB) GetWatchedPerMonthLastYear(ctx context.Context) ([]models.PeriodCount, error) {
+func (d *SqliteDB) GetWatchedPerMonthLastYear(ctx context.Context, userID int64) ([]models.PeriodCount, error) {
 	log.Debug("getting watched per month last year")
 
-	data, err := d.queries.GetWatchedPerMonthLastYear(ctx)
+	data, err := d.queries.GetWatchedPerMonthLastYear(ctx, &userID)
 	if err != nil {
 		log.Error("failed to get monthly data", "error", err)
 		return nil, fmt.Errorf("failed to get monthly data: %w", err)
@@ -557,10 +590,10 @@ func (d *SqliteDB) GetWatchedPerMonthLastYear(ctx context.Context) ([]models.Per
 	return result, nil
 }
 
-func (d *SqliteDB) GetWatchedPerYear(ctx context.Context) ([]models.PeriodCount, error) {
+func (d *SqliteDB) GetWatchedPerYear(ctx context.Context, userID int64) ([]models.PeriodCount, error) {
 	log.Debug("getting watched per year")
 
-	data, err := d.queries.GetWatchedPerYear(ctx)
+	data, err := d.queries.GetWatchedPerYear(ctx, &userID)
 	if err != nil {
 		log.Error("failed to get yearly data", "error", err)
 		return nil, fmt.Errorf("failed to get yearly data: %w", err)
@@ -571,10 +604,10 @@ func (d *SqliteDB) GetWatchedPerYear(ctx context.Context) ([]models.PeriodCount,
 	return result, nil
 }
 
-func (d *SqliteDB) GetWeekdayDistribution(ctx context.Context) ([]models.PeriodCount, error) {
+func (d *SqliteDB) GetWeekdayDistribution(ctx context.Context, userID int64) ([]models.PeriodCount, error) {
 	log.Debug("getting weekday distribution")
 
-	data, err := d.queries.GetWatchedDates(ctx)
+	data, err := d.queries.GetWatchedDates(ctx, &userID)
 	if err != nil {
 		log.Error("failed to get watched dates", "error", err)
 		return nil, fmt.Errorf("failed to get watched dates: %w", err)
@@ -596,10 +629,10 @@ func (d *SqliteDB) GetWeekdayDistribution(ctx context.Context) ([]models.PeriodC
 	return result, nil
 }
 
-func (d *SqliteDB) GetWatchedByGenre(ctx context.Context) ([]models.GenreCount, error) {
+func (d *SqliteDB) GetWatchedByGenre(ctx context.Context, userID int64) ([]models.GenreCount, error) {
 	log.Debug("getting watched by genre")
 
-	data, err := d.queries.GetWatchedByGenre(ctx)
+	data, err := d.queries.GetWatchedByGenre(ctx, &userID)
 	if err != nil {
 		log.Error("failed to get genre data", "error", err)
 		return nil, fmt.Errorf("failed to get genre data: %w", err)
@@ -613,10 +646,10 @@ func (d *SqliteDB) GetWatchedByGenre(ctx context.Context) ([]models.GenreCount, 
 	return result, nil
 }
 
-func (d *SqliteDB) GetTheaterVsHomeCount(ctx context.Context) ([]models.TheaterCount, error) {
+func (d *SqliteDB) GetTheaterVsHomeCount(ctx context.Context, userID int64) ([]models.TheaterCount, error) {
 	log.Debug("getting theater vs home count")
 
-	data, err := d.queries.GetTheaterVsHomeCount(ctx)
+	data, err := d.queries.GetTheaterVsHomeCount(ctx, &userID)
 	if err != nil {
 		log.Error("failed to get theater data", "error", err)
 		return nil, fmt.Errorf("failed to get theater data: %w", err)
@@ -630,10 +663,10 @@ func (d *SqliteDB) GetTheaterVsHomeCount(ctx context.Context) ([]models.TheaterC
 	return result, nil
 }
 
-func (d *SqliteDB) GetMostWatchedMovies(ctx context.Context, limit int) ([]models.TopMovie, error) {
+func (d *SqliteDB) GetMostWatchedMovies(ctx context.Context, userID int64, limit int) ([]models.TopMovie, error) {
 	log.Debug("getting most watched movies", "limit", limit)
 
-	data, err := d.queries.GetMostWatchedMovies(ctx, int64(limit))
+	data, err := d.queries.GetMostWatchedMovies(ctx, sqlc.GetMostWatchedMoviesParams{UserID: &userID, Limit: int64(limit)})
 	if err != nil {
 		log.Error("failed to get most watched movies", "error", err)
 		return nil, fmt.Errorf("failed to get most watched movies: %w", err)
@@ -647,10 +680,10 @@ func (d *SqliteDB) GetMostWatchedMovies(ctx context.Context, limit int) ([]model
 	return result, nil
 }
 
-func (d *SqliteDB) GetMostWatchedDay(ctx context.Context) (*models.MostWatchedDay, error) {
+func (d *SqliteDB) GetMostWatchedDay(ctx context.Context, userID int64) (*models.MostWatchedDay, error) {
 	log.Debug("getting most watched day")
 
-	data, err := d.queries.GetMostWatchedDay(ctx)
+	data, err := d.queries.GetMostWatchedDay(ctx, &userID)
 	if err != nil {
 		log.Error("failed to get most watched day", "error", err)
 		return nil, fmt.Errorf("failed to get most watched day: %w", err)
@@ -683,10 +716,10 @@ func (d *SqliteDB) GetMostWatchedDay(ctx context.Context) (*models.MostWatchedDa
 	return &models.MostWatchedDay{Date: t, Count: maxCount}, nil
 }
 
-func (d *SqliteDB) GetMostWatchedMaleActors(ctx context.Context, limit int) ([]models.TopActor, error) {
+func (d *SqliteDB) GetMostWatchedMaleActors(ctx context.Context, userID int64, limit int) ([]models.TopActor, error) {
 	log.Debug("getting most watched male actors", "limit", limit)
 
-	data, err := d.queries.GetMostWatchedMaleActors(ctx, int64(limit))
+	data, err := d.queries.GetMostWatchedMaleActors(ctx, sqlc.GetMostWatchedMaleActorsParams{UserID: &userID, Limit: int64(limit)})
 	if err != nil {
 		log.Error("failed to get most watched male actors", "error", err)
 		return nil, fmt.Errorf("failed to get most watched male actors: %w", err)
@@ -700,10 +733,10 @@ func (d *SqliteDB) GetMostWatchedMaleActors(ctx context.Context, limit int) ([]m
 	return result, nil
 }
 
-func (d *SqliteDB) GetMostWatchedFemaleActors(ctx context.Context, limit int) ([]models.TopActor, error) {
+func (d *SqliteDB) GetMostWatchedFemaleActors(ctx context.Context, userID int64, limit int) ([]models.TopActor, error) {
 	log.Debug("getting most watched female actors", "limit", limit)
 
-	data, err := d.queries.GetMostWatchedFemaleActors(ctx, int64(limit))
+	data, err := d.queries.GetMostWatchedFemaleActors(ctx, sqlc.GetMostWatchedFemaleActorsParams{UserID: &userID, Limit: int64(limit)})
 	if err != nil {
 		log.Error("failed to get most watched female actors", "error", err)
 		return nil, fmt.Errorf("failed to get most watched female actors: %w", err)
@@ -717,10 +750,10 @@ func (d *SqliteDB) GetMostWatchedFemaleActors(ctx context.Context, limit int) ([
 	return result, nil
 }
 
-func (d *SqliteDB) GetWatchedDateRange(ctx context.Context) (*models.DateRange, error) {
+func (d *SqliteDB) GetWatchedDateRange(ctx context.Context, userID int64) (*models.DateRange, error) {
 	log.Debug("getting watched date range")
 
-	data, err := d.queries.GetWatchedDateRange(ctx)
+	data, err := d.queries.GetWatchedDateRange(ctx, &userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			log.Debug("no watched dates found")
@@ -777,10 +810,10 @@ func (d *SqliteDB) aggregateWatchedByPeriodHours(data []sqlc.GetWatchedRuntimesL
 	return result
 }
 
-func (d *SqliteDB) GetWatchedHoursPerMonthLastYear(ctx context.Context) ([]models.PeriodHours, error) {
+func (d *SqliteDB) GetWatchedHoursPerMonthLastYear(ctx context.Context, userID int64) ([]models.PeriodHours, error) {
 	log.Debug("getting watched hours per month last year")
 
-	data, err := d.queries.GetWatchedRuntimesLastYear(ctx)
+	data, err := d.queries.GetWatchedRuntimesLastYear(ctx, &userID)
 	if err != nil {
 		log.Error("failed to get monthly hours data", "error", err)
 		return nil, fmt.Errorf("failed to get monthly hours data: %w", err)
@@ -791,24 +824,28 @@ func (d *SqliteDB) GetWatchedHoursPerMonthLastYear(ctx context.Context) ([]model
 	return result, nil
 }
 
-func (d *SqliteDB) GetTotalHoursWatched(ctx context.Context) (float64, error) {
+func (d *SqliteDB) GetTotalHoursWatched(ctx context.Context, userID int64) (float64, error) {
 	log.Debug("getting total hours watched")
 
-	totalMinutes, err := d.queries.GetTotalHoursWatched(ctx)
+	totalMinutes, err := d.queries.GetTotalHoursWatched(ctx, &userID)
 	if err != nil {
 		log.Error("failed to get total minutes", "error", err)
 		return 0, fmt.Errorf("failed to get total minutes: %w", err)
 	}
 
+	if totalMinutes == nil {
+		log.Debug("found 0 minutes in the db")
+		return 0, nil
+	}
 	hours := *totalMinutes / 60.0
 	log.Debug("retrieved total hours", "hours", hours)
 	return hours, nil
 }
 
-func (d *SqliteDB) GetMonthlyGenreBreakdown(ctx context.Context) ([]models.MonthlyGenreBreakdown, error) {
+func (d *SqliteDB) GetMonthlyGenreBreakdown(ctx context.Context, userID int64) ([]models.MonthlyGenreBreakdown, error) {
 	log.Debug("getting monthly genre breakdown")
 
-	rawData, err := d.queries.GetMonthlyGenreBreakdown(ctx)
+	rawData, err := d.queries.GetMonthlyGenreBreakdown(ctx, &userID)
 	if err != nil {
 		log.Error("failed to get monthly genre data", "error", err)
 		return nil, fmt.Errorf("failed to get monthly genre data: %w", err)
@@ -838,4 +875,255 @@ func (d *SqliteDB) GetMonthlyGenreBreakdown(ctx context.Context) ([]models.Month
 
 	log.Debug("retrieved monthly genre breakdown", "months", len(result))
 	return result, nil
+}
+
+func (d *SqliteDB) CreateSession(ctx context.Context, id string, userID int64, expiresAt time.Time) error {
+	log.Debug("creating session", "sessionID", id, "userID", userID)
+
+	err := d.queries.CreateSession(ctx, sqlc.CreateSessionParams{
+		ID:        id,
+		UserID:    userID,
+		ExpiresAt: expiresAt,
+	})
+	if err != nil {
+		log.Error("failed to create session", "sessionID", id, "error", err)
+		return fmt.Errorf("failed to create session with ID %s: %w", id, err)
+	}
+	log.Debug("successfully created session", "sessionID", id)
+	return nil
+}
+
+func (d *SqliteDB) GetSession(ctx context.Context, id string) (*models.Session, error) {
+	log.Debug("retrieving session", "sessionID", id)
+
+	session, err := d.queries.GetSession(ctx, id)
+	if err != nil {
+		log.Error("failed to get session", "sessionID", id, "error", err)
+		return nil, fmt.Errorf("failed to get session with ID %s: %w", id, err)
+	}
+
+	log.Debug("retrieved session", "sessionID", id, "userID", session.UserID)
+	return &models.Session{
+		UserID:    session.UserID,
+		ExpiresAt: session.ExpiresAt,
+	}, nil
+}
+
+func (d *SqliteDB) DeleteSession(ctx context.Context, id string) error {
+	log.Debug("deleting session", "sessionID", id)
+
+	err := d.queries.DeleteSession(ctx, id)
+	if err != nil {
+		log.Error("failed to delete session", "sessionID", id, "error", err)
+		return fmt.Errorf("failed to delete session with ID %s: %w", id, err)
+	}
+
+	log.Debug("successfully deleted session", "sessionID", id)
+	return nil
+}
+
+func (d *SqliteDB) CleanupExpiredSessions(ctx context.Context) error {
+	log.Debug("cleaning up expired sessions")
+
+	err := d.queries.DeleteExpiredSessions(ctx)
+	if err != nil {
+		log.Error("failed to cleanup expired sessions", "error", err)
+		return fmt.Errorf("failed to cleanup expired sessions: %w", err)
+	}
+
+	log.Debug("successfully cleaned up expired sessions")
+	return nil
+}
+
+func (d *SqliteDB) CreateUser(ctx context.Context, email, name, passwordHash string) (*models.User, error) {
+	log.Debug("creating new user", "email", email)
+
+	user, err := d.queries.CreateUser(ctx, sqlc.CreateUserParams{
+		Email:        email,
+		Name:         name,
+		PasswordHash: passwordHash,
+	})
+	if err != nil {
+		log.Error("failed to create user in database", "email", email, "error", err)
+		return nil, fmt.Errorf("failed to create user %s: %w", email, err)
+	}
+
+	log.Debug("successfully created user", "user_id", user.ID, "email", email)
+	return &models.User{
+		ID:                    user.ID,
+		Email:                 user.Email,
+		Name:                  user.Name,
+		PasswordHash:          user.PasswordHash,
+		Admin:                 user.Admin,
+		CreatedAt:             user.CreatedAt,
+		PasswordResetRequired: user.PasswordResetRequired,
+	}, nil
+}
+
+func (d *SqliteDB) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	log.Debug("retrieving user by email", "email", email)
+
+	user, err := d.queries.GetUserByEmail(ctx, email)
+	if err != nil {
+		log.Error("failed to retrieve user from database", "email", email, "error", err)
+		return nil, fmt.Errorf("failed to get user %s: %w", email, err)
+	}
+
+	log.Debug("successfully retrieved user", "email", email, "user_id", user.ID)
+	return &models.User{
+		ID:                    user.ID,
+		Email:                 user.Email,
+		Name:                  user.Name,
+		PasswordHash:          user.PasswordHash,
+		Admin:                 user.Admin,
+		CreatedAt:             user.CreatedAt,
+		PasswordResetRequired: user.PasswordResetRequired,
+	}, nil
+}
+
+func (d *SqliteDB) GetUserByID(ctx context.Context, id int64) (*models.User, error) {
+	log.Debug("retrieving user by ID", "userID", id)
+
+	user, err := d.queries.GetUserByID(ctx, id)
+	if err != nil {
+		log.Error("failed to retrieve user from database", "userID", id, "error", err)
+		return nil, fmt.Errorf("failed to get user with ID %d: %w", id, err)
+	}
+
+	log.Debug("successfully retrieved user", "userID", id, "email", user.Email)
+	return &models.User{
+		ID:                    user.ID,
+		Email:                 user.Email,
+		Name:                  user.Name,
+		PasswordHash:          user.PasswordHash,
+		Admin:                 user.Admin,
+		CreatedAt:             user.CreatedAt,
+		PasswordResetRequired: user.PasswordResetRequired,
+	}, nil
+}
+
+func (d *SqliteDB) CountUsers(ctx context.Context) (int64, error) {
+	log.Debug("counting users")
+
+	count, err := d.queries.CountUsers(ctx)
+	if err != nil {
+		log.Error("failed to count users", "error", err)
+		return 0, fmt.Errorf("failed to count users: %w", err)
+	}
+
+	log.Debug("retrieved user count", "count", count)
+	return count, nil
+}
+
+func (d *SqliteDB) AssignNilUserWatched(ctx context.Context, userID *int64) error {
+	log.Debug("assigning nil user to watched records", "userID", userID)
+
+	err := d.queries.AssignNilUserWatched(ctx, userID)
+	if err != nil {
+		log.Error("failed to assign nil user to watched", "userID", userID, "error", err)
+		return fmt.Errorf("failed to assign nil user to watched: %w", err)
+	}
+
+	log.Debug("assigned nil user to watched records", "userID", userID)
+	return nil
+}
+
+func (d *SqliteDB) AssignNilUserLists(ctx context.Context, userID *int64) error {
+	log.Debug("assigning nil user to list records", "userID", userID)
+
+	err := d.queries.AssignNilUserLists(ctx, userID)
+	if err != nil {
+		log.Error("failed to assign nil user to lists", "userID", userID, "error", err)
+		return fmt.Errorf("failed to assign nil user to lists: %w", err)
+	}
+
+	log.Debug("assigned nil user to list records", "userID", userID)
+	return nil
+}
+
+func (d *SqliteDB) SetAdmin(ctx context.Context, userID int64) error {
+	log.Debug("setting user as admin", "userID", userID)
+
+	err := d.queries.SetAdmin(ctx, userID)
+	if err != nil {
+		log.Error("failed to set user as admin", "userID", userID, "error", err)
+		return fmt.Errorf("failed to set user as admin: %w", err)
+	}
+
+	log.Debug("set user as admin", "userID", userID)
+	return nil
+}
+
+func (d *SqliteDB) GetAllUsersWithStats(ctx context.Context) ([]models.UserWithStats, error) {
+	log.Debug("retrieving all users with stats")
+
+	rows, err := d.queries.GetAllUsersWithStats(ctx)
+	if err != nil {
+		log.Error("failed to fetch users with stats", "error", err)
+		return nil, fmt.Errorf("failed to fetch users with stats: %w", err)
+	}
+
+	users := make([]models.UserWithStats, len(rows))
+	for i, r := range rows {
+		users[i] = models.UserWithStats{
+			User: models.User{
+				ID:           r.ID,
+				Email:        r.Email,
+				Name:         r.Name,
+				Admin:        r.Admin,
+				CreatedAt:    r.CreatedAt,
+				PasswordHash: "", // Don't expose this in stats
+			},
+			WatchedCount: r.WatchedCount,
+			ListCount:    r.ListCount,
+		}
+	}
+
+	log.Debug("retrieved users with stats", "count", len(users))
+	return users, nil
+}
+
+func (d *SqliteDB) DeleteUser(ctx context.Context, userID int64) error {
+	log.Debug("deleting user", "userID", userID)
+
+	err := d.queries.DeleteUser(ctx, userID)
+	if err != nil {
+		log.Error("failed to delete user", "userID", userID, "error", err)
+		return fmt.Errorf("failed to delete user %d: %w", userID, err)
+	}
+
+	log.Debug("successfully deleted user", "userID", userID)
+	return nil
+}
+
+func (d *SqliteDB) UpdateUserPassword(ctx context.Context, userID int64, passwordHash string) error {
+	log.Debug("updating user password", "userID", userID)
+
+	err := d.queries.UpdateUserPassword(ctx, sqlc.UpdateUserPasswordParams{
+		PasswordHash: passwordHash,
+		ID:           userID,
+	})
+	if err != nil {
+		log.Error("failed to update user password", "userID", userID, "error", err)
+		return fmt.Errorf("failed to update password for user %d: %w", userID, err)
+	}
+
+	log.Debug("successfully updated user password", "userID", userID)
+	return nil
+}
+
+func (d *SqliteDB) UpdatePasswordResetRequired(ctx context.Context, userID int64, reset bool) error {
+	log.Debug("updating password reset required", "userID", userID)
+
+	err := d.queries.UpdatePasswordResetRequired(ctx, sqlc.UpdatePasswordResetRequiredParams{
+		PasswordResetRequired: reset,
+		ID:                    userID,
+	})
+	if err != nil {
+		log.Error("failed to update password reset required", "userID", userID, "error", err)
+		return fmt.Errorf("failed to update password reset required for user %d: %w", userID, err)
+	}
+
+	log.Debug("successfully updated password reset required", "userID", userID)
+	return nil
 }
