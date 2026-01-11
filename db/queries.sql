@@ -324,15 +324,17 @@ WHERE
             AND list.user_id = ?
     );
 
--- name: GetWatchedPerMonthLastYear :many
+-- name: GetWatchedStatsPerMonthLastYear :many
 SELECT
     CAST(strftime('%Y-%m', watched_date) AS TEXT) AS month,
-    COUNT(*) AS count
+    COUNT(*) AS count,
+    SUM(movie.runtime) AS total_runtime
 FROM
     watched
+    JOIN movie ON watched.movie_id = movie.id
 WHERE
     watched_date >= date('now', 'start of month', '-12 months')
-    AND user_id = ?
+    AND watched.user_id = ?
 GROUP BY
     month
 ORDER BY
@@ -426,7 +428,7 @@ ORDER BY
     count DESC
 LIMIT 1;
 
--- name: GetMostWatchedMaleActors :many
+-- name: GetMostWatchedActorsByGender :many
 SELECT
     person.name,
     person.id,
@@ -438,31 +440,7 @@ FROM
     JOIN "cast" ON watched.movie_id = "cast".movie_id
     JOIN person ON "cast".person_id = person.id
 WHERE
-    person.gender = 2
-    AND watched.user_id = ?
-GROUP BY
-    person.id,
-    person.name,
-    person.profile_path,
-    person.gender
-ORDER BY
-    watch_count DESC
-LIMIT
-    ?;
-
--- name: GetMostWatchedFemaleActors :many
-SELECT
-    person.name,
-    person.id,
-    person.profile_path,
-    person.gender,
-    COUNT(*) AS watch_count
-FROM
-    watched
-    JOIN "cast" ON watched.movie_id = "cast".movie_id
-    JOIN person ON "cast".person_id = person.id
-WHERE
-    person.gender = 1
+    person.gender = ?
     AND watched.user_id = ?
 GROUP BY
     person.id,
@@ -508,29 +486,15 @@ ORDER BY
 LIMIT
     ?;
 
--- name: GetWatchedRuntimesLastYear :many
+-- name: GetTotalWatchedStats :one
 SELECT
-    watched.watched_date,
-    movie.runtime
+    COUNT(*) AS count,
+    SUM(movie.runtime) AS total_runtime
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
 WHERE
-    watched.watched_date >= date('now', 'start of month', '-12 months')
-    AND movie.runtime > 0
-    AND watched.user_id = ?
-ORDER BY
-    watched.watched_date;
-
--- name: GetTotalHoursWatched :one
-SELECT
-    SUM(movie.runtime) AS total_minutes
-FROM
-    watched
-    JOIN movie ON watched.movie_id = movie.id
-WHERE
-    movie.runtime > 0
-    AND watched.user_id = ?;
+    watched.user_id = ?;
 
 -- name: GetMonthlyGenreBreakdown :many
 SELECT

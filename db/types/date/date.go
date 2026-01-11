@@ -25,7 +25,7 @@ func NewFromPtr(t *time.Time) Date {
 }
 
 func (d Date) ToTimePtr() *time.Time {
-	if d.Time.IsZero() {
+	if d.IsZero() {
 		return nil
 	}
 	t := d.Time
@@ -47,13 +47,13 @@ func (d *Date) UnmarshalJSON(b []byte) error {
 }
 
 func (d Date) MarshalJSON() ([]byte, error) {
-	if d.Time.IsZero() {
+	if d.IsZero() {
 		return []byte("null"), nil
 	}
-	return []byte(fmt.Sprintf("\"%s\"", d.Time.Format(Layout))), nil
+	return fmt.Appendf(nil, "\"%s\"", d.Format(Layout)), nil
 }
 
-func (d *Date) Scan(value interface{}) error {
+func (d *Date) Scan(value any) error {
 	if value == nil {
 		d.Time = time.Time{}
 		return nil
@@ -73,33 +73,24 @@ func (d *Date) Scan(value interface{}) error {
 }
 
 func (d *Date) parse(s string) error {
-	// Try standard layout
 	t, err := time.Parse(Layout, s)
-	if err == nil {
-		d.Time = t
-		return nil
+	if err != nil {
+		t, err = time.Parse(time.RFC3339, s)
+		if err != nil {
+			t, err = time.Parse("2006-01-02 15:04:05", s)
+			if err != nil {
+				return fmt.Errorf("cannot parse date string %q", s)
+			}
+		}
 	}
 
-	// Fallback to RFC3339 if needed (sometimes drivers return full timestamp)
-	t, err = time.Parse(time.RFC3339, s)
-	if err == nil {
-		d.Time = t
-		return nil
-	}
-
-	// Try space separated
-	t, err = time.Parse("2006-01-02 15:04:05", s)
-	if err == nil {
-		d.Time = t
-		return nil
-	}
-
-	return fmt.Errorf("cannot parse date string %q", s)
+	d.Time = t
+	return nil
 }
 
 func (d Date) Value() (driver.Value, error) {
-	if d.Time.IsZero() {
+	if d.IsZero() {
 		return nil, nil
 	}
-	return d.Time.Format(Layout), nil
+	return d.Format(Layout), nil
 }

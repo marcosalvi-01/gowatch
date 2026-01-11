@@ -561,24 +561,29 @@ func (d *SqliteDB) GetWatchlistID(ctx context.Context, userID int64) (int64, err
 	return id, nil
 }
 
-func (d *SqliteDB) GetWatchedPerMonthLastYear(ctx context.Context, userID int64) ([]models.PeriodCount, error) {
-	log.Debug("getting watched per month last year")
+func (d *SqliteDB) GetWatchedStatsPerMonthLastYear(ctx context.Context, userID int64) ([]models.PeriodStats, error) {
+	log.Debug("getting watched stats per month last year")
 
-	data, err := d.queries.GetWatchedPerMonthLastYear(ctx, &userID)
+	data, err := d.queries.GetWatchedStatsPerMonthLastYear(ctx, &userID)
 	if err != nil {
-		log.Error("failed to get monthly data", "error", err)
-		return nil, fmt.Errorf("failed to get monthly data: %w", err)
+		log.Error("failed to get monthly stats", "error", err)
+		return nil, fmt.Errorf("failed to get monthly stats: %w", err)
 	}
 
-	result := make([]models.PeriodCount, len(data))
+	result := make([]models.PeriodStats, len(data))
 	for i, item := range data {
-		result[i] = models.PeriodCount{
+		totalRuntime := 0.0
+		if item.TotalRuntime != nil {
+			totalRuntime = *item.TotalRuntime
+		}
+		result[i] = models.PeriodStats{
 			Period: item.Month,
 			Count:  item.Count,
+			Hours:  totalRuntime / 60.0,
 		}
 	}
 
-	log.Debug("retrieved monthly data", "periodCount", len(result))
+	log.Debug("retrieved monthly stats", "periodCount", len(result))
 	return result, nil
 }
 
@@ -719,37 +724,24 @@ func (d *SqliteDB) GetMostWatchedDay(ctx context.Context, userID int64) (*models
 	return &models.MostWatchedDay{Date: result.WatchedDate.Time, Count: result.Count}, nil
 }
 
-func (d *SqliteDB) GetMostWatchedMaleActors(ctx context.Context, userID int64, limit int) ([]models.TopActor, error) {
-	log.Debug("getting most watched male actors", "limit", limit)
+func (d *SqliteDB) GetMostWatchedActorsByGender(ctx context.Context, userID int64, gender int64, limit int) ([]models.TopActor, error) {
+	log.Debug("getting most watched actors by gender", "limit", limit, "gender", gender)
 
-	data, err := d.queries.GetMostWatchedMaleActors(ctx, sqlc.GetMostWatchedMaleActorsParams{UserID: &userID, Limit: int64(limit)})
+	data, err := d.queries.GetMostWatchedActorsByGender(ctx, sqlc.GetMostWatchedActorsByGenderParams{
+		Gender: gender,
+		UserID: &userID,
+		Limit:  int64(limit),
+	})
 	if err != nil {
-		log.Error("failed to get most watched male actors", "error", err)
-		return nil, fmt.Errorf("failed to get most watched male actors: %w", err)
+		log.Error("failed to get most watched actors by gender", "error", err, "gender", gender)
+		return nil, fmt.Errorf("failed to get most watched actors by gender: %w", err)
 	}
 	result := make([]models.TopActor, len(data))
 	for i, d := range data {
 		result[i] = models.TopActor{Name: d.Name, ID: d.ID, WatchCount: d.WatchCount, ProfilePath: d.ProfilePath, Gender: d.Gender}
 	}
 
-	log.Debug("retrieved most watched male actors", "count", len(result))
-	return result, nil
-}
-
-func (d *SqliteDB) GetMostWatchedFemaleActors(ctx context.Context, userID int64, limit int) ([]models.TopActor, error) {
-	log.Debug("getting most watched female actors", "limit", limit)
-
-	data, err := d.queries.GetMostWatchedFemaleActors(ctx, sqlc.GetMostWatchedFemaleActorsParams{UserID: &userID, Limit: int64(limit)})
-	if err != nil {
-		log.Error("failed to get most watched female actors", "error", err)
-		return nil, fmt.Errorf("failed to get most watched female actors: %w", err)
-	}
-	result := make([]models.TopActor, len(data))
-	for i, d := range data {
-		result[i] = models.TopActor{Name: d.Name, ID: d.ID, WatchCount: d.WatchCount, ProfilePath: d.ProfilePath, Gender: d.Gender}
-	}
-
-	log.Debug("retrieved most watched female actors", "count", len(result))
+	log.Debug("retrieved most watched actors by gender", "count", len(result), "gender", gender)
 	return result, nil
 }
 
@@ -805,52 +797,25 @@ func (d *SqliteDB) GetWatchedDateRange(ctx context.Context, userID int64) (*mode
 	return &models.DateRange{MinDate: min, MaxDate: max}, nil
 }
 
-func (d *SqliteDB) aggregateWatchedByPeriodHours(data []sqlc.GetWatchedRuntimesLastYearRow, format string) []models.PeriodHours {
-	hours := make(map[string]float64)
-	for _, item := range data {
-		period := item.WatchedDate.Format(format)
-		hours[period] += float64(item.Runtime) / 60.0 // Convert minutes to hours
-	}
-	result := make([]models.PeriodHours, 0, len(hours))
-	for period, hourCount := range hours {
-		result = append(result, models.PeriodHours{Period: period, Hours: hourCount})
-	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Period < result[j].Period
-	})
-	return result
-}
+func (d *SqliteDB) GetTotalWatchedStats(ctx context.Context, userID int64) (*models.TotalStats, error) {
+	log.Debug("getting total watched stats")
 
-func (d *SqliteDB) GetWatchedHoursPerMonthLastYear(ctx context.Context, userID int64) ([]models.PeriodHours, error) {
-	log.Debug("getting watched hours per month last year")
-
-	data, err := d.queries.GetWatchedRuntimesLastYear(ctx, &userID)
+	stats, err := d.queries.GetTotalWatchedStats(ctx, &userID)
 	if err != nil {
-		log.Error("failed to get monthly hours data", "error", err)
-		return nil, fmt.Errorf("failed to get monthly hours data: %w", err)
-	}
-	result := d.aggregateWatchedByPeriodHours(data, "2006-01")
-
-	log.Debug("retrieved monthly hours data", "periodCount", len(result))
-	return result, nil
-}
-
-func (d *SqliteDB) GetTotalHoursWatched(ctx context.Context, userID int64) (float64, error) {
-	log.Debug("getting total hours watched")
-
-	totalMinutes, err := d.queries.GetTotalHoursWatched(ctx, &userID)
-	if err != nil {
-		log.Error("failed to get total minutes", "error", err)
-		return 0, fmt.Errorf("failed to get total minutes: %w", err)
+		log.Error("failed to get total stats", "error", err)
+		return nil, fmt.Errorf("failed to get total stats: %w", err)
 	}
 
-	if totalMinutes == nil {
-		log.Debug("found 0 minutes in the db")
-		return 0, nil
+	totalRuntime := 0.0
+	if stats.TotalRuntime != nil {
+		totalRuntime = *stats.TotalRuntime
 	}
-	hours := *totalMinutes / 60.0
-	log.Debug("retrieved total hours", "hours", hours)
-	return hours, nil
+
+	log.Debug("retrieved total stats", "count", stats.Count, "totalHours", totalRuntime/60.0)
+	return &models.TotalStats{
+		Count: stats.Count,
+		Hours: totalRuntime / 60.0,
+	}, nil
 }
 
 func (d *SqliteDB) GetMonthlyGenreBreakdown(ctx context.Context, userID int64) ([]models.MonthlyGenreBreakdown, error) {

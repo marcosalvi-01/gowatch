@@ -38,23 +38,15 @@ func (s *HomeService) GetHomeData(ctx context.Context) (*models.HomeData, error)
 	}
 
 	// Get stats summary
-	stats, err := s.watched.GetWatchedStats(ctx, 1)
+	statsSummary, err := s.watched.GetHomeStatsSummary(ctx)
 	if err != nil {
-		s.log.Error("failed to retrieve stats", "error", err)
+		s.log.Error("failed to retrieve stats summary", "error", err)
 		return nil, err
-	}
-
-	statsSummary := models.HomeStatsSummary{
-		TotalWatched: stats.TotalWatched,
-		AvgPerWeek:   stats.AvgPerWeek,
-	}
-	if len(stats.Genres) > 0 {
-		statsSummary.TopGenre = &stats.Genres[0]
 	}
 
 	homeData := &models.HomeData{
 		RecentMovies: recentMovies,
-		Stats:        statsSummary,
+		Stats:        *statsSummary,
 	}
 
 	s.log.Info("successfully aggregated home data")
