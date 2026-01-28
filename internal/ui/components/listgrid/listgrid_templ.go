@@ -16,6 +16,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/utils"
 	"strconv"
 	"time"
 )
@@ -134,7 +135,7 @@ func listMovieItem(listID int64, movie models.MovieItem, isWatchlist bool) templ
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(movie.MovieDetails.Movie.Title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 58, Col: 37}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 59, Col: 37}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -153,9 +154,9 @@ func listMovieItem(listID int64, movie models.MovieItem, isWatchlist bool) templ
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var5 string
-			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(movie.MovieDetails.Movie.ReleaseDate.Format("2006"))
+			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(utils.FormatYear(movie.MovieDetails.Movie.ReleaseDate))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 63, Col: 78}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 64, Col: 81}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -185,7 +186,7 @@ func listMovieItem(listID int64, movie models.MovieItem, isWatchlist bool) templ
 				var templ_7745c5c3_Var6 string
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", movie.MovieDetails.Movie.VoteAverage))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 72, Col: 85}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 73, Col: 85}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
@@ -247,7 +248,7 @@ func listMovieCardTopHoverList(listID int64, movie models.MovieItem, isWatchlist
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(watchlistFormatTimeAgoShort(movie.DateAdded))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 85, Col: 99}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 86, Col: 99}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -320,7 +321,7 @@ func listMovieCardTopHoverList(listID int64, movie models.MovieItem, isWatchlist
 				var templ_7745c5c3_Var11 string
 				templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(*movie.Note)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 103, Col: 62}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 104, Col: 62}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 				if templ_7745c5c3_Err != nil {
@@ -422,7 +423,7 @@ func listConfirmRemoveMovieDialog(listID int64, movie models.MovieItem, isWatchl
 		var templ_7745c5c3_Var15 string
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.FormatInt(movie.MovieDetails.Movie.ID, 10))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 127, Col: 97}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 128, Col: 97}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
@@ -435,7 +436,7 @@ func listConfirmRemoveMovieDialog(listID int64, movie models.MovieItem, isWatchl
 		var templ_7745c5c3_Var16 string
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.FormatInt(listID, 10))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 128, Col: 75}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 129, Col: 75}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
@@ -532,7 +533,7 @@ func listConfirmRemoveMovieDialog(listID int64, movie models.MovieItem, isWatchl
 						var templ_7745c5c3_Var22 string
 						templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(movie.MovieDetails.Movie.Title)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 148, Col: 78}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 149, Col: 78}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 						if templ_7745c5c3_Err != nil {
@@ -545,7 +546,7 @@ func listConfirmRemoveMovieDialog(listID int64, movie models.MovieItem, isWatchl
 						var templ_7745c5c3_Var23 string
 						templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(listType)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 148, Col: 105}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 149, Col: 105}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 						if templ_7745c5c3_Err != nil {
@@ -665,7 +666,7 @@ func listConfirmRemoveMovieDialog(listID int64, movie models.MovieItem, isWatchl
 							var templ_7745c5c3_Var29 string
 							templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(buttonText)
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 177, Col: 19}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/listgrid/listgrid.templ`, Line: 178, Col: 19}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 							if templ_7745c5c3_Err != nil {

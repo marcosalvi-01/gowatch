@@ -358,7 +358,7 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 		s.log.Debug("GetWatchedStats: fetching most watched day")
 		t := time.Now()
 		stats.MostWatchedDay, err = s.getMostWatchedDay(ctx)
-		s.log.Debug("GetWatchedStats: most watched day fetched", "count", stats.MostWatchedDay.Count, "date", stats.MostWatchedDay.Date, "duration", time.Since(t).String())
+		s.log.Debug("GetWatchedStats: most watched day fetched", "duration", time.Since(t).String())
 		return err
 	})
 
@@ -388,7 +388,7 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 		s.log.Debug("GetWatchedStats: fetching date range")
 		t := time.Now()
 		dateRange, err = s.getDateRange(ctx)
-		s.log.Debug("GetWatchedStats: date range fetched", "min", dateRange.MinDate, "max", dateRange.MaxDate, "duration", time.Since(t).String())
+		s.log.Debug("GetWatchedStats: date range fetched", "duration", time.Since(t).String())
 		return err
 	})
 

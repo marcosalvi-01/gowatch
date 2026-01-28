@@ -19,6 +19,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
+	"github.com/marcosalvi-01/gowatch/internal/utils"
 	"strconv"
 )
 
@@ -249,7 +250,7 @@ func statsCard(label, value string, iconFunc func(...icon.Props) templ.Component
 				var templ_7745c5c3_Var8 string
 				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 62, Col: 83}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 63, Col: 83}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 				if templ_7745c5c3_Err != nil {
@@ -262,7 +263,7 @@ func statsCard(label, value string, iconFunc func(...icon.Props) templ.Component
 				var templ_7745c5c3_Var9 string
 				templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(value)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 63, Col: 57}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 64, Col: 57}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 				if templ_7745c5c3_Err != nil {
@@ -374,7 +375,7 @@ func homeRecentActivity(movies []models.WatchedMovieInDay) templ.Component {
 						var templ_7745c5c3_Var14 string
 						templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(movie.MovieDetails.Movie.Title)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 95, Col: 100}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 96, Col: 100}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 						if templ_7745c5c3_Err != nil {
@@ -393,9 +394,9 @@ func homeRecentActivity(movies []models.WatchedMovieInDay) templ.Component {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var15 string
-						templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(movie.MovieDetails.Movie.ReleaseDate.Format("2006"))
+						templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(utils.FormatYear(movie.MovieDetails.Movie.ReleaseDate))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 99, Col: 98}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 100, Col: 101}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 						if templ_7745c5c3_Err != nil {
@@ -425,7 +426,7 @@ func homeRecentActivity(movies []models.WatchedMovieInDay) templ.Component {
 							var templ_7745c5c3_Var16 string
 							templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", *movie.Rating))
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 108, Col: 74}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 109, Col: 74}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 							if templ_7745c5c3_Err != nil {
@@ -657,7 +658,7 @@ func homeHeader(name string) templ.Component {
 		var templ_7745c5c3_Var22 string
 		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 188, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 189, Col: 68}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 		if templ_7745c5c3_Err != nil {

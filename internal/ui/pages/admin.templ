@@ -10,6 +10,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/table"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/tooltip"
+	"github.com/marcosalvi-01/gowatch/internal/utils"
 )
 
 templ AdminUsers(users []models.UserWithStats) {
@@ -63,11 +64,7 @@ templ AdminUsers(users []models.UserWithStats) {
 												{ u.Email }
 											}
 											@table.Cell(table.CellProps{Class: "text-muted-foreground"}) {
-												if u.CreatedAt != nil {
-													{ u.CreatedAt.Format("2006-01-02") }
-												} else {
-													-
-												}
+												{ utils.FormatDate(u.CreatedAt) }
 											}
 											@table.Cell(table.CellProps{Class: "text-center"}) {
 												{ fmt.Sprintf("%d", u.WatchedCount) }
