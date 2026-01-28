@@ -11,6 +11,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
+	"github.com/marcosalvi-01/gowatch/internal/utils"
 	"strconv"
 )
 
@@ -96,7 +97,7 @@ templ homeRecentActivity(movies []models.WatchedMovieInDay) {
 								<div class="flex items-center justify-between">
 									<div class="flex items-center">
 										@icon.Calendar(icon.Props{Size: 12})
-										<p class="ml-2 text-xs opacity-90">{ movie.MovieDetails.Movie.ReleaseDate.Format("2006") }</p>
+										<p class="ml-2 text-xs opacity-90">{ utils.FormatYear(movie.MovieDetails.Movie.ReleaseDate) }</p>
 									</div>
 									if movie.Rating != nil {
 										<div class="flex items-center">

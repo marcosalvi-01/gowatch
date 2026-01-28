@@ -8,6 +8,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/utils"
 	"strconv"
 	"time"
 )
@@ -60,7 +61,7 @@ templ listMovieItem(listID int64, movie models.MovieItem, isWatchlist bool) {
 				<div class="flex items-center justify-between text-xs">
 					<div class="flex items-center text-muted-foreground">
 						@icon.Calendar(icon.Props{Size: 12})
-						<span class="ml-1">{ movie.MovieDetails.Movie.ReleaseDate.Format("2006") }</span>
+						<span class="ml-1">{ utils.FormatYear(movie.MovieDetails.Movie.ReleaseDate) }</span>
 					</div>
 					if movie.MovieDetails.Movie.VoteAverage > 0 {
 						<div class="flex items-center">

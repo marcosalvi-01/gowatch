@@ -18,6 +18,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/table"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/textarea"
+	"github.com/marcosalvi-01/gowatch/internal/utils"
 	"slices"
 	"strconv"
 	"strings"
@@ -121,7 +122,7 @@ templ movieInfo(movie models.MovieDetails, isDark, isInWatchlist bool) {
 					templ.KV("text-muted-foreground", !isDark),
 				}
 			>
-				{ movie.Movie.ReleaseDate.Format("2006") }
+				{ utils.FormatYear(movie.Movie.ReleaseDate) }
 			</p>
 			if director := getDirector(movie.Credits.Crew); director != "" {
 				<div class="flex items-center gap-2">
@@ -395,7 +396,7 @@ templ detailsSection(movie models.MovieDetails) {
 						Release Date
 					}
 					@table.Cell() {
-						{ movie.Movie.ReleaseDate.Format("January 2, 2006") }
+						{ utils.FormatLongDate(movie.Movie.ReleaseDate) }
 					}
 				}
 				@table.Row() {

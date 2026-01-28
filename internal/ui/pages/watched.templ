@@ -9,6 +9,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
+	"github.com/marcosalvi-01/gowatch/internal/utils"
 	"strconv"
 )
 
@@ -63,7 +64,7 @@ templ Watched(days []models.WatchedMoviesInDay) {
 											<div class="flex items-center justify-between mt-auto pt-1">
 												<div class="flex items-center text-muted-foreground">
 													@icon.Calendar(icon.Props{Size: 12})
-													<p class="ml-1 text-[10px] md:text-xs">{ movie.MovieDetails.Movie.ReleaseDate.Format("2006") }</p>
+													<p class="ml-1 text-[10px] md:text-xs">{ utils.FormatYear(movie.MovieDetails.Movie.ReleaseDate) }</p>
 												</div>
 												if movie.Rating != nil {
 													<div class="flex items-center">

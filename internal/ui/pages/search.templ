@@ -6,6 +6,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/moviecard"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
+	"github.com/marcosalvi-01/gowatch/internal/utils"
 	"strconv"
 )
 
@@ -28,11 +29,7 @@ templ Search(query string, results []models.Movie) {
 										<div class="flex items-center">
 											@icon.Calendar(icon.Props{Size: 12})
 											<p class="ml-2 text-xs opacity-90">
-												if movie.ReleaseDate != nil {
-													{ movie.ReleaseDate.Format("2006") }
-												} else {
-													Unknown
-												}
+												{ utils.FormatYear(movie.ReleaseDate) }
 											</p>
 										</div>
 										if movie.VoteAverage > 0 {

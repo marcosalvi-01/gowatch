@@ -18,6 +18,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/table"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/tooltip"
+	"github.com/marcosalvi-01/gowatch/internal/utils"
 )
 
 func AdminUsers(users []models.UserWithStats) templ.Component {
@@ -345,7 +346,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 											var templ_7745c5c3_Var18 string
 											templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(u.Name)
 											if templ_7745c5c3_Err != nil {
-												return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/admin.templ`, Line: 53, Col: 21}
+												return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/admin.templ`, Line: 54, Col: 21}
 											}
 											_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 											if templ_7745c5c3_Err != nil {
@@ -412,7 +413,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 											var templ_7745c5c3_Var21 string
 											templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(u.Email)
 											if templ_7745c5c3_Err != nil {
-												return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/admin.templ`, Line: 63, Col: 21}
+												return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/admin.templ`, Line: 64, Col: 21}
 											}
 											_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 											if templ_7745c5c3_Err != nil {
@@ -440,21 +441,14 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 												}()
 											}
 											ctx = templ.InitializeContext(ctx)
-											if u.CreatedAt != nil {
-												var templ_7745c5c3_Var23 string
-												templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(u.CreatedAt.Format("2006-01-02"))
-												if templ_7745c5c3_Err != nil {
-													return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/admin.templ`, Line: 67, Col: 47}
-												}
-												_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
-												if templ_7745c5c3_Err != nil {
-													return templ_7745c5c3_Err
-												}
-											} else {
-												templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "-")
-												if templ_7745c5c3_Err != nil {
-													return templ_7745c5c3_Err
-												}
+											var templ_7745c5c3_Var23 string
+											templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(utils.FormatDate(u.CreatedAt))
+											if templ_7745c5c3_Err != nil {
+												return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/admin.templ`, Line: 67, Col: 43}
+											}
+											_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
+											if templ_7745c5c3_Err != nil {
+												return templ_7745c5c3_Err
 											}
 											return nil
 										})
@@ -462,7 +456,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 										if templ_7745c5c3_Err != nil {
 											return templ_7745c5c3_Err
 										}
-										templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, " ")
+										templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, " ")
 										if templ_7745c5c3_Err != nil {
 											return templ_7745c5c3_Err
 										}
@@ -481,7 +475,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 											var templ_7745c5c3_Var25 string
 											templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", u.WatchedCount))
 											if templ_7745c5c3_Err != nil {
-												return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/admin.templ`, Line: 73, Col: 47}
+												return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/admin.templ`, Line: 70, Col: 47}
 											}
 											_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 											if templ_7745c5c3_Err != nil {
@@ -493,7 +487,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 										if templ_7745c5c3_Err != nil {
 											return templ_7745c5c3_Err
 										}
-										templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, " ")
+										templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, " ")
 										if templ_7745c5c3_Err != nil {
 											return templ_7745c5c3_Err
 										}
@@ -512,7 +506,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 											var templ_7745c5c3_Var27 string
 											templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", u.ListCount))
 											if templ_7745c5c3_Err != nil {
-												return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/admin.templ`, Line: 76, Col: 44}
+												return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/admin.templ`, Line: 73, Col: 44}
 											}
 											_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 											if templ_7745c5c3_Err != nil {
@@ -524,7 +518,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 										if templ_7745c5c3_Err != nil {
 											return templ_7745c5c3_Err
 										}
-										templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, " ")
+										templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, " ")
 										if templ_7745c5c3_Err != nil {
 											return templ_7745c5c3_Err
 										}
@@ -625,7 +619,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 													if templ_7745c5c3_Err != nil {
 														return templ_7745c5c3_Err
 													}
-													templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, " ")
+													templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, " ")
 													if templ_7745c5c3_Err != nil {
 														return templ_7745c5c3_Err
 													}
@@ -641,7 +635,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 															}()
 														}
 														ctx = templ.InitializeContext(ctx)
-														templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "Reset Password ")
+														templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "Reset Password ")
 														if templ_7745c5c3_Err != nil {
 															return templ_7745c5c3_Err
 														}
@@ -657,7 +651,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 												if templ_7745c5c3_Err != nil {
 													return templ_7745c5c3_Err
 												}
-												templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, " ")
+												templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, " ")
 												if templ_7745c5c3_Err != nil {
 													return templ_7745c5c3_Err
 												}
@@ -697,7 +691,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 																}()
 															}
 															ctx = templ.InitializeContext(ctx)
-															templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "Reset Password ")
+															templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "Reset Password ")
 															if templ_7745c5c3_Err != nil {
 																return templ_7745c5c3_Err
 															}
@@ -707,7 +701,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 														if templ_7745c5c3_Err != nil {
 															return templ_7745c5c3_Err
 														}
-														templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, " ")
+														templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, " ")
 														if templ_7745c5c3_Err != nil {
 															return templ_7745c5c3_Err
 														}
@@ -723,20 +717,20 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 																}()
 															}
 															ctx = templ.InitializeContext(ctx)
-															templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "Are you sure you want to reset the password for <strong>")
+															templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "Are you sure you want to reset the password for <strong>")
 															if templ_7745c5c3_Err != nil {
 																return templ_7745c5c3_Err
 															}
 															var templ_7745c5c3_Var39 string
 															templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(u.Name)
 															if templ_7745c5c3_Err != nil {
-																return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/admin.templ`, Line: 101, Col: 80}
+																return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/admin.templ`, Line: 98, Col: 80}
 															}
 															_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 															if templ_7745c5c3_Err != nil {
 																return templ_7745c5c3_Err
 															}
-															templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</strong>?")
+															templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "</strong>?")
 															if templ_7745c5c3_Err != nil {
 																return templ_7745c5c3_Err
 															}
@@ -752,7 +746,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 													if templ_7745c5c3_Err != nil {
 														return templ_7745c5c3_Err
 													}
-													templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, " ")
+													templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, " ")
 													if templ_7745c5c3_Err != nil {
 														return templ_7745c5c3_Err
 													}
@@ -792,7 +786,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 																	}()
 																}
 																ctx = templ.InitializeContext(ctx)
-																templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "Cancel ")
+																templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "Cancel ")
 																if templ_7745c5c3_Err != nil {
 																	return templ_7745c5c3_Err
 																}
@@ -808,7 +802,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 														if templ_7745c5c3_Err != nil {
 															return templ_7745c5c3_Err
 														}
-														templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, " ")
+														templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, " ")
 														if templ_7745c5c3_Err != nil {
 															return templ_7745c5c3_Err
 														}
@@ -824,7 +818,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 																}()
 															}
 															ctx = templ.InitializeContext(ctx)
-															templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "Confirm Reset ")
+															templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "Confirm Reset ")
 															if templ_7745c5c3_Err != nil {
 																return templ_7745c5c3_Err
 															}
@@ -858,7 +852,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 											if templ_7745c5c3_Err != nil {
 												return templ_7745c5c3_Err
 											}
-											templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, " ")
+											templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, " ")
 											if templ_7745c5c3_Err != nil {
 												return templ_7745c5c3_Err
 											}
@@ -931,7 +925,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 														if templ_7745c5c3_Err != nil {
 															return templ_7745c5c3_Err
 														}
-														templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, " ")
+														templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, " ")
 														if templ_7745c5c3_Err != nil {
 															return templ_7745c5c3_Err
 														}
@@ -947,7 +941,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 																}()
 															}
 															ctx = templ.InitializeContext(ctx)
-															templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "Delete User ")
+															templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "Delete User ")
 															if templ_7745c5c3_Err != nil {
 																return templ_7745c5c3_Err
 															}
@@ -971,7 +965,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 												if templ_7745c5c3_Err != nil {
 													return templ_7745c5c3_Err
 												}
-												templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, " ")
+												templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, " ")
 												if templ_7745c5c3_Err != nil {
 													return templ_7745c5c3_Err
 												}
@@ -1023,7 +1017,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 																	}()
 																}
 																ctx = templ.InitializeContext(ctx)
-																templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "Delete User ")
+																templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "Delete User ")
 																if templ_7745c5c3_Err != nil {
 																	return templ_7745c5c3_Err
 																}
@@ -1033,7 +1027,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 															if templ_7745c5c3_Err != nil {
 																return templ_7745c5c3_Err
 															}
-															templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, " ")
+															templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, " ")
 															if templ_7745c5c3_Err != nil {
 																return templ_7745c5c3_Err
 															}
@@ -1049,20 +1043,20 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 																	}()
 																}
 																ctx = templ.InitializeContext(ctx)
-																templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "Are you sure you want to delete user <strong>")
+																templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "Are you sure you want to delete user <strong>")
 																if templ_7745c5c3_Err != nil {
 																	return templ_7745c5c3_Err
 																}
 																var templ_7745c5c3_Var54 string
 																templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.JoinStringErrs(u.Name)
 																if templ_7745c5c3_Err != nil {
-																	return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/admin.templ`, Line: 150, Col: 70}
+																	return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/admin.templ`, Line: 147, Col: 70}
 																}
 																_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var54))
 																if templ_7745c5c3_Err != nil {
 																	return templ_7745c5c3_Err
 																}
-																templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</strong>? This action cannot be undone.")
+																templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "</strong>? This action cannot be undone.")
 																if templ_7745c5c3_Err != nil {
 																	return templ_7745c5c3_Err
 																}
@@ -1078,7 +1072,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 														if templ_7745c5c3_Err != nil {
 															return templ_7745c5c3_Err
 														}
-														templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, " ")
+														templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, " ")
 														if templ_7745c5c3_Err != nil {
 															return templ_7745c5c3_Err
 														}
@@ -1118,7 +1112,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 																		}()
 																	}
 																	ctx = templ.InitializeContext(ctx)
-																	templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "Cancel ")
+																	templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "Cancel ")
 																	if templ_7745c5c3_Err != nil {
 																		return templ_7745c5c3_Err
 																	}
@@ -1137,7 +1131,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 															if templ_7745c5c3_Err != nil {
 																return templ_7745c5c3_Err
 															}
-															templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, " ")
+															templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, " ")
 															if templ_7745c5c3_Err != nil {
 																return templ_7745c5c3_Err
 															}
@@ -1153,7 +1147,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 																	}()
 																}
 																ctx = templ.InitializeContext(ctx)
-																templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "Delete User ")
+																templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "Delete User ")
 																if templ_7745c5c3_Err != nil {
 																	return templ_7745c5c3_Err
 																}
@@ -1218,7 +1212,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "</div>")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "</div>")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
@@ -1234,7 +1228,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "</div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "</div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
