@@ -122,13 +122,13 @@ func (s *WatchedService) ImportWatched(ctx context.Context, movies models.Import
 
 	for _, importMovie := range movies {
 		for _, movieRef := range importMovie.Movies {
-			_, err := s.tmdb.GetMovieDetails(ctx, int64(movieRef.MovieID))
+			_, err := s.tmdb.GetMovieDetails(ctx, movieRef.MovieID)
 			if err != nil {
 				s.log.Error("ImportWatched: failed to fetch movie details", "movieID", movieRef.MovieID, "date", importMovie.Date, "error", err)
 				return fmt.Errorf("ImportWatched: failed to fetch movie details: %w", err)
 			}
 
-			err = s.AddWatched(ctx, int64(movieRef.MovieID), importMovie.Date, movieRef.InTheaters, movieRef.Rating)
+			err = s.AddWatched(ctx, movieRef.MovieID, importMovie.Date, movieRef.InTheaters, movieRef.Rating)
 			if err != nil {
 				s.log.Error("ImportWatched: failed to import movie", "movieID", movieRef.MovieID, "date", importMovie.Date, "error", err)
 				return fmt.Errorf("ImportWatched: failed to import movie: %w", err)
@@ -137,6 +137,30 @@ func (s *WatchedService) ImportWatched(ctx context.Context, movies models.Import
 	}
 
 	s.log.Info("ImportWatched: successfully imported watched movies", "totalMovies", totalMovies)
+	return nil
+}
+
+// ImportAll imports both watched movies and lists from combined format
+func (s *WatchedService) ImportAll(ctx context.Context, data models.ImportAllData) error {
+	s.log.Info("ImportAll: starting combined import", "watchedDays", len(data.Watched), "lists", len(data.Lists))
+
+	// Import watched movies first
+	if len(data.Watched) > 0 {
+		if err := s.ImportWatched(ctx, data.Watched); err != nil {
+			s.log.Error("ImportAll: failed to import watched movies", "error", err)
+			return fmt.Errorf("ImportAll: failed to import watched movies: %w", err)
+		}
+	}
+
+	// Import lists
+	if len(data.Lists) > 0 {
+		if err := s.listService.ImportLists(ctx, data.Lists); err != nil {
+			s.log.Error("ImportAll: failed to import lists", "error", err)
+			return fmt.Errorf("ImportAll: failed to import lists: %w", err)
+		}
+	}
+
+	s.log.Info("ImportAll: successfully imported all data")
 	return nil
 }
 
@@ -158,7 +182,7 @@ func (s *WatchedService) ExportWatched(ctx context.Context) (models.ImportWatche
 		ids := make([]models.ImportWatchedMovieRef, len(w.Movies))
 		for j, movieDetails := range w.Movies {
 			ids[j] = models.ImportWatchedMovieRef{
-				MovieID:    int(movieDetails.MovieDetails.Movie.ID),
+				MovieID:    movieDetails.MovieDetails.Movie.ID,
 				InTheaters: movieDetails.InTheaters,
 				Rating:     movieDetails.Rating,
 			}

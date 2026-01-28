@@ -99,6 +99,12 @@ templ Sidebar(props Props) {
 									Export watched
 								</a>
 							}
+							@dropdown.Item() {
+								<a href="/api/v1/export/all" download="gowatch_data.json" class="flex items-center w-full">
+									@icon.Download(icon.Props{Size: 16, Class: "mr-2"})
+									Export all data
+								</a>
+							}
 							@dropdown.Separator()
 							@dropdown.Item(dropdown.ItemProps{
 								Attributes: templ.Attributes{
@@ -382,7 +388,7 @@ templ ImportMoviesDialog() {
 						Import Watched Movies
 					}
 					@dialog.Description() {
-						Upload a JSON file of your watched movies to import them.
+						Upload a JSON file of your watched movies and lists to import them.
 					}
 				}
 				@importMoviesFormFields()

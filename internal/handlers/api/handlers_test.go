@@ -36,7 +36,7 @@ func TestHandlers_HealthCheck(t *testing.T) {
 
 	listService := services.NewListService(testDB, nil)
 	watchedService := services.NewWatchedService(testDB, listService, nil)
-	handlers := NewHandlers(testDB, watchedService)
+	handlers := NewHandlers(testDB, watchedService, listService)
 
 	req := httptest.NewRequest("GET", "/health", nil)
 	w := httptest.NewRecorder()
@@ -67,7 +67,7 @@ func TestHandlers_ExportWatched(t *testing.T) {
 	movieService := services.NewMovieService(testDB, nil, time.Hour)
 	listService := services.NewListService(testDB, movieService)
 	watchedService := services.NewWatchedService(testDB, listService, movieService)
-	handlers := NewHandlers(testDB, watchedService)
+	handlers := NewHandlers(testDB, watchedService, listService)
 
 	// Insert movie and watched
 	movie := &models.MovieDetails{
@@ -112,7 +112,7 @@ func TestHandlers_ImportWatched_InvalidJSON(t *testing.T) {
 
 	listService := services.NewListService(testDB, nil)
 	watchedService := services.NewWatchedService(testDB, listService, nil)
-	handlers := NewHandlers(testDB, watchedService)
+	handlers := NewHandlers(testDB, watchedService, listService)
 
 	req := httptest.NewRequest("POST", "/movies/import", bytes.NewReader([]byte("invalid json")))
 	req.Header.Set("Content-Type", "application/json")
@@ -136,7 +136,7 @@ func TestHandlers_ExportWatched_Empty(t *testing.T) {
 	movieService := services.NewMovieService(testDB, nil, time.Hour)
 	listService := services.NewListService(testDB, movieService)
 	watchedService := services.NewWatchedService(testDB, listService, movieService)
-	handlers := NewHandlers(testDB, watchedService)
+	handlers := NewHandlers(testDB, watchedService, listService)
 
 	ctx := getTestCtx()
 	req := httptest.NewRequest("GET", "/movies/export", nil)

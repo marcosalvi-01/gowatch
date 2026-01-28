@@ -6,6 +6,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/marcosalvi-01/gowatch/db"
@@ -21,17 +22,20 @@ var log = logging.Get("api")
 type Handlers struct {
 	db             db.DB
 	watchedService *services.WatchedService
+	listService    *services.ListService
 }
 
-func NewHandlers(db db.DB, watchedService *services.WatchedService) *Handlers {
+func NewHandlers(db db.DB, watchedService *services.WatchedService, listService *services.ListService) *Handlers {
 	return &Handlers{
 		db:             db,
 		watchedService: watchedService,
+		listService:    listService,
 	}
 }
 
 func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Get("/health", h.healthCheck)
+	r.Get("/export/all", h.exportAll)
 	r.Route("/movies", func(r chi.Router) {
 		r.Post("/import", h.importWatched)
 		r.Get("/export", h.exportWatched)
@@ -52,27 +56,70 @@ func (h *Handlers) exportWatched(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, http.StatusOK, export)
 }
 
-func (h *Handlers) importWatched(w http.ResponseWriter, r *http.Request) {
-	log.Debug("starting watched movies import")
+func (h *Handlers) exportAll(w http.ResponseWriter, r *http.Request) {
+	log.Debug("exporting all data")
 
-	var payload models.ImportWatchedMoviesLog
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		log.Error("failed to decode JSON payload", "error", err)
-		http.Error(w, "failed to decode request payload", http.StatusBadRequest)
+	watchedExport, err := h.watchedService.ExportWatched(r.Context())
+	if err != nil {
+		log.Error("failed to export watched movies", "error", err)
+		http.Error(w, "Failed to export watched movies due to an internal error.", http.StatusInternalServerError)
 		return
 	}
 
-	totalMovies := 0
-	for _, importMovie := range payload {
+	listsExport, err := h.listService.ExportLists(r.Context())
+	if err != nil {
+		log.Error("failed to export lists", "error", err)
+		http.Error(w, "Failed to export lists due to an internal error.", http.StatusInternalServerError)
+		return
+	}
+
+	export := models.ImportAllData{
+		Watched: watchedExport,
+		Lists:   listsExport,
+	}
+
+	log.Info("successfully exported all data")
+	jsonResponse(w, http.StatusOK, export)
+}
+
+func (h *Handlers) importWatched(w http.ResponseWriter, r *http.Request) {
+	log.Debug("starting import")
+
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Error("failed to read request body", "error", err)
+		http.Error(w, "failed to read request body", http.StatusBadRequest)
+		return
+	}
+
+	// First try to decode as combined format
+	var allData models.ImportAllData
+	if err := json.Unmarshal(bodyBytes, &allData); err != nil {
+		// If that fails, try legacy watched-only format
+		var watchedData models.ImportWatchedMoviesLog
+		if err := json.Unmarshal(bodyBytes, &watchedData); err != nil {
+			log.Error("failed to decode JSON payload", "error", err)
+			http.Error(w, "failed to decode request payload", http.StatusBadRequest)
+			return
+		}
+		allData.Watched = watchedData
+	}
+
+	totalMovies := len(allData.Watched)
+	totalLists := len(allData.Lists)
+	for _, importMovie := range allData.Watched {
 		totalMovies += len(importMovie.Movies)
 	}
-	log.Info("import request received", "totalDays", len(payload), "totalMovies", totalMovies)
+	for _, list := range allData.Lists {
+		totalMovies += len(list.Movies)
+	}
+	log.Info("import request received", "totalDays", len(allData.Watched), "totalLists", totalLists, "totalMovies", totalMovies)
 
 	ctx := context.WithoutCancel(r.Context())
 
 	go func() {
 		log.Info("import job started")
-		if err := h.watchedService.ImportWatched(ctx, payload); err != nil {
+		if err := h.watchedService.ImportAll(ctx, allData); err != nil {
 			log.Error("import job failed", "error", err)
 			return
 		}

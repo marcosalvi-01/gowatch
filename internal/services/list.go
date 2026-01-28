@@ -297,3 +297,99 @@ func (s *ListService) IsMovieInWatchlist(ctx context.Context, movieID int64) boo
 	}
 	return false
 }
+
+// ExportLists exports all user lists with their movies in import format
+func (s *ListService) ExportLists(ctx context.Context) (models.ImportListsLog, error) {
+	s.log.Debug("exporting all lists")
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get userID", "error", err)
+		return nil, err
+	}
+
+	lists, err := s.db.ExportLists(ctx, user.ID)
+	if err != nil {
+		s.log.Error("failed to export lists from database", "error", err)
+		return nil, fmt.Errorf("failed to export lists: %w", err)
+	}
+
+	exportLists := make(models.ImportListsLog, len(lists))
+	for i, list := range lists {
+		exportMovies := make([]models.ImportListMovieRef, len(list.Movies))
+		for j, movie := range list.Movies {
+			exportMovies[j] = models.ImportListMovieRef{
+				MovieID:   movie.MovieDetails.Movie.ID,
+				DateAdded: movie.DateAdded,
+				Position:  movie.Position,
+				Note:      movie.Note,
+			}
+		}
+
+		exportLists[i] = models.ImportListEntry{
+			Name:        list.Name,
+			Description: list.Description,
+			IsWatchlist: list.IsWatchlist,
+			Movies:      exportMovies,
+		}
+	}
+
+	s.log.Info("successfully exported lists", "listCount", len(exportLists))
+	return exportLists, nil
+}
+
+// ImportLists imports lists from import format
+func (s *ListService) ImportLists(ctx context.Context, lists models.ImportListsLog) error {
+	s.log.Info("ImportLists: starting lists import", "totalLists", len(lists))
+
+	totalMovies := 0
+	for _, list := range lists {
+		totalMovies += len(list.Movies)
+	}
+	s.log.Info("ImportLists: import details", "totalLists", len(lists), "totalMovies", totalMovies)
+
+	for _, importList := range lists {
+		var targetList *models.List
+		var err error
+
+		if importList.IsWatchlist {
+			// For watchlist, use existing or create new
+			targetList, err = s.GetWatchlist(ctx)
+			if err != nil {
+				// Create new watchlist
+				targetList, err = s.CreateList(ctx, importList.Name, importList.Description, true)
+				if err != nil {
+					s.log.Error("ImportLists: failed to create watchlist", "error", err)
+					return fmt.Errorf("ImportLists: failed to create watchlist: %w", err)
+				}
+			}
+		} else {
+			// For custom lists, create new
+			targetList, err = s.CreateList(ctx, importList.Name, importList.Description, false)
+			if err != nil {
+				s.log.Error("ImportLists: failed to create list", "listName", importList.Name, "error", err)
+				return fmt.Errorf("ImportLists: failed to create list %s: %w", importList.Name, err)
+			}
+		}
+
+		// Add movies to the target list
+		for _, movieRef := range importList.Movies {
+			// Ensure movie exists in DB
+			_, err := s.tmdb.GetMovieDetails(ctx, movieRef.MovieID)
+			if err != nil {
+				s.log.Error("ImportLists: failed to fetch movie details", "movieID", movieRef.MovieID, "listName", importList.Name, "error", err)
+				return fmt.Errorf("ImportLists: failed to fetch movie details for ID %d: %w", movieRef.MovieID, err)
+			}
+
+			// For import, we ignore position and use current time for date_added
+			err = s.AddMovieToList(ctx, targetList.ID, movieRef.MovieID, movieRef.Note)
+			if err != nil {
+				s.log.Error("ImportLists: failed to add movie to list", "movieID", movieRef.MovieID, "listID", targetList.ID, "error", err)
+				return fmt.Errorf("ImportLists: failed to add movie %d to list %d: %w", movieRef.MovieID, targetList.ID, err)
+			}
+		}
+	}
+
+	s.log.Info("ImportLists: successfully imported lists", "totalLists", len(lists))
+	return nil
+}

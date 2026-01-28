@@ -1103,3 +1103,61 @@ func (d *SqliteDB) UpdatePasswordResetRequired(ctx context.Context, userID int64
 	log.Debug("successfully updated password reset required", "userID", userID)
 	return nil
 }
+
+func (d *SqliteDB) ExportLists(ctx context.Context, userID int64) ([]models.List, error) {
+	log.Debug("exporting all lists with movies", "userID", userID)
+
+	results, err := d.queries.GetAllListsWithMovies(ctx, &userID)
+	if err != nil {
+		log.Error("failed to fetch lists with movies", "userID", userID, "error", err)
+		return nil, fmt.Errorf("failed to fetch lists with movies: %w", err)
+	}
+
+	listMap := make(map[int64]*models.List)
+	for _, result := range results {
+		listID := result.List.ID
+
+		if listMap[listID] == nil {
+			creationDate, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", result.List.CreationDate)
+			if err != nil {
+				log.Error("failed to parse list creation_date", "listID", listID, "error", err)
+				return nil, fmt.Errorf("failed to parse creation_date for list %d: %w", listID, err)
+			}
+
+			listMap[listID] = &models.List{
+				ID:           result.List.ID,
+				Name:         result.List.Name,
+				CreationDate: creationDate,
+				Description:  result.List.Description,
+				IsWatchlist:  result.List.IsWatchlist,
+				Movies:       []models.MovieItem{},
+			}
+		}
+
+		// Only add movie if it exists (LEFT JOIN may have null movies for empty lists)
+		if result.Movie.ID != 0 {
+			dateAdded, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", result.ListMovie.DateAdded)
+			if err != nil {
+				log.Error("failed to parse movie date_added in list", "listID", listID, "movieID", result.Movie.ID, "error", err)
+				return nil, fmt.Errorf("failed to parse date_added for movie %d: %w", result.Movie.ID, err)
+			}
+
+			movieItem := models.MovieItem{
+				MovieDetails: toModelsMovieDetails(result.Movie),
+				DateAdded:    dateAdded,
+				Position:     result.ListMovie.Position,
+				Note:         result.ListMovie.Note,
+			}
+
+			listMap[listID].Movies = append(listMap[listID].Movies, movieItem)
+		}
+	}
+
+	lists := make([]models.List, 0, len(listMap))
+	for _, list := range listMap {
+		lists = append(lists, *list)
+	}
+
+	log.Info("successfully exported lists", "userID", userID, "listCount", len(lists))
+	return lists, nil
+}
