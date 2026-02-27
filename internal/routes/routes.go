@@ -37,7 +37,7 @@ func NewRouter(
 	homeService := services.NewHomeService(watchedService, listService)
 
 	log.Debug("registering API routes")
-	apiHandlers := api.NewHandlers(db, watchedService)
+	apiHandlers := api.NewHandlers(db, watchedService, listService)
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware(*authService))
 		r.Use(middleware.JSONMiddleware)

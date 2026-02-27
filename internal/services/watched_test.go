@@ -210,3 +210,93 @@ func TestWatchedService_ImportExport_Empty(t *testing.T) {
 		t.Errorf("expected 0 days, got %d", len(exported))
 	}
 }
+
+func TestWatchedService_ImportAll(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
+
+	for i := 1; i <= 2; i++ {
+		movie := &models.MovieDetails{
+			Movie: models.Movie{
+				ID:    int64(i),
+				Title: "Test Movie",
+			},
+		}
+		if err := testDB.UpsertMovie(ctx, movie); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	note := "great"
+	position := int64(3)
+	listMovieDate := time.Date(2024, 1, 2, 15, 0, 0, 0, time.UTC)
+
+	importData := models.ImportAllData{
+		Watched: models.ImportWatchedMoviesLog{
+			{
+				Date: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				Movies: []models.ImportWatchedMovieRef{
+					{MovieID: 1, InTheaters: true},
+				},
+			},
+		},
+		Lists: models.ImportListsLog{
+			{
+				Name: "Favorites",
+				Movies: []models.ImportListMovieRef{
+					{MovieID: 2, DateAdded: listMovieDate, Position: &position, Note: &note},
+				},
+			},
+		},
+	}
+
+	if err := watchedService.ImportAll(ctx, importData); err != nil {
+		t.Fatal(err)
+	}
+
+	count, err := watchedService.GetWatchedCount(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("expected watched count 1, got %d", count)
+	}
+
+	lists, err := listService.GetAllLists(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lists) != 1 {
+		t.Fatalf("expected 1 custom list, got %d", len(lists))
+	}
+
+	details, err := listService.GetListDetails(ctx, lists[0].ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(details.Movies) != 1 {
+		t.Fatalf("expected 1 movie in list, got %d", len(details.Movies))
+	}
+
+	movie := details.Movies[0]
+	if movie.MovieDetails.Movie.ID != 2 {
+		t.Fatalf("expected list movie ID 2, got %d", movie.MovieDetails.Movie.ID)
+	}
+	if movie.Position == nil || *movie.Position != position {
+		t.Fatalf("expected imported position %d, got %v", position, movie.Position)
+	}
+	if movie.Note == nil || *movie.Note != note {
+		t.Fatalf("expected imported note %q, got %v", note, movie.Note)
+	}
+	if !movie.DateAdded.Equal(listMovieDate) {
+		t.Fatalf("expected imported date_added %s, got %s", listMovieDate, movie.DateAdded)
+	}
+}

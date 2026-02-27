@@ -482,6 +482,34 @@ func (d *SqliteDB) AddMovieToList(ctx context.Context, userID int64, insertMovie
 	return nil
 }
 
+func (d *SqliteDB) UpsertMovieInList(ctx context.Context, userID int64, insertMovieList InsertMovieList) error {
+	log.Debug("upserting movie in list", "movieID", insertMovieList.MovieID, "listID", insertMovieList.ListID)
+
+	// First verify the list exists and belongs to the user
+	_, err := d.queries.GetListByID(ctx, sqlc.GetListByIDParams{UserID: &userID, ID: insertMovieList.ListID})
+	if err != nil {
+		log.Error("failed to verify list ownership", "listID", insertMovieList.ListID, "userID", userID, "error", err)
+		return fmt.Errorf("failed to verify list ownership: %w", err)
+	}
+
+	err = d.queries.UpsertMovieInList(ctx, sqlc.UpsertMovieInListParams{
+		MovieID:   insertMovieList.MovieID,
+		ListID:    insertMovieList.ListID,
+		DateAdded: insertMovieList.DateAdded.Format("2006-01-02 15:04:05.999999999 -0700 MST"),
+		Position:  insertMovieList.Position,
+		Note:      insertMovieList.Note,
+		ID:        insertMovieList.ListID,
+		UserID:    &userID,
+	})
+	if err != nil {
+		log.Error("failed to upsert movie in list", "movieID", insertMovieList.MovieID, "listID", insertMovieList.ListID, "error", err)
+		return fmt.Errorf("failed to upsert movie %d in list %d: %w", insertMovieList.MovieID, insertMovieList.ListID, err)
+	}
+
+	log.Info("successfully upserted movie in list", "movieID", insertMovieList.MovieID, "listID", insertMovieList.ListID)
+	return nil
+}
+
 func (d *SqliteDB) GetAllLists(ctx context.Context, userID int64) ([]InsertList, error) {
 	log.Debug("retrieving all lists from database")
 
@@ -1102,4 +1130,63 @@ func (d *SqliteDB) UpdatePasswordResetRequired(ctx context.Context, userID int64
 
 	log.Debug("successfully updated password reset required", "userID", userID)
 	return nil
+}
+
+func (d *SqliteDB) ExportLists(ctx context.Context, userID int64) ([]models.List, error) {
+	log.Debug("exporting all lists with movies", "userID", userID)
+
+	results, err := d.queries.GetAllListsWithMovies(ctx, &userID)
+	if err != nil {
+		log.Error("failed to fetch lists with movies", "userID", userID, "error", err)
+		return nil, fmt.Errorf("failed to fetch lists with movies: %w", err)
+	}
+
+	// create the list with a deterministic order
+	lists := []models.List{}
+	listIndexes := map[int64]int{}
+
+	for _, result := range results {
+		listID := result.List.ID
+
+		idx, ok := listIndexes[listID]
+		if !ok {
+			creationDate, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", result.List.CreationDate)
+			if err != nil {
+				log.Error("failed to parse list creation_date", "listID", listID, "error", err)
+				return nil, fmt.Errorf("failed to parse creation_date for list %d: %w", listID, err)
+			}
+
+			lists = append(lists, models.List{
+				ID:           result.List.ID,
+				Name:         result.List.Name,
+				CreationDate: creationDate,
+				Description:  result.List.Description,
+				IsWatchlist:  result.List.IsWatchlist,
+				Movies:       []models.MovieItem{},
+			})
+			idx = len(lists) - 1
+			listIndexes[listID] = idx
+		}
+
+		// Only add movie if it exists (LEFT JOIN may have null movies for empty lists)
+		if result.Movie.ID != 0 {
+			dateAdded, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", result.ListMovie.DateAdded)
+			if err != nil {
+				log.Error("failed to parse movie date_added in list", "listID", listID, "movieID", result.Movie.ID, "error", err)
+				return nil, fmt.Errorf("failed to parse date_added for movie %d: %w", result.Movie.ID, err)
+			}
+
+			movieItem := models.MovieItem{
+				MovieDetails: toModelsMovieDetails(result.Movie),
+				DateAdded:    dateAdded,
+				Position:     result.ListMovie.Position,
+				Note:         result.ListMovie.Note,
+			}
+
+			lists[idx].Movies = append(lists[idx].Movies, movieItem)
+		}
+	}
+
+	log.Info("successfully exported lists", "userID", userID, "listCount", len(lists))
+	return lists, nil
 }

@@ -6,6 +6,7 @@
 
 # feats:
 
+- [x] export also the watchlist and all lists with the watched movies export
 - [ ] show lists containing the movie in movie details
 - [ ] different switchable view for the watched timeline
 - [ ] add people search support
@@ -34,6 +35,7 @@
 - [x] custom ad-hoc watchlist (separate from lists)
 - [ ] sharable lists
 - [ ] jellyseer integration
+- [ ] add a watchlist section in the home page with the movies to watch next
 
 # optimizations:
 

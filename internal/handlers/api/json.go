@@ -20,7 +20,7 @@ func jsonResponse(w http.ResponseWriter, status int, body any) {
 	}
 
 	w.WriteHeader(status)
-	_, writeErr := w.Write(data)
+	_, writeErr := w.Write(data) // #nosec G705 -- data is trusted output from json.Marshal
 	if writeErr != nil {
 		log.Error("Failed to write JSON response", "error", writeErr)
 	}
