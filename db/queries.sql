@@ -267,13 +267,42 @@ WHERE
     list.id = ?
     AND list.user_id = ?;
 
+-- name: UpsertMovieInList :exec
+INSERT INTO
+    list_movie (
+        movie_id,
+        list_id,
+        date_added,
+        position,
+        note
+    )
+SELECT
+    ?,
+    ?,
+    ?,
+    ?,
+    ?
+FROM
+    list
+WHERE
+    list.id = ?
+    AND list.user_id = ?
+ON CONFLICT(movie_id, list_id) DO
+UPDATE
+SET
+    date_added = excluded.date_added,
+    position = excluded.position,
+    note = excluded.note;
+
 -- name: GetAllLists :many
 SELECT
     *
 FROM
     list
 WHERE
-    user_id = ?;
+    user_id = ?
+ORDER BY
+    id;
 
 -- name: GetWatchlistID :one
 SELECT
@@ -658,4 +687,8 @@ FROM
     LEFT JOIN list_movie ON list_movie.list_id = list.id
     LEFT JOIN movie ON movie.id = list_movie.movie_id
 WHERE
-    list.user_id = ?;
+    list.user_id = ?
+ORDER BY
+    list.id,
+    list_movie.date_added,
+    list_movie.movie_id;

@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -342,37 +344,76 @@ func (s *ListService) ExportLists(ctx context.Context) (models.ImportListsLog, e
 func (s *ListService) ImportLists(ctx context.Context, lists models.ImportListsLog) error {
 	s.log.Info("ImportLists: starting lists import", "totalLists", len(lists))
 
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("ImportLists: failed to get user", "error", err)
+		return fmt.Errorf("ImportLists: failed to get user: %w", err)
+	}
+
+	existingLists, err := s.db.GetAllLists(ctx, user.ID)
+	if err != nil {
+		s.log.Error("ImportLists: failed to fetch existing lists", "error", err)
+		return fmt.Errorf("ImportLists: failed to fetch existing lists: %w", err)
+	}
+
+	existingCustomLists := make(map[string]int64, len(existingLists))
+	for _, existingList := range existingLists {
+		if !existingList.IsWatchlist {
+			existingCustomLists[existingList.Name] = existingList.ID
+		}
+	}
+
+	var watchlistID int64
+	watchlistResolved := false
+
 	totalMovies := 0
 	for _, list := range lists {
 		totalMovies += len(list.Movies)
 	}
+
 	s.log.Info("ImportLists: import details", "totalLists", len(lists), "totalMovies", totalMovies)
 
 	for _, importList := range lists {
-		var targetList *models.List
-		var err error
+		var targetListID int64
 
 		if importList.IsWatchlist {
-			// For watchlist, use existing or create new
-			targetList, err = s.GetWatchlist(ctx)
-			if err != nil {
-				// Create new watchlist
-				targetList, err = s.CreateList(ctx, importList.Name, importList.Description, true)
+			if !watchlistResolved {
+				watchlist, err := s.GetWatchlist(ctx)
 				if err != nil {
-					s.log.Error("ImportLists: failed to create watchlist", "error", err)
-					return fmt.Errorf("ImportLists: failed to create watchlist: %w", err)
+					if !errors.Is(err, sql.ErrNoRows) {
+						s.log.Error("ImportLists: failed to get watchlist", "error", err)
+						return fmt.Errorf("ImportLists: failed to get watchlist: %w", err)
+					}
+
+					watchlist, err = s.CreateList(ctx, importList.Name, importList.Description, true)
+					if err != nil {
+						s.log.Error("ImportLists: failed to create watchlist", "error", err)
+						return fmt.Errorf("ImportLists: failed to create watchlist: %w", err)
+					}
 				}
+
+				watchlistID = watchlist.ID
+				watchlistResolved = true
 			}
+
+			targetListID = watchlistID
 		} else {
-			// For custom lists, create new
-			targetList, err = s.CreateList(ctx, importList.Name, importList.Description, false)
-			if err != nil {
-				s.log.Error("ImportLists: failed to create list", "listName", importList.Name, "error", err)
-				return fmt.Errorf("ImportLists: failed to create list %s: %w", importList.Name, err)
+			existingListID, ok := existingCustomLists[importList.Name]
+			if ok {
+				targetListID = existingListID
+			} else {
+				newList, err := s.CreateList(ctx, importList.Name, importList.Description, false)
+				if err != nil {
+					s.log.Error("ImportLists: failed to create list", "listName", importList.Name, "error", err)
+					return fmt.Errorf("ImportLists: failed to create list %s: %w", importList.Name, err)
+				}
+
+				targetListID = newList.ID
+				existingCustomLists[importList.Name] = newList.ID
 			}
 		}
 
-		// Add movies to the target list
+		// Upsert movies in the target list
 		for _, movieRef := range importList.Movies {
 			// Ensure movie exists in DB
 			_, err := s.tmdb.GetMovieDetails(ctx, movieRef.MovieID)
@@ -381,11 +422,21 @@ func (s *ListService) ImportLists(ctx context.Context, lists models.ImportListsL
 				return fmt.Errorf("ImportLists: failed to fetch movie details for ID %d: %w", movieRef.MovieID, err)
 			}
 
-			// For import, we ignore position and use current time for date_added
-			err = s.AddMovieToList(ctx, targetList.ID, movieRef.MovieID, movieRef.Note)
+			dateAdded := movieRef.DateAdded
+			if dateAdded.IsZero() {
+				dateAdded = time.Now()
+			}
+
+			err = s.db.UpsertMovieInList(ctx, user.ID, db.InsertMovieList{
+				MovieID:   movieRef.MovieID,
+				ListID:    targetListID,
+				DateAdded: dateAdded,
+				Position:  movieRef.Position,
+				Note:      movieRef.Note,
+			})
 			if err != nil {
-				s.log.Error("ImportLists: failed to add movie to list", "movieID", movieRef.MovieID, "listID", targetList.ID, "error", err)
-				return fmt.Errorf("ImportLists: failed to add movie %d to list %d: %w", movieRef.MovieID, targetList.ID, err)
+				s.log.Error("ImportLists: failed to upsert movie in list", "movieID", movieRef.MovieID, "listID", targetListID, "error", err)
+				return fmt.Errorf("ImportLists: failed to upsert movie %d in list %d: %w", movieRef.MovieID, targetListID, err)
 			}
 		}
 	}

@@ -113,6 +113,13 @@ func (h *Handlers) importWatched(w http.ResponseWriter, r *http.Request) {
 	for _, list := range allData.Lists {
 		totalMovies += len(list.Movies)
 	}
+
+	if totalMovies == 0 {
+		log.Warn("import request rejected: payload has no movies")
+		http.Error(w, "request payload contains no movies", http.StatusBadRequest)
+		return
+	}
+
 	log.Info("import request received", "totalDays", len(allData.Watched), "totalLists", totalLists, "totalMovies", totalMovies)
 
 	ctx := context.WithoutCancel(r.Context())

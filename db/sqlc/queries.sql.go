@@ -236,6 +236,8 @@ FROM
     list
 WHERE
     user_id = ?
+ORDER BY
+    id
 `
 
 func (q *Queries) GetAllLists(ctx context.Context, userID *int64) ([]List, error) {
@@ -279,6 +281,10 @@ FROM
     LEFT JOIN movie ON movie.id = list_movie.movie_id
 WHERE
     list.user_id = ?
+ORDER BY
+    list.id,
+    list_movie.date_added,
+    list_movie.movie_id
 `
 
 type GetAllListsWithMoviesRow struct {
@@ -1881,6 +1887,57 @@ func (q *Queries) UpsertMovie(ctx context.Context, arg UpsertMovieParams) error 
 		arg.Runtime,
 		arg.Status,
 		arg.Tagline,
+	)
+	return err
+}
+
+const upsertMovieInList = `-- name: UpsertMovieInList :exec
+INSERT INTO
+    list_movie (
+        movie_id,
+        list_id,
+        date_added,
+        position,
+        note
+    )
+SELECT
+    ?,
+    ?,
+    ?,
+    ?,
+    ?
+FROM
+    list
+WHERE
+    list.id = ?
+    AND list.user_id = ?
+ON CONFLICT(movie_id, list_id) DO
+UPDATE
+SET
+    date_added = excluded.date_added,
+    position = excluded.position,
+    note = excluded.note
+`
+
+type UpsertMovieInListParams struct {
+	MovieID   int64
+	ListID    int64
+	DateAdded string
+	Position  *int64
+	Note      *string
+	ID        int64
+	UserID    *int64
+}
+
+func (q *Queries) UpsertMovieInList(ctx context.Context, arg UpsertMovieInListParams) error {
+	_, err := q.db.ExecContext(ctx, upsertMovieInList,
+		arg.MovieID,
+		arg.ListID,
+		arg.DateAdded,
+		arg.Position,
+		arg.Note,
+		arg.ID,
+		arg.UserID,
 	)
 	return err
 }
