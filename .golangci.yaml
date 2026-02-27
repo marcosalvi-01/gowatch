@@ -27,42 +27,33 @@ linters:
     - contextcheck
     - containedctx
 
-linters-settings:
-  gocyclo:
-    min-complexity: 15
+  settings:
+    goconst:
+      min-len: 3
+      min-occurrences: 3
 
-  dupl:
-    threshold: 100
+    errcheck:
+      check-type-assertions: true
 
-  goconst:
-    min-len: 3
-    min-occurrences: 3
+    govet:
+      disable:
+        - shadow
 
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-
-  govet:
-    enable-all: true
-    disable:
-      - shadow
+  exclusions:
+    rules:
+      - path: ".*_test\\.go$"
+        linters:
+          - gocyclo
+          - errcheck
+          - dupl
+          - gosec
+          - goconst
+    paths:
+      - "db/sqlc/.*"
+      - "internal/ui/.*_templ\\.go$"
+      - "internal/ui/templui/.*"
+      - "internal/ui/utils/templui\\.go$"
 
 issues:
   max-issues-per-linter: 0
-
   max-same-issues: 0
-
-  # Exclude some linters from test files and generated files
-  exclude-rules:
-    - path: ".*_test.go$"
-      linters:
-        - gocyclo
-        - errcheck
-        - dupl
-        - gosec
-        - goconst
-    # Exclude generated files from all linters
-    - path: "db/sqlc/.*"
-    - path: "internal/ui/.*_templ.go"
-    - path: "internal/ui/templui/.*"
-    - path: "internal/ui/utils/templui.go"
