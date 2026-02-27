@@ -505,7 +505,7 @@ func (h *Handlers) ImportWatched(w http.ResponseWriter, r *http.Request) {
 		allData.Watched = watchedData
 	}
 
-	totalMovies := len(allData.Watched)
+	totalMovies := 0
 	for _, importMovie := range allData.Watched {
 		totalMovies += len(importMovie.Movies)
 	}
