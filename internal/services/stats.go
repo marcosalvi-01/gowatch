@@ -181,6 +181,266 @@ func (s *WatchedService) getMostWatchedActors(ctx context.Context, limit int) ([
 	return allActors, nil
 }
 
+func (s *WatchedService) getRewatchStats(ctx context.Context) (*models.RewatchStats, error) {
+	s.log.Debug("retrieving rewatch stats")
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	stats, err := s.db.GetRewatchStats(ctx, user.ID)
+	if err != nil {
+		s.log.Error("failed to retrieve rewatch stats", "error", err)
+		return nil, fmt.Errorf("failed to get rewatch stats: %w", err)
+	}
+
+	return stats, nil
+}
+
+func (s *WatchedService) getWatchedDates(ctx context.Context) ([]time.Time, error) {
+	s.log.Debug("retrieving watched dates")
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	dates, err := s.db.GetWatchedDates(ctx, user.ID)
+	if err != nil {
+		s.log.Error("failed to retrieve watched dates", "error", err)
+		return nil, fmt.Errorf("failed to get watched dates: %w", err)
+	}
+
+	return dates, nil
+}
+
+func (s *WatchedService) getDailyWatchCountsLastYear(ctx context.Context) ([]models.DailyWatchCount, error) {
+	s.log.Debug("retrieving daily watch counts for last year")
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetDailyWatchCountsLastYear(ctx, user.ID)
+	if err != nil {
+		s.log.Error("failed to retrieve daily watch counts for last year", "error", err)
+		return nil, fmt.Errorf("failed to get daily watch counts for last year: %w", err)
+	}
+
+	return data, nil
+}
+
+func (s *WatchedService) getTopDirectors(ctx context.Context, limit int) ([]models.TopCrewMember, error) {
+	s.log.Debug("retrieving top directors", "limit", limit)
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetTopDirectors(ctx, user.ID, limit)
+	if err != nil {
+		s.log.Error("failed to retrieve top directors", "error", err)
+		return nil, fmt.Errorf("failed to get top directors: %w", err)
+	}
+
+	return data, nil
+}
+
+func (s *WatchedService) getTopWriters(ctx context.Context, limit int) ([]models.TopCrewMember, error) {
+	s.log.Debug("retrieving top writers", "limit", limit)
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetTopWriters(ctx, user.ID, limit)
+	if err != nil {
+		s.log.Error("failed to retrieve top writers", "error", err)
+		return nil, fmt.Errorf("failed to get top writers: %w", err)
+	}
+
+	return data, nil
+}
+
+func (s *WatchedService) getTopComposers(ctx context.Context, limit int) ([]models.TopCrewMember, error) {
+	s.log.Debug("retrieving top composers", "limit", limit)
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetTopComposers(ctx, user.ID, limit)
+	if err != nil {
+		s.log.Error("failed to retrieve top composers", "error", err)
+		return nil, fmt.Errorf("failed to get top composers: %w", err)
+	}
+
+	return data, nil
+}
+
+func (s *WatchedService) getTopCinematographers(ctx context.Context, limit int) ([]models.TopCrewMember, error) {
+	s.log.Debug("retrieving top cinematographers", "limit", limit)
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetTopCinematographers(ctx, user.ID, limit)
+	if err != nil {
+		s.log.Error("failed to retrieve top cinematographers", "error", err)
+		return nil, fmt.Errorf("failed to get top cinematographers: %w", err)
+	}
+
+	return data, nil
+}
+
+func (s *WatchedService) getTopLanguages(ctx context.Context, limit int) ([]models.LanguageCount, error) {
+	s.log.Debug("retrieving top languages", "limit", limit)
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetTopLanguages(ctx, user.ID, limit)
+	if err != nil {
+		s.log.Error("failed to retrieve top languages", "error", err)
+		return nil, fmt.Errorf("failed to get top languages: %w", err)
+	}
+
+	return data, nil
+}
+
+func (s *WatchedService) getReleaseYearDistribution(ctx context.Context) ([]models.ReleaseYearCount, error) {
+	s.log.Debug("retrieving release year distribution")
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetReleaseYearDistribution(ctx, user.ID)
+	if err != nil {
+		s.log.Error("failed to retrieve release year distribution", "error", err)
+		return nil, fmt.Errorf("failed to get release year distribution: %w", err)
+	}
+
+	return data, nil
+}
+
+func (s *WatchedService) getLongestWatchedMovie(ctx context.Context) (*models.RuntimeMovie, error) {
+	s.log.Debug("retrieving longest watched movie")
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	movie, err := s.db.GetLongestWatchedMovie(ctx, user.ID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			s.log.Debug("no longest watched movie found")
+			return nil, nil
+		}
+		s.log.Error("failed to retrieve longest watched movie", "error", err)
+		return nil, fmt.Errorf("failed to get longest watched movie: %w", err)
+	}
+
+	return movie, nil
+}
+
+func (s *WatchedService) getShortestWatchedMovie(ctx context.Context) (*models.RuntimeMovie, error) {
+	s.log.Debug("retrieving shortest watched movie")
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	movie, err := s.db.GetShortestWatchedMovie(ctx, user.ID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			s.log.Debug("no shortest watched movie found")
+			return nil, nil
+		}
+		s.log.Error("failed to retrieve shortest watched movie", "error", err)
+		return nil, fmt.Errorf("failed to get shortest watched movie: %w", err)
+	}
+
+	return movie, nil
+}
+
+func (s *WatchedService) getBudgetTierDistribution(ctx context.Context) ([]models.BudgetTierCount, error) {
+	s.log.Debug("retrieving budget tier distribution")
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetBudgetTierDistribution(ctx, user.ID)
+	if err != nil {
+		s.log.Error("failed to retrieve budget tier distribution", "error", err)
+		return nil, fmt.Errorf("failed to get budget tier distribution: %w", err)
+	}
+
+	return s.normalizeBudgetTierDistribution(data), nil
+}
+
+func (s *WatchedService) getTopReturnOnInvestmentMovies(ctx context.Context, limit int) ([]models.MovieFinancial, error) {
+	s.log.Debug("retrieving top return on investment movies", "limit", limit)
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetTopReturnOnInvestmentMovies(ctx, user.ID, limit)
+	if err != nil {
+		s.log.Error("failed to retrieve top return on investment movies", "error", err)
+		return nil, fmt.Errorf("failed to get top return on investment movies: %w", err)
+	}
+
+	return s.sortMoviesByROIDesc(data), nil
+}
+
+func (s *WatchedService) getBiggestBudgetMovies(ctx context.Context, limit int) ([]models.MovieFinancial, error) {
+	s.log.Debug("retrieving biggest budget movies", "limit", limit)
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetBiggestBudgetMovies(ctx, user.ID, limit)
+	if err != nil {
+		s.log.Error("failed to retrieve biggest budget movies", "error", err)
+		return nil, fmt.Errorf("failed to get biggest budget movies: %w", err)
+	}
+
+	return s.sortMoviesByBudgetDesc(data), nil
+}
+
 func (s *WatchedService) getDateRange(ctx context.Context) (*models.DateRange, error) {
 	s.log.Debug("retrieving watched date range")
 	user, err := common.GetUser(ctx)
@@ -460,4 +720,172 @@ func (s *WatchedService) calculateAverages(total int64, dateRange *models.DateRa
 
 	s.log.Debug("calculated averages", "avgPerDay", avgPerDay, "avgPerWeek", avgPerWeek, "avgPerMonth", avgPerMonth)
 	return avgPerDay, avgPerWeek, avgPerMonth
+}
+
+func (s *WatchedService) calculateStreakStats(watchedDates []time.Time, now time.Time) models.StreakStats {
+	if len(watchedDates) == 0 {
+		return models.StreakStats{}
+	}
+
+	normalizedDates := make([]time.Time, len(watchedDates))
+	for i, watchedDate := range watchedDates {
+		normalizedDates[i] = normalizeDate(watchedDate)
+	}
+
+	sort.Slice(normalizedDates, func(i, j int) bool {
+		return normalizedDates[i].Before(normalizedDates[j])
+	})
+
+	uniqueDates := make([]time.Time, 0, len(normalizedDates))
+	for _, watchedDate := range normalizedDates {
+		if len(uniqueDates) == 0 || !uniqueDates[len(uniqueDates)-1].Equal(watchedDate) {
+			uniqueDates = append(uniqueDates, watchedDate)
+		}
+	}
+
+	longestDays := int64(1)
+	longestStartIdx := 0
+	currentRunDays := int64(1)
+	currentRunStartIdx := 0
+
+	for i := 1; i < len(uniqueDates); i++ {
+		if isConsecutiveDay(uniqueDates[i-1], uniqueDates[i]) {
+			currentRunDays++
+			continue
+		}
+
+		if currentRunDays > longestDays {
+			longestDays = currentRunDays
+			longestStartIdx = currentRunStartIdx
+		}
+
+		currentRunDays = 1
+		currentRunStartIdx = i
+	}
+
+	if currentRunDays > longestDays {
+		longestDays = currentRunDays
+		longestStartIdx = currentRunStartIdx
+	}
+
+	longestEndIdx := longestStartIdx + int(longestDays) - 1
+	longestStart := uniqueDates[longestStartIdx]
+	longestEnd := uniqueDates[longestEndIdx]
+
+	recentRunDays := int64(1)
+	for i := len(uniqueDates) - 1; i > 0; i-- {
+		if !isConsecutiveDay(uniqueDates[i-1], uniqueDates[i]) {
+			break
+		}
+		recentRunDays++
+	}
+
+	latestDate := uniqueDates[len(uniqueDates)-1]
+	today := normalizeDate(now)
+	currentDays := int64(0)
+	if latestDate.Equal(today) {
+		currentDays = recentRunDays
+	}
+
+	streakStats := models.StreakStats{
+		CurrentDays:  currentDays,
+		LongestDays:  longestDays,
+		LongestStart: &longestStart,
+		LongestEnd:   &longestEnd,
+	}
+
+	s.log.Debug("calculated streak stats",
+		"currentDays", streakStats.CurrentDays,
+		"longestDays", streakStats.LongestDays,
+		"longestStart", streakStats.LongestStart,
+		"longestEnd", streakStats.LongestEnd,
+	)
+
+	return streakStats
+}
+
+func (s *WatchedService) normalizeBudgetTierDistribution(data []models.BudgetTierCount) []models.BudgetTierCount {
+	budgetTierCounts := map[models.BudgetTier]int64{
+		models.BudgetTierIndie:       0,
+		models.BudgetTierMid:         0,
+		models.BudgetTierBlockbuster: 0,
+		models.BudgetTierUnknown:     0,
+	}
+
+	for _, row := range data {
+		switch row.Tier {
+		case models.BudgetTierIndie, models.BudgetTierMid, models.BudgetTierBlockbuster, models.BudgetTierUnknown:
+			budgetTierCounts[row.Tier] += row.Count
+		default:
+			budgetTierCounts[models.BudgetTierUnknown] += row.Count
+		}
+	}
+
+	orderedTiers := []models.BudgetTier{
+		models.BudgetTierIndie,
+		models.BudgetTierMid,
+		models.BudgetTierBlockbuster,
+		models.BudgetTierUnknown,
+	}
+
+	result := make([]models.BudgetTierCount, 0, len(orderedTiers))
+	for _, tier := range orderedTiers {
+		result = append(result, models.BudgetTierCount{
+			Tier:  tier,
+			Count: budgetTierCounts[tier],
+		})
+	}
+
+	return result
+}
+
+func (s *WatchedService) sortMoviesByROIDesc(movies []models.MovieFinancial) []models.MovieFinancial {
+	result := make([]models.MovieFinancial, 0, len(movies))
+	for _, movie := range movies {
+		if movie.Budget > 0 {
+			result = append(result, movie)
+		}
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].ROI != result[j].ROI {
+			return result[i].ROI > result[j].ROI
+		}
+		if result[i].Revenue != result[j].Revenue {
+			return result[i].Revenue > result[j].Revenue
+		}
+		return result[i].Title < result[j].Title
+	})
+
+	return result
+}
+
+func (s *WatchedService) sortMoviesByBudgetDesc(movies []models.MovieFinancial) []models.MovieFinancial {
+	result := make([]models.MovieFinancial, 0, len(movies))
+	for _, movie := range movies {
+		if movie.Budget > 0 {
+			result = append(result, movie)
+		}
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Budget != result[j].Budget {
+			return result[i].Budget > result[j].Budget
+		}
+		if result[i].Revenue != result[j].Revenue {
+			return result[i].Revenue > result[j].Revenue
+		}
+		return result[i].Title < result[j].Title
+	})
+
+	return result
+}
+
+func normalizeDate(t time.Time) time.Time {
+	year, month, day := t.Date()
+	return time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
+}
+
+func isConsecutiveDay(previous, current time.Time) bool {
+	return previous.AddDate(0, 0, 1).Equal(current)
 }

@@ -46,14 +46,28 @@ type WatchedMovieRecords struct {
 // WatchedStats contains all statistics for watched movies
 type WatchedStats struct {
 	TotalWatched                int64
+	RewatchStats                RewatchStats
+	LongestStreak               StreakStats
 	TheaterVsHome               []TheaterCount
 	MonthlyLastYear             []PeriodCount
 	YearlyAllTime               []PeriodCount
+	DailyWatchCountsLastYear    []DailyWatchCount
 	WeekdayDistribution         []PeriodCount
 	Genres                      []GenreCount
+	ReleaseYearDistribution     []ReleaseYearCount
 	MostWatchedMovies           []TopMovie
 	MostWatchedDay              *MostWatchedDay
 	MostWatchedActors           []TopActor
+	TopDirectors                []TopCrewMember
+	TopWriters                  []TopCrewMember
+	TopComposers                []TopCrewMember
+	TopCinematographers         []TopCrewMember
+	TopLanguages                []LanguageCount
+	LongestMovieWatched         *RuntimeMovie
+	ShortestMovieWatched        *RuntimeMovie
+	BudgetTierDistribution      []BudgetTierCount
+	TopReturnOnInvestmentMovies []MovieFinancial
+	BiggestBudgetMovies         []MovieFinancial
 	AvgPerDay                   float64
 	AvgPerWeek                  float64
 	AvgPerMonth                 float64
@@ -110,6 +124,80 @@ type TopMovie struct {
 	ID         int64
 	PosterPath string
 	WatchCount int64
+}
+
+type RewatchStats struct {
+	UniqueMovieCount    int64
+	RewatchedMovieCount int64
+	RewatchCount        int64
+}
+
+type StreakStats struct {
+	CurrentDays  int64
+	LongestDays  int64
+	LongestStart *time.Time
+	LongestEnd   *time.Time
+}
+
+type DailyWatchCount struct {
+	Date  time.Time
+	Count int64
+}
+
+type ReleaseYearCount struct {
+	Year  int
+	Count int64
+}
+
+type TopCrewMember struct {
+	ID          int64
+	Name        string
+	ProfilePath string
+	WatchCount  int64
+}
+
+type LanguageCount struct {
+	Language   string
+	WatchCount int64
+}
+
+type RuntimeMovie struct {
+	ID             int64
+	Title          string
+	PosterPath     string
+	RuntimeMinutes int64
+}
+
+type BudgetTier string
+
+const (
+	BudgetTierIndie       BudgetTier = "indie"
+	BudgetTierMid         BudgetTier = "mid"
+	BudgetTierBlockbuster BudgetTier = "blockbuster"
+	BudgetTierUnknown     BudgetTier = "unknown"
+)
+
+func BudgetTierFromString(value string) BudgetTier {
+	switch BudgetTier(value) {
+	case BudgetTierIndie, BudgetTierMid, BudgetTierBlockbuster, BudgetTierUnknown:
+		return BudgetTier(value)
+	default:
+		return BudgetTierUnknown
+	}
+}
+
+type BudgetTierCount struct {
+	Tier  BudgetTier
+	Count int64
+}
+
+type MovieFinancial struct {
+	ID         int64
+	Title      string
+	PosterPath string
+	Budget     int64
+	Revenue    int64
+	ROI        float64
 }
 
 type TopActor struct {

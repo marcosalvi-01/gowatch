@@ -825,6 +825,24 @@ func (d *SqliteDB) GetWatchedDateRange(ctx context.Context, userID int64) (*mode
 	return &models.DateRange{MinDate: min, MaxDate: max}, nil
 }
 
+func (d *SqliteDB) GetWatchedDates(ctx context.Context, userID int64) ([]time.Time, error) {
+	log.Debug("getting watched dates")
+
+	data, err := d.queries.GetWatchedDates(ctx, &userID)
+	if err != nil {
+		log.Error("failed to get watched dates", "error", err)
+		return nil, fmt.Errorf("failed to get watched dates: %w", err)
+	}
+
+	result := make([]time.Time, len(data))
+	for i, watchedDate := range data {
+		result[i] = watchedDate.Time
+	}
+
+	log.Debug("retrieved watched dates", "count", len(result))
+	return result, nil
+}
+
 func (d *SqliteDB) GetTotalWatchedStats(ctx context.Context, userID int64) (*models.TotalStats, error) {
 	log.Debug("getting total watched stats")
 
@@ -844,6 +862,299 @@ func (d *SqliteDB) GetTotalWatchedStats(ctx context.Context, userID int64) (*mod
 		Count: stats.Count,
 		Hours: totalRuntime / 60.0,
 	}, nil
+}
+
+func (d *SqliteDB) GetRewatchStats(ctx context.Context, userID int64) (*models.RewatchStats, error) {
+	log.Debug("getting rewatch stats")
+
+	stats, err := d.queries.GetRewatchStats(ctx, &userID)
+	if err != nil {
+		log.Error("failed to get rewatch stats", "error", err)
+		return nil, fmt.Errorf("failed to get rewatch stats: %w", err)
+	}
+
+	result := &models.RewatchStats{
+		UniqueMovieCount:    stats.UniqueMovieCount,
+		RewatchedMovieCount: stats.RewatchedMovieCount,
+		RewatchCount:        stats.RewatchCount,
+	}
+
+	log.Debug("retrieved rewatch stats", "uniqueMovieCount", result.UniqueMovieCount, "rewatchedMovieCount", result.RewatchedMovieCount, "rewatchCount", result.RewatchCount)
+	return result, nil
+}
+
+func (d *SqliteDB) GetDailyWatchCountsLastYear(ctx context.Context, userID int64) ([]models.DailyWatchCount, error) {
+	log.Debug("getting daily watch counts for last year")
+
+	data, err := d.queries.GetDailyWatchCountsLastYear(ctx, &userID)
+	if err != nil {
+		log.Error("failed to get daily watch counts for last year", "error", err)
+		return nil, fmt.Errorf("failed to get daily watch counts for last year: %w", err)
+	}
+
+	result := make([]models.DailyWatchCount, len(data))
+	for i, row := range data {
+		result[i] = models.DailyWatchCount{
+			Date:  row.WatchedDate.Time,
+			Count: row.Count,
+		}
+	}
+
+	log.Debug("retrieved daily watch counts for last year", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetTopDirectors(ctx context.Context, userID int64, limit int) ([]models.TopCrewMember, error) {
+	log.Debug("getting top directors", "limit", limit)
+
+	data, err := d.queries.GetTopDirectors(ctx, sqlc.GetTopDirectorsParams{UserID: &userID, Limit: int64(limit)})
+	if err != nil {
+		log.Error("failed to get top directors", "error", err)
+		return nil, fmt.Errorf("failed to get top directors: %w", err)
+	}
+
+	result := make([]models.TopCrewMember, len(data))
+	for i, row := range data {
+		result[i] = models.TopCrewMember{
+			ID:          row.ID,
+			Name:        row.Name,
+			ProfilePath: row.ProfilePath,
+			WatchCount:  row.WatchCount,
+		}
+	}
+
+	log.Debug("retrieved top directors", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetTopWriters(ctx context.Context, userID int64, limit int) ([]models.TopCrewMember, error) {
+	log.Debug("getting top writers", "limit", limit)
+
+	data, err := d.queries.GetTopWriters(ctx, sqlc.GetTopWritersParams{UserID: &userID, Limit: int64(limit)})
+	if err != nil {
+		log.Error("failed to get top writers", "error", err)
+		return nil, fmt.Errorf("failed to get top writers: %w", err)
+	}
+
+	result := make([]models.TopCrewMember, len(data))
+	for i, row := range data {
+		result[i] = models.TopCrewMember{
+			ID:          row.ID,
+			Name:        row.Name,
+			ProfilePath: row.ProfilePath,
+			WatchCount:  row.WatchCount,
+		}
+	}
+
+	log.Debug("retrieved top writers", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetTopComposers(ctx context.Context, userID int64, limit int) ([]models.TopCrewMember, error) {
+	log.Debug("getting top composers", "limit", limit)
+
+	data, err := d.queries.GetTopComposers(ctx, sqlc.GetTopComposersParams{UserID: &userID, Limit: int64(limit)})
+	if err != nil {
+		log.Error("failed to get top composers", "error", err)
+		return nil, fmt.Errorf("failed to get top composers: %w", err)
+	}
+
+	result := make([]models.TopCrewMember, len(data))
+	for i, row := range data {
+		result[i] = models.TopCrewMember{
+			ID:          row.ID,
+			Name:        row.Name,
+			ProfilePath: row.ProfilePath,
+			WatchCount:  row.WatchCount,
+		}
+	}
+
+	log.Debug("retrieved top composers", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetTopCinematographers(ctx context.Context, userID int64, limit int) ([]models.TopCrewMember, error) {
+	log.Debug("getting top cinematographers", "limit", limit)
+
+	data, err := d.queries.GetTopCinematographers(ctx, sqlc.GetTopCinematographersParams{UserID: &userID, Limit: int64(limit)})
+	if err != nil {
+		log.Error("failed to get top cinematographers", "error", err)
+		return nil, fmt.Errorf("failed to get top cinematographers: %w", err)
+	}
+
+	result := make([]models.TopCrewMember, len(data))
+	for i, row := range data {
+		result[i] = models.TopCrewMember{
+			ID:          row.ID,
+			Name:        row.Name,
+			ProfilePath: row.ProfilePath,
+			WatchCount:  row.WatchCount,
+		}
+	}
+
+	log.Debug("retrieved top cinematographers", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetTopLanguages(ctx context.Context, userID int64, limit int) ([]models.LanguageCount, error) {
+	log.Debug("getting top languages", "limit", limit)
+
+	data, err := d.queries.GetTopLanguages(ctx, sqlc.GetTopLanguagesParams{UserID: &userID, Limit: int64(limit)})
+	if err != nil {
+		log.Error("failed to get top languages", "error", err)
+		return nil, fmt.Errorf("failed to get top languages: %w", err)
+	}
+
+	result := make([]models.LanguageCount, len(data))
+	for i, row := range data {
+		result[i] = models.LanguageCount{
+			Language:   row.Language,
+			WatchCount: row.WatchCount,
+		}
+	}
+
+	log.Debug("retrieved top languages", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetReleaseYearDistribution(ctx context.Context, userID int64) ([]models.ReleaseYearCount, error) {
+	log.Debug("getting release year distribution")
+
+	data, err := d.queries.GetReleaseYearDistribution(ctx, &userID)
+	if err != nil {
+		log.Error("failed to get release year distribution", "error", err)
+		return nil, fmt.Errorf("failed to get release year distribution: %w", err)
+	}
+
+	result := make([]models.ReleaseYearCount, len(data))
+	for i, row := range data {
+		result[i] = models.ReleaseYearCount{
+			Year:  int(row.ReleaseYear),
+			Count: row.Count,
+		}
+	}
+
+	log.Debug("retrieved release year distribution", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetLongestWatchedMovie(ctx context.Context, userID int64) (*models.RuntimeMovie, error) {
+	log.Debug("getting longest watched movie")
+
+	row, err := d.queries.GetLongestWatchedMovie(ctx, &userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Debug("no longest watched movie found")
+			return nil, sql.ErrNoRows
+		}
+		log.Error("failed to get longest watched movie", "error", err)
+		return nil, fmt.Errorf("failed to get longest watched movie: %w", err)
+	}
+
+	result := &models.RuntimeMovie{
+		ID:             row.ID,
+		Title:          row.Title,
+		PosterPath:     row.PosterPath,
+		RuntimeMinutes: row.Runtime,
+	}
+
+	log.Debug("retrieved longest watched movie", "movieID", result.ID, "runtimeMinutes", result.RuntimeMinutes)
+	return result, nil
+}
+
+func (d *SqliteDB) GetShortestWatchedMovie(ctx context.Context, userID int64) (*models.RuntimeMovie, error) {
+	log.Debug("getting shortest watched movie")
+
+	row, err := d.queries.GetShortestWatchedMovie(ctx, &userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Debug("no shortest watched movie found")
+			return nil, sql.ErrNoRows
+		}
+		log.Error("failed to get shortest watched movie", "error", err)
+		return nil, fmt.Errorf("failed to get shortest watched movie: %w", err)
+	}
+
+	result := &models.RuntimeMovie{
+		ID:             row.ID,
+		Title:          row.Title,
+		PosterPath:     row.PosterPath,
+		RuntimeMinutes: row.Runtime,
+	}
+
+	log.Debug("retrieved shortest watched movie", "movieID", result.ID, "runtimeMinutes", result.RuntimeMinutes)
+	return result, nil
+}
+
+func (d *SqliteDB) GetBudgetTierDistribution(ctx context.Context, userID int64) ([]models.BudgetTierCount, error) {
+	log.Debug("getting budget tier distribution")
+
+	data, err := d.queries.GetBudgetTierDistribution(ctx, &userID)
+	if err != nil {
+		log.Error("failed to get budget tier distribution", "error", err)
+		return nil, fmt.Errorf("failed to get budget tier distribution: %w", err)
+	}
+
+	result := make([]models.BudgetTierCount, len(data))
+	for i, row := range data {
+		result[i] = models.BudgetTierCount{
+			Tier:  models.BudgetTierFromString(row.Tier),
+			Count: row.Count,
+		}
+	}
+
+	log.Debug("retrieved budget tier distribution", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetTopReturnOnInvestmentMovies(ctx context.Context, userID int64, limit int) ([]models.MovieFinancial, error) {
+	log.Debug("getting top return on investment movies", "limit", limit)
+
+	data, err := d.queries.GetTopReturnOnInvestmentMovies(ctx, sqlc.GetTopReturnOnInvestmentMoviesParams{UserID: &userID, Limit: int64(limit)})
+	if err != nil {
+		log.Error("failed to get top return on investment movies", "error", err)
+		return nil, fmt.Errorf("failed to get top return on investment movies: %w", err)
+	}
+
+	result := make([]models.MovieFinancial, len(data))
+	for i, row := range data {
+		result[i] = models.MovieFinancial{
+			ID:         row.ID,
+			Title:      row.Title,
+			PosterPath: row.PosterPath,
+			Budget:     row.Budget,
+			Revenue:    row.Revenue,
+			ROI:        row.Roi,
+		}
+	}
+
+	log.Debug("retrieved top return on investment movies", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetBiggestBudgetMovies(ctx context.Context, userID int64, limit int) ([]models.MovieFinancial, error) {
+	log.Debug("getting biggest budget movies", "limit", limit)
+
+	data, err := d.queries.GetBiggestBudgetMovies(ctx, sqlc.GetBiggestBudgetMoviesParams{UserID: &userID, Limit: int64(limit)})
+	if err != nil {
+		log.Error("failed to get biggest budget movies", "error", err)
+		return nil, fmt.Errorf("failed to get biggest budget movies: %w", err)
+	}
+
+	result := make([]models.MovieFinancial, len(data))
+	for i, row := range data {
+		result[i] = models.MovieFinancial{
+			ID:         row.ID,
+			Title:      row.Title,
+			PosterPath: row.PosterPath,
+			Budget:     row.Budget,
+			Revenue:    row.Revenue,
+			ROI:        row.Roi,
+		}
+	}
+
+	log.Debug("retrieved biggest budget movies", "count", len(result))
+	return result, nil
 }
 
 func (d *SqliteDB) GetMonthlyGenreBreakdown(ctx context.Context, userID int64) ([]models.MonthlyGenreBreakdown, error) {

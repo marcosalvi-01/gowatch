@@ -525,6 +525,332 @@ FROM
 WHERE
     watched.user_id = ?;
 
+-- name: GetRewatchStats :one
+WITH movie_watch_counts AS (
+    SELECT
+        watched.movie_id,
+        COUNT(*) AS watch_count
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?
+    GROUP BY
+        watched.movie_id
+)
+SELECT
+    COUNT(*) AS unique_movie_count,
+    CAST(
+        COALESCE(
+            SUM(
+                CASE
+                    WHEN watch_count > 1 THEN 1
+                    ELSE 0
+                END
+            ),
+            0
+        ) AS INTEGER
+    ) AS rewatched_movie_count,
+    CAST(
+        COALESCE(
+            SUM(
+                CASE
+                    WHEN watch_count > 1 THEN watch_count - 1
+                    ELSE 0
+                END
+            ),
+            0
+        ) AS INTEGER
+    ) AS rewatch_count
+FROM
+    movie_watch_counts;
+
+-- name: GetDailyWatchCountsLastYear :many
+SELECT
+    watched.watched_date,
+    COUNT(*) AS count
+FROM
+    watched
+WHERE
+    watched.user_id = ?
+    AND watched.watched_date >= date('now', '-364 days')
+GROUP BY
+    watched.watched_date
+ORDER BY
+    watched.watched_date;
+
+-- name: GetTopDirectors :many
+SELECT
+    person.id,
+    person.name,
+    person.profile_path,
+    COUNT(DISTINCT watched.id) AS watch_count
+FROM
+    watched
+    JOIN crew ON watched.movie_id = crew.movie_id
+    JOIN person ON crew.person_id = person.id
+WHERE
+    watched.user_id = ?
+    AND crew.job = 'Director'
+GROUP BY
+    person.id,
+    person.name,
+    person.profile_path
+ORDER BY
+    watch_count DESC,
+    person.name ASC
+LIMIT
+    ?;
+
+-- name: GetTopWriters :many
+SELECT
+    person.id,
+    person.name,
+    person.profile_path,
+    COUNT(DISTINCT watched.id) AS watch_count
+FROM
+    watched
+    JOIN crew ON watched.movie_id = crew.movie_id
+    JOIN person ON crew.person_id = person.id
+WHERE
+    watched.user_id = ?
+    AND crew.job IN (
+        'Writer',
+        'Screenplay',
+        'Story',
+        'Novel',
+        'Original Story',
+        'Characters'
+    )
+GROUP BY
+    person.id,
+    person.name,
+    person.profile_path
+ORDER BY
+    watch_count DESC,
+    person.name ASC
+LIMIT
+    ?;
+
+-- name: GetTopComposers :many
+SELECT
+    person.id,
+    person.name,
+    person.profile_path,
+    COUNT(DISTINCT watched.id) AS watch_count
+FROM
+    watched
+    JOIN crew ON watched.movie_id = crew.movie_id
+    JOIN person ON crew.person_id = person.id
+WHERE
+    watched.user_id = ?
+    AND crew.job IN ('Original Music Composer', 'Composer', 'Music')
+GROUP BY
+    person.id,
+    person.name,
+    person.profile_path
+ORDER BY
+    watch_count DESC,
+    person.name ASC
+LIMIT
+    ?;
+
+-- name: GetTopCinematographers :many
+SELECT
+    person.id,
+    person.name,
+    person.profile_path,
+    COUNT(DISTINCT watched.id) AS watch_count
+FROM
+    watched
+    JOIN crew ON watched.movie_id = crew.movie_id
+    JOIN person ON crew.person_id = person.id
+WHERE
+    watched.user_id = ?
+    AND crew.job IN ('Director of Photography', 'Cinematography')
+GROUP BY
+    person.id,
+    person.name,
+    person.profile_path
+ORDER BY
+    watch_count DESC,
+    person.name ASC
+LIMIT
+    ?;
+
+-- name: GetTopLanguages :many
+SELECT
+    movie.original_language AS language,
+    COUNT(*) AS watch_count
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.user_id = ?
+    AND movie.original_language <> ''
+GROUP BY
+    movie.original_language
+ORDER BY
+    watch_count DESC,
+    language ASC
+LIMIT
+    ?;
+
+-- name: GetReleaseYearDistribution :many
+SELECT
+    CAST(strftime('%Y', movie.release_date) AS INTEGER) AS release_year,
+    COUNT(DISTINCT watched.movie_id) AS count
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.user_id = ?
+    AND movie.release_date IS NOT NULL
+GROUP BY
+    release_year
+ORDER BY
+    release_year;
+
+-- name: GetLongestWatchedMovie :one
+SELECT
+    movie.id,
+    movie.title,
+    movie.poster_path,
+    movie.runtime
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.user_id = ?
+    AND movie.runtime > 0
+GROUP BY
+    movie.id,
+    movie.title,
+    movie.poster_path,
+    movie.runtime
+ORDER BY
+    movie.runtime DESC,
+    movie.title ASC
+LIMIT
+    1;
+
+-- name: GetShortestWatchedMovie :one
+SELECT
+    movie.id,
+    movie.title,
+    movie.poster_path,
+    movie.runtime
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.user_id = ?
+    AND movie.runtime > 0
+GROUP BY
+    movie.id,
+    movie.title,
+    movie.poster_path,
+    movie.runtime
+ORDER BY
+    movie.runtime ASC,
+    movie.title ASC
+LIMIT
+    1;
+
+-- name: GetBudgetTierDistribution :many
+WITH watched_movies AS (
+    SELECT DISTINCT
+        watched.movie_id,
+        movie.budget
+    FROM
+        watched
+        JOIN movie ON watched.movie_id = movie.id
+    WHERE
+        watched.user_id = ?
+)
+SELECT
+    CASE
+        WHEN watched_movies.budget <= 0 THEN 'unknown'
+        WHEN watched_movies.budget < 10000000 THEN 'indie'
+        WHEN watched_movies.budget <= 100000000 THEN 'mid'
+        ELSE 'blockbuster'
+    END AS tier,
+    COUNT(*) AS count
+FROM
+    watched_movies
+GROUP BY
+    tier
+ORDER BY
+    CASE
+        WHEN tier = 'indie' THEN 1
+        WHEN tier = 'mid' THEN 2
+        WHEN tier = 'blockbuster' THEN 3
+        ELSE 4
+    END;
+
+-- name: GetTopReturnOnInvestmentMovies :many
+WITH watched_movies AS (
+    SELECT DISTINCT
+        watched.movie_id
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?
+)
+SELECT
+    movie.id,
+    movie.title,
+    movie.poster_path,
+    movie.budget,
+    movie.revenue,
+    CAST(
+        CAST(movie.revenue - movie.budget AS REAL) / CAST(movie.budget AS REAL) AS REAL
+    ) AS roi
+FROM
+    watched_movies
+    JOIN movie ON watched_movies.movie_id = movie.id
+WHERE
+    movie.budget > 0
+    AND movie.revenue > 0
+ORDER BY
+    roi DESC,
+    movie.revenue DESC,
+    movie.title ASC
+LIMIT
+    ?;
+
+-- name: GetBiggestBudgetMovies :many
+WITH watched_movies AS (
+    SELECT DISTINCT
+        watched.movie_id
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?
+)
+SELECT
+    movie.id,
+    movie.title,
+    movie.poster_path,
+    movie.budget,
+    movie.revenue,
+    CAST(
+        CASE
+            WHEN movie.budget > 0 THEN CAST(movie.revenue - movie.budget AS REAL) / CAST(movie.budget AS REAL)
+            ELSE 0.0
+        END AS REAL
+    ) AS roi
+FROM
+    watched_movies
+    JOIN movie ON watched_movies.movie_id = movie.id
+WHERE
+    movie.budget > 0
+ORDER BY
+    movie.budget DESC,
+    movie.revenue DESC,
+    movie.title ASC
+LIMIT
+    ?;
+
 -- name: GetMonthlyGenreBreakdown :many
 SELECT
     watched.watched_date,

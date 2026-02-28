@@ -162,6 +162,156 @@ func TestWatchedService_GetWatchedStats(t *testing.T) {
 	}
 }
 
+func TestWatchedService_GetWatchedStats_NewFields(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
+
+	releaseDate := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	movie := &models.MovieDetails{
+		Movie: models.Movie{
+			ID:               100,
+			Title:            "Stats Test Movie",
+			OriginalTitle:    "Stats Test Movie",
+			OriginalLanguage: "en",
+			ReleaseDate:      &releaseDate,
+		},
+		Budget:  5_000_000,
+		Revenue: 20_000_000,
+		Runtime: 120,
+		Credits: models.MovieCredits{
+			Crew: []models.Crew{
+				{
+					MovieID:    100,
+					PersonID:   1,
+					CreditID:   "director-credit",
+					Job:        "Director",
+					Department: "Directing",
+					Person: models.Person{
+						ID:                 1,
+						Name:               "Director Person",
+						OriginalName:       "Director Person",
+						KnownForDepartment: "Directing",
+					},
+				},
+				{
+					MovieID:    100,
+					PersonID:   2,
+					CreditID:   "writer-credit",
+					Job:        "Writer",
+					Department: "Writing",
+					Person: models.Person{
+						ID:                 2,
+						Name:               "Writer Person",
+						OriginalName:       "Writer Person",
+						KnownForDepartment: "Writing",
+					},
+				},
+				{
+					MovieID:    100,
+					PersonID:   3,
+					CreditID:   "composer-credit",
+					Job:        "Composer",
+					Department: "Sound",
+					Person: models.Person{
+						ID:                 3,
+						Name:               "Composer Person",
+						OriginalName:       "Composer Person",
+						KnownForDepartment: "Sound",
+					},
+				},
+				{
+					MovieID:    100,
+					PersonID:   4,
+					CreditID:   "camera-credit",
+					Job:        "Director of Photography",
+					Department: "Camera",
+					Person: models.Person{
+						ID:                 4,
+						Name:               "Camera Person",
+						OriginalName:       "Camera Person",
+						KnownForDepartment: "Camera",
+					},
+				},
+			},
+		},
+	}
+
+	if err := testDB.UpsertMovie(ctx, movie); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now().UTC()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	yesterday := today.AddDate(0, 0, -1)
+
+	if err := watchedService.AddWatched(ctx, 100, yesterday, false, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := watchedService.AddWatched(ctx, 100, today, true, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	stats, err := watchedService.GetWatchedStats(ctx, 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if stats.RewatchStats.RewatchCount != 1 {
+		t.Fatalf("expected rewatch count 1, got %d", stats.RewatchStats.RewatchCount)
+	}
+	if stats.LongestStreak.LongestDays != 2 {
+		t.Fatalf("expected longest streak 2, got %d", stats.LongestStreak.LongestDays)
+	}
+	if len(stats.DailyWatchCountsLastYear) == 0 {
+		t.Fatal("expected daily watch counts for heatmap")
+	}
+	if len(stats.YearlyAllTime) == 0 {
+		t.Fatal("expected watches by year data")
+	}
+	if len(stats.TopDirectors) == 0 {
+		t.Fatal("expected top directors data")
+	}
+	if len(stats.TopWriters) == 0 {
+		t.Fatal("expected top writers data")
+	}
+	if len(stats.TopComposers) == 0 {
+		t.Fatal("expected top composers data")
+	}
+	if len(stats.TopCinematographers) == 0 {
+		t.Fatal("expected top cinematographers data")
+	}
+	if len(stats.TopLanguages) == 0 || stats.TopLanguages[0].Language != "en" {
+		t.Fatalf("expected top language 'en', got %+v", stats.TopLanguages)
+	}
+	if len(stats.ReleaseYearDistribution) == 0 || stats.ReleaseYearDistribution[0].Year != 2020 {
+		t.Fatalf("expected release year distribution for 2020, got %+v", stats.ReleaseYearDistribution)
+	}
+	if stats.LongestMovieWatched == nil || stats.LongestMovieWatched.RuntimeMinutes != 120 {
+		t.Fatalf("expected longest movie runtime 120, got %+v", stats.LongestMovieWatched)
+	}
+	if stats.ShortestMovieWatched == nil || stats.ShortestMovieWatched.RuntimeMinutes != 120 {
+		t.Fatalf("expected shortest movie runtime 120, got %+v", stats.ShortestMovieWatched)
+	}
+	if len(stats.BudgetTierDistribution) == 0 {
+		t.Fatal("expected budget tier distribution data")
+	}
+	if len(stats.TopReturnOnInvestmentMovies) == 0 {
+		t.Fatal("expected top ROI movies data")
+	}
+	if len(stats.BiggestBudgetMovies) == 0 {
+		t.Fatal("expected biggest budget movies data")
+	}
+}
+
 func TestWatchedService_AddWatched_InvalidMovie(t *testing.T) {
 	testDB, err := db.NewTestDB()
 	if err != nil {

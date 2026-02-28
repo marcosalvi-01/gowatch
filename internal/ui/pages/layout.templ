@@ -41,7 +41,7 @@ templ Layout() {
 				<div id="sidebar-content" hx-get="/htmx/sidebar" hx-target="this" hx-swap="innerHTML" hx-trigger="refreshSidebar from:body, load">
 					@sidebar.SidebarLoading(false)
 				</div>
-				@templSidebar.Inset() {
+				@templSidebar.Inset(templSidebar.InsetProps{Class: "min-w-0"}) {
 					<div id="toast"></div>
 					// Header
 					<div class="flex items-center gap-2 p-2 flex-shrink-0 sticky z-10 top-0 border-b-1 bg-background">
@@ -59,8 +59,8 @@ templ Layout() {
 						@StatsLoading()
 						@MovieLoading()
 						@SearchLoading()
-						<div id="main-scroll-container" class="flex flex-1 flex-col overflow-auto w-full">
-							<div id="main-content" class="p-4 w-full max-w-full">
+						<div id="main-scroll-container" class="flex flex-1 flex-col overflow-auto w-full min-w-0">
+							<div id="main-content" class="p-4 w-full max-w-full min-w-0">
 								{ children... }
 							</div>
 						</div>
@@ -135,24 +135,51 @@ templ Scripts() {
 	<script src="/static/js/htmx.min.js"></script>
 	<script>
 	  document.addEventListener("DOMContentLoaded", () => {
+		const initTemplUI = (target) => {
+		  if (!window.templUI) {
+			return;
+		  }
+
+		  Object.values(window.templUI).forEach((comp) => {
+			comp.init?.(target);
+		  });
+		};
+
+		const forceChartRefresh = () => {
+		  const root = document.documentElement;
+		  if (!root) {
+			return;
+		  }
+
+		  // Toggle a temporary CSS variable so chart.min.js MutationObservers
+		  // detect a document style change and remount canvas charts.
+		  // The token avoids deleting a newer value if multiple refreshes overlap.
+		  const token = String(Date.now());
+		  root.style.setProperty("--tui-chart-refresh", token);
+
+		  requestAnimationFrame(() => {
+			if (root.style.getPropertyValue("--tui-chart-refresh") === token) {
+			  root.style.removeProperty("--tui-chart-refresh");
+			}
+		  });
+		};
+
 		// Re-initialize templUI components after HTMX swaps
 		document.body.addEventListener("htmx:afterSwap", (e) => {
-		  if (window.templUI) {
-			Object.values(window.templUI).forEach(comp => {
-			  comp.init?.(e.detail.elt);
-			});
-		  }
+		  initTemplUI(e.detail?.elt ?? document);
 		});
 
 		// Re-initialize components after out-of-band swaps
 		document.body.addEventListener("htmx:oobAfterSwap", (e) => {
-		  if (window.templUI) {
-			Object.values(window.templUI).forEach(comp => {
-			  comp.init?.(e.detail.target);
-			});
-		  }
+		  initTemplUI(e.detail?.target ?? document);
 		});
-	});
+
+		// HTMX history restoration reuses cached DOM; force chart remount.
+		document.body.addEventListener("htmx:historyRestore", () => {
+		  initTemplUI(document);
+		  forceChartRefresh();
+		});
+	  });
 	</script>
 	@SidebarNavigationScript()
 	@ThemeScript()

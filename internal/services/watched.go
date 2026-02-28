@@ -281,6 +281,8 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 	var statsPerMonth []models.PeriodStats
 	var allActors []models.TopActor
 	var dateRange *models.DateRange
+	var rewatchStats *models.RewatchStats
+	var watchedDates []time.Time
 
 	// Total Stats (Count & Hours)
 	g.Go(func() error {
@@ -289,6 +291,16 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 		t := time.Now()
 		totalStats, err = s.getTotalStats(ctx)
 		s.log.Debug("GetWatchedStats: total stats fetched", "count", totalStats.Count, "hours", totalStats.Hours, "duration", time.Since(t).String())
+		return err
+	})
+
+	// Rewatch Stats
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching rewatch stats")
+		t := time.Now()
+		rewatchStats, err = s.getRewatchStats(ctx)
+		s.log.Debug("GetWatchedStats: rewatch stats fetched", "duration", time.Since(t).String())
 		return err
 	})
 
@@ -332,6 +344,16 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 		return err
 	})
 
+	// Daily Watch Counts (Last Year) - used for calendar heatmap
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching daily watch counts for last year")
+		t := time.Now()
+		stats.DailyWatchCountsLastYear, err = s.getDailyWatchCountsLastYear(ctx)
+		s.log.Debug("GetWatchedStats: daily watch counts for last year fetched", "count", len(stats.DailyWatchCountsLastYear), "duration", time.Since(t).String())
+		return err
+	})
+
 	// Genres
 	g.Go(func() error {
 		var err error
@@ -372,6 +394,116 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 		return err
 	})
 
+	// Top Directors
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching top directors")
+		t := time.Now()
+		stats.TopDirectors, err = s.getTopDirectors(ctx, limit)
+		s.log.Debug("GetWatchedStats: top directors fetched", "count", len(stats.TopDirectors), "duration", time.Since(t).String())
+		return err
+	})
+
+	// Top Writers
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching top writers")
+		t := time.Now()
+		stats.TopWriters, err = s.getTopWriters(ctx, limit)
+		s.log.Debug("GetWatchedStats: top writers fetched", "count", len(stats.TopWriters), "duration", time.Since(t).String())
+		return err
+	})
+
+	// Top Composers
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching top composers")
+		t := time.Now()
+		stats.TopComposers, err = s.getTopComposers(ctx, limit)
+		s.log.Debug("GetWatchedStats: top composers fetched", "count", len(stats.TopComposers), "duration", time.Since(t).String())
+		return err
+	})
+
+	// Top Cinematographers
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching top cinematographers")
+		t := time.Now()
+		stats.TopCinematographers, err = s.getTopCinematographers(ctx, limit)
+		s.log.Debug("GetWatchedStats: top cinematographers fetched", "count", len(stats.TopCinematographers), "duration", time.Since(t).String())
+		return err
+	})
+
+	// Top Languages
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching top languages")
+		t := time.Now()
+		stats.TopLanguages, err = s.getTopLanguages(ctx, limit)
+		s.log.Debug("GetWatchedStats: top languages fetched", "count", len(stats.TopLanguages), "duration", time.Since(t).String())
+		return err
+	})
+
+	// Release Year Distribution
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching release year distribution")
+		t := time.Now()
+		stats.ReleaseYearDistribution, err = s.getReleaseYearDistribution(ctx)
+		s.log.Debug("GetWatchedStats: release year distribution fetched", "count", len(stats.ReleaseYearDistribution), "duration", time.Since(t).String())
+		return err
+	})
+
+	// Longest Watched Movie
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching longest watched movie")
+		t := time.Now()
+		stats.LongestMovieWatched, err = s.getLongestWatchedMovie(ctx)
+		s.log.Debug("GetWatchedStats: longest watched movie fetched", "duration", time.Since(t).String())
+		return err
+	})
+
+	// Shortest Watched Movie
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching shortest watched movie")
+		t := time.Now()
+		stats.ShortestMovieWatched, err = s.getShortestWatchedMovie(ctx)
+		s.log.Debug("GetWatchedStats: shortest watched movie fetched", "duration", time.Since(t).String())
+		return err
+	})
+
+	// Budget Tier Distribution
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching budget tier distribution")
+		t := time.Now()
+		stats.BudgetTierDistribution, err = s.getBudgetTierDistribution(ctx)
+		s.log.Debug("GetWatchedStats: budget tier distribution fetched", "count", len(stats.BudgetTierDistribution), "duration", time.Since(t).String())
+		return err
+	})
+
+	// Top Return on Investment Movies
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching top return on investment movies")
+		t := time.Now()
+		stats.TopReturnOnInvestmentMovies, err = s.getTopReturnOnInvestmentMovies(ctx, limit)
+		s.log.Debug("GetWatchedStats: top return on investment movies fetched", "count", len(stats.TopReturnOnInvestmentMovies), "duration", time.Since(t).String())
+		return err
+	})
+
+	// Biggest Budget Movies
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching biggest budget movies")
+		t := time.Now()
+		stats.BiggestBudgetMovies, err = s.getBiggestBudgetMovies(ctx, limit)
+		s.log.Debug("GetWatchedStats: biggest budget movies fetched", "count", len(stats.BiggestBudgetMovies), "duration", time.Since(t).String())
+		return err
+	})
+
 	// Monthly Genre Breakdown
 	g.Go(func() error {
 		var err error
@@ -392,6 +524,16 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 		return err
 	})
 
+	// Watched Dates for streak calculations
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching watched dates")
+		t := time.Now()
+		watchedDates, err = s.getWatchedDates(ctx)
+		s.log.Debug("GetWatchedStats: watched dates fetched", "count", len(watchedDates), "duration", time.Since(t).String())
+		return err
+	})
+
 	if err := g.Wait(); err != nil {
 		s.log.Error("GetWatchedStats: failed to fetch data concurrently", "error", err, "duration", time.Since(start).String())
 		return nil, err
@@ -404,6 +546,9 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 	stats.TotalWatched = totalStats.Count
 	stats.TotalHoursWatched = totalStats.Hours
 	stats.MostWatchedActors = allActors
+	if rewatchStats != nil {
+		stats.RewatchStats = *rewatchStats
+	}
 
 	// Split monthly stats
 	stats.MonthlyLastYear = make([]models.PeriodCount, len(statsPerMonth))
@@ -417,6 +562,7 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 	now := time.Now()
 	stats.AvgPerDay, stats.AvgPerWeek, stats.AvgPerMonth = s.calculateAverages(stats.TotalWatched, dateRange, now)
 	stats.AvgHoursPerDay, stats.AvgHoursPerWeek, stats.AvgHoursPerMonth = s.calculateHoursAverages(stats.TotalHoursWatched, dateRange, now)
+	stats.LongestStreak = s.calculateStreakStats(watchedDates, now)
 
 	stats.MonthlyHoursTrendDirection, stats.MonthlyHoursTrendValue = s.calculateMonthlyHoursTrend(stats.MonthlyHoursLastYear)
 	stats.MonthlyMoviesTrendDirection, stats.MonthlyMoviesTrendValue = s.calculateMonthlyMoviesTrend(stats.MonthlyLastYear)

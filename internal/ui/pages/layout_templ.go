@@ -150,7 +150,7 @@ func Layout() templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div id=\"main-scroll-container\" class=\"flex flex-1 flex-col overflow-auto w-full\"><div id=\"main-content\" class=\"p-4 w-full max-w-full\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div id=\"main-scroll-container\" class=\"flex flex-1 flex-col overflow-auto w-full min-w-0\"><div id=\"main-content\" class=\"p-4 w-full max-w-full min-w-0\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -164,7 +164,7 @@ func Layout() templ.Component {
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = templSidebar.Inset().Render(templ.WithChildren(ctx, templ_7745c5c3_Var3), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = templSidebar.Inset(templSidebar.InsetProps{Class: "min-w-0"}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var3), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -389,7 +389,7 @@ func Scripts() templ.Component {
 			templ_7745c5c3_Var8 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<script src=\"/static/js/htmx.min.js\"></script><script>\n\t  document.addEventListener(\"DOMContentLoaded\", () => {\n\t\t// Re-initialize templUI components after HTMX swaps\n\t\tdocument.body.addEventListener(\"htmx:afterSwap\", (e) => {\n\t\t  if (window.templUI) {\n\t\t\tObject.values(window.templUI).forEach(comp => {\n\t\t\t  comp.init?.(e.detail.elt);\n\t\t\t});\n\t\t  }\n\t\t});\n\n\t\t// Re-initialize components after out-of-band swaps\n\t\tdocument.body.addEventListener(\"htmx:oobAfterSwap\", (e) => {\n\t\t  if (window.templUI) {\n\t\t\tObject.values(window.templUI).forEach(comp => {\n\t\t\t  comp.init?.(e.detail.target);\n\t\t\t});\n\t\t  }\n\t\t});\n\t});\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<script src=\"/static/js/htmx.min.js\"></script><script>\n\t  document.addEventListener(\"DOMContentLoaded\", () => {\n\t\tconst initTemplUI = (target) => {\n\t\t  if (!window.templUI) {\n\t\t\treturn;\n\t\t  }\n\n\t\t  Object.values(window.templUI).forEach((comp) => {\n\t\t\tcomp.init?.(target);\n\t\t  });\n\t\t};\n\n\t\tconst forceChartRefresh = () => {\n\t\t  const root = document.documentElement;\n\t\t  if (!root) {\n\t\t\treturn;\n\t\t  }\n\n\t\t  // Toggle a temporary CSS variable so chart.min.js MutationObservers\n\t\t  // detect a document style change and remount canvas charts.\n\t\t  // The token avoids deleting a newer value if multiple refreshes overlap.\n\t\t  const token = String(Date.now());\n\t\t  root.style.setProperty(\"--tui-chart-refresh\", token);\n\n\t\t  requestAnimationFrame(() => {\n\t\t\tif (root.style.getPropertyValue(\"--tui-chart-refresh\") === token) {\n\t\t\t  root.style.removeProperty(\"--tui-chart-refresh\");\n\t\t\t}\n\t\t  });\n\t\t};\n\n\t\t// Re-initialize templUI components after HTMX swaps\n\t\tdocument.body.addEventListener(\"htmx:afterSwap\", (e) => {\n\t\t  initTemplUI(e.detail?.elt ?? document);\n\t\t});\n\n\t\t// Re-initialize components after out-of-band swaps\n\t\tdocument.body.addEventListener(\"htmx:oobAfterSwap\", (e) => {\n\t\t  initTemplUI(e.detail?.target ?? document);\n\t\t});\n\n\t\t// HTMX history restoration reuses cached DOM; force chart remount.\n\t\tdocument.body.addEventListener(\"htmx:historyRestore\", () => {\n\t\t  initTemplUI(document);\n\t\t  forceChartRefresh();\n\t\t});\n\t  });\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

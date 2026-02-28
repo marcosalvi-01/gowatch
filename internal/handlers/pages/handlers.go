@@ -230,10 +230,19 @@ func (h *Handlers) ListPage(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) StatsPage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	const maxLimit = 100
+
+	limit := 5
+	limitStr := r.URL.Query().Get("limit")
+	if limitStr != "" {
+		if parsed, err := strconv.Atoi(limitStr); err == nil && parsed > 0 {
+			limit = min(parsed, maxLimit)
+		}
+	}
 
 	log.Debug("serving stats page")
 
-	stats, err := h.watchedService.GetWatchedStats(ctx, 5)
+	stats, err := h.watchedService.GetWatchedStats(ctx, limit)
 	if err != nil {
 		log.Error("failed to retrieve watched stats", "error", err)
 		render500Error(w, r)
@@ -243,9 +252,9 @@ func (h *Handlers) StatsPage(w http.ResponseWriter, r *http.Request) {
 	log.Debug("retrieved watched stats", "totalWatched", stats.TotalWatched)
 
 	if r.Header.Get("HX-Request") == htmxRequestHeaderValue {
-		templ.Handler(pages.Stats(stats, 5), templ.WithFragments("content")).ServeHTTP(w, r)
+		templ.Handler(pages.Stats(stats, limit), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
-		templ.Handler(pages.Stats(stats, 5)).ServeHTTP(w, r)
+		templ.Handler(pages.Stats(stats, limit)).ServeHTTP(w, r)
 	}
 
 	log.Info("stats page served successfully")

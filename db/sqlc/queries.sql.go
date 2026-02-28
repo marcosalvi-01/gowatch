@@ -417,6 +417,144 @@ func (q *Queries) GetAllUsersWithStats(ctx context.Context) ([]GetAllUsersWithSt
 	return items, nil
 }
 
+const getBiggestBudgetMovies = `-- name: GetBiggestBudgetMovies :many
+WITH watched_movies AS (
+    SELECT DISTINCT
+        watched.movie_id
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?
+)
+SELECT
+    movie.id,
+    movie.title,
+    movie.poster_path,
+    movie.budget,
+    movie.revenue,
+    CAST(
+        CASE
+            WHEN movie.budget > 0 THEN CAST(movie.revenue - movie.budget AS REAL) / CAST(movie.budget AS REAL)
+            ELSE 0.0
+        END AS REAL
+    ) AS roi
+FROM
+    watched_movies
+    JOIN movie ON watched_movies.movie_id = movie.id
+WHERE
+    movie.budget > 0
+ORDER BY
+    movie.budget DESC,
+    movie.revenue DESC,
+    movie.title ASC
+LIMIT
+    ?
+`
+
+type GetBiggestBudgetMoviesParams struct {
+	UserID *int64
+	Limit  int64
+}
+
+type GetBiggestBudgetMoviesRow struct {
+	ID         int64
+	Title      string
+	PosterPath string
+	Budget     int64
+	Revenue    int64
+	Roi        float64
+}
+
+func (q *Queries) GetBiggestBudgetMovies(ctx context.Context, arg GetBiggestBudgetMoviesParams) ([]GetBiggestBudgetMoviesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getBiggestBudgetMovies, arg.UserID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetBiggestBudgetMoviesRow
+	for rows.Next() {
+		var i GetBiggestBudgetMoviesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.PosterPath,
+			&i.Budget,
+			&i.Revenue,
+			&i.Roi,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getBudgetTierDistribution = `-- name: GetBudgetTierDistribution :many
+WITH watched_movies AS (
+    SELECT DISTINCT
+        watched.movie_id,
+        movie.budget
+    FROM
+        watched
+        JOIN movie ON watched.movie_id = movie.id
+    WHERE
+        watched.user_id = ?
+)
+SELECT
+    CASE
+        WHEN watched_movies.budget <= 0 THEN 'unknown'
+        WHEN watched_movies.budget < 10000000 THEN 'indie'
+        WHEN watched_movies.budget <= 100000000 THEN 'mid'
+        ELSE 'blockbuster'
+    END AS tier,
+    COUNT(*) AS count
+FROM
+    watched_movies
+GROUP BY
+    tier
+ORDER BY
+    CASE
+        WHEN tier = 'indie' THEN 1
+        WHEN tier = 'mid' THEN 2
+        WHEN tier = 'blockbuster' THEN 3
+        ELSE 4
+    END
+`
+
+type GetBudgetTierDistributionRow struct {
+	Tier  string
+	Count int64
+}
+
+func (q *Queries) GetBudgetTierDistribution(ctx context.Context, userID *int64) ([]GetBudgetTierDistributionRow, error) {
+	rows, err := q.db.QueryContext(ctx, getBudgetTierDistribution, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetBudgetTierDistributionRow
+	for rows.Next() {
+		var i GetBudgetTierDistributionRow
+		if err := rows.Scan(&i.Tier, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCastByMovieID = `-- name: GetCastByMovieID :many
 SELECT
     movie_id, person_id, cast_id, credit_id, character, cast_order, updated_at
@@ -483,6 +621,49 @@ func (q *Queries) GetCrewByMovieID(ctx context.Context, movieID int64) ([]Crew, 
 			&i.Department,
 			&i.UpdatedAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getDailyWatchCountsLastYear = `-- name: GetDailyWatchCountsLastYear :many
+SELECT
+    watched.watched_date,
+    COUNT(*) AS count
+FROM
+    watched
+WHERE
+    watched.user_id = ?
+    AND watched.watched_date >= date('now', '-364 days')
+GROUP BY
+    watched.watched_date
+ORDER BY
+    watched.watched_date
+`
+
+type GetDailyWatchCountsLastYearRow struct {
+	WatchedDate date.Date
+	Count       int64
+}
+
+func (q *Queries) GetDailyWatchCountsLastYear(ctx context.Context, userID *int64) ([]GetDailyWatchCountsLastYearRow, error) {
+	rows, err := q.db.QueryContext(ctx, getDailyWatchCountsLastYear, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDailyWatchCountsLastYearRow
+	for rows.Next() {
+		var i GetDailyWatchCountsLastYearRow
+		if err := rows.Scan(&i.WatchedDate, &i.Count); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -602,6 +783,49 @@ func (q *Queries) GetListJoinMovieByID(ctx context.Context, arg GetListJoinMovie
 		return nil, err
 	}
 	return items, nil
+}
+
+const getLongestWatchedMovie = `-- name: GetLongestWatchedMovie :one
+SELECT
+    movie.id,
+    movie.title,
+    movie.poster_path,
+    movie.runtime
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.user_id = ?
+    AND movie.runtime > 0
+GROUP BY
+    movie.id,
+    movie.title,
+    movie.poster_path,
+    movie.runtime
+ORDER BY
+    movie.runtime DESC,
+    movie.title ASC
+LIMIT
+    1
+`
+
+type GetLongestWatchedMovieRow struct {
+	ID         int64
+	Title      string
+	PosterPath string
+	Runtime    int64
+}
+
+func (q *Queries) GetLongestWatchedMovie(ctx context.Context, userID *int64) (GetLongestWatchedMovieRow, error) {
+	row := q.db.QueryRowContext(ctx, getLongestWatchedMovie, userID)
+	var i GetLongestWatchedMovieRow
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.PosterPath,
+		&i.Runtime,
+	)
+	return i, err
 }
 
 const getMonthlyGenreBreakdown = `-- name: GetMonthlyGenreBreakdown :many
@@ -995,6 +1219,103 @@ func (q *Queries) GetRecentWatchedMovies(ctx context.Context, arg GetRecentWatch
 	return items, nil
 }
 
+const getReleaseYearDistribution = `-- name: GetReleaseYearDistribution :many
+SELECT
+    CAST(strftime('%Y', movie.release_date) AS INTEGER) AS release_year,
+    COUNT(DISTINCT watched.movie_id) AS count
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.user_id = ?
+    AND movie.release_date IS NOT NULL
+GROUP BY
+    release_year
+ORDER BY
+    release_year
+`
+
+type GetReleaseYearDistributionRow struct {
+	ReleaseYear int64
+	Count       int64
+}
+
+func (q *Queries) GetReleaseYearDistribution(ctx context.Context, userID *int64) ([]GetReleaseYearDistributionRow, error) {
+	rows, err := q.db.QueryContext(ctx, getReleaseYearDistribution, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetReleaseYearDistributionRow
+	for rows.Next() {
+		var i GetReleaseYearDistributionRow
+		if err := rows.Scan(&i.ReleaseYear, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRewatchStats = `-- name: GetRewatchStats :one
+WITH movie_watch_counts AS (
+    SELECT
+        watched.movie_id,
+        COUNT(*) AS watch_count
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?
+    GROUP BY
+        watched.movie_id
+)
+SELECT
+    COUNT(*) AS unique_movie_count,
+    CAST(
+        COALESCE(
+            SUM(
+                CASE
+                    WHEN watch_count > 1 THEN 1
+                    ELSE 0
+                END
+            ),
+            0
+        ) AS INTEGER
+    ) AS rewatched_movie_count,
+    CAST(
+        COALESCE(
+            SUM(
+                CASE
+                    WHEN watch_count > 1 THEN watch_count - 1
+                    ELSE 0
+                END
+            ),
+            0
+        ) AS INTEGER
+    ) AS rewatch_count
+FROM
+    movie_watch_counts
+`
+
+type GetRewatchStatsRow struct {
+	UniqueMovieCount    int64
+	RewatchedMovieCount int64
+	RewatchCount        int64
+}
+
+func (q *Queries) GetRewatchStats(ctx context.Context, userID *int64) (GetRewatchStatsRow, error) {
+	row := q.db.QueryRowContext(ctx, getRewatchStats, userID)
+	var i GetRewatchStatsRow
+	err := row.Scan(&i.UniqueMovieCount, &i.RewatchedMovieCount, &i.RewatchCount)
+	return i, err
+}
+
 const getSession = `-- name: GetSession :one
 SELECT
     user_id,
@@ -1015,6 +1336,49 @@ func (q *Queries) GetSession(ctx context.Context, id string) (GetSessionRow, err
 	row := q.db.QueryRowContext(ctx, getSession, id)
 	var i GetSessionRow
 	err := row.Scan(&i.UserID, &i.ExpiresAt)
+	return i, err
+}
+
+const getShortestWatchedMovie = `-- name: GetShortestWatchedMovie :one
+SELECT
+    movie.id,
+    movie.title,
+    movie.poster_path,
+    movie.runtime
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.user_id = ?
+    AND movie.runtime > 0
+GROUP BY
+    movie.id,
+    movie.title,
+    movie.poster_path,
+    movie.runtime
+ORDER BY
+    movie.runtime ASC,
+    movie.title ASC
+LIMIT
+    1
+`
+
+type GetShortestWatchedMovieRow struct {
+	ID         int64
+	Title      string
+	PosterPath string
+	Runtime    int64
+}
+
+func (q *Queries) GetShortestWatchedMovie(ctx context.Context, userID *int64) (GetShortestWatchedMovieRow, error) {
+	row := q.db.QueryRowContext(ctx, getShortestWatchedMovie, userID)
+	var i GetShortestWatchedMovieRow
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.PosterPath,
+		&i.Runtime,
+	)
 	return i, err
 }
 
@@ -1045,6 +1409,397 @@ func (q *Queries) GetTheaterVsHomeCount(ctx context.Context, userID *int64) ([]G
 	for rows.Next() {
 		var i GetTheaterVsHomeCountRow
 		if err := rows.Scan(&i.WatchedInTheater, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTopCinematographers = `-- name: GetTopCinematographers :many
+SELECT
+    person.id,
+    person.name,
+    person.profile_path,
+    COUNT(DISTINCT watched.id) AS watch_count
+FROM
+    watched
+    JOIN crew ON watched.movie_id = crew.movie_id
+    JOIN person ON crew.person_id = person.id
+WHERE
+    watched.user_id = ?
+    AND crew.job IN ('Director of Photography', 'Cinematography')
+GROUP BY
+    person.id,
+    person.name,
+    person.profile_path
+ORDER BY
+    watch_count DESC,
+    person.name ASC
+LIMIT
+    ?
+`
+
+type GetTopCinematographersParams struct {
+	UserID *int64
+	Limit  int64
+}
+
+type GetTopCinematographersRow struct {
+	ID          int64
+	Name        string
+	ProfilePath string
+	WatchCount  int64
+}
+
+func (q *Queries) GetTopCinematographers(ctx context.Context, arg GetTopCinematographersParams) ([]GetTopCinematographersRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTopCinematographers, arg.UserID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTopCinematographersRow
+	for rows.Next() {
+		var i GetTopCinematographersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ProfilePath,
+			&i.WatchCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTopComposers = `-- name: GetTopComposers :many
+SELECT
+    person.id,
+    person.name,
+    person.profile_path,
+    COUNT(DISTINCT watched.id) AS watch_count
+FROM
+    watched
+    JOIN crew ON watched.movie_id = crew.movie_id
+    JOIN person ON crew.person_id = person.id
+WHERE
+    watched.user_id = ?
+    AND crew.job IN ('Original Music Composer', 'Composer', 'Music')
+GROUP BY
+    person.id,
+    person.name,
+    person.profile_path
+ORDER BY
+    watch_count DESC,
+    person.name ASC
+LIMIT
+    ?
+`
+
+type GetTopComposersParams struct {
+	UserID *int64
+	Limit  int64
+}
+
+type GetTopComposersRow struct {
+	ID          int64
+	Name        string
+	ProfilePath string
+	WatchCount  int64
+}
+
+func (q *Queries) GetTopComposers(ctx context.Context, arg GetTopComposersParams) ([]GetTopComposersRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTopComposers, arg.UserID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTopComposersRow
+	for rows.Next() {
+		var i GetTopComposersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ProfilePath,
+			&i.WatchCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTopDirectors = `-- name: GetTopDirectors :many
+SELECT
+    person.id,
+    person.name,
+    person.profile_path,
+    COUNT(DISTINCT watched.id) AS watch_count
+FROM
+    watched
+    JOIN crew ON watched.movie_id = crew.movie_id
+    JOIN person ON crew.person_id = person.id
+WHERE
+    watched.user_id = ?
+    AND crew.job = 'Director'
+GROUP BY
+    person.id,
+    person.name,
+    person.profile_path
+ORDER BY
+    watch_count DESC,
+    person.name ASC
+LIMIT
+    ?
+`
+
+type GetTopDirectorsParams struct {
+	UserID *int64
+	Limit  int64
+}
+
+type GetTopDirectorsRow struct {
+	ID          int64
+	Name        string
+	ProfilePath string
+	WatchCount  int64
+}
+
+func (q *Queries) GetTopDirectors(ctx context.Context, arg GetTopDirectorsParams) ([]GetTopDirectorsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTopDirectors, arg.UserID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTopDirectorsRow
+	for rows.Next() {
+		var i GetTopDirectorsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ProfilePath,
+			&i.WatchCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTopLanguages = `-- name: GetTopLanguages :many
+SELECT
+    movie.original_language AS language,
+    COUNT(*) AS watch_count
+FROM
+    watched
+    JOIN movie ON watched.movie_id = movie.id
+WHERE
+    watched.user_id = ?
+    AND movie.original_language <> ''
+GROUP BY
+    movie.original_language
+ORDER BY
+    watch_count DESC,
+    language ASC
+LIMIT
+    ?
+`
+
+type GetTopLanguagesParams struct {
+	UserID *int64
+	Limit  int64
+}
+
+type GetTopLanguagesRow struct {
+	Language   string
+	WatchCount int64
+}
+
+func (q *Queries) GetTopLanguages(ctx context.Context, arg GetTopLanguagesParams) ([]GetTopLanguagesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTopLanguages, arg.UserID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTopLanguagesRow
+	for rows.Next() {
+		var i GetTopLanguagesRow
+		if err := rows.Scan(&i.Language, &i.WatchCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTopReturnOnInvestmentMovies = `-- name: GetTopReturnOnInvestmentMovies :many
+WITH watched_movies AS (
+    SELECT DISTINCT
+        watched.movie_id
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?
+)
+SELECT
+    movie.id,
+    movie.title,
+    movie.poster_path,
+    movie.budget,
+    movie.revenue,
+    CAST(
+        CAST(movie.revenue - movie.budget AS REAL) / CAST(movie.budget AS REAL) AS REAL
+    ) AS roi
+FROM
+    watched_movies
+    JOIN movie ON watched_movies.movie_id = movie.id
+WHERE
+    movie.budget > 0
+    AND movie.revenue > 0
+ORDER BY
+    roi DESC,
+    movie.revenue DESC,
+    movie.title ASC
+LIMIT
+    ?
+`
+
+type GetTopReturnOnInvestmentMoviesParams struct {
+	UserID *int64
+	Limit  int64
+}
+
+type GetTopReturnOnInvestmentMoviesRow struct {
+	ID         int64
+	Title      string
+	PosterPath string
+	Budget     int64
+	Revenue    int64
+	Roi        float64
+}
+
+func (q *Queries) GetTopReturnOnInvestmentMovies(ctx context.Context, arg GetTopReturnOnInvestmentMoviesParams) ([]GetTopReturnOnInvestmentMoviesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTopReturnOnInvestmentMovies, arg.UserID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTopReturnOnInvestmentMoviesRow
+	for rows.Next() {
+		var i GetTopReturnOnInvestmentMoviesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.PosterPath,
+			&i.Budget,
+			&i.Revenue,
+			&i.Roi,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTopWriters = `-- name: GetTopWriters :many
+SELECT
+    person.id,
+    person.name,
+    person.profile_path,
+    COUNT(DISTINCT watched.id) AS watch_count
+FROM
+    watched
+    JOIN crew ON watched.movie_id = crew.movie_id
+    JOIN person ON crew.person_id = person.id
+WHERE
+    watched.user_id = ?
+    AND crew.job IN (
+        'Writer',
+        'Screenplay',
+        'Story',
+        'Novel',
+        'Original Story',
+        'Characters'
+    )
+GROUP BY
+    person.id,
+    person.name,
+    person.profile_path
+ORDER BY
+    watch_count DESC,
+    person.name ASC
+LIMIT
+    ?
+`
+
+type GetTopWritersParams struct {
+	UserID *int64
+	Limit  int64
+}
+
+type GetTopWritersRow struct {
+	ID          int64
+	Name        string
+	ProfilePath string
+	WatchCount  int64
+}
+
+func (q *Queries) GetTopWriters(ctx context.Context, arg GetTopWritersParams) ([]GetTopWritersRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTopWriters, arg.UserID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTopWritersRow
+	for rows.Next() {
+		var i GetTopWritersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ProfilePath,
+			&i.WatchCount,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
