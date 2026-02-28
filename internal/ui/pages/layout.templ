@@ -177,66 +177,119 @@ templ Scripts() {
 templ SidebarNavigationScript() {
 	<script>
 	document.addEventListener("DOMContentLoaded", () => {
-	  // Function to update active state based on a specific URL
-	  function updateSidebarActiveState(url = window.location.pathname) {
-		const allNavButtons = document.querySelectorAll(
-		  "[data-tui-sidebar=menu-button][data-nav-url], [data-tui-sidebar=menu-sub-button][data-nav-url]"
+	  const navSelector = "[data-tui-sidebar=menu-button][data-nav-url], [data-tui-sidebar=menu-sub-button][data-nav-url]";
+	  const sidebarSelectedPathCookieName = "sidebar_selected_path";
+	  const sidebarListsOpenCookieName = "sidebar_lists_open";
+	  const sidebarCookieDurationSeconds = 60 * 60 * 24 * 7;
+
+	  function getPath(url = window.location.pathname) {
+		try {
+		  const parsed = new URL(url, window.location.origin);
+		  let path = parsed.pathname || "";
+		  if (path.length > 1 && path.endsWith("/")) {
+			path = path.slice(0, -1);
+		  }
+		  return path;
+		} catch (_error) {
+		  return "";
+		}
+	  }
+
+	  function isSidebarPath(path) {
+		if (
+		  path === "/home" ||
+		  path === "/watched" ||
+		  path === "/watchlist" ||
+		  path === "/stats" ||
+		  path === "/admin/users"
+		) {
+		  return true;
+		}
+
+		return /^\/list\/\d+$/.test(path);
+	  }
+
+	  function setSidebarSelectedPath(path) {
+		if (!path || !isSidebarPath(path)) {
+		  return;
+		}
+
+		document.cookie = `${sidebarSelectedPathCookieName}=${path}; path=/; max-age=${sidebarCookieDurationSeconds}`;
+	  }
+
+	  function setSidebarListsOpen(isOpen) {
+		document.cookie = `${sidebarListsOpenCookieName}=${isOpen ? "true" : "false"}; path=/; max-age=${sidebarCookieDurationSeconds}`;
+	  }
+
+	  function syncSidebarListsOpenFromDOM() {
+		const listsCollapsible = document.querySelector(
+		  "[data-sidebar-lists-collapsible='true']"
 		);
+		if (!listsCollapsible) {
+		  return;
+		}
 
-		// Reset all buttons
-		allNavButtons.forEach(btn => {
-		  btn.removeAttribute("data-tui-sidebar-active");
-		});
+		const isOpen = listsCollapsible.getAttribute("data-tui-collapsible-state") === "open";
+		setSidebarListsOpen(isOpen);
+	  }
 
-		// Activate the button matching the URL
+	  function syncSidebarSelection(path) {
+		if (!isSidebarPath(path)) {
+		  return;
+		}
+
+		updateSidebarActiveState(path);
+		setSidebarSelectedPath(path);
+	  }
+
+	  function updateSidebarActiveState(url = window.location.pathname) {
+		const path = getPath(url);
+		const allNavButtons = document.querySelectorAll(navSelector);
+
 		allNavButtons.forEach(btn => {
-		  if (btn.getAttribute("data-nav-url") === url) {
+		  if (btn.getAttribute("data-nav-url") === path) {
 			btn.setAttribute("data-tui-sidebar-active", "true");
+		  } else {
+			btn.removeAttribute("data-tui-sidebar-active");
 		  }
 		});
 	  }
 
-	  // Set initial active state on full page load
-	  updateSidebarActiveState();
+	  const initialPath = getPath(window.location.pathname);
+	  syncSidebarSelection(initialPath);
 
-	  // Single listener for all post-swap logic
-	  document.body.addEventListener("htmx:afterSwap", (e) => {
-		if (!e.detail.target) return;
+	  document.body.addEventListener("click", e => {
+		const listsTrigger = e.target.closest("[data-sidebar-lists-collapsible-trigger='true']");
+		if (listsTrigger) {
+		  window.requestAnimationFrame(syncSidebarListsOpenFromDOM);
+		}
 
-		// Case 1: The sidebar itself was refreshed.
-		// Re-apply the active state based on the current browser URL.
-		if (e.detail.target.id === "sidebar-content") {
-		  updateSidebarActiveState(window.location.pathname);
+		const navButton = e.target.closest("[data-nav-url]");
+		if (!navButton) {
 		  return;
 		}
 
-		// Case 2: A main navigation link was clicked.
-		// The request was triggered by an element inside the sidebar menu.
-		// We only update the active state for these explicit navigation events.
-		const trigger = e.detail.elt;
-		const isNavigation = trigger && trigger.closest('[data-tui-sidebar="menu"], [data-tui-sidebar="menu-sub"]');
-		
-		if (isNavigation) {
-			const newUrl = e.detail.pathInfo?.requestPath || window.location.pathname;
-			updateSidebarActiveState(newUrl);
+		const targetPath = getPath(navButton.getAttribute("data-nav-url") || "");
+		if (!targetPath) {
+		  return;
+		}
+
+		syncSidebarSelection(targetPath);
+	  });
+
+	  document.body.addEventListener("htmx:afterSwap", e => {
+		if (!e.detail.target) {
+		  return;
+		}
+
+		if (e.detail.target.id === "sidebar-content") {
+		  syncSidebarListsOpenFromDOM();
 		}
 	  });
 
-
-	  // Handle browser back/forward navigation
 	  window.addEventListener("popstate", () => {
-		updateSidebarActiveState(window.location.pathname);
-	  });
-
-	  // Keep click handler for immediate UI feedback before htmx swap
-	  document.body.addEventListener("click", (e) => {
-		const navButton = e.target.closest("[data-nav-url]");
-		if (navButton) {
-		  const targetUrl = navButton.getAttribute("data-nav-url");
-		  if (targetUrl) {
-			updateSidebarActiveState(targetUrl);
-		  }
-		}
+		const path = getPath(window.location.pathname);
+		syncSidebarSelection(path);
 	  });
 	});
 	</script>

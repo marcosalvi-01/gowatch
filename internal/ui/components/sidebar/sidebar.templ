@@ -21,6 +21,7 @@ import (
 type Props struct {
 	CurrentPage  string
 	Collapsed    bool
+	ListsOpen    bool
 	WatchedCount int64
 	Lists        []models.ListEntry
 	Watchlist    *models.List
@@ -49,7 +50,7 @@ templ Sidebar(props Props) {
 						@adminMenuItem(props.CurrentPage)
 					}
 					@sidebar.Separator()
-					@listsSection(props.Lists, props.CurrentPage)
+					@listsSection(props.Lists, props.CurrentPage, props.ListsOpen)
 				}
 			}
 		}
@@ -225,16 +226,23 @@ templ watchlistMenuItem(watchlist *models.List, currentPage string) {
 	}
 }
 
-templ listsSection(lists []models.ListEntry, currentPage string) {
+templ listsSection(lists []models.ListEntry, currentPage string, listsOpen bool) {
+	{{ contentClass := "" }}
+	if listsOpen {
+		{{ contentClass = "tui-collapsible-open" }}
+	}
+
 	@sidebar.Group() {
 		@sidebar.Menu() {
 			@sidebar.MenuItem() {
 				@collapsible.Collapsible(collapsible.Props{
-					Open:  false,
+					Open:  listsOpen,
 					Class: "group/collapsible w-full",
 				}) {
 					@listsCollapsibleTrigger()
-					@collapsible.Content() {
+					@collapsible.Content(collapsible.ContentProps{
+						Class: contentClass,
+					}) {
 						@sidebar.MenuSub() {
 							@listItems(lists, currentPage)
 							@createListTriggerButton()

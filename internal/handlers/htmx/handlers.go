@@ -32,6 +32,12 @@ import (
 
 var log = logging.Get("htmx handlers")
 
+const (
+	sidebarStateCookieName        = "sidebar_state"
+	sidebarSelectedPathCookieName = "sidebar_selected_path"
+	sidebarListsOpenCookieName    = "sidebar_lists_open"
+)
+
 type Handlers struct {
 	watchedService *services.WatchedService
 	listService    *services.ListService
@@ -85,21 +91,34 @@ func (h *Handlers) RenderAddToListDialogContent(w http.ResponseWriter, r *http.R
 
 func (h *Handlers) GetSidebar(w http.ResponseWriter, r *http.Request) {
 	currentURL := r.Header.Get("HX-Current-URL")
-	if r.Header.Get("HX-Current-URL") == "" {
+	if currentURL == "" {
 		http.Error(w, "HX-Current-URL not set", http.StatusBadRequest)
 		return
 	}
-	location := getFirstPathElement(currentURL)
+
+	selectedPath := ""
+	selectedPathCookie, err := r.Cookie(sidebarSelectedPathCookieName)
+	if err == nil {
+		selectedPath = selectedPathCookie.Value
+	}
+
+	currentPage := resolveSidebarCurrentPage(currentURL, selectedPath)
+
+	listsOpenCookieValue := ""
+	listsOpenCookie, err := r.Cookie(sidebarListsOpenCookieName)
+	if err == nil {
+		listsOpenCookieValue = listsOpenCookie.Value
+	}
+
+	listsOpen := resolveSidebarListsOpen(currentPage, listsOpenCookieValue)
 
 	ctx := r.Context()
 
-	log.Debug("getting sidebar", "location", location)
-
-	cookie, err := r.Cookie("sidebar_state")
-	if err != nil {
-		log.Warn("Cookie sidebar_state not set")
+	collapsed := false
+	stateCookie, err := r.Cookie(sidebarStateCookieName)
+	if err == nil {
+		collapsed = stateCookie.Value == "false"
 	}
-	collapsed := cookie != nil && cookie.Value == "false"
 
 	count, err := h.watchedService.GetWatchedCount(ctx)
 	if err != nil {
@@ -131,8 +150,9 @@ func (h *Handlers) GetSidebar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = sidebar.Sidebar(sidebar.Props{
-		CurrentPage:  currentURL,
+		CurrentPage:  currentPage,
 		Collapsed:    collapsed,
+		ListsOpen:    listsOpen,
 		WatchedCount: count,
 		Lists:        lists,
 		Watchlist:    watchlist,
@@ -144,7 +164,11 @@ func (h *Handlers) GetSidebar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Debug("rendered sidebar", "location", location, "watchedCount", count, "listCount", len(lists))
+	log.Debug(
+		"rendered sidebar",
+		"currentPage", currentPage,
+		"listsOpen", listsOpen,
+	)
 }
 
 func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
@@ -610,18 +634,72 @@ func (h *Handlers) ListStats(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getFirstPathElement(urlStr string) string {
+func resolveSidebarCurrentPage(currentURL, selectedPath string) string {
+	if currentPage := sidebarCurrentPageFromPath(sidebarPathFromURL(currentURL)); currentPage != "" {
+		return currentPage
+	}
+
+	return sidebarCurrentPageFromPath(sidebarPathFromURL(selectedPath))
+}
+
+func resolveSidebarListsOpen(currentPage, cookieValue string) bool {
+	switch cookieValue {
+	case "true":
+		return true
+	case "false":
+		return false
+	}
+
+	return strings.HasPrefix(currentPage, "list_")
+}
+
+func sidebarPathFromURL(urlStr string) string {
+	if urlStr == "" {
+		return ""
+	}
+
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return ""
 	}
 
-	// Remove leading slash and split
-	path := strings.TrimPrefix(u.Path, "/")
-	parts := strings.Split(path, "/")
-
-	if len(parts) > 0 && parts[0] != "" {
-		return parts[0]
+	path := strings.TrimSpace(u.Path)
+	if path == "" {
+		return ""
 	}
+
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+
+	if path != "/" {
+		path = strings.TrimSuffix(path, "/")
+	}
+
+	return path
+}
+
+func sidebarCurrentPageFromPath(path string) string {
+	switch path {
+	case "/", "/home":
+		return "home"
+	case "/watched":
+		return "watched"
+	case "/watchlist":
+		return "watchlist"
+	case "/stats":
+		return "stats"
+	case "/admin/users":
+		return "admin"
+	}
+
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(parts) == 2 && parts[0] == "list" {
+		listID, err := strconv.ParseInt(parts[1], 10, 64)
+		if err == nil && listID > 0 {
+			return fmt.Sprintf("list_%d", listID)
+		}
+	}
+
 	return ""
 }
