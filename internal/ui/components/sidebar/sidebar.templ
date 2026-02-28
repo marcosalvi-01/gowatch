@@ -33,7 +33,7 @@ type Props struct {
 templ Sidebar(props Props) {
 	// Dialog must be at top level for proper portal rendering
 	@CreateListDialog()
-	@ImportMoviesDialog()
+	@ImportDataDialog()
 	@sidebar.Sidebar(sidebar.Props{
 		ID:        "sidebar",
 		Collapsed: props.Collapsed,
@@ -82,7 +82,7 @@ templ Sidebar(props Props) {
 							}
 							@dropdown.Separator()
 							@dialog.Trigger(dialog.TriggerProps{
-								For: "import-movies-dialog",
+								For: "import-data-dialog",
 								Attributes: templ.Attributes{
 									"data-sidebar-import-btn": "true",
 								},
@@ -90,20 +90,14 @@ templ Sidebar(props Props) {
 								@dropdown.Item() {
 									<span class="flex items-center">
 										@icon.Import(icon.Props{Size: 16, Class: "mr-2"})
-										Import movies
+										Import data
 									</span>
 								}
 							}
 							@dropdown.Item() {
-								<a href="/api/v1/movies/export" download="watched_movies.json" class="flex items-center w-full">
+								<a href="/api/v1/export" download="gowatch_data.json" class="flex items-center w-full">
 									@icon.Download(icon.Props{Size: 16, Class: "mr-2"})
-									Export watched
-								</a>
-							}
-							@dropdown.Item() {
-								<a href="/api/v1/export/all" download="gowatch_data.json" class="flex items-center w-full">
-									@icon.Download(icon.Props{Size: 16, Class: "mr-2"})
-									Export all data
+									Export data
 								</a>
 							}
 							@dropdown.Separator()
@@ -379,12 +373,12 @@ templ createListDialogFooter() {
 	}
 }
 
-templ ImportMoviesDialog() {
+templ ImportDataDialog() {
 	@dialog.Dialog(dialog.Props{
-		ID: "import-movies-dialog",
+		ID: "import-data-dialog",
 	}) {
 		<form
-			hx-post="/htmx/movies/import"
+			hx-post="/htmx/import"
 			hx-target="#toast"
 			hx-encoding="multipart/form-data"
 		>
@@ -393,20 +387,20 @@ templ ImportMoviesDialog() {
 			}) {
 				@dialog.Header() {
 					@dialog.Title() {
-						Import Watched Movies
+						Import data
 					}
 					@dialog.Description() {
-						Upload a JSON file of your watched movies and lists to import them.
+						Upload a JSON file of your exported data.
 					}
 				}
-				@importMoviesFormFields()
-				@importMoviesDialogFooter()
+				@importDataFormFields()
+				@importDataDialogFooter()
 			}
 		</form>
 	}
 }
 
-templ importMoviesFormFields() {
+templ importDataFormFields() {
 	<div class="space-y-4">
 		@form.Item() {
 			@form.Label(form.LabelProps{
@@ -425,7 +419,7 @@ templ importMoviesFormFields() {
 	</div>
 }
 
-templ importMoviesDialogFooter() {
+templ importDataDialogFooter() {
 	@dialog.Footer() {
 		@dialog.Close() {
 			@button.Button(button.Props{
@@ -438,7 +432,7 @@ templ importMoviesDialogFooter() {
 			@button.Button(button.Props{
 				Type: button.TypeSubmit,
 			}) {
-				Import Movies
+				Import data
 			}
 		}
 	}

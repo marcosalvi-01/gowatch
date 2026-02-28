@@ -21,7 +21,7 @@ templ Home(userName string, data models.HomeData) {
 		@templ.Fragment("content") {
 			<div class="space-y-7 sm:space-y-8 pb-5">
 				if data.Stats.TotalWatched == 0 && len(data.RecentMovies) == 0 && data.WatchlistMovieCount == 0 {
-					@sidebar.ImportMoviesDialog()
+					@sidebar.ImportDataDialog()
 					@emptystate.EmptyState(emptystate.Props{
 						Title:             fmt.Sprintf("Welcome to Gowatch, %s!", userName),
 						Description:       "You haven't tracked any movies yet. Let's start building your collection!",

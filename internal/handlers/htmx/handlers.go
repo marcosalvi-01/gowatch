@@ -56,7 +56,7 @@ func NewHandlers(watchedService *services.WatchedService, listService *services.
 
 func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Post("/movies/watched", h.AddWatchedMovie)
-	r.Post("/movies/import", h.ImportWatched)
+	r.Post("/import", h.ImportData)
 	r.Post("/lists", h.CreateList)
 	r.Delete("/lists", h.DeleteList)
 
@@ -464,7 +464,7 @@ func (h *Handlers) HomeLists(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handlers) ImportWatched(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) ImportData(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(32 << 20) // 32 MB
 	if err != nil {
 		log.Error("failed to parse multipart form", "error", err)
@@ -491,17 +491,11 @@ func (h *Handlers) ImportWatched(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// First try to decode as combined format
 	var allData models.ImportAllData
 	if err := json.Unmarshal(data, &allData); err != nil {
-		// If that fails, try legacy watched-only format
-		var watchedData models.ImportWatchedMoviesLog
-		if err := json.Unmarshal(data, &watchedData); err != nil {
-			log.Error("failed to parse JSON", "error", err)
-			RenderErrorToast(w, r, "Invalid File Format", "The file must be valid JSON matching the expected format.", 4000)
-			return
-		}
-		allData.Watched = watchedData
+		log.Error("failed to parse JSON", "error", err)
+		RenderErrorToast(w, r, "Invalid File Format", "The file must be valid JSON matching the expected format.", 4000)
+		return
 	}
 
 	totalMovies := 0

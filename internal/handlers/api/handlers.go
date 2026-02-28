@@ -35,28 +35,11 @@ func NewHandlers(db db.DB, watchedService *services.WatchedService, listService 
 
 func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Get("/health", h.healthCheck)
-	r.Get("/export/all", h.exportAll)
-	r.Route("/movies", func(r chi.Router) {
-		r.Post("/import", h.importWatched)
-		r.Get("/export", h.exportWatched)
-	})
+	r.Get("/export", h.exportData)
+	r.Post("/import", h.importData)
 }
 
-func (h *Handlers) exportWatched(w http.ResponseWriter, r *http.Request) {
-	log.Debug("exporting watched movies")
-
-	export, err := h.watchedService.ExportWatched(r.Context())
-	if err != nil {
-		log.Error("failed to export watched movies", "error", err)
-		http.Error(w, "Failed to export watched movies due to an internal error.", http.StatusInternalServerError)
-		return
-	}
-
-	log.Info("successfully exported watched movies")
-	jsonResponse(w, http.StatusOK, export)
-}
-
-func (h *Handlers) exportAll(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) exportData(w http.ResponseWriter, r *http.Request) {
 	log.Debug("exporting all data")
 
 	watchedExport, err := h.watchedService.ExportWatched(r.Context())
@@ -82,7 +65,7 @@ func (h *Handlers) exportAll(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, http.StatusOK, export)
 }
 
-func (h *Handlers) importWatched(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) importData(w http.ResponseWriter, r *http.Request) {
 	log.Debug("starting import")
 
 	bodyBytes, err := io.ReadAll(r.Body)
@@ -92,17 +75,11 @@ func (h *Handlers) importWatched(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// First try to decode as combined format
 	var allData models.ImportAllData
 	if err := json.Unmarshal(bodyBytes, &allData); err != nil {
-		// If that fails, try legacy watched-only format
-		var watchedData models.ImportWatchedMoviesLog
-		if err := json.Unmarshal(bodyBytes, &watchedData); err != nil {
-			log.Error("failed to decode JSON payload", "error", err)
-			http.Error(w, "failed to decode request payload", http.StatusBadRequest)
-			return
-		}
-		allData.Watched = watchedData
+		log.Error("failed to decode JSON payload", "error", err)
+		http.Error(w, "failed to decode request payload", http.StatusBadRequest)
+		return
 	}
 
 	totalMovies := 0

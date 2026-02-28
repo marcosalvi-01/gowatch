@@ -24,7 +24,7 @@ templ Watched(days []models.WatchedMoviesInDay) {
 			}}
 			<div class="space-y-8 pb-5">
 				if watchedCount == 0 {
-					@sidebar.ImportMoviesDialog()
+					@sidebar.ImportDataDialog()
 					@emptystate.EmptyState(emptystate.Props{
 						Title:             "Your history is empty",
 						Description:       "Start tracking your movie journey by searching for your favorite films.",

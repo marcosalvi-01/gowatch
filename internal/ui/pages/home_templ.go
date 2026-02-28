@@ -74,7 +74,7 @@ func Home(userName string, data models.HomeData) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				if data.Stats.TotalWatched == 0 && len(data.RecentMovies) == 0 && data.WatchlistMovieCount == 0 {
-					templ_7745c5c3_Err = sidebar.ImportMoviesDialog().Render(ctx, templ_7745c5c3_Buffer)
+					templ_7745c5c3_Err = sidebar.ImportDataDialog().Render(ctx, templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}

@@ -70,54 +70,7 @@ func TestHandlers_HealthCheck(t *testing.T) {
 	}
 }
 
-func TestHandlers_ExportWatched(t *testing.T) {
-	testDB, err := db.NewTestDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = testDB.Close() }()
-	setupTestUser(t, testDB)
-
-	movieService := services.NewMovieService(testDB, nil, time.Hour)
-	listService := services.NewListService(testDB, movieService)
-	watchedService := services.NewWatchedService(testDB, listService, movieService)
-	handlers := NewHandlers(testDB, watchedService, listService)
-
-	// Insert movie and watched
-	movie := &models.MovieDetails{
-		Movie: models.Movie{
-			ID:    1,
-			Title: "Test Movie",
-		},
-	}
-	ctx := getTestCtx()
-	if err := testDB.UpsertMovie(ctx, movie); err != nil {
-		t.Fatal(err)
-	}
-	if err := watchedService.AddWatched(ctx, 1, time.Now(), true, nil); err != nil {
-		t.Fatal(err)
-	}
-
-	req := httptest.NewRequest("GET", "/movies/export", nil)
-	req = req.WithContext(ctx)
-	w := httptest.NewRecorder()
-
-	handlers.exportWatched(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected status 200, got %d", w.Code)
-	}
-
-	var exported models.ImportWatchedMoviesLog
-	if err := json.Unmarshal(w.Body.Bytes(), &exported); err != nil {
-		t.Fatal(err)
-	}
-	if len(exported) != 1 {
-		t.Errorf("expected 1 day, got %d", len(exported))
-	}
-}
-
-func TestHandlers_ImportWatched_InvalidJSON(t *testing.T) {
+func TestHandlers_Import_InvalidJSON(t *testing.T) {
 	testDB, err := db.NewTestDB()
 	if err != nil {
 		t.Fatal(err)
@@ -128,51 +81,18 @@ func TestHandlers_ImportWatched_InvalidJSON(t *testing.T) {
 	watchedService := services.NewWatchedService(testDB, listService, nil)
 	handlers := NewHandlers(testDB, watchedService, listService)
 
-	req := httptest.NewRequest("POST", "/movies/import", bytes.NewReader([]byte("invalid json")))
+	req := httptest.NewRequest("POST", "/import", bytes.NewReader([]byte("invalid json")))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	handlers.importWatched(w, req)
+	handlers.importData(w, req)
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("expected status 400, got %d", w.Code)
 	}
 }
 
-func TestHandlers_ExportWatched_Empty(t *testing.T) {
-	testDB, err := db.NewTestDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = testDB.Close() }()
-	setupTestUser(t, testDB)
-
-	movieService := services.NewMovieService(testDB, nil, time.Hour)
-	listService := services.NewListService(testDB, movieService)
-	watchedService := services.NewWatchedService(testDB, listService, movieService)
-	handlers := NewHandlers(testDB, watchedService, listService)
-
-	ctx := getTestCtx()
-	req := httptest.NewRequest("GET", "/movies/export", nil)
-	req = req.WithContext(ctx)
-	w := httptest.NewRecorder()
-
-	handlers.exportWatched(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected status 200, got %d", w.Code)
-	}
-
-	var exported models.ImportWatchedMoviesLog
-	if err := json.Unmarshal(w.Body.Bytes(), &exported); err != nil {
-		t.Fatal(err)
-	}
-	if len(exported) != 0 {
-		t.Errorf("expected 0 days, got %d", len(exported))
-	}
-}
-
-func TestHandlers_ExportAll(t *testing.T) {
+func TestHandlers_Export(t *testing.T) {
 	testDB, err := db.NewTestDB()
 	if err != nil {
 		t.Fatal(err)
@@ -204,11 +124,11 @@ func TestHandlers_ExportAll(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := httptest.NewRequest("GET", "/export/all", nil)
+	req := httptest.NewRequest("GET", "/export", nil)
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
-	handlers.exportAll(w, req)
+	handlers.exportData(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d", w.Code)
@@ -230,24 +150,16 @@ func TestHandlers_ExportAll(t *testing.T) {
 	}
 }
 
-func TestHandlers_ImportWatched_LegacyPayloadAccepted(t *testing.T) {
+func TestHandlers_Import_LegacyPayloadRejected(t *testing.T) {
 	testDB, err := db.NewTestDB()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = testDB.Close() }()
-	setupTestUser(t, testDB)
 
-	movieService := services.NewMovieService(testDB, nil, time.Hour)
-	listService := services.NewListService(testDB, movieService)
-	watchedService := services.NewWatchedService(testDB, listService, movieService)
+	listService := services.NewListService(testDB, nil)
+	watchedService := services.NewWatchedService(testDB, listService, nil)
 	handlers := NewHandlers(testDB, watchedService, listService)
-
-	ctx := getTestCtx()
-	movie := &models.MovieDetails{Movie: models.Movie{ID: 1, Title: "Test Movie"}}
-	if err := testDB.UpsertMovie(ctx, movie); err != nil {
-		t.Fatal(err)
-	}
 
 	payload := models.ImportWatchedMoviesLog{
 		{
@@ -263,24 +175,18 @@ func TestHandlers_ImportWatched_LegacyPayloadAccepted(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := httptest.NewRequest("POST", "/movies/import", bytes.NewReader(body))
-	req = req.WithContext(ctx)
+	req := httptest.NewRequest("POST", "/import", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	handlers.importWatched(w, req)
+	handlers.importData(w, req)
 
-	if w.Code != http.StatusAccepted {
-		t.Fatalf("expected status 202, got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", w.Code)
 	}
-
-	waitForCondition(t, 2*time.Second, func() bool {
-		count, err := watchedService.GetWatchedCount(ctx)
-		return err == nil && count == 1
-	})
 }
 
-func TestHandlers_ImportWatched_CombinedPayloadAccepted(t *testing.T) {
+func TestHandlers_Import_CombinedPayloadAccepted(t *testing.T) {
 	testDB, err := db.NewTestDB()
 	if err != nil {
 		t.Fatal(err)
@@ -318,12 +224,12 @@ func TestHandlers_ImportWatched_CombinedPayloadAccepted(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := httptest.NewRequest("POST", "/movies/import", bytes.NewReader(body))
+	req := httptest.NewRequest("POST", "/import", bytes.NewReader(body))
 	req = req.WithContext(ctx)
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	handlers.importWatched(w, req)
+	handlers.importData(w, req)
 
 	if w.Code != http.StatusAccepted {
 		t.Fatalf("expected status 202, got %d", w.Code)
@@ -344,7 +250,7 @@ func TestHandlers_ImportWatched_CombinedPayloadAccepted(t *testing.T) {
 	})
 }
 
-func TestHandlers_ImportWatched_RejectsPayloadWithoutMovies(t *testing.T) {
+func TestHandlers_Import_RejectsPayloadWithoutMovies(t *testing.T) {
 	testDB, err := db.NewTestDB()
 	if err != nil {
 		t.Fatal(err)
@@ -370,11 +276,11 @@ func TestHandlers_ImportWatched_RejectsPayloadWithoutMovies(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := httptest.NewRequest("POST", "/movies/import", bytes.NewReader(body))
+	req := httptest.NewRequest("POST", "/import", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	handlers.importWatched(w, req)
+	handlers.importData(w, req)
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected status 400, got %d", w.Code)

@@ -32,7 +32,7 @@ templ EmptyState(props Props) {
 		if props.ShowImport {
 			<div class="grid grid-cols-1 gap-4 w-full max-w-md mx-auto pt-4">
 				@dialog.Trigger(dialog.TriggerProps{
-					For: "import-movies-dialog",
+					For: "import-data-dialog",
 				}) {
 					@card.Card(card.Props{
 						Class: "flex flex-col items-center p-8 space-y-4 cursor-pointer hover:bg-muted transition-all group",
