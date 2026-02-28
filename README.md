@@ -70,7 +70,7 @@ The application will be available at `http://localhost:8080`.
 
 ### Local Development
 
-1. Ensure you have Go 1.25.3+ and Node.js/npm installed.
+1. Ensure you have Go 1.26 and curl installed.
 
 2. Clone the repository and install dependencies:
 
@@ -160,7 +160,7 @@ admin_default_password: "Welcome123!"
 ### Prerequisites
 
 - Go 1.25.3+
-- Node.js and npm (for Tailwind)
+- curl (for Tailwind standalone binary download)
 - TMDB API key (get one at [TMDB](https://www.themoviedb.org/settings/api))
 
 ### Setup

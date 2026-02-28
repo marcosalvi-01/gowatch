@@ -5,6 +5,11 @@ run:
   tests: true
   modules-download-mode: readonly
 
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+
 linters:
   default: standard
   enable:
