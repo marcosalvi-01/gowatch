@@ -10,6 +10,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/selectbox"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/tooltip"
 	"strconv"
 	"strings"
 	"time"
@@ -604,14 +605,35 @@ templ calendarHeatmapCard(data []models.DailyWatchCount) {
 				}
 				startDate := normalizeHeatmapStartDate(time.Now())
 				dayLabels := []string{"M", "T", "W", "T", "F", "S", "S"}
+				monthLabels := make([]string, 53)
+				monthLabels[0] = startDate.Format("Jan")
+				for week := 1; week < len(monthLabels); week++ {
+					for dayIndex := 0; dayIndex < len(dayLabels); dayIndex++ {
+						currentDate := startDate.AddDate(0, 0, week*7+dayIndex)
+						if currentDate.Day() == 1 {
+							monthLabels[week] = currentDate.Format("Jan")
+							break
+						}
+					}
+				}
 			}}
 			<div class="h-full min-w-0 flex flex-col justify-center gap-2">
 				<div class="w-full min-w-0 max-w-full overflow-x-auto overflow-y-hidden pb-4">
 					<div class="w-max">
 						<div class="space-y-1">
+							<div class="flex items-center gap-1">
+								<div class="sticky left-0 z-10 h-3.5 w-3.5 shrink-0 bg-card"></div>
+								for week := 0; week < len(monthLabels); week++ {
+									<div class="relative h-3.5 w-3.5 shrink-0">
+										if monthLabels[week] != "" {
+											<span class="absolute left-0 top-0 text-[10px] leading-none text-muted-foreground font-bold">{ monthLabels[week] }</span>
+										}
+									</div>
+								}
+							</div>
 							for dayIndex := 0; dayIndex < len(dayLabels); dayIndex++ {
 								<div class="flex items-center gap-1">
-									<div class="sticky left-0 z-10 h-3.5 w-3.5 shrink-0 bg-card text-[10px] text-muted-foreground flex items-center justify-end leading-none">
+									<div class="sticky left-0 z-10 h-3.5 w-3.5 shrink-0 bg-card text-[10px] text-muted-foreground font-bold flex items-center justify-end leading-none pr-1">
 										{ dayLabels[dayIndex] }
 									</div>
 									for week := 0; week < 53; week++ {
@@ -619,10 +641,16 @@ templ calendarHeatmapCard(data []models.DailyWatchCount) {
 										{{ key := currentDate.Format("2006-01-02") }}
 										{{ count := countByDate[key] }}
 										{{ level := heatmapLevel(count, maxCount) }}
-										<div
-											class={ heatmapCellClass(level) }
-											title={ fmt.Sprintf("%s - %d watches", currentDate.Format("2006-01-02"), count) }
-										></div>
+										{{ tooltipID := fmt.Sprintf("stats-heatmap-tooltip-%d-%d", dayIndex, week) }}
+										{{ tooltipLabel := fmt.Sprintf("%s - %d watches", currentDate.Format("2006-01-02"), count) }}
+										@tooltip.Tooltip() {
+											@tooltip.Trigger(tooltip.TriggerProps{For: tooltipID, Class: "inline-flex"}) {
+												<div class={ heatmapCellClass(level) }></div>
+											}
+											@tooltip.Content(tooltip.ContentProps{ID: tooltipID, Position: tooltip.PositionTop, Class: "text-xs"}) {
+												{ tooltipLabel }
+											}
+										}
 									}
 								</div>
 							}
