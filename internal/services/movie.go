@@ -87,6 +87,12 @@ func (s *MovieService) GetMovieDetails(ctx context.Context, id int64) (*models.M
 		s.log.Error("failed to get movie details from database. Fetching from TMDB", "movieID", id, "error", err)
 	}
 
+	if s.client == nil {
+		err := fmt.Errorf("tmdb client not configured")
+		s.log.Error("tmdb client not configured", "movieID", id)
+		return nil, err
+	}
+
 	s.log.Info("movie details cache miss, fetching from TMDB", "movieID", id)
 
 	// cache miss

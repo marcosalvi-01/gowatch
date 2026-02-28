@@ -270,6 +270,19 @@ func (s *WatchedService) GetRecentWatchedMovies(ctx context.Context, limit int) 
 	return result, nil
 }
 
+func (s *WatchedService) GetDailyWatchCountsLastYear(ctx context.Context) ([]models.DailyWatchCount, error) {
+	s.log.Debug("GetDailyWatchCountsLastYear: retrieving daily watch counts")
+
+	data, err := s.getDailyWatchCountsLastYear(ctx)
+	if err != nil {
+		s.log.Error("GetDailyWatchCountsLastYear: failed to retrieve daily watch counts", "error", err)
+		return nil, err
+	}
+
+	s.log.Debug("GetDailyWatchCountsLastYear: retrieved daily watch counts", "count", len(data))
+	return data, nil
+}
+
 func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*models.WatchedStats, error) {
 	start := time.Now()
 	s.log.Debug("GetWatchedStats: starting stats calculation", "limit", limit)

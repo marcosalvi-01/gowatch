@@ -37,8 +37,8 @@
 - [ ] sharable lists
 - [ ] seer integration
 - [ ] improve home
-  - [ ] add a watchlist section in the home page with the movies to watch next
-  - [ ] add calendar heatmap to home
+  - [x] add a watchlist section in the home page with the movies to watch next
+  - [x] add calendar heatmap to home
   - [ ] generic improvements now that we have a better stats page
 
 # optimizations:
