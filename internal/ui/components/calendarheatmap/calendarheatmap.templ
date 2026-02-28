@@ -45,7 +45,7 @@ templ CalendarHeatmapCard(data []models.DailyWatchCount) {
 					<div class="w-max">
 						<div class="space-y-1">
 							<div class="flex items-center gap-1">
-								<div class="sticky left-0 z-10 h-3.5 w-3.5 shrink-0 bg-card"></div>
+								<div class="sticky left-0 h-3.5 w-3.5 shrink-0 bg-card"></div>
 								for week := 0; week < len(monthLabels); week++ {
 									<div class="relative h-3.5 w-3.5 shrink-0">
 										if monthLabels[week] != "" {
@@ -56,7 +56,7 @@ templ CalendarHeatmapCard(data []models.DailyWatchCount) {
 							</div>
 							for dayIndex := 0; dayIndex < len(dayLabels); dayIndex++ {
 								<div class="flex items-center gap-1">
-									<div class="sticky left-0 z-10 h-3.5 w-3.5 shrink-0 bg-card text-[10px] text-muted-foreground font-bold flex items-center justify-end leading-none pr-1">
+									<div class="sticky left-0 h-3.5 w-3.5 shrink-0 bg-card text-[10px] text-muted-foreground font-bold flex items-center justify-end leading-none pr-1">
 										{ dayLabels[dayIndex] }
 									</div>
 									for week := 0; week < 53; week++ {
