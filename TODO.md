@@ -1,7 +1,7 @@
 # bugs:
 
 - [ ] fix addtolistdialog to return full dialog content with buttons and handle empty lists and add loading indicator
-- [x] we need to keep track of the selected item on the sidebar in a cookie or something so that the backend can render the sidebar with the correct state (should also simplify the sidebar script?). this is to fix removing a movie from the watchlist removing the selection on the watchlist item in the sidebar when refreshing it. 
+- [x] we need to keep track of the selected item on the sidebar in a cookie or something so that the backend can render the sidebar with the correct state (should also simplify the sidebar script?). this is to fix removing a movie from the watchlist removing the selection on the watchlist item in the sidebar when refreshing it.
 - [x] use a correct sqlite supported date type in the db instead of just the go time as a string
 
 # feats:
@@ -16,17 +16,18 @@
 - [ ] shortcut to search
 - [x] package it as a cli so that it can be installed with `go install`
 - [ ] more stats
-  - [ ] rewatches
-  - [ ] longest streak
-  - [ ] most in one day
-  - [ ] calendar heatmap
-  - [ ] watches by year
-  - [ ] top directors
-  - [ ] distribution of years of the movies
-  - [ ] longest/shortest movie watched
-  - [ ] Top countries/languages/studios/writers/composers/cinematographers
-  - [ ] budget of watched movies distribution (indie/mid/blockbuster)
-  - [ ] return of investment movies/biggest budget movies
+  - [x] rewatches
+  - [x] longest streak
+  - [x] most in one day
+  - [x] calendar heatmap
+  - [x] watches by year
+  - [x] top directors
+  - [x] distribution of years of the movies
+  - [x] longest/shortest movie watched
+  - [x] Top languages/writers/composers/cinematographers
+  - [ ] Top countries/studios
+  - [x] budget of watched movies distribution (indie/mid/blockbuster)
+  - [x] return of investment movies/biggest budget movies
   - [ ] franchises
 - [ ] import from letterboxd
 - [ ] jellyfin watched integration
@@ -34,12 +35,15 @@
 - [x] add rating capabilities to watched movies
 - [x] custom ad-hoc watchlist (separate from lists)
 - [ ] sharable lists
-- [ ] jellyseer integration
-- [ ] add a watchlist section in the home page with the movies to watch next
+- [ ] seer integration
+- [ ] improve home
+  - [ ] add a watchlist section in the home page with the movies to watch next
+  - [ ] add calendar heatmap to home
+  - [ ] generic improvements now that we have a better stats page
 
 # optimizations:
 
-- [ ] add pagination to watched lists
+- [ ] add pagination (or htmx progressive loading) to watched movies
 - [ ] load movie activity section asynchronously with HTMX
 - [ ] add proxy and cache for poster images
 - [ ] better mobile ui (change the hover stuff to click?)
