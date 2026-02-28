@@ -12,6 +12,15 @@ import (
 
 var log = logging.Get("static")
 
+const (
+	manifestPath         = "static/manifest.webmanifest"
+	manifestContentType  = "application/manifest+json"
+	serviceWorkerPath    = "static/sw.js"
+	serviceWorkerAllowed = "/"
+	jsContentType        = "application/javascript; charset=utf-8"
+	noCacheHeaderValue   = "no-cache"
+)
+
 type Handlers struct{}
 
 func NewHandlers() *Handlers {
@@ -24,4 +33,31 @@ var staticFiles embed.FS
 func (h *Handlers) RegisterRoutes(r chi.Router) {
 	log.Debug("registering static file routes")
 	r.Handle("/*", http.FileServer(http.FS(staticFiles)))
+}
+
+func (h *Handlers) Manifest(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", manifestContentType)
+	w.Header().Set("Cache-Control", noCacheHeaderValue)
+	h.serveEmbeddedFile(w, r, manifestPath)
+}
+
+func (h *Handlers) ServiceWorker(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", jsContentType)
+	w.Header().Set("Cache-Control", noCacheHeaderValue)
+	w.Header().Set("Service-Worker-Allowed", serviceWorkerAllowed)
+	h.serveEmbeddedFile(w, r, serviceWorkerPath)
+}
+
+func (h *Handlers) serveEmbeddedFile(w http.ResponseWriter, r *http.Request, path string) {
+	content, err := staticFiles.ReadFile(path)
+	if err != nil {
+		log.Error("failed to read embedded file", "path", path, "error", err)
+		http.NotFound(w, r)
+		return
+	}
+
+	_, err = w.Write(content)
+	if err != nil {
+		log.Error("failed to write embedded file response", "path", path, "error", err)
+	}
 }

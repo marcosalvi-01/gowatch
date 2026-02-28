@@ -53,6 +53,10 @@ func NewRouter(
 
 	log.Debug("registering static routes")
 	staticHandlers := static.NewHandlers()
+	r.Get("/manifest.webmanifest", staticHandlers.Manifest)
+	r.Head("/manifest.webmanifest", staticHandlers.Manifest)
+	r.Get("/sw.js", staticHandlers.ServiceWorker)
+	r.Head("/sw.js", staticHandlers.ServiceWorker)
 	r.Route("/static", func(r chi.Router) {
 		staticHandlers.RegisterRoutes(r)
 	})

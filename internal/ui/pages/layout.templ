@@ -183,6 +183,7 @@ templ Scripts() {
 	</script>
 	@SidebarNavigationScript()
 	@ThemeScript()
+	@ServiceWorkerScript()
 	// for the sidebar
 	@templSidebar.Script()
 	@popover.Script()
@@ -326,22 +327,50 @@ templ ThemeScript() {
 	<script>
 	(() => {
 	  const root = document.documentElement;
-	  const saved = localStorage.getItem('theme');
-	  const shouldBeDark = saved ? saved === 'dark' : true;
+	  const themeColorMeta = document.querySelector("meta[name='theme-color']");
+	  const lightThemeColor = "#ffffff";
+	  const darkThemeColor = "#09090b";
+
+	  const syncThemeColor = () => {
+		if (!themeColorMeta) {
+		  return;
+		}
+
+		themeColorMeta.setAttribute("content", root.classList.contains("dark") ? darkThemeColor : lightThemeColor);
+	  };
+
+	  const saved = localStorage.getItem("theme");
+	  const shouldBeDark = saved ? saved === "dark" : true;
 	  if (shouldBeDark) {
-	    root.classList.add('dark');
+	    root.classList.add("dark");
 	  }
+	  syncThemeColor();
+
 	  window.toggleTheme = () => {
-	    const isDark = root.classList.toggle('dark');
-	    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+	    const isDark = root.classList.toggle("dark");
+	    localStorage.setItem("theme", isDark ? "dark" : "light");
+	    syncThemeColor();
 	  };
 	})();
 	</script>
 }
 
+templ ServiceWorkerScript() {
+	<script>
+	if ("serviceWorker" in navigator && window.isSecureContext) {
+	  window.addEventListener("load", () => {
+		navigator.serviceWorker.register("/sw.js").catch(error => {
+		  console.error("service worker registration failed", error);
+		});
+	  });
+	}
+	</script>
+}
+
 templ Favicons() {
 	<link rel="icon" type="image/svg+xml" href="/static/favicon.svg"/>
-	<meta name="theme-color" content="#ffffff"/>
+	<link rel="manifest" href="/manifest.webmanifest"/>
+	<meta name="theme-color" content="#09090b"/>
 }
 
 templ skeletonDashboard() {
