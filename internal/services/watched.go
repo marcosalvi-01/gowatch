@@ -125,18 +125,18 @@ func (s *WatchedService) ImportWatched(ctx context.Context, movies models.Import
 			_, err := s.tmdb.GetMovieDetails(ctx, movieRef.MovieID)
 			if err != nil {
 				s.log.Error("ImportWatched: failed to fetch movie details", "movieID", movieRef.MovieID, "date", importMovie.Date, "error", err)
-				return fmt.Errorf("ImportWatched: failed to fetch movie details: %w", err)
+				continue
 			}
 
 			err = s.AddWatched(ctx, movieRef.MovieID, importMovie.Date, movieRef.InTheaters, movieRef.Rating)
 			if err != nil {
 				s.log.Error("ImportWatched: failed to import movie", "movieID", movieRef.MovieID, "date", importMovie.Date, "error", err)
-				return fmt.Errorf("ImportWatched: failed to import movie: %w", err)
+				continue
 			}
 		}
 	}
 
-	s.log.Info("ImportWatched: successfully imported watched movies", "totalMovies", totalMovies)
+	s.log.Info("ImportWatched: completed watched movies import", "totalMovies", totalMovies)
 	return nil
 }
 
@@ -148,7 +148,6 @@ func (s *WatchedService) ImportAll(ctx context.Context, data models.ImportAllDat
 	if len(data.Watched) > 0 {
 		if err := s.ImportWatched(ctx, data.Watched); err != nil {
 			s.log.Error("ImportAll: failed to import watched movies", "error", err)
-			return fmt.Errorf("ImportAll: failed to import watched movies: %w", err)
 		}
 	}
 

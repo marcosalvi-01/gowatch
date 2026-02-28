@@ -381,14 +381,14 @@ func (s *ListService) ImportLists(ctx context.Context, lists models.ImportListsL
 				watchlist, err := s.GetWatchlist(ctx)
 				if err != nil {
 					if !errors.Is(err, sql.ErrNoRows) {
-						s.log.Error("ImportLists: failed to get watchlist", "error", err)
-						return fmt.Errorf("ImportLists: failed to get watchlist: %w", err)
+						s.log.Error("ImportLists: failed to get watchlist", "listName", importList.Name, "error", err)
+						continue
 					}
 
 					watchlist, err = s.CreateList(ctx, importList.Name, importList.Description, true)
 					if err != nil {
-						s.log.Error("ImportLists: failed to create watchlist", "error", err)
-						return fmt.Errorf("ImportLists: failed to create watchlist: %w", err)
+						s.log.Error("ImportLists: failed to create watchlist", "listName", importList.Name, "error", err)
+						continue
 					}
 				}
 
@@ -405,7 +405,7 @@ func (s *ListService) ImportLists(ctx context.Context, lists models.ImportListsL
 				newList, err := s.CreateList(ctx, importList.Name, importList.Description, false)
 				if err != nil {
 					s.log.Error("ImportLists: failed to create list", "listName", importList.Name, "error", err)
-					return fmt.Errorf("ImportLists: failed to create list %s: %w", importList.Name, err)
+					continue
 				}
 
 				targetListID = newList.ID
@@ -419,7 +419,7 @@ func (s *ListService) ImportLists(ctx context.Context, lists models.ImportListsL
 			_, err := s.tmdb.GetMovieDetails(ctx, movieRef.MovieID)
 			if err != nil {
 				s.log.Error("ImportLists: failed to fetch movie details", "movieID", movieRef.MovieID, "listName", importList.Name, "error", err)
-				return fmt.Errorf("ImportLists: failed to fetch movie details for ID %d: %w", movieRef.MovieID, err)
+				continue
 			}
 
 			dateAdded := movieRef.DateAdded
@@ -436,7 +436,7 @@ func (s *ListService) ImportLists(ctx context.Context, lists models.ImportListsL
 			})
 			if err != nil {
 				s.log.Error("ImportLists: failed to upsert movie in list", "movieID", movieRef.MovieID, "listID", targetListID, "error", err)
-				return fmt.Errorf("ImportLists: failed to upsert movie %d in list %d: %w", movieRef.MovieID, targetListID, err)
+				continue
 			}
 		}
 	}

@@ -361,6 +361,141 @@ func TestWatchedService_ImportExport_Empty(t *testing.T) {
 	}
 }
 
+func TestWatchedService_ImportWatched_ContinuesOnPerMovieErrors(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
+
+	for i := 1; i <= 2; i++ {
+		movie := &models.MovieDetails{
+			Movie: models.Movie{
+				ID:    int64(i),
+				Title: "Test Movie",
+			},
+		}
+		if err := testDB.UpsertMovie(ctx, movie); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	watchedDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	importData := models.ImportWatchedMoviesLog{
+		{
+			Date: watchedDate,
+			Movies: []models.ImportWatchedMovieRef{
+				{MovieID: 1, InTheaters: true},
+				{MovieID: 1, InTheaters: false}, // duplicate day+movie, should fail and be skipped
+				{MovieID: 2, InTheaters: false},
+			},
+		},
+	}
+
+	if err := watchedService.ImportWatched(ctx, importData); err != nil {
+		t.Fatal(err)
+	}
+
+	count, err := watchedService.GetWatchedCount(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Fatalf("expected watched count 2 after skipping duplicate, got %d", count)
+	}
+
+	movie1Records, err := watchedService.GetWatchedMovieRecordsByID(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(movie1Records.Records) != 1 {
+		t.Fatalf("expected 1 watched record for movie 1, got %d", len(movie1Records.Records))
+	}
+
+	movie2Records, err := watchedService.GetWatchedMovieRecordsByID(ctx, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(movie2Records.Records) != 1 {
+		t.Fatalf("expected 1 watched record for movie 2, got %d", len(movie2Records.Records))
+	}
+}
+
+func TestWatchedService_ImportAll_ContinuesWithListsWhenWatchedHasErrors(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
+
+	for i := 1; i <= 2; i++ {
+		movie := &models.MovieDetails{
+			Movie: models.Movie{
+				ID:    int64(i),
+				Title: "Test Movie",
+			},
+		}
+		if err := testDB.UpsertMovie(ctx, movie); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	watchlistMovieDate := time.Date(2024, 1, 2, 15, 0, 0, 0, time.UTC)
+	importData := models.ImportAllData{
+		Watched: models.ImportWatchedMoviesLog{
+			{
+				Date: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				Movies: []models.ImportWatchedMovieRef{
+					{MovieID: 1, InTheaters: true},
+					{MovieID: 1, InTheaters: false}, // duplicate day+movie, should fail and be skipped
+				},
+			},
+		},
+		Lists: models.ImportListsLog{
+			{
+				Name:        "Watchlist",
+				IsWatchlist: true,
+				Movies: []models.ImportListMovieRef{
+					{MovieID: 2, DateAdded: watchlistMovieDate},
+				},
+			},
+		},
+	}
+
+	if err := watchedService.ImportAll(ctx, importData); err != nil {
+		t.Fatal(err)
+	}
+
+	count, err := watchedService.GetWatchedCount(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("expected watched count 1 after skipping duplicate, got %d", count)
+	}
+
+	watchlist, err := listService.GetWatchlist(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(watchlist.Movies) != 1 {
+		t.Fatalf("expected 1 movie in imported watchlist, got %d", len(watchlist.Movies))
+	}
+	if watchlist.Movies[0].MovieDetails.Movie.ID != 2 {
+		t.Fatalf("expected watchlist movie ID 2, got %d", watchlist.Movies[0].MovieDetails.Movie.ID)
+	}
+}
+
 func TestWatchedService_ImportAll(t *testing.T) {
 	testDB, err := db.NewTestDB()
 	if err != nil {

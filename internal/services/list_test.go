@@ -296,3 +296,110 @@ func TestListService_ExportLists_IsStable(t *testing.T) {
 		t.Fatal("expected repeated exports to be stable")
 	}
 }
+
+func TestListService_ImportLists_SkipsMovieFailuresAndContinues(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	ctx := setupTestUser(t, testDB)
+
+	validMovie := &models.MovieDetails{
+		Movie: models.Movie{
+			ID:    1,
+			Title: "Valid Movie",
+		},
+	}
+	if err := testDB.UpsertMovie(ctx, validMovie); err != nil {
+		t.Fatal(err)
+	}
+
+	importData := models.ImportListsLog{
+		{
+			Name: "Mixed",
+			Movies: []models.ImportListMovieRef{
+				{MovieID: 1, DateAdded: time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC)},
+				{MovieID: 999, DateAdded: time.Date(2024, 1, 2, 10, 0, 0, 0, time.UTC)}, // not in DB, should fail and be skipped
+			},
+		},
+	}
+
+	if err := listService.ImportLists(ctx, importData); err != nil {
+		t.Fatal(err)
+	}
+
+	lists, err := listService.GetAllLists(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lists) != 1 {
+		t.Fatalf("expected 1 list, got %d", len(lists))
+	}
+
+	listDetails, err := listService.GetListDetails(ctx, lists[0].ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listDetails.Movies) != 1 {
+		t.Fatalf("expected only valid movie to be imported, got %d movies", len(listDetails.Movies))
+	}
+	if listDetails.Movies[0].MovieDetails.Movie.ID != 1 {
+		t.Fatalf("expected imported movie ID 1, got %d", listDetails.Movies[0].MovieDetails.Movie.ID)
+	}
+}
+
+func TestListService_ImportLists_SkipsInvalidListAndContinues(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	ctx := setupTestUser(t, testDB)
+
+	validMovie := &models.MovieDetails{
+		Movie: models.Movie{
+			ID:    1,
+			Title: "Valid Movie",
+		},
+	}
+	if err := testDB.UpsertMovie(ctx, validMovie); err != nil {
+		t.Fatal(err)
+	}
+
+	importData := models.ImportListsLog{
+		{
+			Name: "",
+			Movies: []models.ImportListMovieRef{
+				{MovieID: 1, DateAdded: time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC)},
+			},
+		},
+		{
+			Name: "Valid List",
+			Movies: []models.ImportListMovieRef{
+				{MovieID: 1, DateAdded: time.Date(2024, 1, 2, 10, 0, 0, 0, time.UTC)},
+			},
+		},
+	}
+
+	if err := listService.ImportLists(ctx, importData); err != nil {
+		t.Fatal(err)
+	}
+
+	lists, err := listService.GetAllLists(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lists) != 1 {
+		t.Fatalf("expected only the valid list to be created, got %d", len(lists))
+	}
+	if lists[0].Name != "Valid List" {
+		t.Fatalf("expected list name 'Valid List', got %q", lists[0].Name)
+	}
+}
