@@ -38,15 +38,17 @@ templ Watched(days []models.WatchedMoviesInDay) {
 					<div class="flex flex-wrap gap-6 items-start">
 						for _, day := range days {
 							<section class="p-3 sm:p-4 rounded-lg space-y-2 border border-border bg-card">
-								<div class="flex items-center justify-between gap-4">
-									<h2 class="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
+								<div class="flex items-center justify-between gap-2 sm:gap-4">
+									<h2 class="font-semibold text-xs sm:text-sm text-muted-foreground uppercase tracking-wider truncate">
 										{ day.Date.Format("Mon 02 Jan 2006") }
 									</h2>
-									@badge.Badge(badge.Props{Variant: badge.VariantSecondary, Class: "font-mono"}) {
-										{ strconv.Itoa(len(day.Movies)) }
+									if len(day.Movies) > 1 {
+										@badge.Badge(badge.Props{Variant: badge.VariantSecondary, Class: "font-mono text-xs shrink-0"}) {
+											{ strconv.Itoa(len(day.Movies)) }
+										}
 									}
 								</div>
-								<div class="flex flex-wrap gap-4 justify-center">
+								<div class="flex flex-wrap gap-6 sm:gap-4">
 									for _, movie := range day.Movies {
 										{{
 											moviecardProps := moviecard.Props{
