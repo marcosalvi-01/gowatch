@@ -183,7 +183,6 @@ templ Scripts() {
 	</script>
 	@SidebarNavigationScript()
 	@ThemeScript()
-	@ServiceWorkerScript()
 	// for the sidebar
 	@templSidebar.Script()
 	@popover.Script()
@@ -355,21 +354,8 @@ templ ThemeScript() {
 	</script>
 }
 
-templ ServiceWorkerScript() {
-	<script>
-	if ("serviceWorker" in navigator && window.isSecureContext) {
-	  window.addEventListener("load", () => {
-		navigator.serviceWorker.register("/sw.js").catch(error => {
-		  console.error("service worker registration failed", error);
-		});
-	  });
-	}
-	</script>
-}
-
 templ Favicons() {
 	<link rel="icon" type="image/svg+xml" href="/static/favicon.svg"/>
-	<link rel="manifest" href="/manifest.webmanifest"/>
 	<meta name="theme-color" content="#09090b"/>
 }
 

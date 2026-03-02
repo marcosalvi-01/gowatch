@@ -13,12 +13,9 @@ import (
 var log = logging.Get("static")
 
 const (
-	manifestPath         = "static/manifest.webmanifest"
-	manifestContentType  = "application/manifest+json"
-	serviceWorkerPath    = "static/sw.js"
-	serviceWorkerAllowed = "/"
-	jsContentType        = "application/javascript; charset=utf-8"
-	noCacheHeaderValue   = "no-cache"
+	manifestPath        = "static/manifest.webmanifest"
+	manifestContentType = "application/manifest+json"
+	noCacheHeaderValue  = "no-cache"
 )
 
 type Handlers struct{}
@@ -39,13 +36,6 @@ func (h *Handlers) Manifest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", manifestContentType)
 	w.Header().Set("Cache-Control", noCacheHeaderValue)
 	h.serveEmbeddedFile(w, r, manifestPath)
-}
-
-func (h *Handlers) ServiceWorker(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", jsContentType)
-	w.Header().Set("Cache-Control", noCacheHeaderValue)
-	w.Header().Set("Service-Worker-Allowed", serviceWorkerAllowed)
-	h.serveEmbeddedFile(w, r, serviceWorkerPath)
 }
 
 func (h *Handlers) serveEmbeddedFile(w http.ResponseWriter, r *http.Request, path string) {
