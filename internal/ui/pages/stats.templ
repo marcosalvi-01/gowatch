@@ -363,25 +363,32 @@ templ topActorsCard(title string, gender int64, actors []models.TopActor, limit 
 					{{ count = 0 }}
 					for _, actor := range actors {
 						if actor.Gender == gender && count < limit {
-							<div class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2">
-								@avatar.Avatar(avatar.Props{Class: "h-9 w-9"}) {
-									if actor.ProfilePath != "" {
-										@avatar.Image(avatar.ImageProps{
-											Src:   "https://image.tmdb.org/t/p/w185/" + strings.TrimPrefix(actor.ProfilePath, "/"),
-											Alt:   actor.Name,
-											Class: "object-cover",
-										})
-									} else {
-										@avatar.Fallback(avatar.FallbackProps{Class: "text-xs"}) {
-											{ string(actor.Name[0]) }
-										}
-									}
-								}
-								<div class="flex-1">
-									<div class="font-medium text-sm">{ actor.Name }</div>
-									<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", actor.WatchCount) }</div>
+							{{ personHref := personPagePath(actor.ID) }}
+							if personHref != "" {
+								<div
+									data-page="person"
+									hx-get={ personHref }
+									hx-target="#main-content"
+									hx-push-url="true"
+									hx-swap="scroll:#main-scroll-container:top"
+									hx-indicator="#person-loading"
+									class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2 cursor-pointer hover:bg-muted/30 transition-colors"
+								>
+									@actorRowAvatar(actor.Name, actor.ProfilePath)
+									<div class="flex-1">
+										<div class="font-medium text-sm">{ actor.Name }</div>
+										<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", actor.WatchCount) }</div>
+									</div>
 								</div>
-							</div>
+							} else {
+								<div class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2">
+									@actorRowAvatar(actor.Name, actor.ProfilePath)
+									<div class="flex-1">
+										<div class="font-medium text-sm">{ actor.Name }</div>
+										<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", actor.WatchCount) }</div>
+									</div>
+								</div>
+							}
 							{{ count++ }}
 						}
 					}
@@ -404,29 +411,52 @@ templ topCrewCard(title string, people []models.TopCrewMember) {
 			if len(people) > 0 {
 				<div class="space-y-3">
 					for _, person := range people {
-						<div class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2">
-							@avatar.Avatar(avatar.Props{Class: "h-9 w-9"}) {
-								if person.ProfilePath != "" {
-									@avatar.Image(avatar.ImageProps{
-										Src:   "https://image.tmdb.org/t/p/w185/" + strings.TrimPrefix(person.ProfilePath, "/"),
-										Alt:   person.Name,
-										Class: "object-cover",
-									})
-								} else {
-									@avatar.Fallback(avatar.FallbackProps{Class: "text-xs"}) {
-										{ string(person.Name[0]) }
-									}
-								}
-							}
-							<div class="flex-1">
-								<div class="font-medium text-sm">{ person.Name }</div>
-								<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", person.WatchCount) }</div>
+						{{ personHref := personPagePath(person.ID) }}
+						if personHref != "" {
+							<div
+								data-page="person"
+								hx-get={ personHref }
+								hx-target="#main-content"
+								hx-push-url="true"
+								hx-swap="scroll:#main-scroll-container:top"
+								hx-indicator="#person-loading"
+								class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2 cursor-pointer hover:bg-muted/30 transition-colors"
+							>
+								@actorRowAvatar(person.Name, person.ProfilePath)
+								<div class="flex-1">
+									<div class="font-medium text-sm">{ person.Name }</div>
+									<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", person.WatchCount) }</div>
+								</div>
 							</div>
-						</div>
+						} else {
+							<div class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2">
+								@actorRowAvatar(person.Name, person.ProfilePath)
+								<div class="flex-1">
+									<div class="font-medium text-sm">{ person.Name }</div>
+									<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", person.WatchCount) }</div>
+								</div>
+							</div>
+						}
 					}
 				</div>
 			} else {
 				<div class="text-center text-muted-foreground py-8">No data available</div>
+			}
+		}
+	}
+}
+
+templ actorRowAvatar(name, profilePath string) {
+	@avatar.Avatar(avatar.Props{Class: "h-9 w-9"}) {
+		if profilePath != "" {
+			@avatar.Image(avatar.ImageProps{
+				Src:   "https://image.tmdb.org/t/p/w185/" + strings.TrimPrefix(profilePath, "/"),
+				Alt:   name,
+				Class: "object-cover",
+			})
+		} else {
+			@avatar.Fallback(avatar.FallbackProps{Class: "text-xs"}) {
+				{ personInitials(name) }
 			}
 		}
 	}

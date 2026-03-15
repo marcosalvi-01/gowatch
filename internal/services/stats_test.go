@@ -225,6 +225,18 @@ func TestCalculateStreakStats(t *testing.T) {
 			expectedEnd:     "2024-01-10",
 		},
 		{
+			name: "current streak ends yesterday",
+			watchedDates: []time.Time{
+				time.Date(2024, 1, 8, 8, 0, 0, 0, time.UTC),
+				time.Date(2024, 1, 9, 8, 0, 0, 0, time.UTC),
+			},
+			now:             time.Date(2024, 1, 10, 12, 0, 0, 0, time.UTC),
+			expectedCurrent: 2,
+			expectedLongest: 2,
+			expectedStart:   "2024-01-08",
+			expectedEnd:     "2024-01-09",
+		},
+		{
 			name: "longest streak in the past",
 			watchedDates: []time.Time{
 				time.Date(2024, 1, 1, 8, 0, 0, 0, time.UTC),
@@ -238,6 +250,19 @@ func TestCalculateStreakStats(t *testing.T) {
 			expectedLongest: 3,
 			expectedStart:   "2024-01-01",
 			expectedEnd:     "2024-01-03",
+		},
+		{
+			name: "watched today but streak already broken before yesterday",
+			watchedDates: []time.Time{
+				time.Date(2024, 1, 7, 8, 0, 0, 0, time.UTC),
+				time.Date(2024, 1, 8, 8, 0, 0, 0, time.UTC),
+				time.Date(2024, 1, 10, 8, 0, 0, 0, time.UTC),
+			},
+			now:             time.Date(2024, 1, 10, 12, 0, 0, 0, time.UTC),
+			expectedCurrent: 1,
+			expectedLongest: 2,
+			expectedStart:   "2024-01-07",
+			expectedEnd:     "2024-01-08",
 		},
 	}
 

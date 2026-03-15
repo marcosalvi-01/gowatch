@@ -772,19 +772,21 @@ func (s *WatchedService) calculateStreakStats(watchedDates []time.Time, now time
 	longestStart := uniqueDates[longestStartIdx]
 	longestEnd := uniqueDates[longestEndIdx]
 
-	recentRunDays := int64(1)
-	for i := len(uniqueDates) - 1; i > 0; i-- {
-		if !isConsecutiveDay(uniqueDates[i-1], uniqueDates[i]) {
-			break
-		}
-		recentRunDays++
-	}
-
-	latestDate := uniqueDates[len(uniqueDates)-1]
 	today := normalizeDate(now)
 	currentDays := int64(0)
-	if latestDate.Equal(today) {
-		currentDays = recentRunDays
+	endIdx := len(uniqueDates) - 1
+	targetEnd := today.AddDate(0, 0, -1)
+	if uniqueDates[endIdx].Equal(today) {
+		targetEnd = today
+	}
+	if uniqueDates[endIdx].Equal(targetEnd) {
+		currentDays = 1
+		for i := endIdx; i > 0; i-- {
+			if !isConsecutiveDay(uniqueDates[i-1], uniqueDates[i]) {
+				break
+			}
+			currentDays++
+		}
 	}
 
 	streakStats := models.StreakStats{

@@ -4,45 +4,88 @@ import (
 	"fmt"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/moviecard"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
-	"github.com/marcosalvi-01/gowatch/internal/utils"
 	"strconv"
 )
 
-templ Search(query string, results []models.Movie) {
+func searchResultHref(result models.SearchResult) string {
+	switch result.Type {
+	case models.SearchResultTypePerson:
+		return "/person/" + strconv.FormatInt(result.ID, 10)
+	default:
+		return "/movie/" + strconv.FormatInt(result.ID, 10)
+	}
+}
+
+func searchResultIndicator(result models.SearchResult) string {
+	if result.Type == models.SearchResultTypePerson {
+		return "#person-loading"
+	}
+
+	return "#movie-loading"
+}
+
+templ searchResultTypeChip(resultType models.SearchResultType) {
+	if resultType == models.SearchResultTypeMovie {
+		@badge.Badge(badge.Props{
+			Variant: badge.VariantSecondary,
+			Class:   "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide shadow-sm",
+		}) {
+			@icon.Film()
+		}
+	} else {
+		@badge.Badge(badge.Props{
+			Variant: badge.VariantSecondary,
+			Class:   "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide shadow-sm",
+		}) {
+			@icon.User()
+		}
+	}
+}
+
+templ Search(query string, results []models.SearchResult) {
 	@Layout() {
 		@templ.Fragment("content") {
 			<div class="w-full">
 				if len(results) > 0 {
 					<div class="p-2 md:p-4 rounded-lg space-y-4">
 						<div class="flex flex-wrap gap-4 md:gap-6 w-full">
-							for _, movie := range results {
+							for _, result := range results {
 								@moviecard.MovieCard(moviecard.Props{
-									Title:      movie.Title,
-									PosterPath: movie.PosterPath,
-									Hoverable:  true,
-									Href:       "/movie/" + strconv.Itoa(int(movie.ID)),
+									Title:              result.Title,
+									PosterPath:         result.ImagePath,
+									Hoverable:          true,
+									Href:               searchResultHref(result),
+									IndicatorID:        searchResultIndicator(result),
+									TopStaticComponent: searchResultTypeChip(result.Type),
 								}) {
-									<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight">{ movie.Title }</h3>
-									<div class="flex items-center justify-between">
-										<div class="flex items-center">
-											@icon.Calendar(icon.Props{Size: 12})
-											<p class="ml-2 text-xs opacity-90">
-												{ utils.FormatYear(movie.ReleaseDate) }
-											</p>
-										</div>
-										if movie.VoteAverage > 0 {
+									if result.Type == models.SearchResultTypeMovie {
+										<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight">{ result.Title }</h3>
+										<div class="flex items-center justify-between">
 											<div class="flex items-center">
-												@icon.Star(icon.Props{
-													Size:   12,
-													Fill:   "orange",
-													Stroke: "orange",
-												})
-												<span class="ml-1 text-xs">{ fmt.Sprintf("%.1f", movie.VoteAverage) }</span>
+												@icon.Calendar(icon.Props{Size: 12})
+												<p class="ml-2 text-xs opacity-90">{ result.SecondaryText }</p>
 											</div>
-										}
+											if result.VoteAverage > 0 {
+												<div class="flex items-center">
+													@icon.Star(icon.Props{
+														Size:   12,
+														Fill:   "orange",
+														Stroke: "orange",
+													})
+													<span class="ml-1 text-xs">{ fmt.Sprintf("%.1f", result.VoteAverage) }</span>
+												</div>
+											}
+										</div>
+									} else {
+									<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight">{ result.Title }</h3>
+									<div class="flex items-center">
+										@icon.User(icon.Props{Size: 12})
+										<p class="ml-2 text-xs opacity-90">{ result.SecondaryText }</p>
 									</div>
+								}
 								}
 							}
 						</div>
@@ -58,9 +101,9 @@ templ Search(query string, results []models.Movie) {
 						</p>
 						<p class="text-sm mb-8">
 							if query != "" {
-								Try adjusting your search terms or check for typos.
+								Try adjusting your search terms for movies or people, or check for typos.
 							} else {
-								Enter a movie title to search for films.
+								Enter a movie title or person name to search.
 							}
 						</p>
 						<div class="text-gray-500 flex flex-col items-center">
@@ -69,7 +112,7 @@ templ Search(query string, results []models.Movie) {
 								Color: "gray",
 								Class: "mb-2 opacity-50",
 							})
-							<p class="text-xs">No movies to display</p>
+							<p class="text-xs">No movies or people to display</p>
 						</div>
 					</div>
 				}

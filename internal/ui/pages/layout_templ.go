@@ -146,6 +146,10 @@ func Layout() templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
+				templ_7745c5c3_Err = PersonLoading().Render(ctx, templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
 				templ_7745c5c3_Err = SearchLoading().Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
@@ -661,7 +665,7 @@ func SearchBar(searchContent string) templ.Component {
 		}
 		templ_7745c5c3_Err = input.Input(input.Props{
 			Type:        input.TypeSearch,
-			Placeholder: "Search Movies...",
+			Placeholder: "Search movies or people...",
 			Class:       "pl-10",
 			Value:       searchContent,
 			Name:        "q",

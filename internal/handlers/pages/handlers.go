@@ -66,6 +66,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 		r.Get("/home", h.HomePage)
 		r.Get("/search", h.SearchPage)
 		r.Get("/movie/{id}", h.MoviePage)
+		r.Get("/person/{id}", h.PersonPage)
 		r.Get("/list/{id}", h.ListPage)
 		r.Get("/watchlist", h.Watchlist)
 		r.Get("/stats", h.StatsPage)
@@ -167,6 +168,41 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 	log.Info("movie page served successfully", "movieID", id, "title", movie.Movie.Title)
 }
 
+func (h *Handlers) PersonPage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	paramID := chi.URLParam(r, "id")
+
+	id, err := strconv.ParseInt(paramID, 10, 64)
+	if err != nil {
+		log.Error("invalid person ID", "id", paramID, "error", err)
+		http.Error(w, "Invalid person ID", http.StatusBadRequest)
+		return
+	}
+
+	if h.tmdbService == nil {
+		log.Error("tmdb service not configured for person page", "personID", id)
+		render500Error(w, r)
+		return
+	}
+
+	log.Debug("serving person page", "personID", id)
+
+	personDetails, err := h.tmdbService.GetPersonDetails(ctx, id)
+	if err != nil {
+		log.Error("failed to get person details", "personID", id, "error", err)
+		render500Error(w, r)
+		return
+	}
+
+	if r.Header.Get("HX-Request") == htmxRequestHeaderValue {
+		templ.Handler(pages.Person(*personDetails), templ.WithFragments("content")).ServeHTTP(w, r)
+	} else {
+		templ.Handler(pages.Person(*personDetails)).ServeHTTP(w, r)
+	}
+
+	log.Info("person page served successfully", "personID", id, "name", personDetails.Name)
+}
+
 func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 
@@ -179,20 +215,20 @@ func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("serving search page", "query", sanitizedQuery)
 
-	results, err := h.tmdbService.SearchMovies(sanitizedQuery)
+	results, err := h.tmdbService.SearchMulti(sanitizedQuery)
 	if err != nil {
-		log.Error("failed to search for movie", "query", sanitizedQuery, "error", err)
+		log.Error("failed to search for movies and people", "query", sanitizedQuery, "error", err)
 		render500Error(w, r)
 		return
 	}
 
-	log.Debug("found movies", "query", sanitizedQuery, "count", len(results))
+	log.Debug("found search results", "query", sanitizedQuery, "resultCount", len(results))
 
 	if r.Header.Get("HX-Request") == htmxRequestHeaderValue {
 		w.Header().Add("HX-Trigger", "refreshSidebar")
-		templ.Handler(pages.Search("", results), templ.WithFragments("content")).ServeHTTP(w, r)
+		templ.Handler(pages.Search(sanitizedQuery, results), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
-		templ.Handler(pages.Search("", results)).ServeHTTP(w, r)
+		templ.Handler(pages.Search(sanitizedQuery, results)).ServeHTTP(w, r)
 	}
 
 	log.Info("search page served successfully", "query", sanitizedQuery, "resultCount", len(results))

@@ -124,7 +124,7 @@ templ movieInfo(movie models.MovieDetails, isDark, isInWatchlist bool) {
 			>
 				{ utils.FormatYear(movie.Movie.ReleaseDate) }
 			</p>
-			if director := getDirector(movie.Credits.Crew); director != "" {
+			if director := getDirector(movie.Credits.Crew); director.Person.Name != "" {
 				<div class="flex items-center gap-2">
 					<span
 						class={
@@ -135,6 +135,7 @@ templ movieInfo(movie models.MovieDetails, isDark, isInWatchlist bool) {
 					>
 						•
 					</span>
+					{{ personHref := personPagePath(director.Person.ID) }}
 					<p
 						class={
 							"text-sm sm:text-base font-medium",
@@ -142,8 +143,35 @@ templ movieInfo(movie models.MovieDetails, isDark, isInWatchlist bool) {
 							templ.KV("text-foreground", !isDark),
 						}
 					>
-						Directed by { director }
+						Directed by
 					</p>
+					if personHref != "" {
+						<p
+							data-page="person"
+							hx-get={ personHref }
+							hx-target="#main-content"
+							hx-push-url="true"
+							hx-swap="scroll:#main-scroll-container:top"
+							hx-indicator="#person-loading"
+							class={
+								"text-sm sm:text-base font-medium cursor-pointer hover:underline",
+								templ.KV("text-white/90 drop-shadow-lg", isDark),
+								templ.KV("text-foreground", !isDark),
+							}
+						>
+							{ director.Person.Name }
+						</p>
+					} else {
+						<p
+							class={
+								"text-sm sm:text-base font-medium",
+								templ.KV("text-white/90 drop-shadow-lg", isDark),
+								templ.KV("text-foreground", !isDark),
+							}
+						>
+							{ director.Person.Name }
+						</p>
+					}
 				</div>
 			}
 		</div>
@@ -485,20 +513,35 @@ templ castSection(cast []models.Cast) {
 }
 
 templ castMemberCard(cast models.Cast) {
+	{{ personHref := personPagePath(cast.Person.ID) }}
 	@card.Card(card.Props{
-		Class: "hover:bg-white/20 transition-colors duration-300",
+		Class: "transition-colors duration-300",
 	}) {
-		<a
-			class="flex items-center space-x-3 p-2"
-			href={ "https://www.themoviedb.org/person/" + strconv.Itoa(int(cast.Person.ID)) }
-			target="_blank"
-		>
-			@profileImage(cast.Person.ProfilePath, cast.Person.Name)
-			<div class="flex-1 min-w-0">
-				<p class="text-sm font-medium truncate">{ cast.Person.Name }</p>
-				<p class="text-xs text-muted-foreground truncate">{ cast.Character }</p>
+		if personHref != "" {
+			<div
+				data-page="person"
+				hx-get={ personHref }
+				hx-target="#main-content"
+				hx-push-url="true"
+				hx-swap="scroll:#main-scroll-container:top"
+				hx-indicator="#person-loading"
+				class="flex items-center space-x-3 p-2 cursor-pointer hover:bg-white/20"
+			>
+				@profileImage(cast.Person.ProfilePath, cast.Person.Name)
+				<div class="flex-1 min-w-0">
+					<p class="text-sm font-medium truncate">{ cast.Person.Name }</p>
+					<p class="text-xs text-muted-foreground truncate">{ cast.Character }</p>
+				</div>
 			</div>
-		</a>
+		} else {
+			<div class="flex items-center space-x-3 p-2">
+				@profileImage(cast.Person.ProfilePath, cast.Person.Name)
+				<div class="flex-1 min-w-0">
+					<p class="text-sm font-medium truncate">{ cast.Person.Name }</p>
+					<p class="text-xs text-muted-foreground truncate">{ cast.Character }</p>
+				</div>
+			</div>
+		}
 	}
 }
 
@@ -535,9 +578,24 @@ templ crewSection(crew []models.Crew) {
 }
 
 templ crewMemberItem(crew models.Crew) {
+	{{ personHref := personPagePath(crew.Person.ID) }}
 	<div class="space-y-1">
 		<dt class="text-sm font-medium text-muted-foreground">{ crew.Job }</dt>
-		<dd class="text-sm font-medium">{ crew.Person.Name }</dd>
+		if personHref != "" {
+			<dd
+				data-page="person"
+				hx-get={ personHref }
+				hx-target="#main-content"
+				hx-push-url="true"
+				hx-swap="scroll:#main-scroll-container:top"
+				hx-indicator="#person-loading"
+				class="text-sm font-medium text-primary hover:underline cursor-pointer"
+			>
+				{ crew.Person.Name }
+			</dd>
+		} else {
+			<dd class="text-sm font-medium">{ crew.Person.Name }</dd>
+		}
 	</div>
 }
 
@@ -803,13 +861,13 @@ func sortCrewByImportance(crew []models.Crew) []models.Crew {
 	return keyCrew
 }
 
-func getDirector(crew []models.Crew) string {
+func getDirector(crew []models.Crew) models.Crew {
 	for _, member := range crew {
 		if member.Job == "Director" {
-			return member.Person.Name
+			return member
 		}
 	}
-	return ""
+	return models.Crew{}
 }
 
 templ MovieLoading() {

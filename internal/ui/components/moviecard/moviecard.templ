@@ -8,13 +8,24 @@ import (
 )
 
 const tmdbBase = "https://image.tmdb.org/t/p/w500"
+const defaultIndicatorID = "#movie-loading"
 
 type Props struct {
 	Title             string
 	PosterPath        string
 	Href              string
+	IndicatorID       string
 	Hoverable         bool
+	TopStaticComponent templ.Component
 	TopHoverComponent templ.Component
+}
+
+func movieCardIndicatorID(indicatorID string) string {
+	if indicatorID == "" {
+		return defaultIndicatorID
+	}
+
+	return indicatorID
 }
 
 templ MovieCard(props Props) {
@@ -25,7 +36,7 @@ templ MovieCard(props Props) {
 			hx-target="#main-content"
 			hx-push-url="true"
 			hx-swap="scroll:#main-scroll-container:top"
-			hx-indicator="#movie-loading"
+			hx-indicator={ movieCardIndicatorID(props.IndicatorID) }
 			class="cursor-pointer"
 		>
 			@cardContent(props) {
@@ -60,6 +71,13 @@ templ cardContent(props Props) {
 					<div class="flex flex-col items-center bg-background justify-center gap-6 h-full w-full p-2 sm:p-3 md:p-4 text-center font-semibold text-xs sm:text-sm md:text-base relative overflow-hidden">
 						@icon.Film()
 						<span class="leading-tight">{ props.Title }</span>
+					</div>
+				}
+				if props.TopStaticComponent != nil {
+					<div class="absolute inset-x-0 top-0 p-1.5 sm:p-2 md:p-3 pointer-events-none">
+						<div class="flex justify-end">
+							@props.TopStaticComponent
+						</div>
 					</div>
 				}
 				if props.Hoverable {

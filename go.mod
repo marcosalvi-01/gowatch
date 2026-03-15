@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	github.com/Oudwins/tailwind-merge-go v0.2.1
-	github.com/a-h/templ v0.3.960
+	github.com/a-h/templ v0.3.1001
 	github.com/cyruzin/golang-tmdb v1.9.0
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/pressly/goose/v3 v3.25.0

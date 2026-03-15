@@ -58,6 +58,7 @@ templ Layout() {
 						@WatchedLoading()
 						@StatsLoading()
 						@MovieLoading()
+						@PersonLoading()
 						@SearchLoading()
 						<div id="main-scroll-container" class="flex flex-1 flex-col overflow-auto w-full min-w-0">
 							<div id="main-content" class="p-4 w-full max-w-full min-w-0">
@@ -388,7 +389,7 @@ templ SearchBar(searchContent string) {
 		})
 		@input.Input(input.Props{
 			Type:        input.TypeSearch,
-			Placeholder: "Search Movies...",
+			Placeholder: "Search movies or people...",
 			Class:       "pl-10",
 			Value:       searchContent,
 			Name:        "q",
