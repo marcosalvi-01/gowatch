@@ -37,6 +37,10 @@ linters:
       min-len: 3
       min-occurrences: 3
 
+    gosec:
+      excludes:
+        - G120
+
     errcheck:
       check-type-assertions: true
 

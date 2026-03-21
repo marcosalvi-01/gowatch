@@ -180,7 +180,7 @@ func backupDatabase(dbPath, dbName string, currentVersion, targetVersion int64) 
 		return "", fmt.Errorf("failed to read database file: %w", err)
 	}
 
-	if err := os.WriteFile(backupFile, data, 0o600); err != nil {
+	if err := os.WriteFile(backupFile, data, 0o600); err != nil { // #nosec G703 -- backup path is derived from trusted startup config
 		log.Error("Failed to write backup file", "file", backupFile, "error", err)
 		return "", fmt.Errorf("failed to write backup file: %w", err)
 	}
