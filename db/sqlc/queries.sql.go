@@ -86,40 +86,6 @@ func (q *Queries) AssignNilUserWatched(ctx context.Context, userID *int64) error
 	return err
 }
 
-const countHigherRankedActorsByGender = `-- name: CountHigherRankedActorsByGender :one
-SELECT
-    COUNT(*) AS count
-FROM
-    (
-        SELECT
-            person.id
-        FROM
-            watched
-            JOIN "cast" ON watched.movie_id = "cast".movie_id
-            JOIN person ON "cast".person_id = person.id
-        WHERE
-            watched.user_id = ?1
-            AND person.gender = ?2
-        GROUP BY
-            person.id
-        HAVING
-            COUNT(*) > ?3
-    ) AS higher_ranked_actors
-`
-
-type CountHigherRankedActorsByGenderParams struct {
-	UserID  *int64
-	Gender  int64
-	Column3 interface{}
-}
-
-func (q *Queries) CountHigherRankedActorsByGender(ctx context.Context, arg CountHigherRankedActorsByGenderParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countHigherRankedActorsByGender, arg.UserID, arg.Gender, arg.Column3)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const countUsers = `-- name: CountUsers :one
 SELECT
     COUNT(*)
@@ -1194,74 +1160,6 @@ func (q *Queries) GetMonthlyGenreBreakdown(ctx context.Context, userID *int64) (
 	return items, nil
 }
 
-const getMostWatchedActorsByGender = `-- name: GetMostWatchedActorsByGender :many
-SELECT
-    person.name,
-    person.id,
-    person.profile_path,
-    person.gender,
-    COUNT(*) AS watch_count
-FROM
-    watched
-    JOIN "cast" ON watched.movie_id = "cast".movie_id
-    JOIN person ON "cast".person_id = person.id
-WHERE
-    person.gender = ?
-    AND watched.user_id = ?
-GROUP BY
-    person.id,
-    person.name,
-    person.profile_path,
-    person.gender
-ORDER BY
-    watch_count DESC
-LIMIT
-    ?
-`
-
-type GetMostWatchedActorsByGenderParams struct {
-	Gender int64
-	UserID *int64
-	Limit  int64
-}
-
-type GetMostWatchedActorsByGenderRow struct {
-	Name        string
-	ID          int64
-	ProfilePath string
-	Gender      int64
-	WatchCount  int64
-}
-
-func (q *Queries) GetMostWatchedActorsByGender(ctx context.Context, arg GetMostWatchedActorsByGenderParams) ([]GetMostWatchedActorsByGenderRow, error) {
-	rows, err := q.db.QueryContext(ctx, getMostWatchedActorsByGender, arg.Gender, arg.UserID, arg.Limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetMostWatchedActorsByGenderRow
-	for rows.Next() {
-		var i GetMostWatchedActorsByGenderRow
-		if err := rows.Scan(
-			&i.Name,
-			&i.ID,
-			&i.ProfilePath,
-			&i.Gender,
-			&i.WatchCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getMostWatchedDay = `-- name: GetMostWatchedDay :one
 SELECT
     watched_date,
@@ -2080,198 +1978,6 @@ func (q *Queries) GetTheaterVsHomeCount(ctx context.Context, userID *int64) ([]G
 	return items, nil
 }
 
-const getTopCinematographers = `-- name: GetTopCinematographers :many
-SELECT
-    person.id,
-    person.name,
-    person.profile_path,
-    COUNT(DISTINCT watched.id) AS watch_count
-FROM
-    watched
-    JOIN crew ON watched.movie_id = crew.movie_id
-    JOIN person ON crew.person_id = person.id
-WHERE
-    watched.user_id = ?
-    AND crew.job IN ('Director of Photography', 'Cinematography')
-GROUP BY
-    person.id,
-    person.name,
-    person.profile_path
-ORDER BY
-    watch_count DESC,
-    person.name ASC
-LIMIT
-    ?
-`
-
-type GetTopCinematographersParams struct {
-	UserID *int64
-	Limit  int64
-}
-
-type GetTopCinematographersRow struct {
-	ID          int64
-	Name        string
-	ProfilePath string
-	WatchCount  int64
-}
-
-func (q *Queries) GetTopCinematographers(ctx context.Context, arg GetTopCinematographersParams) ([]GetTopCinematographersRow, error) {
-	rows, err := q.db.QueryContext(ctx, getTopCinematographers, arg.UserID, arg.Limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetTopCinematographersRow
-	for rows.Next() {
-		var i GetTopCinematographersRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.ProfilePath,
-			&i.WatchCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getTopComposers = `-- name: GetTopComposers :many
-SELECT
-    person.id,
-    person.name,
-    person.profile_path,
-    COUNT(DISTINCT watched.id) AS watch_count
-FROM
-    watched
-    JOIN crew ON watched.movie_id = crew.movie_id
-    JOIN person ON crew.person_id = person.id
-WHERE
-    watched.user_id = ?
-    AND crew.job IN ('Original Music Composer', 'Composer', 'Music')
-GROUP BY
-    person.id,
-    person.name,
-    person.profile_path
-ORDER BY
-    watch_count DESC,
-    person.name ASC
-LIMIT
-    ?
-`
-
-type GetTopComposersParams struct {
-	UserID *int64
-	Limit  int64
-}
-
-type GetTopComposersRow struct {
-	ID          int64
-	Name        string
-	ProfilePath string
-	WatchCount  int64
-}
-
-func (q *Queries) GetTopComposers(ctx context.Context, arg GetTopComposersParams) ([]GetTopComposersRow, error) {
-	rows, err := q.db.QueryContext(ctx, getTopComposers, arg.UserID, arg.Limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetTopComposersRow
-	for rows.Next() {
-		var i GetTopComposersRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.ProfilePath,
-			&i.WatchCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getTopDirectors = `-- name: GetTopDirectors :many
-SELECT
-    person.id,
-    person.name,
-    person.profile_path,
-    COUNT(DISTINCT watched.id) AS watch_count
-FROM
-    watched
-    JOIN crew ON watched.movie_id = crew.movie_id
-    JOIN person ON crew.person_id = person.id
-WHERE
-    watched.user_id = ?
-    AND crew.job = 'Director'
-GROUP BY
-    person.id,
-    person.name,
-    person.profile_path
-ORDER BY
-    watch_count DESC,
-    person.name ASC
-LIMIT
-    ?
-`
-
-type GetTopDirectorsParams struct {
-	UserID *int64
-	Limit  int64
-}
-
-type GetTopDirectorsRow struct {
-	ID          int64
-	Name        string
-	ProfilePath string
-	WatchCount  int64
-}
-
-func (q *Queries) GetTopDirectors(ctx context.Context, arg GetTopDirectorsParams) ([]GetTopDirectorsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getTopDirectors, arg.UserID, arg.Limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetTopDirectorsRow
-	for rows.Next() {
-		var i GetTopDirectorsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.ProfilePath,
-			&i.WatchCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getTopLanguages = `-- name: GetTopLanguages :many
 SELECT
     movie.original_language AS language,
@@ -2400,77 +2106,6 @@ func (q *Queries) GetTopReturnOnInvestmentMovies(ctx context.Context, arg GetTop
 	return items, nil
 }
 
-const getTopWriters = `-- name: GetTopWriters :many
-SELECT
-    person.id,
-    person.name,
-    person.profile_path,
-    COUNT(DISTINCT watched.id) AS watch_count
-FROM
-    watched
-    JOIN crew ON watched.movie_id = crew.movie_id
-    JOIN person ON crew.person_id = person.id
-WHERE
-    watched.user_id = ?
-    AND crew.job IN (
-        'Writer',
-        'Screenplay',
-        'Story',
-        'Novel',
-        'Original Story',
-        'Characters'
-    )
-GROUP BY
-    person.id,
-    person.name,
-    person.profile_path
-ORDER BY
-    watch_count DESC,
-    person.name ASC
-LIMIT
-    ?
-`
-
-type GetTopWritersParams struct {
-	UserID *int64
-	Limit  int64
-}
-
-type GetTopWritersRow struct {
-	ID          int64
-	Name        string
-	ProfilePath string
-	WatchCount  int64
-}
-
-func (q *Queries) GetTopWriters(ctx context.Context, arg GetTopWritersParams) ([]GetTopWritersRow, error) {
-	rows, err := q.db.QueryContext(ctx, getTopWriters, arg.UserID, arg.Limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetTopWritersRow
-	for rows.Next() {
-		var i GetTopWritersRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.ProfilePath,
-			&i.WatchCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getTotalWatchedStats = `-- name: GetTotalWatchedStats :one
 SELECT
     COUNT(*) AS count,
@@ -2542,37 +2177,76 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 	return i, err
 }
 
-const getWatchedActorStatsByID = `-- name: GetWatchedActorStatsByID :one
+const getWatchedActors = `-- name: GetWatchedActors :many
+WITH watched_actors AS (
+    SELECT DISTINCT
+        watched.id AS watched_id,
+        person.id,
+        person.name,
+        person.profile_path,
+        person.gender
+    FROM
+        watched
+        JOIN "cast" ON watched.movie_id = "cast".movie_id
+        JOIN person ON "cast".person_id = person.id
+    WHERE
+        watched.user_id = ?
+        AND person.gender IN (1, 2)
+)
 SELECT
-    person.gender,
+    watched_actors.name,
+    watched_actors.id,
+    watched_actors.profile_path,
+    watched_actors.gender,
     COUNT(*) AS watch_count
 FROM
-    watched
-    JOIN "cast" ON watched.movie_id = "cast".movie_id
-    JOIN person ON "cast".person_id = person.id
-WHERE
-    watched.user_id = ?
-    AND person.id = ?
-    AND person.gender IN (1, 2)
+    watched_actors
 GROUP BY
-    person.gender
+    watched_actors.id,
+    watched_actors.name,
+    watched_actors.profile_path,
+    watched_actors.gender
+ORDER BY
+    watched_actors.gender ASC,
+    watch_count DESC,
+    watched_actors.name ASC
 `
 
-type GetWatchedActorStatsByIDParams struct {
-	UserID *int64
-	ID     int64
+type GetWatchedActorsRow struct {
+	Name        string
+	ID          int64
+	ProfilePath string
+	Gender      int64
+	WatchCount  int64
 }
 
-type GetWatchedActorStatsByIDRow struct {
-	Gender     int64
-	WatchCount int64
-}
-
-func (q *Queries) GetWatchedActorStatsByID(ctx context.Context, arg GetWatchedActorStatsByIDParams) (GetWatchedActorStatsByIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getWatchedActorStatsByID, arg.UserID, arg.ID)
-	var i GetWatchedActorStatsByIDRow
-	err := row.Scan(&i.Gender, &i.WatchCount)
-	return i, err
+func (q *Queries) GetWatchedActors(ctx context.Context, userID *int64) ([]GetWatchedActorsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getWatchedActors, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetWatchedActorsRow
+	for rows.Next() {
+		var i GetWatchedActorsRow
+		if err := rows.Scan(
+			&i.Name,
+			&i.ID,
+			&i.ProfilePath,
+			&i.Gender,
+			&i.WatchCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getWatchedByGenre = `-- name: GetWatchedByGenre :many
@@ -2635,6 +2309,92 @@ func (q *Queries) GetWatchedCount(ctx context.Context, userID *int64) (int64, er
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const getWatchedCrewMembers = `-- name: GetWatchedCrewMembers :many
+WITH normalized_crew AS (
+    SELECT DISTINCT
+        watched.id AS watched_id,
+        person.id,
+        person.name,
+        person.profile_path,
+        CASE
+            WHEN crew.job = 'Director' THEN 'director'
+            WHEN crew.job IN (
+                'Writer',
+                'Screenplay',
+                'Story',
+                'Novel',
+                'Original Story',
+                'Characters'
+            ) THEN 'writer'
+            WHEN crew.job IN ('Original Music Composer', 'Composer', 'Music') THEN 'composer'
+            WHEN crew.job IN ('Director of Photography', 'Cinematography') THEN 'cinematographer'
+            ELSE NULL
+        END AS role_key
+    FROM
+        watched
+        JOIN crew ON watched.movie_id = crew.movie_id
+        JOIN person ON crew.person_id = person.id
+    WHERE
+        watched.user_id = ?
+)
+SELECT
+    normalized_crew.role_key,
+    normalized_crew.id,
+    normalized_crew.name,
+    normalized_crew.profile_path,
+    COUNT(*) AS watch_count
+FROM
+    normalized_crew
+WHERE
+    normalized_crew.role_key IS NOT NULL
+GROUP BY
+    normalized_crew.role_key,
+    normalized_crew.id,
+    normalized_crew.name,
+    normalized_crew.profile_path
+ORDER BY
+    normalized_crew.role_key ASC,
+    watch_count DESC,
+    normalized_crew.name ASC
+`
+
+type GetWatchedCrewMembersRow struct {
+	RoleKey     interface{}
+	ID          int64
+	Name        string
+	ProfilePath string
+	WatchCount  int64
+}
+
+func (q *Queries) GetWatchedCrewMembers(ctx context.Context, userID *int64) ([]GetWatchedCrewMembersRow, error) {
+	rows, err := q.db.QueryContext(ctx, getWatchedCrewMembers, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetWatchedCrewMembersRow
+	for rows.Next() {
+		var i GetWatchedCrewMembersRow
+		if err := rows.Scan(
+			&i.RoleKey,
+			&i.ID,
+			&i.Name,
+			&i.ProfilePath,
+			&i.WatchCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getWatchedDateRange = `-- name: GetWatchedDateRange :one

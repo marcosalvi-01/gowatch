@@ -15,6 +15,11 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+const (
+	tmdbGenderFemale int64 = 1
+	tmdbGenderMale   int64 = 2
+)
+
 func (s *WatchedService) getTotalStats(ctx context.Context) (*models.TotalStats, error) {
 	s.log.Debug("retrieving total stats")
 	user, err := common.GetUser(ctx)
@@ -142,44 +147,34 @@ func (s *WatchedService) getMostWatchedDay(ctx context.Context) (*models.MostWat
 func (s *WatchedService) getMostWatchedActors(ctx context.Context, limit int) ([]models.TopActor, error) {
 	s.log.Debug("retrieving most watched actors", "limit", limit)
 
+	actors, err := s.getWatchedActors(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	allActors := make([]models.TopActor, 0, len(actors))
+	allActors = append(allActors, limitTopActorsByGender(actors, tmdbGenderMale, limit)...)
+	allActors = append(allActors, limitTopActorsByGender(actors, tmdbGenderFemale, limit)...)
+
+	return allActors, nil
+}
+
+func (s *WatchedService) getWatchedActors(ctx context.Context) ([]models.TopActor, error) {
+	s.log.Debug("retrieving watched actors")
+
 	user, err := common.GetUser(ctx)
 	if err != nil {
 		s.log.Error("failed to get user", "error", err)
 		return nil, err
 	}
 
-	var maleActors, femaleActors []models.TopActor
-	g, ctx := errgroup.WithContext(ctx)
-
-	// Fetch males and females separately to ensure we get enough of each
-	// Gender 2 = Male, Gender 1 = Female in TMDB
-	g.Go(func() error {
-		var err error
-		maleActors, err = s.db.GetMostWatchedActorsByGender(ctx, user.ID, 2, limit)
-		if err != nil {
-			s.log.Error("failed to retrieve most watched male actors", "error", err)
-			return fmt.Errorf("failed to get most watched male actors: %w", err)
-		}
-		return nil
-	})
-
-	g.Go(func() error {
-		var err error
-		femaleActors, err = s.db.GetMostWatchedActorsByGender(ctx, user.ID, 1, limit)
-		if err != nil {
-			s.log.Error("failed to retrieve most watched female actors", "error", err)
-			return fmt.Errorf("failed to get most watched female actors: %w", err)
-		}
-		return nil
-	})
-
-	if err := g.Wait(); err != nil {
-		return nil, err
+	actors, err := s.db.GetWatchedActors(ctx, user.ID)
+	if err != nil {
+		s.log.Error("failed to retrieve watched actors", "error", err)
+		return nil, fmt.Errorf("failed to get watched actors: %w", err)
 	}
 
-	allActors := append(maleActors, femaleActors...)
-
-	return allActors, nil
+	return actors, nil
 }
 
 func (s *WatchedService) getRewatchStats(ctx context.Context) (*models.RewatchStats, error) {
@@ -236,8 +231,8 @@ func (s *WatchedService) getDailyWatchCountsLastYear(ctx context.Context) ([]mod
 	return data, nil
 }
 
-func (s *WatchedService) getTopDirectors(ctx context.Context, limit int) ([]models.TopCrewMember, error) {
-	s.log.Debug("retrieving top directors", "limit", limit)
+func (s *WatchedService) getWatchedCrewMembers(ctx context.Context) ([]models.TopCrewMemberStat, error) {
+	s.log.Debug("retrieving watched crew members")
 
 	user, err := common.GetUser(ctx)
 	if err != nil {
@@ -245,67 +240,76 @@ func (s *WatchedService) getTopDirectors(ctx context.Context, limit int) ([]mode
 		return nil, err
 	}
 
-	data, err := s.db.GetTopDirectors(ctx, user.ID, limit)
+	data, err := s.db.GetWatchedCrewMembers(ctx, user.ID)
 	if err != nil {
-		s.log.Error("failed to retrieve top directors", "error", err)
-		return nil, fmt.Errorf("failed to get top directors: %w", err)
+		s.log.Error("failed to retrieve watched crew members", "error", err)
+		return nil, fmt.Errorf("failed to get watched crew members: %w", err)
 	}
 
 	return data, nil
 }
 
-func (s *WatchedService) getTopWriters(ctx context.Context, limit int) ([]models.TopCrewMember, error) {
-	s.log.Debug("retrieving top writers", "limit", limit)
+func limitTopActorsByGender(actors []models.TopActor, gender int64, limit int) []models.TopActor {
+	filtered := make([]models.TopActor, 0, len(actors))
+	for _, actor := range actors {
+		if actor.Gender != gender {
+			continue
+		}
 
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
+		filtered = append(filtered, actor)
+		if limit > 0 && len(filtered) >= limit {
+			break
+		}
 	}
 
-	data, err := s.db.GetTopWriters(ctx, user.ID, limit)
-	if err != nil {
-		s.log.Error("failed to retrieve top writers", "error", err)
-		return nil, fmt.Errorf("failed to get top writers: %w", err)
-	}
-
-	return data, nil
+	return filtered
 }
 
-func (s *WatchedService) getTopComposers(ctx context.Context, limit int) ([]models.TopCrewMember, error) {
-	s.log.Debug("retrieving top composers", "limit", limit)
+func watchedActorRankByGender(actors []models.TopActor, personID int64) *int64 {
+	var currentGender int64
+	var currentRank int64
+	var previousWatchCount int64
+	haveCurrentGender := false
 
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
+	for _, actor := range actors {
+		if !haveCurrentGender || actor.Gender != currentGender {
+			currentGender = actor.Gender
+			currentRank = 1
+			previousWatchCount = actor.WatchCount
+			haveCurrentGender = true
+		} else if actor.WatchCount < previousWatchCount {
+			currentRank++
+			previousWatchCount = actor.WatchCount
+		}
+
+		if actor.ID == personID {
+			rank := currentRank
+			return &rank
+		}
 	}
 
-	data, err := s.db.GetTopComposers(ctx, user.ID, limit)
-	if err != nil {
-		s.log.Error("failed to retrieve top composers", "error", err)
-		return nil, fmt.Errorf("failed to get top composers: %w", err)
-	}
-
-	return data, nil
+	return nil
 }
 
-func (s *WatchedService) getTopCinematographers(ctx context.Context, limit int) ([]models.TopCrewMember, error) {
-	s.log.Debug("retrieving top cinematographers", "limit", limit)
+func filterTopCrewMembersByRole(data []models.TopCrewMemberStat, role models.TopCrewRole, limit int) []models.TopCrewMember {
+	filtered := make([]models.TopCrewMember, 0, len(data))
+	for _, member := range data {
+		if member.RoleKey != role {
+			continue
+		}
 
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
+		filtered = append(filtered, models.TopCrewMember{
+			ID:          member.ID,
+			Name:        member.Name,
+			ProfilePath: member.ProfilePath,
+			WatchCount:  member.WatchCount,
+		})
+		if limit > 0 && len(filtered) >= limit {
+			break
+		}
 	}
 
-	data, err := s.db.GetTopCinematographers(ctx, user.ID, limit)
-	if err != nil {
-		s.log.Error("failed to retrieve top cinematographers", "error", err)
-		return nil, fmt.Errorf("failed to get top cinematographers: %w", err)
-	}
-
-	return data, nil
+	return filtered
 }
 
 func (s *WatchedService) getTopLanguages(ctx context.Context, limit int) ([]models.LanguageCount, error) {

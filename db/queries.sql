@@ -514,64 +514,39 @@ ORDER BY
     count DESC
 LIMIT 1;
 
--- name: GetMostWatchedActorsByGender :many
+-- name: GetWatchedActors :many
+WITH watched_actors AS (
+    SELECT DISTINCT
+        watched.id AS watched_id,
+        person.id,
+        person.name,
+        person.profile_path,
+        person.gender
+    FROM
+        watched
+        JOIN "cast" ON watched.movie_id = "cast".movie_id
+        JOIN person ON "cast".person_id = person.id
+    WHERE
+        watched.user_id = ?
+        AND person.gender IN (1, 2)
+)
 SELECT
-    person.name,
-    person.id,
-    person.profile_path,
-    person.gender,
+    watched_actors.name,
+    watched_actors.id,
+    watched_actors.profile_path,
+    watched_actors.gender,
     COUNT(*) AS watch_count
 FROM
-    watched
-    JOIN "cast" ON watched.movie_id = "cast".movie_id
-    JOIN person ON "cast".person_id = person.id
-WHERE
-    person.gender = ?
-    AND watched.user_id = ?
+    watched_actors
 GROUP BY
-    person.id,
-    person.name,
-    person.profile_path,
-    person.gender
+    watched_actors.id,
+    watched_actors.name,
+    watched_actors.profile_path,
+    watched_actors.gender
 ORDER BY
-    watch_count DESC
-LIMIT
-    ?;
-
--- name: GetWatchedActorStatsByID :one
-SELECT
-    person.gender,
-    COUNT(*) AS watch_count
-FROM
-    watched
-    JOIN "cast" ON watched.movie_id = "cast".movie_id
-    JOIN person ON "cast".person_id = person.id
-WHERE
-    watched.user_id = ?
-    AND person.id = ?
-    AND person.gender IN (1, 2)
-GROUP BY
-    person.gender;
-
--- name: CountHigherRankedActorsByGender :one
-SELECT
-    COUNT(*) AS count
-FROM
-    (
-        SELECT
-            person.id
-        FROM
-            watched
-            JOIN "cast" ON watched.movie_id = "cast".movie_id
-            JOIN person ON "cast".person_id = person.id
-        WHERE
-            watched.user_id = ?1
-            AND person.gender = ?2
-        GROUP BY
-            person.id
-        HAVING
-            COUNT(*) > ?3
-    ) AS higher_ranked_actors;
+    watched_actors.gender ASC,
+    watch_count DESC,
+    watched_actors.name ASC;
 
 -- name: GetWatchedDateRange :one
 SELECT
@@ -670,104 +645,53 @@ GROUP BY
 ORDER BY
     watched.watched_date;
 
--- name: GetTopDirectors :many
+-- name: GetWatchedCrewMembers :many
+WITH normalized_crew AS (
+    SELECT DISTINCT
+        watched.id AS watched_id,
+        person.id,
+        person.name,
+        person.profile_path,
+        CASE
+            WHEN crew.job = 'Director' THEN 'director'
+            WHEN crew.job IN (
+                'Writer',
+                'Screenplay',
+                'Story',
+                'Novel',
+                'Original Story',
+                'Characters'
+            ) THEN 'writer'
+            WHEN crew.job IN ('Original Music Composer', 'Composer', 'Music') THEN 'composer'
+            WHEN crew.job IN ('Director of Photography', 'Cinematography') THEN 'cinematographer'
+            ELSE NULL
+        END AS role_key
+    FROM
+        watched
+        JOIN crew ON watched.movie_id = crew.movie_id
+        JOIN person ON crew.person_id = person.id
+    WHERE
+        watched.user_id = ?
+)
 SELECT
-    person.id,
-    person.name,
-    person.profile_path,
-    COUNT(DISTINCT watched.id) AS watch_count
+    normalized_crew.role_key,
+    normalized_crew.id,
+    normalized_crew.name,
+    normalized_crew.profile_path,
+    COUNT(*) AS watch_count
 FROM
-    watched
-    JOIN crew ON watched.movie_id = crew.movie_id
-    JOIN person ON crew.person_id = person.id
+    normalized_crew
 WHERE
-    watched.user_id = ?
-    AND crew.job = 'Director'
+    normalized_crew.role_key IS NOT NULL
 GROUP BY
-    person.id,
-    person.name,
-    person.profile_path
+    normalized_crew.role_key,
+    normalized_crew.id,
+    normalized_crew.name,
+    normalized_crew.profile_path
 ORDER BY
+    normalized_crew.role_key ASC,
     watch_count DESC,
-    person.name ASC
-LIMIT
-    ?;
-
--- name: GetTopWriters :many
-SELECT
-    person.id,
-    person.name,
-    person.profile_path,
-    COUNT(DISTINCT watched.id) AS watch_count
-FROM
-    watched
-    JOIN crew ON watched.movie_id = crew.movie_id
-    JOIN person ON crew.person_id = person.id
-WHERE
-    watched.user_id = ?
-    AND crew.job IN (
-        'Writer',
-        'Screenplay',
-        'Story',
-        'Novel',
-        'Original Story',
-        'Characters'
-    )
-GROUP BY
-    person.id,
-    person.name,
-    person.profile_path
-ORDER BY
-    watch_count DESC,
-    person.name ASC
-LIMIT
-    ?;
-
--- name: GetTopComposers :many
-SELECT
-    person.id,
-    person.name,
-    person.profile_path,
-    COUNT(DISTINCT watched.id) AS watch_count
-FROM
-    watched
-    JOIN crew ON watched.movie_id = crew.movie_id
-    JOIN person ON crew.person_id = person.id
-WHERE
-    watched.user_id = ?
-    AND crew.job IN ('Original Music Composer', 'Composer', 'Music')
-GROUP BY
-    person.id,
-    person.name,
-    person.profile_path
-ORDER BY
-    watch_count DESC,
-    person.name ASC
-LIMIT
-    ?;
-
--- name: GetTopCinematographers :many
-SELECT
-    person.id,
-    person.name,
-    person.profile_path,
-    COUNT(DISTINCT watched.id) AS watch_count
-FROM
-    watched
-    JOIN crew ON watched.movie_id = crew.movie_id
-    JOIN person ON crew.person_id = person.id
-WHERE
-    watched.user_id = ?
-    AND crew.job IN ('Director of Photography', 'Cinematography')
-GROUP BY
-    person.id,
-    person.name,
-    person.profile_path
-ORDER BY
-    watch_count DESC,
-    person.name ASC
-LIMIT
-    ?;
+    normalized_crew.name ASC;
 
 -- name: GetTopLanguages :many
 SELECT

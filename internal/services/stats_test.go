@@ -164,6 +164,31 @@ func TestNormalizeRatingDistribution(t *testing.T) {
 	}
 }
 
+func TestWatchedActorRankByGender(t *testing.T) {
+	actors := []models.TopActor{
+		{ID: 1, Name: "Female One", Gender: tmdbGenderFemale, WatchCount: 5},
+		{ID: 2, Name: "Female Two", Gender: tmdbGenderFemale, WatchCount: 5},
+		{ID: 3, Name: "Female Three", Gender: tmdbGenderFemale, WatchCount: 3},
+		{ID: 4, Name: "Male One", Gender: tmdbGenderMale, WatchCount: 4},
+		{ID: 5, Name: "Male Two", Gender: tmdbGenderMale, WatchCount: 2},
+	}
+
+	femaleRank := watchedActorRankByGender(actors, 3)
+	if femaleRank == nil || *femaleRank != 2 {
+		t.Fatalf("expected female actor rank 2, got %v", femaleRank)
+	}
+
+	maleRank := watchedActorRankByGender(actors, 5)
+	if maleRank == nil || *maleRank != 2 {
+		t.Fatalf("expected male actor rank 2, got %v", maleRank)
+	}
+
+	missingRank := watchedActorRankByGender(actors, 99)
+	if missingRank != nil {
+		t.Fatalf("expected nil rank for missing actor, got %v", *missingRank)
+	}
+}
+
 func TestCalculateMonthlyMoviesTrend(t *testing.T) {
 	s := &WatchedService{log: slog.New(slog.DiscardHandler)}
 

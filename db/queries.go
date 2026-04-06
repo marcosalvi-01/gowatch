@@ -793,57 +793,28 @@ func (d *SqliteDB) GetMostWatchedDay(ctx context.Context, userID int64) (*models
 	return &models.MostWatchedDay{Date: result.WatchedDate.Time, Count: result.Count}, nil
 }
 
-func (d *SqliteDB) GetMostWatchedActorsByGender(ctx context.Context, userID int64, gender int64, limit int) ([]models.TopActor, error) {
-	log.Debug("getting most watched actors by gender", "limit", limit, "gender", gender)
+func (d *SqliteDB) GetWatchedActors(ctx context.Context, userID int64) ([]models.TopActor, error) {
+	log.Debug("getting watched actors", "userID", userID)
 
-	data, err := d.queries.GetMostWatchedActorsByGender(ctx, sqlc.GetMostWatchedActorsByGenderParams{
-		Gender: gender,
-		UserID: &userID,
-		Limit:  int64(limit),
-	})
+	data, err := d.queries.GetWatchedActors(ctx, &userID)
 	if err != nil {
-		log.Error("failed to get most watched actors by gender", "error", err, "gender", gender)
-		return nil, fmt.Errorf("failed to get most watched actors by gender: %w", err)
+		log.Error("failed to get watched actors", "userID", userID, "error", err)
+		return nil, fmt.Errorf("failed to get watched actors: %w", err)
 	}
+
 	result := make([]models.TopActor, len(data))
-	for i, d := range data {
-		result[i] = models.TopActor{Name: d.Name, ID: d.ID, WatchCount: d.WatchCount, ProfilePath: d.ProfilePath, Gender: d.Gender}
-	}
-
-	log.Debug("retrieved most watched actors by gender", "count", len(result), "gender", gender)
-	return result, nil
-}
-
-func (d *SqliteDB) GetMostWatchedActorRankByGender(ctx context.Context, userID, personID int64) (*int64, error) {
-	log.Debug("getting most watched actor rank by gender", "userID", userID, "personID", personID)
-
-	targetActorStats, err := d.queries.GetWatchedActorStatsByID(ctx, sqlc.GetWatchedActorStatsByIDParams{
-		UserID: &userID,
-		ID:     personID,
-	})
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			log.Debug("no most watched actor rank found", "userID", userID, "personID", personID)
-			return nil, nil
+	for i, row := range data {
+		result[i] = models.TopActor{
+			Name:        row.Name,
+			ID:          row.ID,
+			ProfilePath: row.ProfilePath,
+			WatchCount:  row.WatchCount,
+			Gender:      row.Gender,
 		}
-
-		log.Error("failed to get most watched actor rank by gender", "userID", userID, "personID", personID, "error", err)
-		return nil, fmt.Errorf("failed to get most watched actor rank by gender: %w", err)
 	}
 
-	higherRankedCount, err := d.queries.CountHigherRankedActorsByGender(ctx, sqlc.CountHigherRankedActorsByGenderParams{
-		UserID:  &userID,
-		Gender:  targetActorStats.Gender,
-		Column3: targetActorStats.WatchCount,
-	})
-	if err != nil {
-		log.Error("failed to count higher ranked actors by gender", "userID", userID, "personID", personID, "gender", targetActorStats.Gender, "error", err)
-		return nil, fmt.Errorf("failed to count higher ranked actors by gender: %w", err)
-	}
-
-	rank := higherRankedCount + 1
-	log.Debug("retrieved most watched actor rank by gender", "userID", userID, "personID", personID, "rank", rank)
-	return &rank, nil
+	log.Debug("retrieved watched actors", "userID", userID, "count", len(result))
+	return result, nil
 }
 
 func (d *SqliteDB) GetWatchedDateRange(ctx context.Context, userID int64) (*models.DateRange, error) {
@@ -977,18 +948,24 @@ func (d *SqliteDB) GetDailyWatchCountsLastYear(ctx context.Context, userID int64
 	return result, nil
 }
 
-func (d *SqliteDB) GetTopDirectors(ctx context.Context, userID int64, limit int) ([]models.TopCrewMember, error) {
-	log.Debug("getting top directors", "limit", limit)
+func (d *SqliteDB) GetWatchedCrewMembers(ctx context.Context, userID int64) ([]models.TopCrewMemberStat, error) {
+	log.Debug("getting watched crew members", "userID", userID)
 
-	data, err := d.queries.GetTopDirectors(ctx, sqlc.GetTopDirectorsParams{UserID: &userID, Limit: int64(limit)})
+	data, err := d.queries.GetWatchedCrewMembers(ctx, &userID)
 	if err != nil {
-		log.Error("failed to get top directors", "error", err)
-		return nil, fmt.Errorf("failed to get top directors: %w", err)
+		log.Error("failed to get watched crew members", "userID", userID, "error", err)
+		return nil, fmt.Errorf("failed to get watched crew members: %w", err)
 	}
 
-	result := make([]models.TopCrewMember, len(data))
+	result := make([]models.TopCrewMemberStat, len(data))
 	for i, row := range data {
-		result[i] = models.TopCrewMember{
+		roleKey, err := scanStringValue(row.RoleKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse crew role key for person %d: %w", row.ID, err)
+		}
+
+		result[i] = models.TopCrewMemberStat{
+			RoleKey:     models.TopCrewRole(roleKey),
 			ID:          row.ID,
 			Name:        row.Name,
 			ProfilePath: row.ProfilePath,
@@ -996,76 +973,7 @@ func (d *SqliteDB) GetTopDirectors(ctx context.Context, userID int64, limit int)
 		}
 	}
 
-	log.Debug("retrieved top directors", "count", len(result))
-	return result, nil
-}
-
-func (d *SqliteDB) GetTopWriters(ctx context.Context, userID int64, limit int) ([]models.TopCrewMember, error) {
-	log.Debug("getting top writers", "limit", limit)
-
-	data, err := d.queries.GetTopWriters(ctx, sqlc.GetTopWritersParams{UserID: &userID, Limit: int64(limit)})
-	if err != nil {
-		log.Error("failed to get top writers", "error", err)
-		return nil, fmt.Errorf("failed to get top writers: %w", err)
-	}
-
-	result := make([]models.TopCrewMember, len(data))
-	for i, row := range data {
-		result[i] = models.TopCrewMember{
-			ID:          row.ID,
-			Name:        row.Name,
-			ProfilePath: row.ProfilePath,
-			WatchCount:  row.WatchCount,
-		}
-	}
-
-	log.Debug("retrieved top writers", "count", len(result))
-	return result, nil
-}
-
-func (d *SqliteDB) GetTopComposers(ctx context.Context, userID int64, limit int) ([]models.TopCrewMember, error) {
-	log.Debug("getting top composers", "limit", limit)
-
-	data, err := d.queries.GetTopComposers(ctx, sqlc.GetTopComposersParams{UserID: &userID, Limit: int64(limit)})
-	if err != nil {
-		log.Error("failed to get top composers", "error", err)
-		return nil, fmt.Errorf("failed to get top composers: %w", err)
-	}
-
-	result := make([]models.TopCrewMember, len(data))
-	for i, row := range data {
-		result[i] = models.TopCrewMember{
-			ID:          row.ID,
-			Name:        row.Name,
-			ProfilePath: row.ProfilePath,
-			WatchCount:  row.WatchCount,
-		}
-	}
-
-	log.Debug("retrieved top composers", "count", len(result))
-	return result, nil
-}
-
-func (d *SqliteDB) GetTopCinematographers(ctx context.Context, userID int64, limit int) ([]models.TopCrewMember, error) {
-	log.Debug("getting top cinematographers", "limit", limit)
-
-	data, err := d.queries.GetTopCinematographers(ctx, sqlc.GetTopCinematographersParams{UserID: &userID, Limit: int64(limit)})
-	if err != nil {
-		log.Error("failed to get top cinematographers", "error", err)
-		return nil, fmt.Errorf("failed to get top cinematographers: %w", err)
-	}
-
-	result := make([]models.TopCrewMember, len(data))
-	for i, row := range data {
-		result[i] = models.TopCrewMember{
-			ID:          row.ID,
-			Name:        row.Name,
-			ProfilePath: row.ProfilePath,
-			WatchCount:  row.WatchCount,
-		}
-	}
-
-	log.Debug("retrieved top cinematographers", "count", len(result))
+	log.Debug("retrieved watched crew members", "userID", userID, "count", len(result))
 	return result, nil
 }
 

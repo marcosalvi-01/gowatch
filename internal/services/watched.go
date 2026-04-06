@@ -293,15 +293,13 @@ func (s *WatchedService) GetPersonWatchActivity(ctx context.Context, personID in
 	}
 
 	if activity.ActingMovieCount > 0 {
-		actorRank, err := s.db.GetMostWatchedActorRankByGender(ctx, user.ID, personID)
+		actors, err := s.db.GetWatchedActors(ctx, user.ID)
 		if err != nil {
-			if !errors.Is(err, sql.ErrNoRows) {
-				s.log.Error("GetPersonWatchActivity: failed to get actor rank", "personID", personID, "error", err)
-				return models.PersonWatchActivity{}, fmt.Errorf("GetPersonWatchActivity: get actor rank: %w", err)
-			}
-		} else {
-			activity.ActorRank = actorRank
+			s.log.Error("GetPersonWatchActivity: failed to get watched actors", "personID", personID, "error", err)
+			return models.PersonWatchActivity{}, fmt.Errorf("GetPersonWatchActivity: get watched actors: %w", err)
 		}
+
+		activity.ActorRank = watchedActorRankByGender(actors, personID)
 	}
 
 	return activity, nil
@@ -509,43 +507,28 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 		return err
 	})
 
-	// Top Directors
+	// Top Crew
 	g.Go(func() error {
 		var err error
-		s.log.Debug("GetWatchedStats: fetching top directors")
+		s.log.Debug("GetWatchedStats: fetching top crew members")
 		t := time.Now()
-		stats.TopDirectors, err = s.getTopDirectors(ctx, limit)
-		s.log.Debug("GetWatchedStats: top directors fetched", "count", len(stats.TopDirectors), "duration", time.Since(t).String())
-		return err
-	})
+		crewMembers, err := s.getWatchedCrewMembers(ctx)
+		if err != nil {
+			return err
+		}
 
-	// Top Writers
-	g.Go(func() error {
-		var err error
-		s.log.Debug("GetWatchedStats: fetching top writers")
-		t := time.Now()
-		stats.TopWriters, err = s.getTopWriters(ctx, limit)
-		s.log.Debug("GetWatchedStats: top writers fetched", "count", len(stats.TopWriters), "duration", time.Since(t).String())
-		return err
-	})
-
-	// Top Composers
-	g.Go(func() error {
-		var err error
-		s.log.Debug("GetWatchedStats: fetching top composers")
-		t := time.Now()
-		stats.TopComposers, err = s.getTopComposers(ctx, limit)
-		s.log.Debug("GetWatchedStats: top composers fetched", "count", len(stats.TopComposers), "duration", time.Since(t).String())
-		return err
-	})
-
-	// Top Cinematographers
-	g.Go(func() error {
-		var err error
-		s.log.Debug("GetWatchedStats: fetching top cinematographers")
-		t := time.Now()
-		stats.TopCinematographers, err = s.getTopCinematographers(ctx, limit)
-		s.log.Debug("GetWatchedStats: top cinematographers fetched", "count", len(stats.TopCinematographers), "duration", time.Since(t).String())
+		stats.TopDirectors = filterTopCrewMembersByRole(crewMembers, models.TopCrewRoleDirector, limit)
+		stats.TopWriters = filterTopCrewMembersByRole(crewMembers, models.TopCrewRoleWriter, limit)
+		stats.TopComposers = filterTopCrewMembersByRole(crewMembers, models.TopCrewRoleComposer, limit)
+		stats.TopCinematographers = filterTopCrewMembersByRole(crewMembers, models.TopCrewRoleCinematographer, limit)
+		s.log.Debug(
+			"GetWatchedStats: top crew members fetched",
+			"directors", len(stats.TopDirectors),
+			"writers", len(stats.TopWriters),
+			"composers", len(stats.TopComposers),
+			"cinematographers", len(stats.TopCinematographers),
+			"duration", time.Since(t).String(),
+		)
 		return err
 	})
 

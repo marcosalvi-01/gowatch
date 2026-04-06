@@ -274,6 +274,23 @@ type TopCrewMember struct {
 	WatchCount  int64
 }
 
+type TopCrewRole string
+
+const (
+	TopCrewRoleDirector        TopCrewRole = "director"
+	TopCrewRoleWriter          TopCrewRole = "writer"
+	TopCrewRoleComposer        TopCrewRole = "composer"
+	TopCrewRoleCinematographer TopCrewRole = "cinematographer"
+)
+
+type TopCrewMemberStat struct {
+	RoleKey     TopCrewRole
+	ID          int64
+	Name        string
+	ProfilePath string
+	WatchCount  int64
+}
+
 type LanguageCount struct {
 	Language   string
 	WatchCount int64
