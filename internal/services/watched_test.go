@@ -489,6 +489,297 @@ func TestWatchedService_GetWatchedStats_RatingFields(t *testing.T) {
 	}
 }
 
+func TestWatchedService_GetPersonWatchActivity(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
+
+	const targetPersonID int64 = 77
+	const competingMalePersonID int64 = 88
+	const competingFemalePersonID int64 = 99
+
+	movies := []*models.MovieDetails{
+		testMovieDetailsWithCredits(
+			1,
+			"Alpha",
+			[]models.Cast{{
+				MovieID:   1,
+				PersonID:  targetPersonID,
+				CastID:    101,
+				CreditID:  "alpha-cast",
+				Character: "Lead",
+				CastOrder: 0,
+				Person:    testPerson(targetPersonID, "Target Person", "Acting", 2),
+			}},
+			[]models.Crew{{
+				MovieID:    1,
+				PersonID:   targetPersonID,
+				CreditID:   "alpha-director",
+				Job:        "Director",
+				Department: "Directing",
+				Person:     testPerson(targetPersonID, "Target Person", "Directing", 2),
+			}, {
+				MovieID:    1,
+				PersonID:   targetPersonID,
+				CreditID:   "alpha-producer",
+				Job:        "Producer",
+				Department: "Production",
+				Person:     testPerson(targetPersonID, "Target Person", "Production", 2),
+			}},
+		),
+		testMovieDetailsWithCredits(
+			2,
+			"Beta",
+			nil,
+			[]models.Crew{{
+				MovieID:    2,
+				PersonID:   targetPersonID,
+				CreditID:   "beta-writer",
+				Job:        "Writer",
+				Department: "Writing",
+				Person:     testPerson(targetPersonID, "Target Person", "Writing", 2),
+			}},
+		),
+		testMovieDetailsWithCredits(
+			3,
+			"Gamma",
+			[]models.Cast{{
+				MovieID:   3,
+				PersonID:  competingMalePersonID,
+				CastID:    301,
+				CreditID:  "gamma-cast",
+				Character: "Lead",
+				CastOrder: 0,
+				Person:    testPerson(competingMalePersonID, "Other Male Actor", "Acting", 2),
+			}},
+			nil,
+		),
+		testMovieDetailsWithCredits(
+			4,
+			"Delta",
+			[]models.Cast{{
+				MovieID:   4,
+				PersonID:  competingFemalePersonID,
+				CastID:    401,
+				CreditID:  "delta-cast",
+				Character: "Lead",
+				CastOrder: 0,
+				Person:    testPerson(competingFemalePersonID, "Other Female Actor", "Acting", 1),
+			}},
+			nil,
+		),
+	}
+
+	for _, movie := range movies {
+		if err := testDB.UpsertMovie(ctx, movie); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	entries := []struct {
+		movieID int64
+		date    time.Time
+	}{
+		{movieID: 1, date: time.Date(2024, 1, 10, 0, 0, 0, 0, time.UTC)},
+		{movieID: 1, date: time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC)},
+		{movieID: 2, date: time.Date(2024, 3, 20, 0, 0, 0, 0, time.UTC)},
+		{movieID: 3, date: time.Date(2024, 4, 5, 0, 0, 0, 0, time.UTC)},
+		{movieID: 3, date: time.Date(2024, 4, 6, 0, 0, 0, 0, time.UTC)},
+		{movieID: 3, date: time.Date(2024, 4, 7, 0, 0, 0, 0, time.UTC)},
+		{movieID: 4, date: time.Date(2024, 4, 8, 0, 0, 0, 0, time.UTC)},
+		{movieID: 4, date: time.Date(2024, 4, 9, 0, 0, 0, 0, time.UTC)},
+		{movieID: 4, date: time.Date(2024, 4, 10, 0, 0, 0, 0, time.UTC)},
+		{movieID: 4, date: time.Date(2024, 4, 11, 0, 0, 0, 0, time.UTC)},
+	}
+
+	for _, entry := range entries {
+		if err := watchedService.AddWatched(ctx, entry.movieID, entry.date, false, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	activity, err := watchedService.GetPersonWatchActivity(ctx, targetPersonID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if activity.TotalWatchCount != 3 {
+		t.Fatalf("expected total watch count 3, got %d", activity.TotalWatchCount)
+	}
+	if activity.ActingMovieCount != 1 {
+		t.Fatalf("expected acting movie count 1, got %d", activity.ActingMovieCount)
+	}
+	if activity.CrewMovieCount != 2 {
+		t.Fatalf("expected crew movie count 2, got %d", activity.CrewMovieCount)
+	}
+	if activity.ActorRank == nil {
+		t.Fatal("expected actor rank to be set")
+	}
+	if *activity.ActorRank != 2 {
+		t.Fatalf("expected actor rank 2, got %d", *activity.ActorRank)
+	}
+	if len(activity.Movies) != 2 {
+		t.Fatalf("expected 2 watched movies, got %d", len(activity.Movies))
+	}
+
+	firstMovie := activity.Movies[0]
+	if firstMovie.ID != 1 {
+		t.Fatalf("expected first movie ID 1, got %d", firstMovie.ID)
+	}
+	if firstMovie.WatchCount != 2 {
+		t.Fatalf("expected first movie watch count 2, got %d", firstMovie.WatchCount)
+	}
+	if !firstMovie.LastWatchedDate.Equal(time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC)) {
+		t.Fatalf("unexpected first movie last watched date: %s", firstMovie.LastWatchedDate)
+	}
+	if len(firstMovie.Roles) != 3 {
+		t.Fatalf("expected 3 roles for first movie, got %d", len(firstMovie.Roles))
+	}
+	if firstMovie.Roles[0].Kind != models.PersonWatchRoleKindActing || firstMovie.Roles[0].Label != "Lead" {
+		t.Fatalf("unexpected first role: %+v", firstMovie.Roles[0])
+	}
+	if firstMovie.Roles[1].Kind != models.PersonWatchRoleKindCrew || firstMovie.Roles[1].Label != "Director" {
+		t.Fatalf("unexpected second role: %+v", firstMovie.Roles[1])
+	}
+	if firstMovie.Roles[2].Kind != models.PersonWatchRoleKindCrew || firstMovie.Roles[2].Label != "Producer" {
+		t.Fatalf("unexpected third role: %+v", firstMovie.Roles[2])
+	}
+
+	secondMovie := activity.Movies[1]
+	if secondMovie.ID != 2 {
+		t.Fatalf("expected second movie ID 2, got %d", secondMovie.ID)
+	}
+	if secondMovie.WatchCount != 1 {
+		t.Fatalf("expected second movie watch count 1, got %d", secondMovie.WatchCount)
+	}
+	if len(secondMovie.Roles) != 1 {
+		t.Fatalf("expected 1 role for second movie, got %d", len(secondMovie.Roles))
+	}
+	if secondMovie.Roles[0].Kind != models.PersonWatchRoleKindCrew || secondMovie.Roles[0].Label != "Writer" {
+		t.Fatalf("unexpected second movie role: %+v", secondMovie.Roles[0])
+	}
+}
+
+func TestWatchedService_GetPersonWatchActivity_CrewOnlyActorRankNil(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
+
+	const targetPersonID int64 = 55
+
+	movie := testMovieDetailsWithCredits(
+		1,
+		"Crew Movie",
+		nil,
+		[]models.Crew{{
+			MovieID:    1,
+			PersonID:   targetPersonID,
+			CreditID:   "crew-director",
+			Job:        "Director",
+			Department: "Directing",
+			Person:     testPerson(targetPersonID, "Crew Person", "Directing", 2),
+		}},
+	)
+
+	if err := testDB.UpsertMovie(ctx, movie); err != nil {
+		t.Fatal(err)
+	}
+	if err := watchedService.AddWatched(ctx, 1, time.Date(2024, 1, 10, 0, 0, 0, 0, time.UTC), false, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	activity, err := watchedService.GetPersonWatchActivity(ctx, targetPersonID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if activity.TotalWatchCount != 1 {
+		t.Fatalf("expected total watch count 1, got %d", activity.TotalWatchCount)
+	}
+	if activity.ActingMovieCount != 0 {
+		t.Fatalf("expected acting movie count 0, got %d", activity.ActingMovieCount)
+	}
+	if activity.CrewMovieCount != 1 {
+		t.Fatalf("expected crew movie count 1, got %d", activity.CrewMovieCount)
+	}
+	if activity.ActorRank != nil {
+		t.Fatalf("expected actor rank to be nil, got %d", *activity.ActorRank)
+	}
+	if len(activity.Movies) != 1 {
+		t.Fatalf("expected 1 watched movie, got %d", len(activity.Movies))
+	}
+}
+
+func TestWatchedService_GetPersonWatchActivity_NoMatches(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
+
+	movie := testMovieDetailsWithCredits(
+		1,
+		"Alpha",
+		[]models.Cast{{
+			MovieID:   1,
+			PersonID:  88,
+			CastID:    101,
+			CreditID:  "alpha-cast",
+			Character: "Lead",
+			CastOrder: 0,
+			Person:    testPerson(88, "Other Person", "Acting", 2),
+		}},
+		nil,
+	)
+
+	if err := testDB.UpsertMovie(ctx, movie); err != nil {
+		t.Fatal(err)
+	}
+	if err := watchedService.AddWatched(ctx, 1, time.Date(2024, 1, 10, 0, 0, 0, 0, time.UTC), false, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	activity, err := watchedService.GetPersonWatchActivity(ctx, 99)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if activity.TotalWatchCount != 0 {
+		t.Fatalf("expected total watch count 0, got %d", activity.TotalWatchCount)
+	}
+	if activity.ActingMovieCount != 0 {
+		t.Fatalf("expected acting movie count 0, got %d", activity.ActingMovieCount)
+	}
+	if activity.CrewMovieCount != 0 {
+		t.Fatalf("expected crew movie count 0, got %d", activity.CrewMovieCount)
+	}
+	if activity.ActorRank != nil {
+		t.Fatalf("expected actor rank to be nil, got %d", *activity.ActorRank)
+	}
+	if len(activity.Movies) != 0 {
+		t.Fatalf("expected 0 watched movies, got %d", len(activity.Movies))
+	}
+}
+
 func TestWatchedService_AddWatched_InvalidMovie(t *testing.T) {
 	testDB, err := db.NewTestDB()
 	if err != nil {
@@ -760,5 +1051,30 @@ func TestWatchedService_ImportAll(t *testing.T) {
 	}
 	if !movie.DateAdded.Equal(listMovieDate) {
 		t.Fatalf("expected imported date_added %s, got %s", listMovieDate, movie.DateAdded)
+	}
+}
+
+func testMovieDetailsWithCredits(movieID int64, title string, cast []models.Cast, crew []models.Crew) *models.MovieDetails {
+	return &models.MovieDetails{
+		Movie: models.Movie{
+			ID:               movieID,
+			Title:            title,
+			OriginalTitle:    title,
+			OriginalLanguage: "en",
+		},
+		Credits: models.MovieCredits{
+			Cast: cast,
+			Crew: crew,
+		},
+	}
+}
+
+func testPerson(personID int64, name, department string, gender int64) models.Person {
+	return models.Person{
+		ID:                 personID,
+		Name:               name,
+		OriginalName:       name,
+		KnownForDepartment: department,
+		Gender:             gender,
 	}
 }

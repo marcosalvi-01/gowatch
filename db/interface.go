@@ -19,6 +19,8 @@ type DB interface {
 	InsertWatched(ctx context.Context, watched InsertWatched) error
 	GetWatchedJoinMovie(ctx context.Context, userID int64) ([]models.WatchedMovie, error)
 	GetWatchedJoinMovieByID(ctx context.Context, userID, movieID int64) ([]models.WatchedMovie, error)
+	GetWatchedMoviesByPerson(ctx context.Context, userID, personID int64) ([]models.PersonWatchMovieMatch, error)
+	GetMostWatchedActorRankByGender(ctx context.Context, userID, personID int64) (*int64, error)
 	GetRecentWatchedMovies(ctx context.Context, userID int64, limit int) ([]models.WatchedMovieInDay, error)
 	GetWatchedCount(ctx context.Context, userID int64) (int64, error)
 	GetWatchedDateRange(ctx context.Context, userID int64) (*models.DateRange, error)

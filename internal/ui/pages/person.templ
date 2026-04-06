@@ -29,13 +29,16 @@ const (
 	personKnownForVisibleLimit  = 3
 )
 
-templ Person(person models.PersonDetailsPage) {
+templ Person(person models.PersonDetailsPage, activity models.PersonWatchActivity) {
 	@Layout() {
 		@templ.Fragment("content") {
 			@personHero(person)
 			<div class="space-y-8 pb-5">
 				@personBiographySection(person.Biography)
 				@personDetailsSection(person)
+				if len(activity.Movies) > 0 {
+					@personWatchActivitySection(activity)
+				}
 				@actingCreditsSection(person.ActingCredits)
 				@crewCreditsSection(person.CrewCredits)
 			</div>
@@ -279,6 +282,67 @@ templ personDetailsSection(person models.PersonDetailsPage) {
 				}
 			}
 		</div>
+	</div>
+}
+
+templ personWatchActivitySection(activity models.PersonWatchActivity) {
+	<div class="border-1 rounded-lg p-3">
+		<h2 class="text-xl font-semibold mb-4">Your Activity</h2>
+		<div class="space-y-6">
+			@personWatchActivityStats(activity)
+			@separator.Separator()
+			@personWatchHistory(activity.Movies)
+		</div>
+	</div>
+}
+
+templ personWatchActivityStats(activity models.PersonWatchActivity) {
+	<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+		@personActivityStat("Times Watched", fmt.Sprintf("%d", activity.TotalWatchCount))
+		@personActivityStat("Movies Watched", fmt.Sprintf("%d", len(activity.Movies)))
+		@personActivityStat("Watched Actor Rank", personActorRankText(activity.ActorRank))
+		@personActivityStat("Last Watched", personLatestWatchDateText(activity.Movies))
+	</div>
+}
+
+templ personActivityStat(label, value string) {
+	<div class="text-center">
+		<div class="text-2xl font-bold text-primary">{ value }</div>
+		<div class="text-xs text-muted-foreground">{ label }</div>
+	</div>
+}
+
+templ personWatchHistory(movies []models.PersonWatchedMovie) {
+	<div>
+		<h3 class="text-sm font-medium mb-3">Movies Watched</h3>
+		<div class="space-y-2 max-h-64 overflow-y-auto">
+			for _, movie := range movies {
+				@personWatchedMovieItem(movie)
+			}
+		</div>
+	</div>
+}
+
+templ personWatchedMovieItem(movie models.PersonWatchedMovie) {
+	<div
+		data-page="movie"
+		hx-get={ "/movie/" + strconv.FormatInt(movie.ID, 10) }
+		hx-target="#main-content"
+		hx-push-url="true"
+		hx-swap="scroll:#main-scroll-container:top"
+		hx-indicator="#movie-loading"
+		class="flex items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2 cursor-pointer hover:bg-muted/70 transition-colors"
+	>
+		<div class="flex min-w-0 items-center gap-3">
+			@personCreditPoster(movie.PosterPath, movie.Title)
+			<div class="min-w-0">
+				<div class="text-sm font-medium line-clamp-1">{ movie.Title }</div>
+				if len(movie.Roles) > 0 {
+					<div class="text-xs text-muted-foreground line-clamp-1">{ personWatchRolesText(movie.Roles) }</div>
+				}
+			</div>
+		</div>
+		<div class="text-xs text-muted-foreground whitespace-nowrap">{ personWatchCountText(movie.WatchCount) }</div>
 	</div>
 }
 
@@ -616,6 +680,75 @@ func personCreditDateText(date *time.Time) string {
 	}
 
 	return date.Format("2006")
+}
+
+func personLatestWatchDateText(movies []models.PersonWatchedMovie) string {
+	if len(movies) == 0 {
+		return "N/A"
+	}
+
+	latest := movies[0].LastWatchedDate
+	for _, movie := range movies[1:] {
+		if movie.LastWatchedDate.After(latest) {
+			latest = movie.LastWatchedDate
+		}
+	}
+
+	if latest.IsZero() {
+		return "N/A"
+	}
+
+	return latest.Format("Jan 2006")
+}
+
+func personWatchCountText(count int64) string {
+	if count == 1 {
+		return "1 watch"
+	}
+
+	return fmt.Sprintf("%d watches", count)
+}
+
+func personActorRankText(rank *int64) string {
+	if rank == nil || *rank <= 0 {
+		return "N/A"
+	}
+
+	return fmt.Sprintf("#%d", *rank)
+}
+
+func personWatchRolesText(roles []models.PersonWatchRole) string {
+	if len(roles) == 0 {
+		return ""
+	}
+
+	var builder strings.Builder
+	for i, role := range roles {
+		if i > 0 {
+			builder.WriteString(" • ")
+		}
+
+		builder.WriteString(personWatchRoleText(role))
+	}
+
+	return builder.String()
+}
+
+func personWatchRoleText(role models.PersonWatchRole) string {
+	label := strings.TrimSpace(role.Label)
+	if label == "" {
+		if role.Kind == models.PersonWatchRoleKindActing {
+			return "as actor"
+		}
+
+		return "Crew"
+	}
+
+	if role.Kind == models.PersonWatchRoleKindActing {
+		return "as " + label
+	}
+
+	return label
 }
 
 func personRandomBackdropPath(actingCredits []models.PersonCredit, crewCredits []models.PersonCredit) string {

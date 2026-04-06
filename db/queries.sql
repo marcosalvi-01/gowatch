@@ -223,6 +223,57 @@ WHERE
 ORDER BY
     watched.watched_date DESC;
 
+-- name: GetWatchedMoviesByPerson :many
+WITH person_roles AS (
+    SELECT
+        "cast".movie_id,
+        'acting' AS role_kind,
+        COALESCE(NULLIF(TRIM("cast".character), ''), 'Actor') AS role_label
+    FROM
+        "cast"
+    WHERE
+        "cast".person_id = ?1
+    UNION
+    SELECT
+        crew.movie_id,
+        'crew' AS role_kind,
+        COALESCE(NULLIF(TRIM(crew.job), ''), COALESCE(NULLIF(TRIM(crew.department), ''), 'Crew')) AS role_label
+    FROM
+        crew
+    WHERE
+        crew.person_id = ?1
+),
+watched_movies AS (
+    SELECT
+        watched.movie_id,
+        COUNT(watched.id) AS watch_count,
+        MAX(watched.watched_date) AS last_watched_date
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?2
+    GROUP BY
+        watched.movie_id
+)
+SELECT
+    movie.id,
+    movie.title,
+    movie.poster_path,
+    watched_movies.watch_count,
+    watched_movies.last_watched_date,
+    person_roles.role_kind,
+    person_roles.role_label
+FROM
+    person_roles
+    JOIN watched_movies ON watched_movies.movie_id = person_roles.movie_id
+    JOIN movie ON watched_movies.movie_id = movie.id
+ORDER BY
+    watched_movies.watch_count DESC,
+    watched_movies.last_watched_date DESC,
+    movie.title ASC,
+    person_roles.role_kind ASC,
+    person_roles.role_label ASC;
+
 -- Lists and watchlist.
 -- name: InsertList :one
 INSERT INTO
@@ -486,6 +537,41 @@ ORDER BY
     watch_count DESC
 LIMIT
     ?;
+
+-- name: GetWatchedActorStatsByID :one
+SELECT
+    person.gender,
+    COUNT(*) AS watch_count
+FROM
+    watched
+    JOIN "cast" ON watched.movie_id = "cast".movie_id
+    JOIN person ON "cast".person_id = person.id
+WHERE
+    watched.user_id = ?
+    AND person.id = ?
+    AND person.gender IN (1, 2)
+GROUP BY
+    person.gender;
+
+-- name: CountHigherRankedActorsByGender :one
+SELECT
+    COUNT(*) AS count
+FROM
+    (
+        SELECT
+            person.id
+        FROM
+            watched
+            JOIN "cast" ON watched.movie_id = "cast".movie_id
+            JOIN person ON "cast".person_id = person.id
+        WHERE
+            watched.user_id = ?1
+            AND person.gender = ?2
+        GROUP BY
+            person.id
+        HAVING
+            COUNT(*) > ?3
+    ) AS higher_ranked_actors;
 
 -- name: GetWatchedDateRange :one
 SELECT

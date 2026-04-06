@@ -330,6 +330,47 @@ func (d *SqliteDB) GetWatchedJoinMovieByID(ctx context.Context, userID, movieID 
 	return watched, nil
 }
 
+func (d *SqliteDB) GetWatchedMoviesByPerson(ctx context.Context, userID, personID int64) ([]models.PersonWatchMovieMatch, error) {
+	log.Debug("retrieving watched movies for person", "userID", userID, "personID", personID)
+
+	rows, err := d.queries.GetWatchedMoviesByPerson(ctx, sqlc.GetWatchedMoviesByPersonParams{
+		PersonID: personID,
+		UserID:   &userID,
+	})
+	if err != nil {
+		log.Error("failed to get watched movies for person", "userID", userID, "personID", personID, "error", err)
+		return nil, fmt.Errorf("get watched movies by person: %w", err)
+	}
+
+	movies := make([]models.PersonWatchMovieMatch, len(rows))
+	for i, row := range rows {
+		lastWatchedDate, err := scanDateValue(row.LastWatchedDate)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse last watched date for person %d movie %d: %w", personID, row.ID, err)
+		}
+
+		roleLabel, err := scanStringValue(row.RoleLabel)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse role label for person %d movie %d: %w", personID, row.ID, err)
+		}
+
+		movies[i] = models.PersonWatchMovieMatch{
+			ID:              row.ID,
+			Title:           row.Title,
+			PosterPath:      row.PosterPath,
+			WatchCount:      row.WatchCount,
+			LastWatchedDate: lastWatchedDate,
+			Role: models.PersonWatchRole{
+				Kind:  models.PersonWatchRoleKind(row.RoleKind),
+				Label: roleLabel,
+			},
+		}
+	}
+
+	log.Debug("retrieved watched movies for person", "userID", userID, "personID", personID, "count", len(movies))
+	return movies, nil
+}
+
 func (d *SqliteDB) GetRecentWatchedMovies(ctx context.Context, userID int64, limit int) ([]models.WatchedMovieInDay, error) {
 	log.Debug("retrieving recent watched movies", "limit", limit)
 
@@ -771,6 +812,38 @@ func (d *SqliteDB) GetMostWatchedActorsByGender(ctx context.Context, userID int6
 
 	log.Debug("retrieved most watched actors by gender", "count", len(result), "gender", gender)
 	return result, nil
+}
+
+func (d *SqliteDB) GetMostWatchedActorRankByGender(ctx context.Context, userID, personID int64) (*int64, error) {
+	log.Debug("getting most watched actor rank by gender", "userID", userID, "personID", personID)
+
+	targetActorStats, err := d.queries.GetWatchedActorStatsByID(ctx, sqlc.GetWatchedActorStatsByIDParams{
+		UserID: &userID,
+		ID:     personID,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Debug("no most watched actor rank found", "userID", userID, "personID", personID)
+			return nil, nil
+		}
+
+		log.Error("failed to get most watched actor rank by gender", "userID", userID, "personID", personID, "error", err)
+		return nil, fmt.Errorf("failed to get most watched actor rank by gender: %w", err)
+	}
+
+	higherRankedCount, err := d.queries.CountHigherRankedActorsByGender(ctx, sqlc.CountHigherRankedActorsByGenderParams{
+		UserID:  &userID,
+		Gender:  targetActorStats.Gender,
+		Column3: targetActorStats.WatchCount,
+	})
+	if err != nil {
+		log.Error("failed to count higher ranked actors by gender", "userID", userID, "personID", personID, "gender", targetActorStats.Gender, "error", err)
+		return nil, fmt.Errorf("failed to count higher ranked actors by gender: %w", err)
+	}
+
+	rank := higherRankedCount + 1
+	log.Debug("retrieved most watched actor rank by gender", "userID", userID, "personID", personID, "rank", rank)
+	return &rank, nil
 }
 
 func (d *SqliteDB) GetWatchedDateRange(ctx context.Context, userID int64) (*models.DateRange, error) {
@@ -1450,6 +1523,19 @@ func scanDateValue(value any) (time.Time, error) {
 		return time.Time{}, err
 	}
 	return parsed.Time, nil
+}
+
+func scanStringValue(value any) (string, error) {
+	switch v := value.(type) {
+	case string:
+		return v, nil
+	case []byte:
+		return string(v), nil
+	case nil:
+		return "", nil
+	default:
+		return "", fmt.Errorf("unexpected string value type: %T", value)
+	}
 }
 
 func (d *SqliteDB) CreateSession(ctx context.Context, id string, userID int64, expiresAt time.Time) error {

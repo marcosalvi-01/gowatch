@@ -43,6 +43,44 @@ type WatchedMovieRecords struct {
 	Records      []WatchedMovieRecord
 }
 
+type PersonWatchRoleKind string
+
+const (
+	PersonWatchRoleKindActing PersonWatchRoleKind = "acting"
+	PersonWatchRoleKindCrew   PersonWatchRoleKind = "crew"
+)
+
+type PersonWatchRole struct {
+	Kind  PersonWatchRoleKind
+	Label string
+}
+
+type PersonWatchMovieMatch struct {
+	ID              int64
+	Title           string
+	PosterPath      string
+	WatchCount      int64
+	LastWatchedDate time.Time
+	Role            PersonWatchRole
+}
+
+type PersonWatchActivity struct {
+	TotalWatchCount  int64
+	ActingMovieCount int
+	CrewMovieCount   int
+	ActorRank        *int64
+	Movies           []PersonWatchedMovie
+}
+
+type PersonWatchedMovie struct {
+	ID              int64
+	Title           string
+	PosterPath      string
+	WatchCount      int64
+	LastWatchedDate time.Time
+	Roles           []PersonWatchRole
+}
+
 // WatchedStats contains all statistics for watched movies
 type WatchedStats struct {
 	TotalWatched                int64

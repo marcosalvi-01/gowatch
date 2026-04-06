@@ -242,6 +242,91 @@ func (s *WatchedService) GetWatchedMovieRecordsByID(ctx context.Context, movieID
 	return rec, nil
 }
 
+func (s *WatchedService) GetPersonWatchActivity(ctx context.Context, personID int64) (models.PersonWatchActivity, error) {
+	s.log.Debug("GetPersonWatchActivity: get person watch activity", "personID", personID)
+
+	if personID <= 0 {
+		return models.PersonWatchActivity{}, fmt.Errorf("GetPersonWatchActivity: invalid person ID")
+	}
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("GetPersonWatchActivity: failed to get user", "error", err)
+		return models.PersonWatchActivity{}, fmt.Errorf("GetPersonWatchActivity: failed to get user: %w", err)
+	}
+
+	movies, err := s.db.GetWatchedMoviesByPerson(ctx, user.ID, personID)
+	if err != nil {
+		s.log.Error("GetPersonWatchActivity: db query failed", "personID", personID, "error", err)
+		return models.PersonWatchActivity{}, fmt.Errorf("GetPersonWatchActivity: get watched movies by person: %w", err)
+	}
+
+	activity := models.PersonWatchActivity{Movies: []models.PersonWatchedMovie{}}
+	movieIndexByID := make(map[int64]int, len(movies))
+
+	for _, movie := range movies {
+		index, exists := movieIndexByID[movie.ID]
+		if !exists {
+			movieIndexByID[movie.ID] = len(activity.Movies)
+			activity.Movies = append(activity.Movies, models.PersonWatchedMovie{
+				ID:              movie.ID,
+				Title:           movie.Title,
+				PosterPath:      movie.PosterPath,
+				WatchCount:      movie.WatchCount,
+				LastWatchedDate: movie.LastWatchedDate,
+				Roles:           []models.PersonWatchRole{},
+			})
+			index = len(activity.Movies) - 1
+		}
+
+		activity.Movies[index].Roles = appendUniquePersonWatchRole(activity.Movies[index].Roles, movie.Role)
+	}
+
+	for _, movie := range activity.Movies {
+		activity.TotalWatchCount += movie.WatchCount
+		if personWatchedMovieHasRoleKind(movie, models.PersonWatchRoleKindActing) {
+			activity.ActingMovieCount++
+		}
+		if personWatchedMovieHasRoleKind(movie, models.PersonWatchRoleKindCrew) {
+			activity.CrewMovieCount++
+		}
+	}
+
+	if activity.ActingMovieCount > 0 {
+		actorRank, err := s.db.GetMostWatchedActorRankByGender(ctx, user.ID, personID)
+		if err != nil {
+			if !errors.Is(err, sql.ErrNoRows) {
+				s.log.Error("GetPersonWatchActivity: failed to get actor rank", "personID", personID, "error", err)
+				return models.PersonWatchActivity{}, fmt.Errorf("GetPersonWatchActivity: get actor rank: %w", err)
+			}
+		} else {
+			activity.ActorRank = actorRank
+		}
+	}
+
+	return activity, nil
+}
+
+func appendUniquePersonWatchRole(existing []models.PersonWatchRole, role models.PersonWatchRole) []models.PersonWatchRole {
+	for _, existingRole := range existing {
+		if existingRole.Kind == role.Kind && existingRole.Label == role.Label {
+			return existing
+		}
+	}
+
+	return append(existing, role)
+}
+
+func personWatchedMovieHasRoleKind(movie models.PersonWatchedMovie, kind models.PersonWatchRoleKind) bool {
+	for _, role := range movie.Roles {
+		if role.Kind == kind {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (s *WatchedService) GetWatchedCount(ctx context.Context) (int64, error) {
 	user, err := common.GetUser(ctx)
 	if err != nil {

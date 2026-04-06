@@ -86,6 +86,40 @@ func (q *Queries) AssignNilUserWatched(ctx context.Context, userID *int64) error
 	return err
 }
 
+const countHigherRankedActorsByGender = `-- name: CountHigherRankedActorsByGender :one
+SELECT
+    COUNT(*) AS count
+FROM
+    (
+        SELECT
+            person.id
+        FROM
+            watched
+            JOIN "cast" ON watched.movie_id = "cast".movie_id
+            JOIN person ON "cast".person_id = person.id
+        WHERE
+            watched.user_id = ?1
+            AND person.gender = ?2
+        GROUP BY
+            person.id
+        HAVING
+            COUNT(*) > ?3
+    ) AS higher_ranked_actors
+`
+
+type CountHigherRankedActorsByGenderParams struct {
+	UserID  *int64
+	Gender  int64
+	Column3 interface{}
+}
+
+func (q *Queries) CountHigherRankedActorsByGender(ctx context.Context, arg CountHigherRankedActorsByGenderParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countHigherRankedActorsByGender, arg.UserID, arg.Gender, arg.Column3)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countUsers = `-- name: CountUsers :one
 SELECT
     COUNT(*)
@@ -2508,6 +2542,39 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 	return i, err
 }
 
+const getWatchedActorStatsByID = `-- name: GetWatchedActorStatsByID :one
+SELECT
+    person.gender,
+    COUNT(*) AS watch_count
+FROM
+    watched
+    JOIN "cast" ON watched.movie_id = "cast".movie_id
+    JOIN person ON "cast".person_id = person.id
+WHERE
+    watched.user_id = ?
+    AND person.id = ?
+    AND person.gender IN (1, 2)
+GROUP BY
+    person.gender
+`
+
+type GetWatchedActorStatsByIDParams struct {
+	UserID *int64
+	ID     int64
+}
+
+type GetWatchedActorStatsByIDRow struct {
+	Gender     int64
+	WatchCount int64
+}
+
+func (q *Queries) GetWatchedActorStatsByID(ctx context.Context, arg GetWatchedActorStatsByIDParams) (GetWatchedActorStatsByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getWatchedActorStatsByID, arg.UserID, arg.ID)
+	var i GetWatchedActorStatsByIDRow
+	err := row.Scan(&i.Gender, &i.WatchCount)
+	return i, err
+}
+
 const getWatchedByGenre = `-- name: GetWatchedByGenre :many
 SELECT
     genre.name,
@@ -2752,6 +2819,104 @@ func (q *Queries) GetWatchedJoinMovieByID(ctx context.Context, arg GetWatchedJoi
 			&i.Watched.WatchedDate,
 			&i.Watched.WatchedInTheater,
 			&i.Watched.Rating,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getWatchedMoviesByPerson = `-- name: GetWatchedMoviesByPerson :many
+WITH person_roles AS (
+    SELECT
+        "cast".movie_id,
+        'acting' AS role_kind,
+        COALESCE(NULLIF(TRIM("cast".character), ''), 'Actor') AS role_label
+    FROM
+        "cast"
+    WHERE
+        "cast".person_id = ?1
+    UNION
+    SELECT
+        crew.movie_id,
+        'crew' AS role_kind,
+        COALESCE(NULLIF(TRIM(crew.job), ''), COALESCE(NULLIF(TRIM(crew.department), ''), 'Crew')) AS role_label
+    FROM
+        crew
+    WHERE
+        crew.person_id = ?1
+),
+watched_movies AS (
+    SELECT
+        watched.movie_id,
+        COUNT(watched.id) AS watch_count,
+        MAX(watched.watched_date) AS last_watched_date
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?2
+    GROUP BY
+        watched.movie_id
+)
+SELECT
+    movie.id,
+    movie.title,
+    movie.poster_path,
+    watched_movies.watch_count,
+    watched_movies.last_watched_date,
+    person_roles.role_kind,
+    person_roles.role_label
+FROM
+    person_roles
+    JOIN watched_movies ON watched_movies.movie_id = person_roles.movie_id
+    JOIN movie ON watched_movies.movie_id = movie.id
+ORDER BY
+    watched_movies.watch_count DESC,
+    watched_movies.last_watched_date DESC,
+    movie.title ASC,
+    person_roles.role_kind ASC,
+    person_roles.role_label ASC
+`
+
+type GetWatchedMoviesByPersonParams struct {
+	PersonID int64
+	UserID   *int64
+}
+
+type GetWatchedMoviesByPersonRow struct {
+	ID              int64
+	Title           string
+	PosterPath      string
+	WatchCount      int64
+	LastWatchedDate interface{}
+	RoleKind        string
+	RoleLabel       interface{}
+}
+
+func (q *Queries) GetWatchedMoviesByPerson(ctx context.Context, arg GetWatchedMoviesByPersonParams) ([]GetWatchedMoviesByPersonRow, error) {
+	rows, err := q.db.QueryContext(ctx, getWatchedMoviesByPerson, arg.PersonID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetWatchedMoviesByPersonRow
+	for rows.Next() {
+		var i GetWatchedMoviesByPersonRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.PosterPath,
+			&i.WatchCount,
+			&i.LastWatchedDate,
+			&i.RoleKind,
+			&i.RoleLabel,
 		); err != nil {
 			return nil, err
 		}

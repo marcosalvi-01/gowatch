@@ -194,10 +194,17 @@ func (h *Handlers) PersonPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	activity, err := h.watchedService.GetPersonWatchActivity(ctx, id)
+	if err != nil {
+		log.Error("failed to get person watch activity", "personID", id, "error", err)
+		render500Error(w, r)
+		return
+	}
+
 	if r.Header.Get("HX-Request") == htmxRequestHeaderValue {
-		templ.Handler(pages.Person(*personDetails), templ.WithFragments("content")).ServeHTTP(w, r)
+		templ.Handler(pages.Person(*personDetails, activity), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
-		templ.Handler(pages.Person(*personDetails)).ServeHTTP(w, r)
+		templ.Handler(pages.Person(*personDetails, activity)).ServeHTTP(w, r)
 	}
 
 	log.Info("person page served successfully", "personID", id, "name", personDetails.Name)
