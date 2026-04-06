@@ -80,6 +80,7 @@ WHERE
     user_id IS NULL
 `
 
+// Admin and maintenance.
 func (q *Queries) AssignNilUserWatched(ctx context.Context, userID *int64) error {
 	_, err := q.db.ExecContext(ctx, assignNilUserWatched, userID)
 	return err
@@ -112,6 +113,7 @@ type CreateSessionParams struct {
 	ExpiresAt time.Time
 }
 
+// Sessions.
 func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) error {
 	_, err := q.db.ExecContext(ctx, createSession, arg.ID, arg.UserID, arg.ExpiresAt)
 	return err
@@ -132,6 +134,7 @@ type CreateUserParams struct {
 	PasswordHash string
 }
 
+// Users and authentication.
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRowContext(ctx, createUser, arg.Email, arg.Name, arg.PasswordHash)
 	var i User
@@ -189,9 +192,9 @@ WHERE
         FROM
             list
         WHERE
-            list.id = list_id
-            AND list.user_id = ?
-    )
+    list.id = list_id
+    AND list.user_id = ?
+)
 `
 
 type DeleteMovieFromListParams struct {
@@ -677,6 +680,239 @@ func (q *Queries) GetDailyWatchCountsLastYear(ctx context.Context, userID *int64
 	return items, nil
 }
 
+const getFavoriteActorsByRating = `-- name: GetFavoriteActorsByRating :many
+WITH rated_movies AS (
+    SELECT
+        watched.movie_id,
+        CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?1
+        AND watched.rating IS NOT NULL
+    GROUP BY
+        watched.movie_id
+),
+cast_members AS (
+    SELECT DISTINCT
+        "cast".movie_id,
+        "cast".person_id
+    FROM
+        "cast"
+)
+SELECT
+    person.id,
+    person.name,
+    person.profile_path,
+    person.gender,
+    CAST(COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL) AS average_rating,
+    COUNT(*) AS rated_movie_count
+FROM
+    rated_movies
+    JOIN cast_members ON rated_movies.movie_id = cast_members.movie_id
+    JOIN person ON cast_members.person_id = person.id
+GROUP BY
+    person.id,
+    person.name,
+    person.profile_path,
+    person.gender
+ORDER BY
+    average_rating DESC,
+    rated_movie_count DESC,
+    person.name ASC
+`
+
+type GetFavoriteActorsByRatingRow struct {
+	ID              int64
+	Name            string
+	ProfilePath     string
+	Gender          int64
+	AverageRating   float64
+	RatedMovieCount int64
+}
+
+func (q *Queries) GetFavoriteActorsByRating(ctx context.Context, userID *int64) ([]GetFavoriteActorsByRatingRow, error) {
+	rows, err := q.db.QueryContext(ctx, getFavoriteActorsByRating, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFavoriteActorsByRatingRow
+	for rows.Next() {
+		var i GetFavoriteActorsByRatingRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ProfilePath,
+			&i.Gender,
+			&i.AverageRating,
+			&i.RatedMovieCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFavoriteDirectorsByRating = `-- name: GetFavoriteDirectorsByRating :many
+WITH rated_movies AS (
+    SELECT
+        watched.movie_id,
+        CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?1
+        AND watched.rating IS NOT NULL
+    GROUP BY
+        watched.movie_id
+),
+directors AS (
+    SELECT DISTINCT
+        crew.movie_id,
+        crew.person_id
+    FROM
+        crew
+    WHERE
+        crew.job = 'Director'
+)
+SELECT
+    person.id,
+    person.name,
+    person.profile_path,
+    CAST(COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL) AS average_rating,
+    COUNT(*) AS rated_movie_count
+FROM
+    rated_movies
+    JOIN directors ON rated_movies.movie_id = directors.movie_id
+    JOIN person ON directors.person_id = person.id
+GROUP BY
+    person.id,
+    person.name,
+    person.profile_path
+ORDER BY
+    average_rating DESC,
+    rated_movie_count DESC,
+    person.name ASC
+`
+
+type GetFavoriteDirectorsByRatingRow struct {
+	ID              int64
+	Name            string
+	ProfilePath     string
+	AverageRating   float64
+	RatedMovieCount int64
+}
+
+func (q *Queries) GetFavoriteDirectorsByRating(ctx context.Context, userID *int64) ([]GetFavoriteDirectorsByRatingRow, error) {
+	rows, err := q.db.QueryContext(ctx, getFavoriteDirectorsByRating, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFavoriteDirectorsByRatingRow
+	for rows.Next() {
+		var i GetFavoriteDirectorsByRatingRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ProfilePath,
+			&i.AverageRating,
+			&i.RatedMovieCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getHighestRatedMovies = `-- name: GetHighestRatedMovies :many
+WITH rated_movies AS (
+    SELECT
+        watched.movie_id,
+        CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating,
+        COUNT(watched.rating) AS rated_watch_count
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?1
+        AND watched.rating IS NOT NULL
+    GROUP BY
+        watched.movie_id
+)
+SELECT
+    movie.id,
+    movie.title,
+    movie.poster_path,
+    rated_movies.average_rating,
+    rated_movies.rated_watch_count
+FROM
+    rated_movies
+    JOIN movie ON rated_movies.movie_id = movie.id
+ORDER BY
+    rated_movies.average_rating DESC,
+    rated_movies.rated_watch_count DESC,
+    movie.title ASC
+LIMIT
+    ?2
+`
+
+type GetHighestRatedMoviesParams struct {
+	UserID *int64
+	Limit  int64
+}
+
+type GetHighestRatedMoviesRow struct {
+	ID              int64
+	Title           string
+	PosterPath      string
+	AverageRating   float64
+	RatedWatchCount int64
+}
+
+func (q *Queries) GetHighestRatedMovies(ctx context.Context, arg GetHighestRatedMoviesParams) ([]GetHighestRatedMoviesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getHighestRatedMovies, arg.UserID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetHighestRatedMoviesRow
+	for rows.Next() {
+		var i GetHighestRatedMoviesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.PosterPath,
+			&i.AverageRating,
+			&i.RatedWatchCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getListByID = `-- name: GetListByID :one
 SELECT
     id, name, creation_date, description, user_id, is_watchlist
@@ -826,6 +1062,52 @@ func (q *Queries) GetLongestWatchedMovie(ctx context.Context, userID *int64) (Ge
 		&i.Runtime,
 	)
 	return i, err
+}
+
+const getMonthlyAverageRatingLastYear = `-- name: GetMonthlyAverageRatingLastYear :many
+SELECT
+    CAST(strftime('%Y-%m', watched.watched_date) AS TEXT) AS month,
+    CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating,
+    COUNT(watched.rating) AS rated_count
+FROM
+    watched
+WHERE
+    watched.user_id = ?
+    AND watched.rating IS NOT NULL
+    AND watched.watched_date >= date('now', 'start of month', '-11 months')
+GROUP BY
+    month
+ORDER BY
+    month
+`
+
+type GetMonthlyAverageRatingLastYearRow struct {
+	Month         string
+	AverageRating float64
+	RatedCount    int64
+}
+
+func (q *Queries) GetMonthlyAverageRatingLastYear(ctx context.Context, userID *int64) ([]GetMonthlyAverageRatingLastYearRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMonthlyAverageRatingLastYear, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMonthlyAverageRatingLastYearRow
+	for rows.Next() {
+		var i GetMonthlyAverageRatingLastYearRow
+		if err := rows.Scan(&i.Month, &i.AverageRating, &i.RatedCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getMonthlyGenreBreakdown = `-- name: GetMonthlyGenreBreakdown :many
@@ -1145,6 +1427,180 @@ func (q *Queries) GetPerson(ctx context.Context, id int64) (Person, error) {
 	return i, err
 }
 
+const getRatingByReleaseDecade = `-- name: GetRatingByReleaseDecade :many
+WITH rated_movies AS (
+    SELECT
+        watched.movie_id,
+        CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?1
+        AND watched.rating IS NOT NULL
+    GROUP BY
+        watched.movie_id
+)
+SELECT
+    (CAST(strftime('%Y', movie.release_date) AS INTEGER) / 10) * 10 AS decade,
+    CAST(COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL) AS average_rating,
+    COUNT(*) AS rated_movie_count
+FROM
+    rated_movies
+    JOIN movie ON rated_movies.movie_id = movie.id
+WHERE
+    movie.release_date IS NOT NULL
+GROUP BY
+    decade
+ORDER BY
+    decade
+`
+
+type GetRatingByReleaseDecadeRow struct {
+	Decade          int64
+	AverageRating   float64
+	RatedMovieCount int64
+}
+
+func (q *Queries) GetRatingByReleaseDecade(ctx context.Context, userID *int64) ([]GetRatingByReleaseDecadeRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRatingByReleaseDecade, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRatingByReleaseDecadeRow
+	for rows.Next() {
+		var i GetRatingByReleaseDecadeRow
+		if err := rows.Scan(&i.Decade, &i.AverageRating, &i.RatedMovieCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRatingDistribution = `-- name: GetRatingDistribution :many
+SELECT
+    CAST(ROUND(CAST(watched.rating AS REAL) * 2.0, 0) / 2.0 AS REAL) AS rating_bucket,
+    COUNT(*) AS count
+FROM
+    watched
+WHERE
+    watched.user_id = ?
+    AND watched.rating IS NOT NULL
+GROUP BY
+    rating_bucket
+ORDER BY
+    rating_bucket
+`
+
+type GetRatingDistributionRow struct {
+	RatingBucket float64
+	Count        int64
+}
+
+func (q *Queries) GetRatingDistribution(ctx context.Context, userID *int64) ([]GetRatingDistributionRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRatingDistribution, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRatingDistributionRow
+	for rows.Next() {
+		var i GetRatingDistributionRow
+		if err := rows.Scan(&i.RatingBucket, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRatingSummary = `-- name: GetRatingSummary :one
+SELECT
+    CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating,
+    COUNT(watched.rating) AS rated_count
+FROM
+    watched
+WHERE
+    watched.user_id = ?
+    AND watched.rating IS NOT NULL
+`
+
+type GetRatingSummaryRow struct {
+	AverageRating float64
+	RatedCount    int64
+}
+
+// Rating stats.
+func (q *Queries) GetRatingSummary(ctx context.Context, userID *int64) (GetRatingSummaryRow, error) {
+	row := q.db.QueryRowContext(ctx, getRatingSummary, userID)
+	var i GetRatingSummaryRow
+	err := row.Scan(&i.AverageRating, &i.RatedCount)
+	return i, err
+}
+
+const getRatingVsTMDB = `-- name: GetRatingVsTMDB :one
+WITH rated_movies AS (
+    SELECT
+        watched.movie_id,
+        CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?1
+        AND watched.rating IS NOT NULL
+    GROUP BY
+        watched.movie_id
+)
+SELECT
+    CAST(COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL) AS average_user_rating,
+    CAST(COALESCE(AVG(CAST(movie.vote_average AS REAL) / 2.0), 0.0) AS REAL) AS average_tmdb_rating,
+    CAST(COALESCE(AVG(rated_movies.average_rating - (CAST(movie.vote_average AS REAL) / 2.0)), 0.0) AS REAL) AS average_difference,
+    COUNT(*) AS compared_movie_count
+FROM
+    rated_movies
+    JOIN movie ON rated_movies.movie_id = movie.id
+WHERE
+    movie.vote_average > 0
+    AND movie.vote_count >= ?2
+`
+
+type GetRatingVsTMDBParams struct {
+	UserID    *int64
+	VoteCount int64
+}
+
+type GetRatingVsTMDBRow struct {
+	AverageUserRating  float64
+	AverageTmdbRating  float64
+	AverageDifference  float64
+	ComparedMovieCount int64
+}
+
+func (q *Queries) GetRatingVsTMDB(ctx context.Context, arg GetRatingVsTMDBParams) (GetRatingVsTMDBRow, error) {
+	row := q.db.QueryRowContext(ctx, getRatingVsTMDB, arg.UserID, arg.VoteCount)
+	var i GetRatingVsTMDBRow
+	err := row.Scan(
+		&i.AverageUserRating,
+		&i.AverageTmdbRating,
+		&i.AverageDifference,
+		&i.ComparedMovieCount,
+	)
+	return i, err
+}
+
 const getRecentWatchedMovies = `-- name: GetRecentWatchedMovies :many
 SELECT
     movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
@@ -1250,6 +1706,131 @@ func (q *Queries) GetReleaseYearDistribution(ctx context.Context, userID *int64)
 	for rows.Next() {
 		var i GetReleaseYearDistributionRow
 		if err := rows.Scan(&i.ReleaseYear, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRewatchRatingDrift = `-- name: GetRewatchRatingDrift :many
+WITH rated_movies AS (
+    SELECT
+        movie.id,
+        movie.title,
+        movie.poster_path,
+        COUNT(*) AS rated_watch_count,
+        MIN(watched.watched_date) AS first_watched_date,
+        MAX(watched.watched_date) AS last_watched_date,
+        (
+            SELECT
+                CAST(first_watch.rating AS REAL)
+            FROM
+                watched AS first_watch
+            WHERE
+                first_watch.user_id = ?1
+                AND first_watch.movie_id = movie.id
+                AND first_watch.rating IS NOT NULL
+            ORDER BY
+                first_watch.watched_date ASC,
+                first_watch.id ASC
+            LIMIT
+                1
+        ) AS first_rating,
+        (
+            SELECT
+                CAST(last_watch.rating AS REAL)
+            FROM
+                watched AS last_watch
+            WHERE
+                last_watch.user_id = ?1
+                AND last_watch.movie_id = movie.id
+                AND last_watch.rating IS NOT NULL
+            ORDER BY
+                last_watch.watched_date DESC,
+                last_watch.id DESC
+            LIMIT
+                1
+        ) AS last_rating
+    FROM
+        watched
+        JOIN movie ON watched.movie_id = movie.id
+    WHERE
+        watched.user_id = ?1
+        AND watched.rating IS NOT NULL
+    GROUP BY
+        movie.id,
+        movie.title,
+        movie.poster_path
+    HAVING
+        COUNT(*) >= CAST(?2 AS INTEGER)
+)
+SELECT
+    rated_movies.id,
+    rated_movies.title,
+    rated_movies.poster_path,
+    rated_movies.first_rating,
+    rated_movies.last_rating,
+    CAST(rated_movies.last_rating - rated_movies.first_rating AS REAL) AS rating_change,
+    rated_movies.rated_watch_count,
+    rated_movies.first_watched_date,
+    rated_movies.last_watched_date
+FROM
+    rated_movies
+WHERE
+    ABS(rated_movies.last_rating - rated_movies.first_rating) > 0
+ORDER BY
+    ABS(rated_movies.last_rating - rated_movies.first_rating) DESC,
+    rated_movies.rated_watch_count DESC,
+    rated_movies.title ASC
+LIMIT
+    ?3
+`
+
+type GetRewatchRatingDriftParams struct {
+	UserID  *int64
+	Column2 int64
+	Limit   int64
+}
+
+type GetRewatchRatingDriftRow struct {
+	ID               int64
+	Title            string
+	PosterPath       string
+	FirstRating      float64
+	LastRating       float64
+	RatingChange     float64
+	RatedWatchCount  int64
+	FirstWatchedDate interface{}
+	LastWatchedDate  interface{}
+}
+
+func (q *Queries) GetRewatchRatingDrift(ctx context.Context, arg GetRewatchRatingDriftParams) ([]GetRewatchRatingDriftRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRewatchRatingDrift, arg.UserID, arg.Column2, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRewatchRatingDriftRow
+	for rows.Next() {
+		var i GetRewatchRatingDriftRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.PosterPath,
+			&i.FirstRating,
+			&i.LastRating,
+			&i.RatingChange,
+			&i.RatedWatchCount,
+			&i.FirstWatchedDate,
+			&i.LastWatchedDate,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -1380,6 +1961,49 @@ func (q *Queries) GetShortestWatchedMovie(ctx context.Context, userID *int64) (G
 		&i.Runtime,
 	)
 	return i, err
+}
+
+const getTheaterVsHomeAverageRating = `-- name: GetTheaterVsHomeAverageRating :many
+SELECT
+    watched.watched_in_theater,
+    CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating,
+    COUNT(watched.rating) AS rated_count
+FROM
+    watched
+WHERE
+    watched.user_id = ?
+    AND watched.rating IS NOT NULL
+GROUP BY
+    watched.watched_in_theater
+`
+
+type GetTheaterVsHomeAverageRatingRow struct {
+	WatchedInTheater bool
+	AverageRating    float64
+	RatedCount       int64
+}
+
+func (q *Queries) GetTheaterVsHomeAverageRating(ctx context.Context, userID *int64) ([]GetTheaterVsHomeAverageRatingRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTheaterVsHomeAverageRating, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTheaterVsHomeAverageRatingRow
+	for rows.Next() {
+		var i GetTheaterVsHomeAverageRatingRow
+		if err := rows.Scan(&i.WatchedInTheater, &i.AverageRating, &i.RatedCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getTheaterVsHomeCount = `-- name: GetTheaterVsHomeCount :many
@@ -2092,6 +2716,7 @@ type GetWatchedJoinMovieByIDRow struct {
 	Watched Watched
 }
 
+// Watched history by movie.
 func (q *Queries) GetWatchedJoinMovieByID(ctx context.Context, arg GetWatchedJoinMovieByIDParams) ([]GetWatchedJoinMovieByIDRow, error) {
 	rows, err := q.db.QueryContext(ctx, getWatchedJoinMovieByID, arg.UserID, arg.MovieID)
 	if err != nil {
@@ -2206,6 +2831,7 @@ type GetWatchedStatsPerMonthLastYearRow struct {
 	TotalRuntime *float64
 }
 
+// Watched stats.
 func (q *Queries) GetWatchedStatsPerMonthLastYear(ctx context.Context, userID *int64) ([]GetWatchedStatsPerMonthLastYearRow, error) {
 	rows, err := q.db.QueryContext(ctx, getWatchedStatsPerMonthLastYear, userID)
 	if err != nil {
@@ -2311,6 +2937,7 @@ type InsertListParams struct {
 	IsWatchlist  bool
 }
 
+// Lists and watchlist.
 func (q *Queries) InsertList(ctx context.Context, arg InsertListParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, insertList,
 		arg.Name,
@@ -2341,6 +2968,7 @@ type InsertWatchedParams struct {
 	Rating           *float64
 }
 
+// Watched history and activity.
 func (q *Queries) InsertWatched(ctx context.Context, arg InsertWatchedParams) (Watched, error) {
 	row := q.db.QueryRowContext(ctx, insertWatched,
 		arg.MovieID,
@@ -2622,6 +3250,7 @@ type UpsertMovieParams struct {
 	Tagline          string
 }
 
+// Movie catalog and metadata.
 func (q *Queries) UpsertMovie(ctx context.Context, arg UpsertMovieParams) error {
 	_, err := q.db.ExecContext(ctx, upsertMovie,
 		arg.ID,
@@ -2735,6 +3364,7 @@ type UpsertPersonParams struct {
 	Adult              bool
 }
 
+// People and credits metadata.
 func (q *Queries) UpsertPerson(ctx context.Context, arg UpsertPersonParams) error {
 	_, err := q.db.ExecContext(ctx, upsertPerson,
 		arg.ID,

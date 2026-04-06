@@ -16,7 +16,15 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const MaxGenresDisplayed = 11
+const (
+	MaxGenresDisplayed        = 11
+	minFavoriteDirectorMovies = 2
+	minFavoriteActorMovies    = 3
+	minRewatchRatedWatches    = 2
+	minTMDBVoteCount          = 100
+	ratingBucketSize          = 0.5
+	maxMovieRating            = 5.0
+)
 
 // WatchedService handles user's watched movie tracking
 type WatchedService struct {
@@ -295,6 +303,16 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 	var dateRange *models.DateRange
 	var rewatchStats *models.RewatchStats
 	var watchedDates []time.Time
+	var ratingSummary *models.RatingSummary
+	var ratingVsTMDB *models.RatingVsTMDB
+	var ratingDistribution []models.RatingBucketCount
+	var monthlyAverageRating []models.PeriodRating
+	var theaterVsHomeAverageRating []models.TheaterRating
+	var highestRatedMovies []models.RatedMovie
+	var ratingByReleaseDecade []models.DecadeRating
+	var favoriteDirectorsByRating []models.RatedPerson
+	var favoriteActorsByRating []models.RatedPerson
+	var rewatchRatingDrift []models.RewatchRatingDrift
 
 	// Total Stats (Count & Hours)
 	g.Go(func() error {
@@ -526,6 +544,106 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 		return err
 	})
 
+	// Rating Summary
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching rating summary")
+		t := time.Now()
+		ratingSummary, err = s.getRatingSummary(ctx)
+		s.log.Debug("GetWatchedStats: rating summary fetched", "duration", time.Since(t).String())
+		return err
+	})
+
+	// Rating Distribution
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching rating distribution")
+		t := time.Now()
+		ratingDistribution, err = s.getRatingDistribution(ctx)
+		s.log.Debug("GetWatchedStats: rating distribution fetched", "count", len(ratingDistribution), "duration", time.Since(t).String())
+		return err
+	})
+
+	// Monthly Average Rating
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching monthly average rating")
+		t := time.Now()
+		monthlyAverageRating, err = s.getMonthlyAverageRatingLastYear(ctx)
+		s.log.Debug("GetWatchedStats: monthly average rating fetched", "count", len(monthlyAverageRating), "duration", time.Since(t).String())
+		return err
+	})
+
+	// Theater vs Home Average Rating
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching theater vs home average rating")
+		t := time.Now()
+		theaterVsHomeAverageRating, err = s.getTheaterVsHomeAverageRating(ctx)
+		s.log.Debug("GetWatchedStats: theater vs home average rating fetched", "count", len(theaterVsHomeAverageRating), "duration", time.Since(t).String())
+		return err
+	})
+
+	// Highest Rated Movies
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching highest rated movies")
+		t := time.Now()
+		highestRatedMovies, err = s.getHighestRatedMovies(ctx, limit)
+		s.log.Debug("GetWatchedStats: highest rated movies fetched", "count", len(highestRatedMovies), "duration", time.Since(t).String())
+		return err
+	})
+
+	// Rating vs TMDB
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching rating vs TMDB")
+		t := time.Now()
+		ratingVsTMDB, err = s.getRatingVsTMDB(ctx)
+		s.log.Debug("GetWatchedStats: rating vs TMDB fetched", "duration", time.Since(t).String())
+		return err
+	})
+
+	// Rating by Release Decade
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching rating by release decade")
+		t := time.Now()
+		ratingByReleaseDecade, err = s.getRatingByReleaseDecade(ctx)
+		s.log.Debug("GetWatchedStats: rating by release decade fetched", "count", len(ratingByReleaseDecade), "duration", time.Since(t).String())
+		return err
+	})
+
+	// Favorite Directors by Rating
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching favorite directors by rating")
+		t := time.Now()
+		favoriteDirectorsByRating, err = s.getFavoriteDirectorsByRating(ctx, limit)
+		s.log.Debug("GetWatchedStats: favorite directors by rating fetched", "count", len(favoriteDirectorsByRating), "duration", time.Since(t).String())
+		return err
+	})
+
+	// Favorite Actors by Rating
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching favorite actors by rating")
+		t := time.Now()
+		favoriteActorsByRating, err = s.getFavoriteActorsByRating(ctx, limit)
+		s.log.Debug("GetWatchedStats: favorite actors by rating fetched", "count", len(favoriteActorsByRating), "duration", time.Since(t).String())
+		return err
+	})
+
+	// Rewatch Rating Drift
+	g.Go(func() error {
+		var err error
+		s.log.Debug("GetWatchedStats: fetching rewatch rating drift")
+		t := time.Now()
+		rewatchRatingDrift, err = s.getRewatchRatingDrift(ctx, limit)
+		s.log.Debug("GetWatchedStats: rewatch rating drift fetched", "count", len(rewatchRatingDrift), "duration", time.Since(t).String())
+		return err
+	})
+
 	// Date Range for Averages
 	g.Go(func() error {
 		var err error
@@ -560,6 +678,18 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 	stats.MostWatchedActors = allActors
 	if rewatchStats != nil {
 		stats.RewatchStats = *rewatchStats
+	}
+	stats.Ratings.Summary = s.finalizeRatingSummary(ratingSummary, stats.TotalWatched)
+	stats.Ratings.Distribution = ratingDistribution
+	stats.Ratings.MonthlyAverage = monthlyAverageRating
+	stats.Ratings.TheaterVsHome = theaterVsHomeAverageRating
+	stats.Ratings.HighestRatedMovies = highestRatedMovies
+	stats.Ratings.ReleaseDecades = ratingByReleaseDecade
+	stats.Ratings.FavoriteDirectors = favoriteDirectorsByRating
+	stats.Ratings.FavoriteActors = favoriteActorsByRating
+	stats.Ratings.RewatchDrift = rewatchRatingDrift
+	if ratingVsTMDB != nil {
+		stats.Ratings.VsTMDB = *ratingVsTMDB
 	}
 
 	// Split monthly stats

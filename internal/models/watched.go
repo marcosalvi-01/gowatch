@@ -48,6 +48,7 @@ type WatchedStats struct {
 	TotalWatched                int64
 	RewatchStats                RewatchStats
 	LongestStreak               StreakStats
+	Ratings                     RatingStats
 	TheaterVsHome               []TheaterCount
 	MonthlyLastYear             []PeriodCount
 	YearlyAllTime               []PeriodCount
@@ -81,6 +82,85 @@ type WatchedStats struct {
 	MonthlyMoviesTrendDirection TrendDirection
 	MonthlyMoviesTrendValue     int64
 	MonthlyGenreBreakdown       []MonthlyGenreBreakdown
+}
+
+type RatingStats struct {
+	Summary            RatingSummary
+	Distribution       []RatingBucketCount
+	MonthlyAverage     []PeriodRating
+	TheaterVsHome      []TheaterRating
+	HighestRatedMovies []RatedMovie
+	VsTMDB             RatingVsTMDB
+	ReleaseDecades     []DecadeRating
+	FavoriteDirectors  []RatedPerson
+	FavoriteActors     []RatedPerson
+	RewatchDrift       []RewatchRatingDrift
+}
+
+type RatingSummary struct {
+	AverageRating float64
+	RatedCount    int64
+	UnratedCount  int64
+	Coverage      float64
+}
+
+type RatingBucketCount struct {
+	Rating float64
+	Count  int64
+}
+
+type PeriodRating struct {
+	Period        string
+	AverageRating float64
+	RatedCount    int64
+}
+
+type TheaterRating struct {
+	InTheater     bool
+	AverageRating float64
+	RatedCount    int64
+}
+
+type RatedMovie struct {
+	ID              int64
+	Title           string
+	PosterPath      string
+	AverageRating   float64
+	RatedWatchCount int64
+}
+
+type RatingVsTMDB struct {
+	AverageUserRating  float64
+	AverageTMDBRating  float64
+	AverageDifference  float64
+	ComparedMovieCount int64
+}
+
+type DecadeRating struct {
+	Decade          int
+	AverageRating   float64
+	RatedMovieCount int64
+}
+
+type RatedPerson struct {
+	ID              int64
+	Name            string
+	ProfilePath     string
+	Gender          int64
+	AverageRating   float64
+	RatedMovieCount int64
+}
+
+type RewatchRatingDrift struct {
+	MovieID          int64
+	Title            string
+	PosterPath       string
+	FirstRating      float64
+	LastRating       float64
+	RatingChange     float64
+	RatedWatchCount  int64
+	FirstWatchedDate time.Time
+	LastWatchedDate  time.Time
 }
 
 type MonthlyGenreBreakdown struct {

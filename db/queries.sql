@@ -1,3 +1,4 @@
+-- Movie catalog and metadata.
 -- name: UpsertMovie :exec
 INSERT INTO
     movie (
@@ -83,6 +84,7 @@ UPDATE
 SET
     updated_at = CURRENT_TIMESTAMP;
 
+-- Watched history and activity.
 -- name: InsertWatched :one
 INSERT INTO
     watched (movie_id, watched_date, watched_in_theater, user_id, rating)
@@ -109,6 +111,7 @@ FROM
 WHERE
     watched.user_id = ?;
 
+-- People and credits metadata.
 -- name: UpsertPerson :exec
 INSERT INTO
     person (
@@ -206,6 +209,7 @@ FROM
 WHERE
     genre_movie.movie_id = ?;
 
+-- Watched history by movie.
 -- name: GetWatchedJoinMovieByID :many
 SELECT
     sqlc.embed(movie),
@@ -219,6 +223,7 @@ WHERE
 ORDER BY
     watched.watched_date DESC;
 
+-- Lists and watchlist.
 -- name: InsertList :one
 INSERT INTO
     list (
@@ -349,10 +354,11 @@ WHERE
         FROM
             list
         WHERE
-            list.id = list_id
-            AND list.user_id = ?
-    );
+    list.id = list_id
+    AND list.user_id = ?
+);
 
+-- Watched stats.
 -- name: GetWatchedStatsPerMonthLastYear :many
 SELECT
     CAST(strftime('%Y-%m', watched_date) AS TEXT) AS month,
@@ -871,6 +877,298 @@ ORDER BY
     watched.watched_date,
     movie_count DESC;
 
+-- Rating stats.
+-- name: GetRatingSummary :one
+SELECT
+    CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating,
+    COUNT(watched.rating) AS rated_count
+FROM
+    watched
+WHERE
+    watched.user_id = ?
+    AND watched.rating IS NOT NULL;
+
+-- name: GetRatingDistribution :many
+SELECT
+    CAST(ROUND(CAST(watched.rating AS REAL) * 2.0, 0) / 2.0 AS REAL) AS rating_bucket,
+    COUNT(*) AS count
+FROM
+    watched
+WHERE
+    watched.user_id = ?
+    AND watched.rating IS NOT NULL
+GROUP BY
+    rating_bucket
+ORDER BY
+    rating_bucket;
+
+-- name: GetMonthlyAverageRatingLastYear :many
+SELECT
+    CAST(strftime('%Y-%m', watched.watched_date) AS TEXT) AS month,
+    CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating,
+    COUNT(watched.rating) AS rated_count
+FROM
+    watched
+WHERE
+    watched.user_id = ?
+    AND watched.rating IS NOT NULL
+    AND watched.watched_date >= date('now', 'start of month', '-11 months')
+GROUP BY
+    month
+ORDER BY
+    month;
+
+-- name: GetTheaterVsHomeAverageRating :many
+SELECT
+    watched.watched_in_theater,
+    CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating,
+    COUNT(watched.rating) AS rated_count
+FROM
+    watched
+WHERE
+    watched.user_id = ?
+    AND watched.rating IS NOT NULL
+GROUP BY
+    watched.watched_in_theater;
+
+-- name: GetHighestRatedMovies :many
+WITH rated_movies AS (
+    SELECT
+        watched.movie_id,
+        CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating,
+        COUNT(watched.rating) AS rated_watch_count
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?1
+        AND watched.rating IS NOT NULL
+    GROUP BY
+        watched.movie_id
+)
+SELECT
+    movie.id,
+    movie.title,
+    movie.poster_path,
+    rated_movies.average_rating,
+    rated_movies.rated_watch_count
+FROM
+    rated_movies
+    JOIN movie ON rated_movies.movie_id = movie.id
+ORDER BY
+    rated_movies.average_rating DESC,
+    rated_movies.rated_watch_count DESC,
+    movie.title ASC
+LIMIT
+    ?2;
+
+-- name: GetRatingVsTMDB :one
+WITH rated_movies AS (
+    SELECT
+        watched.movie_id,
+        CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?1
+        AND watched.rating IS NOT NULL
+    GROUP BY
+        watched.movie_id
+)
+SELECT
+    CAST(COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL) AS average_user_rating,
+    CAST(COALESCE(AVG(CAST(movie.vote_average AS REAL) / 2.0), 0.0) AS REAL) AS average_tmdb_rating,
+    CAST(COALESCE(AVG(rated_movies.average_rating - (CAST(movie.vote_average AS REAL) / 2.0)), 0.0) AS REAL) AS average_difference,
+    COUNT(*) AS compared_movie_count
+FROM
+    rated_movies
+    JOIN movie ON rated_movies.movie_id = movie.id
+WHERE
+    movie.vote_average > 0
+    AND movie.vote_count >= ?2;
+
+-- name: GetRatingByReleaseDecade :many
+WITH rated_movies AS (
+    SELECT
+        watched.movie_id,
+        CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?1
+        AND watched.rating IS NOT NULL
+    GROUP BY
+        watched.movie_id
+)
+SELECT
+    (CAST(strftime('%Y', movie.release_date) AS INTEGER) / 10) * 10 AS decade,
+    CAST(COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL) AS average_rating,
+    COUNT(*) AS rated_movie_count
+FROM
+    rated_movies
+    JOIN movie ON rated_movies.movie_id = movie.id
+WHERE
+    movie.release_date IS NOT NULL
+GROUP BY
+    decade
+ORDER BY
+    decade;
+
+-- name: GetFavoriteDirectorsByRating :many
+WITH rated_movies AS (
+    SELECT
+        watched.movie_id,
+        CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?1
+        AND watched.rating IS NOT NULL
+    GROUP BY
+        watched.movie_id
+),
+directors AS (
+    SELECT DISTINCT
+        crew.movie_id,
+        crew.person_id
+    FROM
+        crew
+    WHERE
+        crew.job = 'Director'
+)
+SELECT
+    person.id,
+    person.name,
+    person.profile_path,
+    CAST(COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL) AS average_rating,
+    COUNT(*) AS rated_movie_count
+FROM
+    rated_movies
+    JOIN directors ON rated_movies.movie_id = directors.movie_id
+    JOIN person ON directors.person_id = person.id
+GROUP BY
+    person.id,
+    person.name,
+    person.profile_path
+ORDER BY
+    average_rating DESC,
+    rated_movie_count DESC,
+    person.name ASC;
+
+-- name: GetFavoriteActorsByRating :many
+WITH rated_movies AS (
+    SELECT
+        watched.movie_id,
+        CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?1
+        AND watched.rating IS NOT NULL
+    GROUP BY
+        watched.movie_id
+),
+cast_members AS (
+    SELECT DISTINCT
+        "cast".movie_id,
+        "cast".person_id
+    FROM
+        "cast"
+)
+SELECT
+    person.id,
+    person.name,
+    person.profile_path,
+    person.gender,
+    CAST(COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL) AS average_rating,
+    COUNT(*) AS rated_movie_count
+FROM
+    rated_movies
+    JOIN cast_members ON rated_movies.movie_id = cast_members.movie_id
+    JOIN person ON cast_members.person_id = person.id
+GROUP BY
+    person.id,
+    person.name,
+    person.profile_path,
+    person.gender
+ORDER BY
+    average_rating DESC,
+    rated_movie_count DESC,
+    person.name ASC;
+
+-- name: GetRewatchRatingDrift :many
+WITH rated_movies AS (
+    SELECT
+        movie.id,
+        movie.title,
+        movie.poster_path,
+        COUNT(*) AS rated_watch_count,
+        MIN(watched.watched_date) AS first_watched_date,
+        MAX(watched.watched_date) AS last_watched_date,
+        (
+            SELECT
+                CAST(first_watch.rating AS REAL)
+            FROM
+                watched AS first_watch
+            WHERE
+                first_watch.user_id = ?1
+                AND first_watch.movie_id = movie.id
+                AND first_watch.rating IS NOT NULL
+            ORDER BY
+                first_watch.watched_date ASC,
+                first_watch.id ASC
+            LIMIT
+                1
+        ) AS first_rating,
+        (
+            SELECT
+                CAST(last_watch.rating AS REAL)
+            FROM
+                watched AS last_watch
+            WHERE
+                last_watch.user_id = ?1
+                AND last_watch.movie_id = movie.id
+                AND last_watch.rating IS NOT NULL
+            ORDER BY
+                last_watch.watched_date DESC,
+                last_watch.id DESC
+            LIMIT
+                1
+        ) AS last_rating
+    FROM
+        watched
+        JOIN movie ON watched.movie_id = movie.id
+    WHERE
+        watched.user_id = ?1
+        AND watched.rating IS NOT NULL
+    GROUP BY
+        movie.id,
+        movie.title,
+        movie.poster_path
+    HAVING
+        COUNT(*) >= CAST(?2 AS INTEGER)
+)
+SELECT
+    rated_movies.id,
+    rated_movies.title,
+    rated_movies.poster_path,
+    rated_movies.first_rating,
+    rated_movies.last_rating,
+    CAST(rated_movies.last_rating - rated_movies.first_rating AS REAL) AS rating_change,
+    rated_movies.rated_watch_count,
+    rated_movies.first_watched_date,
+    rated_movies.last_watched_date
+FROM
+    rated_movies
+WHERE
+    ABS(rated_movies.last_rating - rated_movies.first_rating) > 0
+ORDER BY
+    ABS(rated_movies.last_rating - rated_movies.first_rating) DESC,
+    rated_movies.rated_watch_count DESC,
+    rated_movies.title ASC
+LIMIT
+    ?3;
+
+-- Sessions.
 -- name: CreateSession :exec
 INSERT INTO
     session (id, user_id, expires_at)
@@ -899,6 +1197,7 @@ DELETE FROM
 WHERE
     expires_at <= datetime('now');
 
+-- Users and authentication.
 -- name: CreateUser :one
 INSERT INTO
     user (email, name, password_hash, created_at)
@@ -929,6 +1228,7 @@ SELECT
 FROM
     user;
 
+-- Admin and maintenance.
 -- name: AssignNilUserWatched :exec
 UPDATE
     watched

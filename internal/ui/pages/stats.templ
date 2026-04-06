@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/calendarheatmap"
-	"github.com/marcosalvi-01/gowatch/internal/ui/components/moviecard"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/statscollectioncard"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/avatar"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/chart"
@@ -48,8 +48,9 @@ templ Stats(stats *models.WatchedStats, limit int) {
 				@statsAtGlance(stats)
 				@statsActivitySection(stats)
 				@statsTasteSection(stats)
+				@statsRatingsSection(stats)
 				@statsPeopleSection(stats, limit)
-				@statsRuntimeFinancialSection(stats, limit)
+				@statsRuntimeFinancialSection(stats)
 			</div>
 		}
 	}
@@ -69,14 +70,10 @@ templ statsAtGlance(stats *models.WatchedStats) {
 			@card.Content(card.ContentProps{Class: "p-4 sm:p-6"}) {
 				<div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
 					@statsMetricCard("Total Watched", fmt.Sprintf("%d", stats.TotalWatched), icon.Film)
+					@statsMetricCard("Rated Watches", fmt.Sprintf("%d", stats.Ratings.Summary.RatedCount), icon.Star)
 					@statsMetricCard("Rewatches", fmt.Sprintf("%d", stats.RewatchStats.RewatchCount), icon.RefreshCcw)
 					@statsMetricCard("Unique Movies", fmt.Sprintf("%d", stats.RewatchStats.UniqueMovieCount), icon.Clapperboard)
 					@statsMetricCard("Longest Streak", fmt.Sprintf("%d days", stats.LongestStreak.LongestDays), icon.Flame)
-					if stats.MostWatchedDay != nil {
-						@statsMetricCard("Most in One Day", fmt.Sprintf("%d", stats.MostWatchedDay.Count), icon.Calendar)
-					} else {
-						@statsMetricCard("Most in One Day", "0", icon.Calendar)
-					}
 					@statsMetricCard("Total Hours", fmt.Sprintf("%.1f", stats.TotalHoursWatched), icon.Clock)
 				</div>
 			}
@@ -268,11 +265,111 @@ templ statsTasteSection(stats *models.WatchedStats) {
 	</div>
 }
 
+templ statsRatingsSection(stats *models.WatchedStats) {
+	<div class="space-y-4">
+		@statsSectionHeader("Ratings & Ranking", icon.Star)
+		<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+			@ratingMetricCard(
+				"Avg Rating",
+				formatRatingValue(stats.Ratings.Summary.AverageRating, stats.Ratings.Summary.RatedCount),
+				fmt.Sprintf("%d rated watches", stats.Ratings.Summary.RatedCount),
+				icon.Star,
+			)
+			@ratingMetricCard(
+				"Rated Watches %",
+				formatPercentage(stats.Ratings.Summary.Coverage),
+				fmt.Sprintf("%d of %d watched entries rated", stats.Ratings.Summary.RatedCount, stats.TotalWatched),
+				icon.BadgePercent,
+			)
+			@ratingMetricCard(
+				"You vs TMDB",
+				formatRatingDifference(stats.Ratings.VsTMDB.AverageDifference, stats.Ratings.VsTMDB.ComparedMovieCount),
+				fmt.Sprintf("%d rated movies compared", stats.Ratings.VsTMDB.ComparedMovieCount),
+				icon.CirclePercent,
+			)
+			@theaterVsHomeMetricCard(stats.Ratings.TheaterVsHome)
+		</div>
+		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+			@card.Card(card.Props{Class: "h-full"}) {
+				@card.Header() {
+					@card.Title() {
+						Rating Distribution
+					}
+				}
+				@card.Content(card.ContentProps{Class: "pt-4"}) {
+					@chart.Chart(chart.Props{
+						Variant:     chart.VariantBar,
+						Data:        prepareRatingDistributionData(stats.Ratings.Distribution),
+						Options:     chart.Options{Responsive: true},
+						ShowXAxis:   true,
+						ShowXLabels: true,
+						ShowYAxis:   true,
+						ShowYLabels: true,
+						Class:       "h-56",
+					})
+				}
+			}
+			@card.Card(card.Props{Class: "h-full"}) {
+				@card.Header() {
+					@card.Title() {
+						Average Rating by Month
+					}
+				}
+				@card.Content(card.ContentProps{Class: "pt-4"}) {
+					{{ yMin := 0.0 }}
+					{{ yMax := 5.0 }}
+					@chart.Chart(chart.Props{
+						Variant:     chart.VariantBar,
+						Data:        prepareMonthlyAverageRatingData(stats.Ratings.MonthlyAverage),
+						Options:     chart.Options{Responsive: true},
+						ShowXAxis:   true,
+						ShowXLabels: true,
+						ShowYAxis:   true,
+						ShowYLabels: true,
+						YMin:        &yMin,
+						YMax:        &yMax,
+						Class:       "h-56",
+					})
+				}
+			}
+			@card.Card(card.Props{Class: "h-full"}) {
+				@card.Header() {
+					@card.Title() {
+						Rating by Release Decade
+					}
+				}
+				@card.Content(card.ContentProps{Class: "pt-4"}) {
+					{{ yMin := 0.0 }}
+					{{ yMax := 5.0 }}
+					@chart.Chart(chart.Props{
+						Variant:     chart.VariantBar,
+						Data:        prepareReleaseDecadeRatingData(stats.Ratings.ReleaseDecades),
+						Options:     chart.Options{Responsive: true},
+						ShowXAxis:   true,
+						ShowXLabels: true,
+						ShowYAxis:   true,
+						ShowYLabels: true,
+						YMin:        &yMin,
+						YMax:        &yMax,
+						Class:       "h-56",
+					})
+				}
+			}
+		</div>
+		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+			@highestRatedMoviesCard(stats.Ratings.HighestRatedMovies)
+			@ratedPeopleCard("Favorite Directors", stats.Ratings.FavoriteDirectors)
+			@ratedPeopleCard("Favorite Actors", stats.Ratings.FavoriteActors)
+		</div>
+		@rewatchRatingDriftCard(stats.Ratings.RewatchDrift)
+	</div>
+}
+
 templ statsPeopleSection(stats *models.WatchedStats, limit int) {
 	<div class="space-y-4">
 		@statsSectionHeader("People & Languages", icon.Users)
 		<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-			@topMoviesCard(stats.MostWatchedMovies, limit)
+			@topMoviesCard(stats.MostWatchedMovies)
 			@topActorsCard("Most Watched Male Actors", int64(2), stats.MostWatchedActors, limit)
 			@topActorsCard("Most Watched Female Actors", int64(1), stats.MostWatchedActors, limit)
 			@topCrewCard("Top Directors", stats.TopDirectors)
@@ -284,7 +381,7 @@ templ statsPeopleSection(stats *models.WatchedStats, limit int) {
 	</div>
 }
 
-templ statsRuntimeFinancialSection(stats *models.WatchedStats, limit int) {
+templ statsRuntimeFinancialSection(stats *models.WatchedStats) {
 	<div class="space-y-4">
 		@statsSectionHeader("Runtime & Financials", icon.BadgeDollarSign)
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -307,140 +404,265 @@ templ statsRuntimeFinancialSection(stats *models.WatchedStats, limit int) {
 			}
 		</div>
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-			@movieFinancialCard("Top ROI Movies", stats.TopReturnOnInvestmentMovies, limit, true)
-			@movieFinancialCard("Biggest Budget Movies", stats.BiggestBudgetMovies, limit, false)
+			@movieFinancialCard("Top ROI Movies", stats.TopReturnOnInvestmentMovies, true)
+			@movieFinancialCard("Biggest Budget Movies", stats.BiggestBudgetMovies, false)
 		</div>
 	</div>
 }
 
-templ topMoviesCard(movies []models.TopMovie, limit int) {
+templ ratingMetricCard(label, value, detail string, iconFunc func(...icon.Props) templ.Component) {
 	@card.Card(card.Props{Class: "h-full"}) {
-		@card.Header() {
-			@card.Title() {
-				Most Watched Movies
-			}
+		@card.Content(card.ContentProps{Class: "p-4 sm:p-6 h-full"}) {
+			<div class="flex h-full items-start justify-between gap-4">
+				<div class="min-w-0 flex-1">
+					<div class="text-sm text-muted-foreground">{ label }</div>
+					<div class="mt-3 text-3xl font-bold leading-none">{ value }</div>
+					<div class="mt-2 text-sm text-muted-foreground">{ detail }</div>
+				</div>
+				<div class="rounded-md bg-primary/10 p-2 shrink-0">
+					@iconFunc(icon.Props{Size: 18, Class: "text-primary"})
+				</div>
+			</div>
 		}
-		@card.Content(card.ContentProps{Class: "pt-4"}) {
-			if len(movies) > 0 {
-				<div class="flex flex-wrap justify-center sm:justify-start gap-4">
-					for i, movie := range movies {
-						if i >= limit {
-							{{ break }}
-						}
-						@moviecard.MovieCard(moviecard.Props{
-							Title:      movie.Title,
-							PosterPath: "/" + strings.TrimPrefix(movie.PosterPath, "/"),
-							Href:       "/movie/" + strconv.Itoa(int(movie.ID)),
-							Hoverable:  true,
-						}) {
-							<div class="text-center text-white font-semibold">{ movie.WatchCount } watches</div>
-						}
-					}
+	}
+}
+
+templ theaterVsHomeMetricCard(data []models.TheaterRating) {
+	{{ theater := findTheaterRating(data, true) }}
+	{{ home := findTheaterRating(data, false) }}
+	@card.Card(card.Props{Class: "h-full"}) {
+		@card.Content(card.ContentProps{Class: "p-4 sm:p-6 h-full"}) {
+			if theater.RatedCount == 0 && home.RatedCount == 0 {
+				<div class="flex h-full items-start justify-between gap-4">
+					<div class="min-w-0 flex-1">
+						<div class="text-sm text-muted-foreground">Theater vs Home</div>
+						<div class="mt-3 text-3xl font-bold leading-none">N/A</div>
+						<div class="mt-2 text-sm text-muted-foreground">No ratings yet</div>
+					</div>
+					<div class="rounded-md bg-primary/10 p-2 shrink-0">
+						@icon.Film(icon.Props{Size: 18, Class: "text-primary"})
+					</div>
 				</div>
 			} else {
-				<div class="text-center text-muted-foreground py-8">No data available</div>
+				<div class="flex h-full items-start justify-between gap-4">
+					<div class="min-w-0 flex-1">
+						<div class="text-sm text-muted-foreground">Theater vs Home</div>
+						<div class="mt-4 grid grid-cols-2 gap-4">
+							<div>
+								<div class="text-xs text-muted-foreground mb-1">Theater</div>
+								<div class="text-lg font-semibold">{ formatRatingValue(theater.AverageRating, theater.RatedCount) }</div>
+								<div class="mt-1 text-xs text-muted-foreground">{ fmt.Sprintf("%d ratings", theater.RatedCount) }</div>
+							</div>
+							<div>
+								<div class="text-xs text-muted-foreground mb-1">Home</div>
+								<div class="text-lg font-semibold">{ formatRatingValue(home.AverageRating, home.RatedCount) }</div>
+								<div class="mt-1 text-xs text-muted-foreground">{ fmt.Sprintf("%d ratings", home.RatedCount) }</div>
+							</div>
+						</div>
+					</div>
+					<div class="rounded-md bg-primary/10 p-2 shrink-0">
+						@icon.Film(icon.Props{Size: 18, Class: "text-primary"})
+					</div>
+				</div>
 			}
+		}
+	}
+}
+
+templ highestRatedMoviesCard(movies []models.RatedMovie) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Highest Rated Movies", Count: len(movies)}) {
+		for _, movie := range movies {
+			<div
+				data-page="movie"
+				hx-get={ "/movie/" + strconv.FormatInt(movie.ID, 10) }
+				hx-target="#main-content"
+				hx-push-url="true"
+				hx-swap="scroll:#main-scroll-container:top"
+				hx-indicator="#movie-loading"
+				class="rounded-lg border border-border/60 bg-muted/15 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
+			>
+				<div class="flex items-center gap-3">
+					@moviePosterThumb(movie.PosterPath, movie.Title)
+					<div class="min-w-0 flex-1">
+						<div class="font-medium text-sm line-clamp-1">{ movie.Title }</div>
+						<div class="mt-1 text-xs text-muted-foreground">{ formatRatingValue(movie.AverageRating, movie.RatedWatchCount) }</div>
+						<div class="mt-1 text-xs text-muted-foreground">{ fmt.Sprintf("%d rated watches", movie.RatedWatchCount) }</div>
+					</div>
+				</div>
+			</div>
+		}
+	}
+}
+
+templ ratedPeopleCard(title string, people []models.RatedPerson) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: title, Count: len(people)}) {
+		for _, person := range people {
+			{{ personHref := personPagePath(person.ID) }}
+			if personHref != "" {
+				<div
+					data-page="person"
+					hx-get={ personHref }
+					hx-target="#main-content"
+					hx-push-url="true"
+					hx-swap="scroll:#main-scroll-container:top"
+					hx-indicator="#person-loading"
+					class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2 cursor-pointer hover:bg-muted/30 transition-colors"
+				>
+					@actorRowAvatar(person.Name, person.ProfilePath)
+					<div class="flex-1 min-w-0">
+						<div class="font-medium text-sm line-clamp-1">{ person.Name }</div>
+						<div class="text-xs text-muted-foreground">{ formatRatingValue(person.AverageRating, person.RatedMovieCount) } | { fmt.Sprintf("%d rated movies", person.RatedMovieCount) }</div>
+					</div>
+				</div>
+			} else {
+				<div class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2">
+					@actorRowAvatar(person.Name, person.ProfilePath)
+					<div class="flex-1 min-w-0">
+						<div class="font-medium text-sm line-clamp-1">{ person.Name }</div>
+						<div class="text-xs text-muted-foreground">{ formatRatingValue(person.AverageRating, person.RatedMovieCount) } | { fmt.Sprintf("%d rated movies", person.RatedMovieCount) }</div>
+					</div>
+				</div>
+			}
+		}
+	}
+}
+
+templ rewatchRatingDriftCard(drifts []models.RewatchRatingDrift) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Rewatch Rating Drift", Count: len(drifts)}) {
+		for _, drift := range drifts {
+			<div
+				data-page="movie"
+				hx-get={ "/movie/" + strconv.FormatInt(drift.MovieID, 10) }
+				hx-target="#main-content"
+				hx-push-url="true"
+				hx-swap="scroll:#main-scroll-container:top"
+				hx-indicator="#movie-loading"
+				class="rounded-lg border border-border/60 bg-muted/15 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
+			>
+				<div class="flex items-center gap-3">
+					@moviePosterThumb(drift.PosterPath, drift.Title)
+					<div class="min-w-0 flex-1">
+						<div class="font-medium text-sm line-clamp-1">{ drift.Title }</div>
+						<div class="mt-1 text-xs text-muted-foreground">
+							First { fmt.Sprintf("%.1f/5", drift.FirstRating) }
+							| Last { fmt.Sprintf("%.1f/5", drift.LastRating) }
+							| Change { formatSignedFloat(drift.RatingChange) }
+						</div>
+						<div class="mt-1 text-xs text-muted-foreground">
+							{ drift.FirstWatchedDate.Format("Jan 2006") }
+							| { drift.LastWatchedDate.Format("Jan 2006") }
+							| { fmt.Sprintf("%d rated watches", drift.RatedWatchCount) }
+						</div>
+					</div>
+				</div>
+			</div>
+		}
+	}
+}
+
+
+templ topMoviesCard(movies []models.TopMovie) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Most Watched Movies", Count: len(movies)}) {
+		for _, movie := range movies {
+			<div
+				data-page="movie"
+				hx-get={ "/movie/" + strconv.FormatInt(movie.ID, 10) }
+				hx-target="#main-content"
+				hx-push-url="true"
+				hx-swap="scroll:#main-scroll-container:top"
+				hx-indicator="#movie-loading"
+				class="rounded-lg border border-border/60 bg-muted/15 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
+			>
+				<div class="flex items-center gap-3">
+					@moviePosterThumb(movie.PosterPath, movie.Title)
+					<div class="min-w-0 flex-1">
+						<div class="font-medium text-sm line-clamp-1">{ movie.Title }</div>
+						<div class="mt-1 text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", movie.WatchCount) }</div>
+					</div>
+				</div>
+			</div>
 		}
 	}
 }
 
 templ topActorsCard(title string, gender int64, actors []models.TopActor, limit int) {
-	@card.Card(card.Props{Class: "h-full"}) {
-		@card.Header() {
-			@card.Title() {
-				{ title }
-			}
-		}
-		@card.Content(card.ContentProps{Class: "pt-4"}) {
-			{{ count := 0 }}
-			for _, actor := range actors {
-				if actor.Gender == gender && count < limit {
-					{{ count++ }}
-				}
-			}
-			if count > 0 {
-				<div class="space-y-3">
-					{{ count = 0 }}
-					for _, actor := range actors {
-						if actor.Gender == gender && count < limit {
-							{{ personHref := personPagePath(actor.ID) }}
-							if personHref != "" {
-								<div
-									data-page="person"
-									hx-get={ personHref }
-									hx-target="#main-content"
-									hx-push-url="true"
-									hx-swap="scroll:#main-scroll-container:top"
-									hx-indicator="#person-loading"
-									class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2 cursor-pointer hover:bg-muted/30 transition-colors"
-								>
-									@actorRowAvatar(actor.Name, actor.ProfilePath)
-									<div class="flex-1">
-										<div class="font-medium text-sm">{ actor.Name }</div>
-										<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", actor.WatchCount) }</div>
-									</div>
-								</div>
-							} else {
-								<div class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2">
-									@actorRowAvatar(actor.Name, actor.ProfilePath)
-									<div class="flex-1">
-										<div class="font-medium text-sm">{ actor.Name }</div>
-										<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", actor.WatchCount) }</div>
-									</div>
-								</div>
-							}
-							{{ count++ }}
-						}
-					}
+	{{ filteredActors := filterTopActorsByGender(actors, gender, limit) }}
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: title, Count: len(filteredActors)}) {
+		for _, actor := range filteredActors {
+			{{ personHref := personPagePath(actor.ID) }}
+			if personHref != "" {
+				<div
+					data-page="person"
+					hx-get={ personHref }
+					hx-target="#main-content"
+					hx-push-url="true"
+					hx-swap="scroll:#main-scroll-container:top"
+					hx-indicator="#person-loading"
+					class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2 cursor-pointer hover:bg-muted/30 transition-colors"
+				>
+					@actorRowAvatar(actor.Name, actor.ProfilePath)
+					<div class="flex-1">
+						<div class="font-medium text-sm">{ actor.Name }</div>
+						<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", actor.WatchCount) }</div>
+					</div>
 				</div>
 			} else {
-				<div class="text-center text-muted-foreground py-8">No data available</div>
+				<div class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2">
+					@actorRowAvatar(actor.Name, actor.ProfilePath)
+					<div class="flex-1">
+						<div class="font-medium text-sm">{ actor.Name }</div>
+						<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", actor.WatchCount) }</div>
+					</div>
+				</div>
 			}
 		}
 	}
 }
 
-templ topCrewCard(title string, people []models.TopCrewMember) {
-	@card.Card(card.Props{Class: "h-full"}) {
-		@card.Header() {
-			@card.Title() {
-				{ title }
-			}
+func filterTopActorsByGender(actors []models.TopActor, gender int64, limit int) []models.TopActor {
+	filtered := make([]models.TopActor, 0, len(actors))
+	for _, actor := range actors {
+		if actor.Gender != gender {
+			continue
 		}
-		@card.Content(card.ContentProps{Class: "pt-4"}) {
-			if len(people) > 0 {
-				<div class="space-y-3">
-					for _, person := range people {
-						{{ personHref := personPagePath(person.ID) }}
-						if personHref != "" {
-							<div
-								data-page="person"
-								hx-get={ personHref }
-								hx-target="#main-content"
-								hx-push-url="true"
-								hx-swap="scroll:#main-scroll-container:top"
-								hx-indicator="#person-loading"
-								class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2 cursor-pointer hover:bg-muted/30 transition-colors"
-							>
-								@actorRowAvatar(person.Name, person.ProfilePath)
-								<div class="flex-1">
-									<div class="font-medium text-sm">{ person.Name }</div>
-									<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", person.WatchCount) }</div>
-								</div>
-							</div>
-						} else {
-							<div class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2">
-								@actorRowAvatar(person.Name, person.ProfilePath)
-								<div class="flex-1">
-									<div class="font-medium text-sm">{ person.Name }</div>
-									<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", person.WatchCount) }</div>
-								</div>
-							</div>
-						}
-					}
+
+		filtered = append(filtered, actor)
+		if limit > 0 && len(filtered) >= limit {
+			break
+		}
+	}
+
+	return filtered
+}
+
+templ topCrewCard(title string, people []models.TopCrewMember) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: title, Count: len(people)}) {
+		for _, person := range people {
+			{{ personHref := personPagePath(person.ID) }}
+			if personHref != "" {
+				<div
+					data-page="person"
+					hx-get={ personHref }
+					hx-target="#main-content"
+					hx-push-url="true"
+					hx-swap="scroll:#main-scroll-container:top"
+					hx-indicator="#person-loading"
+					class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2 cursor-pointer hover:bg-muted/30 transition-colors"
+				>
+					@actorRowAvatar(person.Name, person.ProfilePath)
+					<div class="flex-1">
+						<div class="font-medium text-sm">{ person.Name }</div>
+						<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", person.WatchCount) }</div>
+					</div>
 				</div>
 			} else {
-				<div class="text-center text-muted-foreground py-8">No data available</div>
+				<div class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2">
+					@actorRowAvatar(person.Name, person.ProfilePath)
+					<div class="flex-1">
+						<div class="font-medium text-sm">{ person.Name }</div>
+						<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", person.WatchCount) }</div>
+					</div>
+				</div>
 			}
 		}
 	}
@@ -463,25 +685,12 @@ templ actorRowAvatar(name, profilePath string) {
 }
 
 templ topLanguagesCard(languages []models.LanguageCount) {
-	@card.Card(card.Props{Class: "h-full"}) {
-		@card.Header() {
-			@card.Title() {
-				Top Languages
-			}
-		}
-		@card.Content(card.ContentProps{Class: "pt-4"}) {
-			if len(languages) > 0 {
-				<div class="space-y-3">
-					for _, language := range languages {
-						<div class="flex items-center justify-between rounded-md border border-border/50 bg-muted/15 px-3 py-2">
-							<div class="text-sm font-medium uppercase tracking-wide">{ strings.ToUpper(language.Language) }</div>
-							<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", language.WatchCount) }</div>
-						</div>
-					}
-				</div>
-			} else {
-				<div class="text-center text-muted-foreground py-8">No data available</div>
-			}
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Top Languages", Count: len(languages)}) {
+		for _, language := range languages {
+			<div class="flex items-center justify-between rounded-md border border-border/50 bg-muted/15 px-3 py-2">
+				<div class="text-sm font-medium uppercase tracking-wide">{ strings.ToUpper(language.Language) }</div>
+				<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", language.WatchCount) }</div>
+			</div>
 		}
 	}
 }
@@ -567,50 +776,34 @@ templ runtimeExtremesCard(longest, shortest *models.RuntimeMovie) {
 	}
 }
 
-templ movieFinancialCard(title string, movies []models.MovieFinancial, limit int, showROI bool) {
-	@card.Card(card.Props{Class: "h-full"}) {
-		@card.Header() {
-			@card.Title() {
-				{ title }
-			}
-		}
-		@card.Content(card.ContentProps{Class: "pt-4"}) {
-			if len(movies) > 0 {
-				<div class="space-y-3">
-					for i, movie := range movies {
-						if i >= limit {
-							{{ break }}
-						}
-						<div
-							data-page="movie"
-							hx-get={ "/movie/" + strconv.FormatInt(movie.ID, 10) }
-							hx-target="#main-content"
-							hx-push-url="true"
-							hx-swap="scroll:#main-scroll-container:top"
-							hx-indicator="#movie-loading"
-							class="rounded-lg border border-border/60 bg-muted/15 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
-						>
-							<div class="flex items-center gap-3">
-								@moviePosterThumb(movie.PosterPath, movie.Title)
-								<div class="min-w-0 flex-1">
-									<div class="font-medium text-sm line-clamp-1">{ movie.Title }</div>
-									<div class="mt-1 text-xs text-muted-foreground">
-										Budget: ${ formatLargeNumber(movie.Budget) }
-										if movie.Revenue > 0 {
-											| Revenue: ${ formatLargeNumber(movie.Revenue) }
-										}
-									</div>
-									if showROI {
-										<div class="text-xs text-primary mt-1">ROI: { formatROIPercent(movie.ROI) }</div>
-									}
-								</div>
-							</div>
+templ movieFinancialCard(title string, movies []models.MovieFinancial, showROI bool) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: title, Count: len(movies)}) {
+		for _, movie := range movies {
+			<div
+				data-page="movie"
+				hx-get={ "/movie/" + strconv.FormatInt(movie.ID, 10) }
+				hx-target="#main-content"
+				hx-push-url="true"
+				hx-swap="scroll:#main-scroll-container:top"
+				hx-indicator="#movie-loading"
+				class="rounded-lg border border-border/60 bg-muted/15 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
+			>
+				<div class="flex items-center gap-3">
+					@moviePosterThumb(movie.PosterPath, movie.Title)
+					<div class="min-w-0 flex-1">
+						<div class="font-medium text-sm line-clamp-1">{ movie.Title }</div>
+						<div class="mt-1 text-xs text-muted-foreground">
+							Budget: ${ formatLargeNumber(movie.Budget) }
+							if movie.Revenue > 0 {
+								| Revenue: ${ formatLargeNumber(movie.Revenue) }
+							}
 						</div>
-					}
+						if showROI {
+							<div class="text-xs text-primary mt-1">ROI: { formatROIPercent(movie.ROI) }</div>
+						}
+					</div>
 				</div>
-			} else {
-				<div class="text-center text-muted-foreground py-8">No data available</div>
-			}
+			</div>
 		}
 	}
 }
@@ -1056,6 +1249,70 @@ func prepareWeekdayData(data []models.PeriodCount) chart.Data {
 	}
 }
 
+func prepareRatingDistributionData(data []models.RatingBucketCount) chart.Data {
+	labels := make([]string, len(data))
+	values := make([]float64, len(data))
+	for i, item := range data {
+		labels[i] = fmt.Sprintf("%.1f", item.Rating)
+		values[i] = float64(item.Count)
+	}
+
+	return chart.Data{
+		Labels: labels,
+		Datasets: []chart.Dataset{{
+			Label:           "Ratings",
+			Data:            values,
+			BackgroundColor: []any{"rgba(245, 158, 11, 0.5)"},
+			BorderColor:     []any{"rgba(245, 158, 11, 1)"},
+			BorderWidth:     1,
+		}},
+	}
+}
+
+func prepareMonthlyAverageRatingData(data []models.PeriodRating) chart.Data {
+	labels := make([]string, len(data))
+	values := make([]float64, len(data))
+	for i, item := range data {
+		if parsedTime, err := time.Parse("2006-01", item.Period); err == nil {
+			labels[i] = parsedTime.Format("Jan")
+		} else {
+			labels[i] = item.Period
+		}
+		values[i] = item.AverageRating
+	}
+
+	return chart.Data{
+		Labels: labels,
+		Datasets: []chart.Dataset{{
+			Label:           "Avg Rating",
+			Data:            values,
+			BackgroundColor: []any{"rgba(34, 197, 94, 0.45)"},
+			BorderColor:     []any{"rgba(34, 197, 94, 1)"},
+			BorderWidth:     1,
+		}},
+	}
+}
+
+func prepareReleaseDecadeRatingData(data []models.DecadeRating) chart.Data {
+	labels := make([]string, len(data))
+	values := make([]float64, len(data))
+	for i, item := range data {
+		labels[i] = fmt.Sprintf("%ds", item.Decade)
+		values[i] = item.AverageRating
+	}
+
+	return chart.Data{
+		Labels: labels,
+		Datasets: []chart.Dataset{{
+			Label:           "Avg Rating",
+			Data:            values,
+			BackgroundColor: []any{"rgba(59, 130, 246, 0.45)"},
+			BorderColor:     []any{"rgba(59, 130, 246, 1)"},
+			BorderWidth:     1,
+		}},
+	}
+}
+
 func prepareMonthlyHoursData(data []models.PeriodHours) chart.Data {
 	// Create a map of period to hours
 	dataMap := make(map[string]float64)
@@ -1183,6 +1440,38 @@ func formatROIPercent(roi float64) string {
 	return fmt.Sprintf("%+.0f%%", roi*100)
 }
 
+func formatRatingValue(value float64, count int64) string {
+	if count == 0 {
+		return "N/A"
+	}
+	return fmt.Sprintf("%.1f/5", value)
+}
+
+func formatPercentage(value float64) string {
+	return fmt.Sprintf("%.0f%%", value*100)
+}
+
+func formatRatingDifference(value float64, count int64) string {
+	if count == 0 {
+		return "N/A"
+	}
+	return fmt.Sprintf("%+.1f", value)
+}
+
+func formatSignedFloat(value float64) string {
+	return fmt.Sprintf("%+.1f", value)
+}
+
+func findTheaterRating(data []models.TheaterRating, inTheater bool) models.TheaterRating {
+	for _, item := range data {
+		if item.InTheater == inTheater {
+			return item
+		}
+	}
+
+	return models.TheaterRating{InTheater: inTheater}
+}
+
 templ StatsLoading() {
 	<div id="stats-loading" class="htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none overflow-hidden">
 		<div class="p-4 space-y-8">
@@ -1200,7 +1489,7 @@ templ StatsLoading() {
 			@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-36 rounded-lg"})
 			@skeleton.Skeleton(skeleton.Props{Class: "h-40 w-full rounded-lg"})
 			// Main sections
-			for _ = range 5 {
+			for _ = range 6 {
 				@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-44 rounded-lg"})
 				<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 					@skeleton.Skeleton(skeleton.Props{Class: "h-64 w-full rounded-lg"})

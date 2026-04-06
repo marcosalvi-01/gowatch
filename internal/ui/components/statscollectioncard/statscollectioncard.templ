@@ -1,0 +1,55 @@
+// Package statscollectioncard contains a reusable card for scrollable stats collections.
+package statscollectioncard
+
+import (
+	"fmt"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
+	"github.com/marcosalvi-01/gowatch/internal/ui/utils"
+)
+
+type Props struct {
+	Title       string
+	Count       int
+	EmptyText   string
+	CardClass   string
+	ScrollClass string
+}
+
+templ StatsCollectionCard(props Props) {
+	@card.Card(card.Props{
+		Class: utils.TwMerge("h-full", props.CardClass),
+	}) {
+		@card.Header(card.HeaderProps{Class: "flex flex-row items-center justify-between space-y-0 gap-3"}) {
+			@card.Title() {
+				{ props.Title }
+			}
+			if props.Count > 0 {
+				@badge.Badge(badge.Props{Variant: badge.VariantSecondary}) {
+					{ fmt.Sprintf("%d", props.Count) }
+				}
+			}
+		}
+		@card.Content(card.ContentProps{Class: "pt-4"}) {
+			if props.Count > 0 {
+				<div class={ collectionScrollClass(props.ScrollClass) }>
+					{ children... }
+				</div>
+			} else {
+				<div class="text-center text-muted-foreground py-8">{ collectionEmptyText(props.EmptyText) }</div>
+			}
+		}
+	}
+}
+
+func collectionEmptyText(text string) string {
+	if text == "" {
+		return "No data available"
+	}
+
+	return text
+}
+
+func collectionScrollClass(scrollClass string) string {
+	return utils.TwMerge("space-y-3 h-90 overflow-y-auto pr-1", scrollClass)
+}

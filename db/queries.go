@@ -1192,6 +1192,266 @@ func (d *SqliteDB) GetMonthlyGenreBreakdown(ctx context.Context, userID int64) (
 	return result, nil
 }
 
+func (d *SqliteDB) GetRatingSummary(ctx context.Context, userID int64) (*models.RatingSummary, error) {
+	log.Debug("getting rating summary")
+
+	row, err := d.queries.GetRatingSummary(ctx, &userID)
+	if err != nil {
+		log.Error("failed to get rating summary", "error", err)
+		return nil, fmt.Errorf("failed to get rating summary: %w", err)
+	}
+
+	result := &models.RatingSummary{
+		AverageRating: row.AverageRating,
+		RatedCount:    row.RatedCount,
+	}
+
+	log.Debug("retrieved rating summary", "averageRating", result.AverageRating, "ratedCount", result.RatedCount)
+	return result, nil
+}
+
+func (d *SqliteDB) GetRatingDistribution(ctx context.Context, userID int64) ([]models.RatingBucketCount, error) {
+	log.Debug("getting rating distribution")
+
+	data, err := d.queries.GetRatingDistribution(ctx, &userID)
+	if err != nil {
+		log.Error("failed to get rating distribution", "error", err)
+		return nil, fmt.Errorf("failed to get rating distribution: %w", err)
+	}
+
+	result := make([]models.RatingBucketCount, len(data))
+	for i, row := range data {
+		result[i] = models.RatingBucketCount{
+			Rating: row.RatingBucket,
+			Count:  row.Count,
+		}
+	}
+
+	log.Debug("retrieved rating distribution", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetMonthlyAverageRatingLastYear(ctx context.Context, userID int64) ([]models.PeriodRating, error) {
+	log.Debug("getting monthly average rating")
+
+	data, err := d.queries.GetMonthlyAverageRatingLastYear(ctx, &userID)
+	if err != nil {
+		log.Error("failed to get monthly average rating", "error", err)
+		return nil, fmt.Errorf("failed to get monthly average rating: %w", err)
+	}
+
+	result := make([]models.PeriodRating, len(data))
+	for i, row := range data {
+		result[i] = models.PeriodRating{
+			Period:        row.Month,
+			AverageRating: row.AverageRating,
+			RatedCount:    row.RatedCount,
+		}
+	}
+
+	log.Debug("retrieved monthly average rating", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetTheaterVsHomeAverageRating(ctx context.Context, userID int64) ([]models.TheaterRating, error) {
+	log.Debug("getting theater vs home average rating")
+
+	data, err := d.queries.GetTheaterVsHomeAverageRating(ctx, &userID)
+	if err != nil {
+		log.Error("failed to get theater vs home average rating", "error", err)
+		return nil, fmt.Errorf("failed to get theater vs home average rating: %w", err)
+	}
+
+	result := make([]models.TheaterRating, len(data))
+	for i, row := range data {
+		result[i] = models.TheaterRating{
+			InTheater:     row.WatchedInTheater,
+			AverageRating: row.AverageRating,
+			RatedCount:    row.RatedCount,
+		}
+	}
+
+	log.Debug("retrieved theater vs home average rating", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetHighestRatedMovies(ctx context.Context, userID int64, limit int) ([]models.RatedMovie, error) {
+	log.Debug("getting highest rated movies", "limit", limit)
+
+	data, err := d.queries.GetHighestRatedMovies(ctx, sqlc.GetHighestRatedMoviesParams{UserID: &userID, Limit: int64(limit)})
+	if err != nil {
+		log.Error("failed to get highest rated movies", "error", err)
+		return nil, fmt.Errorf("failed to get highest rated movies: %w", err)
+	}
+
+	result := make([]models.RatedMovie, len(data))
+	for i, row := range data {
+		result[i] = models.RatedMovie{
+			ID:              row.ID,
+			Title:           row.Title,
+			PosterPath:      row.PosterPath,
+			AverageRating:   row.AverageRating,
+			RatedWatchCount: row.RatedWatchCount,
+		}
+	}
+
+	log.Debug("retrieved highest rated movies", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetRatingVsTMDB(ctx context.Context, userID int64, minVoteCount int) (*models.RatingVsTMDB, error) {
+	log.Debug("getting rating vs TMDB", "minVoteCount", minVoteCount)
+
+	row, err := d.queries.GetRatingVsTMDB(ctx, sqlc.GetRatingVsTMDBParams{UserID: &userID, VoteCount: int64(minVoteCount)})
+	if err != nil {
+		log.Error("failed to get rating vs TMDB", "error", err)
+		return nil, fmt.Errorf("failed to get rating vs TMDB: %w", err)
+	}
+
+	result := &models.RatingVsTMDB{
+		AverageUserRating:  row.AverageUserRating,
+		AverageTMDBRating:  row.AverageTmdbRating,
+		AverageDifference:  row.AverageDifference,
+		ComparedMovieCount: row.ComparedMovieCount,
+	}
+
+	log.Debug("retrieved rating vs TMDB", "comparedMovieCount", result.ComparedMovieCount, "averageDifference", result.AverageDifference)
+	return result, nil
+}
+
+func (d *SqliteDB) GetRatingByReleaseDecade(ctx context.Context, userID int64) ([]models.DecadeRating, error) {
+	log.Debug("getting rating by release decade")
+
+	data, err := d.queries.GetRatingByReleaseDecade(ctx, &userID)
+	if err != nil {
+		log.Error("failed to get rating by release decade", "error", err)
+		return nil, fmt.Errorf("failed to get rating by release decade: %w", err)
+	}
+
+	result := make([]models.DecadeRating, len(data))
+	for i, row := range data {
+		result[i] = models.DecadeRating{
+			Decade:          int(row.Decade),
+			AverageRating:   row.AverageRating,
+			RatedMovieCount: row.RatedMovieCount,
+		}
+	}
+
+	log.Debug("retrieved rating by release decade", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetFavoriteDirectorsByRating(ctx context.Context, userID int64, minRatedMovies, limit int) ([]models.RatedPerson, error) {
+	log.Debug("getting favorite directors by rating", "minRatedMovies", minRatedMovies, "limit", limit)
+
+	data, err := d.queries.GetFavoriteDirectorsByRating(ctx, &userID)
+	if err != nil {
+		log.Error("failed to get favorite directors by rating", "error", err)
+		return nil, fmt.Errorf("failed to get favorite directors by rating: %w", err)
+	}
+
+	people := make([]models.RatedPerson, len(data))
+	for i, row := range data {
+		people[i] = models.RatedPerson{
+			ID:              row.ID,
+			Name:            row.Name,
+			ProfilePath:     row.ProfilePath,
+			AverageRating:   row.AverageRating,
+			RatedMovieCount: row.RatedMovieCount,
+		}
+	}
+
+	result := filterRatedPeople(people, minRatedMovies, limit)
+	log.Debug("retrieved favorite directors by rating", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetFavoriteActorsByRating(ctx context.Context, userID int64, minRatedMovies, limit int) ([]models.RatedPerson, error) {
+	log.Debug("getting favorite actors by rating", "minRatedMovies", minRatedMovies, "limit", limit)
+
+	data, err := d.queries.GetFavoriteActorsByRating(ctx, &userID)
+	if err != nil {
+		log.Error("failed to get favorite actors by rating", "error", err)
+		return nil, fmt.Errorf("failed to get favorite actors by rating: %w", err)
+	}
+
+	people := make([]models.RatedPerson, len(data))
+	for i, row := range data {
+		people[i] = models.RatedPerson{
+			ID:              row.ID,
+			Name:            row.Name,
+			ProfilePath:     row.ProfilePath,
+			Gender:          row.Gender,
+			AverageRating:   row.AverageRating,
+			RatedMovieCount: row.RatedMovieCount,
+		}
+	}
+
+	result := filterRatedPeople(people, minRatedMovies, limit)
+	log.Debug("retrieved favorite actors by rating", "count", len(result))
+	return result, nil
+}
+
+func (d *SqliteDB) GetRewatchRatingDrift(ctx context.Context, userID int64, minRatedWatches, limit int) ([]models.RewatchRatingDrift, error) {
+	log.Debug("getting rewatch rating drift", "minRatedWatches", minRatedWatches, "limit", limit)
+
+	data, err := d.queries.GetRewatchRatingDrift(ctx, sqlc.GetRewatchRatingDriftParams{UserID: &userID, Column2: int64(minRatedWatches), Limit: int64(limit)})
+	if err != nil {
+		log.Error("failed to get rewatch rating drift", "error", err)
+		return nil, fmt.Errorf("failed to get rewatch rating drift: %w", err)
+	}
+
+	result := make([]models.RewatchRatingDrift, len(data))
+	for i, row := range data {
+		firstWatchedDate, err := scanDateValue(row.FirstWatchedDate)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse first watched date for movie %d: %w", row.ID, err)
+		}
+
+		lastWatchedDate, err := scanDateValue(row.LastWatchedDate)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse last watched date for movie %d: %w", row.ID, err)
+		}
+
+		result[i] = models.RewatchRatingDrift{
+			MovieID:          row.ID,
+			Title:            row.Title,
+			PosterPath:       row.PosterPath,
+			FirstRating:      row.FirstRating,
+			LastRating:       row.LastRating,
+			RatingChange:     row.RatingChange,
+			RatedWatchCount:  row.RatedWatchCount,
+			FirstWatchedDate: firstWatchedDate,
+			LastWatchedDate:  lastWatchedDate,
+		}
+	}
+
+	log.Debug("retrieved rewatch rating drift", "count", len(result))
+	return result, nil
+}
+
+func filterRatedPeople(people []models.RatedPerson, minRatedMovies, limit int) []models.RatedPerson {
+	result := make([]models.RatedPerson, 0, len(people))
+	for _, person := range people {
+		if minRatedMovies > 0 && person.RatedMovieCount < int64(minRatedMovies) {
+			continue
+		}
+		result = append(result, person)
+		if limit > 0 && len(result) >= limit {
+			break
+		}
+	}
+	return result
+}
+
+func scanDateValue(value any) (time.Time, error) {
+	var parsed date.Date
+	if err := parsed.Scan(value); err != nil {
+		return time.Time{}, err
+	}
+	return parsed.Time, nil
+}
+
 func (d *SqliteDB) CreateSession(ctx context.Context, id string, userID int64, expiresAt time.Time) error {
 	log.Debug("creating session", "sessionID", id, "userID", userID)
 

@@ -2,6 +2,7 @@ package services
 
 import (
 	"log/slog"
+	"math"
 	"reflect"
 	"testing"
 	"time"
@@ -117,6 +118,49 @@ func TestCalculateAverages(t *testing.T) {
 				t.Errorf("calculateAverages() = %v, want %v", result, tt.expected)
 			}
 		})
+	}
+}
+
+func TestFinalizeRatingSummary(t *testing.T) {
+	s := &WatchedService{}
+
+	summary := s.finalizeRatingSummary(&models.RatingSummary{
+		AverageRating: 4.0,
+		RatedCount:    5,
+	}, 6)
+
+	if summary.UnratedCount != 1 {
+		t.Fatalf("expected unrated count 1, got %d", summary.UnratedCount)
+	}
+
+	if math.Abs(summary.Coverage-(5.0/6.0)) > 0.0001 {
+		t.Fatalf("expected coverage close to %f, got %f", 5.0/6.0, summary.Coverage)
+	}
+}
+
+func TestNormalizeRatingDistribution(t *testing.T) {
+	s := &WatchedService{}
+
+	result := s.normalizeRatingDistribution([]models.RatingBucketCount{
+		{Rating: 1.5, Count: 2},
+		{Rating: 4.0, Count: 3},
+		{Rating: 5.0, Count: 1},
+	})
+
+	if len(result) != 10 {
+		t.Fatalf("expected 10 rating buckets, got %d", len(result))
+	}
+
+	if result[2].Rating != 1.5 || result[2].Count != 2 {
+		t.Fatalf("expected 1.5 bucket count 2, got %+v", result[2])
+	}
+
+	if result[7].Rating != 4.0 || result[7].Count != 3 {
+		t.Fatalf("expected 4.0 bucket count 3, got %+v", result[7])
+	}
+
+	if result[9].Rating != 5.0 || result[9].Count != 1 {
+		t.Fatalf("expected 5.0 bucket count 1, got %+v", result[9])
 	}
 }
 

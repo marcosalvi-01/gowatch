@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 	"sort"
 	"time"
@@ -475,6 +476,228 @@ func (s *WatchedService) getMonthlyGenreBreakdown(ctx context.Context) ([]models
 
 	aggregated := s.aggregateTopGenresForChart(data, MaxGenresDisplayed)
 	return aggregated, nil
+}
+
+func (s *WatchedService) getRatingSummary(ctx context.Context) (*models.RatingSummary, error) {
+	s.log.Debug("retrieving rating summary")
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	summary, err := s.db.GetRatingSummary(ctx, user.ID)
+	if err != nil {
+		s.log.Error("failed to retrieve rating summary", "error", err)
+		return nil, fmt.Errorf("failed to get rating summary: %w", err)
+	}
+
+	return summary, nil
+}
+
+func (s *WatchedService) getRatingDistribution(ctx context.Context) ([]models.RatingBucketCount, error) {
+	s.log.Debug("retrieving rating distribution")
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetRatingDistribution(ctx, user.ID)
+	if err != nil {
+		s.log.Error("failed to retrieve rating distribution", "error", err)
+		return nil, fmt.Errorf("failed to get rating distribution: %w", err)
+	}
+
+	return s.normalizeRatingDistribution(data), nil
+}
+
+func (s *WatchedService) getMonthlyAverageRatingLastYear(ctx context.Context) ([]models.PeriodRating, error) {
+	s.log.Debug("retrieving monthly average rating")
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetMonthlyAverageRatingLastYear(ctx, user.ID)
+	if err != nil {
+		s.log.Error("failed to retrieve monthly average rating", "error", err)
+		return nil, fmt.Errorf("failed to get monthly average rating: %w", err)
+	}
+
+	return data, nil
+}
+
+func (s *WatchedService) getTheaterVsHomeAverageRating(ctx context.Context) ([]models.TheaterRating, error) {
+	s.log.Debug("retrieving theater vs home average rating")
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetTheaterVsHomeAverageRating(ctx, user.ID)
+	if err != nil {
+		s.log.Error("failed to retrieve theater vs home average rating", "error", err)
+		return nil, fmt.Errorf("failed to get theater vs home average rating: %w", err)
+	}
+
+	return data, nil
+}
+
+func (s *WatchedService) getHighestRatedMovies(ctx context.Context, limit int) ([]models.RatedMovie, error) {
+	s.log.Debug("retrieving highest rated movies", "limit", limit)
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetHighestRatedMovies(ctx, user.ID, limit)
+	if err != nil {
+		s.log.Error("failed to retrieve highest rated movies", "error", err)
+		return nil, fmt.Errorf("failed to get highest rated movies: %w", err)
+	}
+
+	return data, nil
+}
+
+func (s *WatchedService) getRatingVsTMDB(ctx context.Context) (*models.RatingVsTMDB, error) {
+	s.log.Debug("retrieving rating vs TMDB")
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	stats, err := s.db.GetRatingVsTMDB(ctx, user.ID, minTMDBVoteCount)
+	if err != nil {
+		s.log.Error("failed to retrieve rating vs TMDB", "error", err)
+		return nil, fmt.Errorf("failed to get rating vs TMDB: %w", err)
+	}
+
+	return stats, nil
+}
+
+func (s *WatchedService) getRatingByReleaseDecade(ctx context.Context) ([]models.DecadeRating, error) {
+	s.log.Debug("retrieving rating by release decade")
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetRatingByReleaseDecade(ctx, user.ID)
+	if err != nil {
+		s.log.Error("failed to retrieve rating by release decade", "error", err)
+		return nil, fmt.Errorf("failed to get rating by release decade: %w", err)
+	}
+
+	return data, nil
+}
+
+func (s *WatchedService) getFavoriteDirectorsByRating(ctx context.Context, limit int) ([]models.RatedPerson, error) {
+	s.log.Debug("retrieving favorite directors by rating", "limit", limit)
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetFavoriteDirectorsByRating(ctx, user.ID, minFavoriteDirectorMovies, limit)
+	if err != nil {
+		s.log.Error("failed to retrieve favorite directors by rating", "error", err)
+		return nil, fmt.Errorf("failed to get favorite directors by rating: %w", err)
+	}
+
+	return data, nil
+}
+
+func (s *WatchedService) getFavoriteActorsByRating(ctx context.Context, limit int) ([]models.RatedPerson, error) {
+	s.log.Debug("retrieving favorite actors by rating", "limit", limit)
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetFavoriteActorsByRating(ctx, user.ID, minFavoriteActorMovies, limit)
+	if err != nil {
+		s.log.Error("failed to retrieve favorite actors by rating", "error", err)
+		return nil, fmt.Errorf("failed to get favorite actors by rating: %w", err)
+	}
+
+	return data, nil
+}
+
+func (s *WatchedService) getRewatchRatingDrift(ctx context.Context, limit int) ([]models.RewatchRatingDrift, error) {
+	s.log.Debug("retrieving rewatch rating drift", "limit", limit)
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
+	data, err := s.db.GetRewatchRatingDrift(ctx, user.ID, minRewatchRatedWatches, limit)
+	if err != nil {
+		s.log.Error("failed to retrieve rewatch rating drift", "error", err)
+		return nil, fmt.Errorf("failed to get rewatch rating drift: %w", err)
+	}
+
+	return data, nil
+}
+
+func (s *WatchedService) finalizeRatingSummary(summary *models.RatingSummary, totalWatched int64) models.RatingSummary {
+	if summary == nil {
+		return models.RatingSummary{UnratedCount: totalWatched}
+	}
+
+	result := *summary
+	if result.RatedCount < 0 {
+		result.RatedCount = 0
+	}
+
+	result.UnratedCount = totalWatched - result.RatedCount
+	if result.UnratedCount < 0 {
+		result.UnratedCount = 0
+	}
+
+	if totalWatched > 0 {
+		result.Coverage = float64(result.RatedCount) / float64(totalWatched)
+	}
+
+	return result
+}
+
+func (s *WatchedService) normalizeRatingDistribution(data []models.RatingBucketCount) []models.RatingBucketCount {
+	countsByBucket := make(map[float64]int64, len(data))
+	for _, item := range data {
+		bucket := math.Round(item.Rating/ratingBucketSize) * ratingBucketSize
+		countsByBucket[bucket] += item.Count
+	}
+
+	bucketCount := int(maxMovieRating / ratingBucketSize)
+	result := make([]models.RatingBucketCount, 0, bucketCount)
+	for i := 1; i <= bucketCount; i++ {
+		bucket := float64(i) * ratingBucketSize
+		result = append(result, models.RatingBucketCount{
+			Rating: bucket,
+			Count:  countsByBucket[bucket],
+		})
+	}
+
+	return result
 }
 
 func (s *WatchedService) calculateHoursAverages(totalHours float64, dateRange *models.DateRange, now time.Time) (avgPerDay, avgPerWeek, avgPerMonth float64) {
