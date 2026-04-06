@@ -364,10 +364,16 @@ func (s *WatchedService) GetRecentWatchedMovies(ctx context.Context, limit int) 
 func (s *WatchedService) GetDailyWatchCountsLastYear(ctx context.Context) ([]models.DailyWatchCount, error) {
 	s.log.Debug("GetDailyWatchCountsLastYear: retrieving daily watch counts")
 
-	data, err := s.getDailyWatchCountsLastYear(ctx)
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("GetDailyWatchCountsLastYear: failed to get user", "error", err)
+		return nil, fmt.Errorf("GetDailyWatchCountsLastYear: failed to get user: %w", err)
+	}
+
+	data, err := s.db.GetDailyWatchCountsLastYear(ctx, user.ID)
 	if err != nil {
 		s.log.Error("GetDailyWatchCountsLastYear: failed to retrieve daily watch counts", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("GetDailyWatchCountsLastYear: failed to get daily watch counts: %w", err)
 	}
 
 	s.log.Debug("GetDailyWatchCountsLastYear: retrieved daily watch counts", "count", len(data))
@@ -377,6 +383,13 @@ func (s *WatchedService) GetDailyWatchCountsLastYear(ctx context.Context) ([]mod
 func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*models.WatchedStats, error) {
 	start := time.Now()
 	s.log.Debug("GetWatchedStats: starting stats calculation", "limit", limit)
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("GetWatchedStats: failed to get user", "error", err)
+		return nil, fmt.Errorf("GetWatchedStats: failed to get user: %w", err)
+	}
+
 	stats := &models.WatchedStats{}
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -399,122 +412,147 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 
 	// Total Stats (Count & Hours)
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching total stats")
 		t := time.Now()
-		totalStats, err = s.getTotalStats(ctx)
+		totalStats, err = s.db.GetTotalWatchedStats(ctx, user.ID)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get total stats: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: total stats fetched", "count", totalStats.Count, "hours", totalStats.Hours, "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Rewatch Stats
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching rewatch stats")
 		t := time.Now()
-		rewatchStats, err = s.getRewatchStats(ctx)
+		rewatchStats, err = s.db.GetRewatchStats(ctx, user.ID)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get rewatch stats: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: rewatch stats fetched", "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Theater vs Home
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching theater vs home")
 		t := time.Now()
-		stats.TheaterVsHome, err = s.getTheaterVsHome(ctx)
+		stats.TheaterVsHome, err = s.db.GetTheaterVsHomeCount(ctx, user.ID)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get theater vs home counts: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: theater vs home fetched", "count", len(stats.TheaterVsHome), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Monthly Stats (Count & Hours)
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching monthly stats")
 		t := time.Now()
-		statsPerMonth, err = s.getMonthlyStats(ctx)
+		statsPerMonth, err = s.db.GetWatchedStatsPerMonthLastYear(ctx, user.ID)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get monthly stats: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: monthly stats fetched", "count", len(statsPerMonth), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Yearly Stats
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching yearly stats")
 		t := time.Now()
-		stats.YearlyAllTime, err = s.getYearlyAllTime(ctx)
+		stats.YearlyAllTime, err = s.db.GetWatchedPerYear(ctx, user.ID)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get yearly stats: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: yearly stats fetched", "count", len(stats.YearlyAllTime), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Weekday Distribution
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching weekday distribution")
 		t := time.Now()
-		stats.WeekdayDistribution, err = s.getWeekdayDistribution(ctx)
+		stats.WeekdayDistribution, err = s.db.GetWeekdayDistribution(ctx, user.ID)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get weekday distribution: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: weekday distribution fetched", "count", len(stats.WeekdayDistribution), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Daily Watch Counts (Last Year) - used for calendar heatmap
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching daily watch counts for last year")
 		t := time.Now()
-		stats.DailyWatchCountsLastYear, err = s.getDailyWatchCountsLastYear(ctx)
+		stats.DailyWatchCountsLastYear, err = s.db.GetDailyWatchCountsLastYear(ctx, user.ID)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get daily watch counts last year: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: daily watch counts for last year fetched", "count", len(stats.DailyWatchCountsLastYear), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Genres
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching genres")
 		t := time.Now()
 		stats.Genres, err = s.getGenres(ctx)
+		if err != nil {
+			return err
+		}
 		s.log.Debug("GetWatchedStats: genres fetched", "count", len(stats.Genres), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Most Watched Movies
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching most watched movies")
 		t := time.Now()
-		stats.MostWatchedMovies, err = s.getMostWatchedMovies(ctx, limit)
+		stats.MostWatchedMovies, err = s.db.GetMostWatchedMovies(ctx, user.ID, limit)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get most watched movies: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: most watched movies fetched", "count", len(stats.MostWatchedMovies), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Most Watched Day
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching most watched day")
 		t := time.Now()
 		stats.MostWatchedDay, err = s.getMostWatchedDay(ctx)
+		if err != nil {
+			return err
+		}
 		s.log.Debug("GetWatchedStats: most watched day fetched", "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Most Watched Actors
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching most watched actors")
 		t := time.Now()
-		allActors, err = s.getMostWatchedActors(ctx, limit)
+		actors, err := s.db.GetWatchedActors(ctx, user.ID)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get watched actors: %w", err)
+		}
+
+		allActors = make([]models.TopActor, 0, len(actors))
+		allActors = append(allActors, limitTopActorsByGender(actors, tmdbGenderMale, limit)...)
+		allActors = append(allActors, limitTopActorsByGender(actors, tmdbGenderFemale, limit)...)
 		s.log.Debug("GetWatchedStats: most watched actors fetched", "count", len(allActors), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Top Crew
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching top crew members")
 		t := time.Now()
-		crewMembers, err := s.getWatchedCrewMembers(ctx)
+		crewMembers, err := s.db.GetWatchedCrewMembers(ctx, user.ID)
 		if err != nil {
-			return err
+			return fmt.Errorf("GetWatchedStats: get watched crew members: %w", err)
 		}
 
 		stats.TopDirectors = filterTopCrewMembersByRole(crewMembers, models.TopCrewRoleDirector, limit)
@@ -529,207 +567,247 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 			"cinematographers", len(stats.TopCinematographers),
 			"duration", time.Since(t).String(),
 		)
-		return err
+		return nil
 	})
 
 	// Top Languages
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching top languages")
 		t := time.Now()
-		stats.TopLanguages, err = s.getTopLanguages(ctx, limit)
+		stats.TopLanguages, err = s.db.GetTopLanguages(ctx, user.ID, limit)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get top languages: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: top languages fetched", "count", len(stats.TopLanguages), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Release Year Distribution
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching release year distribution")
 		t := time.Now()
-		stats.ReleaseYearDistribution, err = s.getReleaseYearDistribution(ctx)
+		stats.ReleaseYearDistribution, err = s.db.GetReleaseYearDistribution(ctx, user.ID)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get release year distribution: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: release year distribution fetched", "count", len(stats.ReleaseYearDistribution), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Longest Watched Movie
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching longest watched movie")
 		t := time.Now()
 		stats.LongestMovieWatched, err = s.getLongestWatchedMovie(ctx)
+		if err != nil {
+			return err
+		}
 		s.log.Debug("GetWatchedStats: longest watched movie fetched", "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Shortest Watched Movie
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching shortest watched movie")
 		t := time.Now()
 		stats.ShortestMovieWatched, err = s.getShortestWatchedMovie(ctx)
+		if err != nil {
+			return err
+		}
 		s.log.Debug("GetWatchedStats: shortest watched movie fetched", "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Budget Tier Distribution
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching budget tier distribution")
 		t := time.Now()
 		stats.BudgetTierDistribution, err = s.getBudgetTierDistribution(ctx)
+		if err != nil {
+			return err
+		}
 		s.log.Debug("GetWatchedStats: budget tier distribution fetched", "count", len(stats.BudgetTierDistribution), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Top Return on Investment Movies
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching top return on investment movies")
 		t := time.Now()
 		stats.TopReturnOnInvestmentMovies, err = s.getTopReturnOnInvestmentMovies(ctx, limit)
+		if err != nil {
+			return err
+		}
 		s.log.Debug("GetWatchedStats: top return on investment movies fetched", "count", len(stats.TopReturnOnInvestmentMovies), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Biggest Budget Movies
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching biggest budget movies")
 		t := time.Now()
 		stats.BiggestBudgetMovies, err = s.getBiggestBudgetMovies(ctx, limit)
+		if err != nil {
+			return err
+		}
 		s.log.Debug("GetWatchedStats: biggest budget movies fetched", "count", len(stats.BiggestBudgetMovies), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Monthly Genre Breakdown
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching monthly genre breakdown")
 		t := time.Now()
 		stats.MonthlyGenreBreakdown, err = s.getMonthlyGenreBreakdown(ctx)
+		if err != nil {
+			return err
+		}
 		s.log.Debug("GetWatchedStats: monthly genre breakdown fetched", "count", len(stats.MonthlyGenreBreakdown), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Rating Summary
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching rating summary")
 		t := time.Now()
-		ratingSummary, err = s.getRatingSummary(ctx)
+		ratingSummary, err = s.db.GetRatingSummary(ctx, user.ID)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get rating summary: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: rating summary fetched", "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Rating Distribution
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching rating distribution")
 		t := time.Now()
 		ratingDistribution, err = s.getRatingDistribution(ctx)
+		if err != nil {
+			return err
+		}
 		s.log.Debug("GetWatchedStats: rating distribution fetched", "count", len(ratingDistribution), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Monthly Average Rating
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching monthly average rating")
 		t := time.Now()
-		monthlyAverageRating, err = s.getMonthlyAverageRatingLastYear(ctx)
+		monthlyAverageRating, err = s.db.GetMonthlyAverageRatingLastYear(ctx, user.ID)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get monthly average rating: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: monthly average rating fetched", "count", len(monthlyAverageRating), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Theater vs Home Average Rating
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching theater vs home average rating")
 		t := time.Now()
-		theaterVsHomeAverageRating, err = s.getTheaterVsHomeAverageRating(ctx)
+		theaterVsHomeAverageRating, err = s.db.GetTheaterVsHomeAverageRating(ctx, user.ID)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get theater vs home average rating: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: theater vs home average rating fetched", "count", len(theaterVsHomeAverageRating), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Highest Rated Movies
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching highest rated movies")
 		t := time.Now()
-		highestRatedMovies, err = s.getHighestRatedMovies(ctx, limit)
+		highestRatedMovies, err = s.db.GetHighestRatedMovies(ctx, user.ID, limit)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get highest rated movies: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: highest rated movies fetched", "count", len(highestRatedMovies), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Rating vs TMDB
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching rating vs TMDB")
 		t := time.Now()
-		ratingVsTMDB, err = s.getRatingVsTMDB(ctx)
+		ratingVsTMDB, err = s.db.GetRatingVsTMDB(ctx, user.ID, minTMDBVoteCount)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get rating vs TMDB: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: rating vs TMDB fetched", "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Rating by Release Decade
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching rating by release decade")
 		t := time.Now()
-		ratingByReleaseDecade, err = s.getRatingByReleaseDecade(ctx)
+		ratingByReleaseDecade, err = s.db.GetRatingByReleaseDecade(ctx, user.ID)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get rating by release decade: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: rating by release decade fetched", "count", len(ratingByReleaseDecade), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Favorite Directors by Rating
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching favorite directors by rating")
 		t := time.Now()
-		favoriteDirectorsByRating, err = s.getFavoriteDirectorsByRating(ctx, limit)
+		favoriteDirectorsByRating, err = s.db.GetFavoriteDirectorsByRating(ctx, user.ID, minFavoriteDirectorMovies, limit)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get favorite directors by rating: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: favorite directors by rating fetched", "count", len(favoriteDirectorsByRating), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Favorite Actors by Rating
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching favorite actors by rating")
 		t := time.Now()
-		favoriteActorsByRating, err = s.getFavoriteActorsByRating(ctx, limit)
+		favoriteActorsByRating, err = s.db.GetFavoriteActorsByRating(ctx, user.ID, minFavoriteActorMovies, limit)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get favorite actors by rating: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: favorite actors by rating fetched", "count", len(favoriteActorsByRating), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Rewatch Rating Drift
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching rewatch rating drift")
 		t := time.Now()
-		rewatchRatingDrift, err = s.getRewatchRatingDrift(ctx, limit)
+		rewatchRatingDrift, err = s.db.GetRewatchRatingDrift(ctx, user.ID, minRewatchRatedWatches, limit)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get rewatch rating drift: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: rewatch rating drift fetched", "count", len(rewatchRatingDrift), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Date Range for Averages
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching date range")
 		t := time.Now()
 		dateRange, err = s.getDateRange(ctx)
+		if err != nil {
+			return err
+		}
 		s.log.Debug("GetWatchedStats: date range fetched", "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	// Watched Dates for streak calculations
 	g.Go(func() error {
-		var err error
 		s.log.Debug("GetWatchedStats: fetching watched dates")
 		t := time.Now()
-		watchedDates, err = s.getWatchedDates(ctx)
+		watchedDates, err = s.db.GetWatchedDates(ctx, user.ID)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get watched dates: %w", err)
+		}
 		s.log.Debug("GetWatchedStats: watched dates fetched", "count", len(watchedDates), "duration", time.Since(t).String())
-		return err
+		return nil
 	})
 
 	if err := g.Wait(); err != nil {

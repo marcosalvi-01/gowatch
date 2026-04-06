@@ -20,81 +20,6 @@ const (
 	tmdbGenderMale   int64 = 2
 )
 
-func (s *WatchedService) getTotalStats(ctx context.Context) (*models.TotalStats, error) {
-	s.log.Debug("retrieving total stats")
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-	stats, err := s.db.GetTotalWatchedStats(ctx, user.ID)
-	if err != nil {
-		s.log.Error("failed to retrieve total stats", "error", err)
-		return nil, fmt.Errorf("failed to get total stats: %w", err)
-	}
-	return stats, nil
-}
-
-func (s *WatchedService) getTheaterVsHome(ctx context.Context) ([]models.TheaterCount, error) {
-	s.log.Debug("retrieving theater vs home counts")
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-	data, err := s.db.GetTheaterVsHomeCount(ctx, user.ID)
-	if err != nil {
-		s.log.Error("failed to retrieve theater vs home counts", "error", err)
-		return nil, fmt.Errorf("failed to get theater vs home: %w", err)
-	}
-	return data, nil
-}
-
-func (s *WatchedService) getMonthlyStats(ctx context.Context) ([]models.PeriodStats, error) {
-	s.log.Debug("retrieving monthly stats")
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-	data, err := s.db.GetWatchedStatsPerMonthLastYear(ctx, user.ID)
-	if err != nil {
-		s.log.Error("failed to retrieve monthly stats", "error", err)
-		return nil, fmt.Errorf("failed to get monthly stats: %w", err)
-	}
-	return data, nil
-}
-
-func (s *WatchedService) getYearlyAllTime(ctx context.Context) ([]models.PeriodCount, error) {
-	s.log.Debug("retrieving yearly watched data")
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-	data, err := s.db.GetWatchedPerYear(ctx, user.ID)
-	if err != nil {
-		s.log.Error("failed to retrieve yearly watched data", "error", err)
-		return nil, fmt.Errorf("failed to get yearly data: %w", err)
-	}
-	return data, nil
-}
-
-func (s *WatchedService) getWeekdayDistribution(ctx context.Context) ([]models.PeriodCount, error) {
-	s.log.Debug("retrieving weekday distribution")
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-	data, err := s.db.GetWeekdayDistribution(ctx, user.ID)
-	if err != nil {
-		s.log.Error("failed to retrieve weekday distribution", "error", err)
-		return nil, fmt.Errorf("failed to get weekday distribution: %w", err)
-	}
-	return data, nil
-}
-
 func (s *WatchedService) getGenres(ctx context.Context) ([]models.GenreCount, error) {
 	s.log.Debug("retrieving watched by genre data")
 	user, err := common.GetUser(ctx)
@@ -108,21 +33,6 @@ func (s *WatchedService) getGenres(ctx context.Context) ([]models.GenreCount, er
 		return nil, fmt.Errorf("failed to get genre data: %w", err)
 	}
 	return s.aggregateGenres(genreData, MaxGenresDisplayed), nil
-}
-
-func (s *WatchedService) getMostWatchedMovies(ctx context.Context, limit int) ([]models.TopMovie, error) {
-	s.log.Debug("retrieving most watched movies", "limit", limit)
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-	data, err := s.db.GetMostWatchedMovies(ctx, user.ID, limit)
-	if err != nil {
-		s.log.Error("failed to retrieve most watched movies", "error", err)
-		return nil, fmt.Errorf("failed to get most watched movies: %w", err)
-	}
-	return data, nil
 }
 
 func (s *WatchedService) getMostWatchedDay(ctx context.Context) (*models.MostWatchedDay, error) {
@@ -142,111 +52,6 @@ func (s *WatchedService) getMostWatchedDay(ctx context.Context) (*models.MostWat
 		return nil, fmt.Errorf("failed to get most watched day: %w", err)
 	}
 	return dayData, nil
-}
-
-func (s *WatchedService) getMostWatchedActors(ctx context.Context, limit int) ([]models.TopActor, error) {
-	s.log.Debug("retrieving most watched actors", "limit", limit)
-
-	actors, err := s.getWatchedActors(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	allActors := make([]models.TopActor, 0, len(actors))
-	allActors = append(allActors, limitTopActorsByGender(actors, tmdbGenderMale, limit)...)
-	allActors = append(allActors, limitTopActorsByGender(actors, tmdbGenderFemale, limit)...)
-
-	return allActors, nil
-}
-
-func (s *WatchedService) getWatchedActors(ctx context.Context) ([]models.TopActor, error) {
-	s.log.Debug("retrieving watched actors")
-
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-
-	actors, err := s.db.GetWatchedActors(ctx, user.ID)
-	if err != nil {
-		s.log.Error("failed to retrieve watched actors", "error", err)
-		return nil, fmt.Errorf("failed to get watched actors: %w", err)
-	}
-
-	return actors, nil
-}
-
-func (s *WatchedService) getRewatchStats(ctx context.Context) (*models.RewatchStats, error) {
-	s.log.Debug("retrieving rewatch stats")
-
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-
-	stats, err := s.db.GetRewatchStats(ctx, user.ID)
-	if err != nil {
-		s.log.Error("failed to retrieve rewatch stats", "error", err)
-		return nil, fmt.Errorf("failed to get rewatch stats: %w", err)
-	}
-
-	return stats, nil
-}
-
-func (s *WatchedService) getWatchedDates(ctx context.Context) ([]time.Time, error) {
-	s.log.Debug("retrieving watched dates")
-
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-
-	dates, err := s.db.GetWatchedDates(ctx, user.ID)
-	if err != nil {
-		s.log.Error("failed to retrieve watched dates", "error", err)
-		return nil, fmt.Errorf("failed to get watched dates: %w", err)
-	}
-
-	return dates, nil
-}
-
-func (s *WatchedService) getDailyWatchCountsLastYear(ctx context.Context) ([]models.DailyWatchCount, error) {
-	s.log.Debug("retrieving daily watch counts for last year")
-
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-
-	data, err := s.db.GetDailyWatchCountsLastYear(ctx, user.ID)
-	if err != nil {
-		s.log.Error("failed to retrieve daily watch counts for last year", "error", err)
-		return nil, fmt.Errorf("failed to get daily watch counts for last year: %w", err)
-	}
-
-	return data, nil
-}
-
-func (s *WatchedService) getWatchedCrewMembers(ctx context.Context) ([]models.TopCrewMemberStat, error) {
-	s.log.Debug("retrieving watched crew members")
-
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-
-	data, err := s.db.GetWatchedCrewMembers(ctx, user.ID)
-	if err != nil {
-		s.log.Error("failed to retrieve watched crew members", "error", err)
-		return nil, fmt.Errorf("failed to get watched crew members: %w", err)
-	}
-
-	return data, nil
 }
 
 func limitTopActorsByGender(actors []models.TopActor, gender int64, limit int) []models.TopActor {
@@ -310,42 +115,6 @@ func filterTopCrewMembersByRole(data []models.TopCrewMemberStat, role models.Top
 	}
 
 	return filtered
-}
-
-func (s *WatchedService) getTopLanguages(ctx context.Context, limit int) ([]models.LanguageCount, error) {
-	s.log.Debug("retrieving top languages", "limit", limit)
-
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-
-	data, err := s.db.GetTopLanguages(ctx, user.ID, limit)
-	if err != nil {
-		s.log.Error("failed to retrieve top languages", "error", err)
-		return nil, fmt.Errorf("failed to get top languages: %w", err)
-	}
-
-	return data, nil
-}
-
-func (s *WatchedService) getReleaseYearDistribution(ctx context.Context) ([]models.ReleaseYearCount, error) {
-	s.log.Debug("retrieving release year distribution")
-
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-
-	data, err := s.db.GetReleaseYearDistribution(ctx, user.ID)
-	if err != nil {
-		s.log.Error("failed to retrieve release year distribution", "error", err)
-		return nil, fmt.Errorf("failed to get release year distribution: %w", err)
-	}
-
-	return data, nil
 }
 
 func (s *WatchedService) getLongestWatchedMovie(ctx context.Context) (*models.RuntimeMovie, error) {
@@ -482,24 +251,6 @@ func (s *WatchedService) getMonthlyGenreBreakdown(ctx context.Context) ([]models
 	return aggregated, nil
 }
 
-func (s *WatchedService) getRatingSummary(ctx context.Context) (*models.RatingSummary, error) {
-	s.log.Debug("retrieving rating summary")
-
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-
-	summary, err := s.db.GetRatingSummary(ctx, user.ID)
-	if err != nil {
-		s.log.Error("failed to retrieve rating summary", "error", err)
-		return nil, fmt.Errorf("failed to get rating summary: %w", err)
-	}
-
-	return summary, nil
-}
-
 func (s *WatchedService) getRatingDistribution(ctx context.Context) ([]models.RatingBucketCount, error) {
 	s.log.Debug("retrieving rating distribution")
 
@@ -518,150 +269,6 @@ func (s *WatchedService) getRatingDistribution(ctx context.Context) ([]models.Ra
 	return s.normalizeRatingDistribution(data), nil
 }
 
-func (s *WatchedService) getMonthlyAverageRatingLastYear(ctx context.Context) ([]models.PeriodRating, error) {
-	s.log.Debug("retrieving monthly average rating")
-
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-
-	data, err := s.db.GetMonthlyAverageRatingLastYear(ctx, user.ID)
-	if err != nil {
-		s.log.Error("failed to retrieve monthly average rating", "error", err)
-		return nil, fmt.Errorf("failed to get monthly average rating: %w", err)
-	}
-
-	return data, nil
-}
-
-func (s *WatchedService) getTheaterVsHomeAverageRating(ctx context.Context) ([]models.TheaterRating, error) {
-	s.log.Debug("retrieving theater vs home average rating")
-
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-
-	data, err := s.db.GetTheaterVsHomeAverageRating(ctx, user.ID)
-	if err != nil {
-		s.log.Error("failed to retrieve theater vs home average rating", "error", err)
-		return nil, fmt.Errorf("failed to get theater vs home average rating: %w", err)
-	}
-
-	return data, nil
-}
-
-func (s *WatchedService) getHighestRatedMovies(ctx context.Context, limit int) ([]models.RatedMovie, error) {
-	s.log.Debug("retrieving highest rated movies", "limit", limit)
-
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-
-	data, err := s.db.GetHighestRatedMovies(ctx, user.ID, limit)
-	if err != nil {
-		s.log.Error("failed to retrieve highest rated movies", "error", err)
-		return nil, fmt.Errorf("failed to get highest rated movies: %w", err)
-	}
-
-	return data, nil
-}
-
-func (s *WatchedService) getRatingVsTMDB(ctx context.Context) (*models.RatingVsTMDB, error) {
-	s.log.Debug("retrieving rating vs TMDB")
-
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-
-	stats, err := s.db.GetRatingVsTMDB(ctx, user.ID, minTMDBVoteCount)
-	if err != nil {
-		s.log.Error("failed to retrieve rating vs TMDB", "error", err)
-		return nil, fmt.Errorf("failed to get rating vs TMDB: %w", err)
-	}
-
-	return stats, nil
-}
-
-func (s *WatchedService) getRatingByReleaseDecade(ctx context.Context) ([]models.DecadeRating, error) {
-	s.log.Debug("retrieving rating by release decade")
-
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-
-	data, err := s.db.GetRatingByReleaseDecade(ctx, user.ID)
-	if err != nil {
-		s.log.Error("failed to retrieve rating by release decade", "error", err)
-		return nil, fmt.Errorf("failed to get rating by release decade: %w", err)
-	}
-
-	return data, nil
-}
-
-func (s *WatchedService) getFavoriteDirectorsByRating(ctx context.Context, limit int) ([]models.RatedPerson, error) {
-	s.log.Debug("retrieving favorite directors by rating", "limit", limit)
-
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-
-	data, err := s.db.GetFavoriteDirectorsByRating(ctx, user.ID, minFavoriteDirectorMovies, limit)
-	if err != nil {
-		s.log.Error("failed to retrieve favorite directors by rating", "error", err)
-		return nil, fmt.Errorf("failed to get favorite directors by rating: %w", err)
-	}
-
-	return data, nil
-}
-
-func (s *WatchedService) getFavoriteActorsByRating(ctx context.Context, limit int) ([]models.RatedPerson, error) {
-	s.log.Debug("retrieving favorite actors by rating", "limit", limit)
-
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-
-	data, err := s.db.GetFavoriteActorsByRating(ctx, user.ID, minFavoriteActorMovies, limit)
-	if err != nil {
-		s.log.Error("failed to retrieve favorite actors by rating", "error", err)
-		return nil, fmt.Errorf("failed to get favorite actors by rating: %w", err)
-	}
-
-	return data, nil
-}
-
-func (s *WatchedService) getRewatchRatingDrift(ctx context.Context, limit int) ([]models.RewatchRatingDrift, error) {
-	s.log.Debug("retrieving rewatch rating drift", "limit", limit)
-
-	user, err := common.GetUser(ctx)
-	if err != nil {
-		s.log.Error("failed to get user", "error", err)
-		return nil, err
-	}
-
-	data, err := s.db.GetRewatchRatingDrift(ctx, user.ID, minRewatchRatedWatches, limit)
-	if err != nil {
-		s.log.Error("failed to retrieve rewatch rating drift", "error", err)
-		return nil, fmt.Errorf("failed to get rewatch rating drift: %w", err)
-	}
-
-	return data, nil
-}
-
 func (s *WatchedService) finalizeRatingSummary(summary *models.RatingSummary, totalWatched int64) models.RatingSummary {
 	if summary == nil {
 		return models.RatingSummary{UnratedCount: totalWatched}
@@ -672,10 +279,7 @@ func (s *WatchedService) finalizeRatingSummary(summary *models.RatingSummary, to
 		result.RatedCount = 0
 	}
 
-	result.UnratedCount = totalWatched - result.RatedCount
-	if result.UnratedCount < 0 {
-		result.UnratedCount = 0
-	}
+	result.UnratedCount = max(totalWatched - result.RatedCount, 0)
 
 	if totalWatched > 0 {
 		result.Coverage = float64(result.RatedCount) / float64(totalWatched)
@@ -878,6 +482,12 @@ func (s *WatchedService) aggregateGenres(genreData []models.GenreCount, maxDispl
 func (s *WatchedService) GetHomeStatsSummary(ctx context.Context) (*models.HomeStatsSummary, error) {
 	s.log.Debug("retrieving home stats summary")
 
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get user", "error", err)
+		return nil, err
+	}
+
 	summary := &models.HomeStatsSummary{}
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -886,9 +496,12 @@ func (s *WatchedService) GetHomeStatsSummary(ctx context.Context) (*models.HomeS
 	var genres []models.GenreCount
 
 	g.Go(func() error {
-		var err error
-		totalStats, err = s.getTotalStats(ctx)
-		return err
+		var fetchErr error
+		totalStats, fetchErr = s.db.GetTotalWatchedStats(ctx, user.ID)
+		if fetchErr != nil {
+			return fmt.Errorf("failed to get total stats: %w", fetchErr)
+		}
+		return nil
 	})
 
 	g.Go(func() error {
