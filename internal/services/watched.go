@@ -380,6 +380,7 @@ func (s *WatchedService) GetDailyWatchCountsLastYear(ctx context.Context) ([]mod
 	return data, nil
 }
 
+//nolint:gocyclo // Coordinates many parallel stats fetches in one place. Mostly boilerplate
 func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*models.WatchedStats, error) {
 	start := time.Now()
 	s.log.Debug("GetWatchedStats: starting stats calculation", "limit", limit)

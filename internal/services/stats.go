@@ -279,7 +279,7 @@ func (s *WatchedService) finalizeRatingSummary(summary *models.RatingSummary, to
 		result.RatedCount = 0
 	}
 
-	result.UnratedCount = max(totalWatched - result.RatedCount, 0)
+	result.UnratedCount = max(totalWatched-result.RatedCount, 0)
 
 	if totalWatched > 0 {
 		result.Coverage = float64(result.RatedCount) / float64(totalWatched)
