@@ -3,6 +3,7 @@ package pages
 import (
 	"fmt"
 	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/utils"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/calendarheatmap"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/statscollectioncard"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/avatar"
@@ -672,7 +673,7 @@ templ actorRowAvatar(name, profilePath string) {
 	@avatar.Avatar(avatar.Props{Class: "h-9 w-9"}) {
 		if profilePath != "" {
 			@avatar.Image(avatar.ImageProps{
-				Src:   "https://image.tmdb.org/t/p/w185/" + strings.TrimPrefix(profilePath, "/"),
+				Src:   utils.TMDBImageURL("w185", profilePath),
 				Alt:   name,
 				Class: "object-cover",
 			})
@@ -699,7 +700,7 @@ templ moviePosterThumb(posterPath, title string) {
 	<div class="h-14 w-10 shrink-0 overflow-hidden rounded border border-border/50 bg-muted">
 		if posterPath != "" {
 			<img
-				src={ "https://image.tmdb.org/t/p/w92/" + strings.TrimPrefix(posterPath, "/") }
+				src={ utils.TMDBImageURL("w92", posterPath) }
 				alt={ title }
 				loading="lazy"
 				class="h-full w-full object-cover"

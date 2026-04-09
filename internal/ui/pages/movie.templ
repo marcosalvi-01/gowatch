@@ -49,7 +49,7 @@ templ backdropHero(movie models.MovieDetails, isInWatchlist bool) {
 	<div class="relative w-full h-[40vh] min-h-[350px] max-h-[500px] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] overflow-hidden">
 		<!-- Background Image -->
 		<img
-			src={ "https://image.tmdb.org/t/p/w1280" + movie.Movie.BackdropPath }
+			src={ utils.TMDBImageURL("w1280", movie.Movie.BackdropPath) }
 			alt={ movie.Movie.Title + " backdrop" }
 			class="absolute inset-0 w-full h-full object-cover object-top"
 		/>
@@ -89,7 +89,7 @@ templ posterSection(movie models.MovieDetails, isDark bool) {
 			<div class="w-32 md:w-40 lg:w-48 xl:w-52">
 				<div class="aspect-[2/3] rounded-lg overflow-hidden shadow-lg">
 					<img
-						src={ "https://image.tmdb.org/t/p/w500" + movie.Movie.PosterPath }
+						src={ utils.TMDBImageURL("w500", movie.Movie.PosterPath) }
 						alt={ movie.Movie.Title + " poster" }
 						class="w-full h-full object-cover"
 					/>
@@ -548,7 +548,8 @@ templ castMemberCard(cast models.Cast) {
 templ profileImage(profilePath, name string) {
 	@avatar.Avatar() {
 		@avatar.Image(avatar.ImageProps{
-			Src:   "https://image.tmdb.org/t/p/w185" + profilePath,
+			Src:   utils.TMDBImageURL("w185", profilePath),
+			Alt:   name,
 			Class: "object-cover",
 		})
 		@avatar.Fallback() {

@@ -8,6 +8,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/db"
 	"github.com/marcosalvi-01/gowatch/internal/handlers/api"
 	"github.com/marcosalvi-01/gowatch/internal/handlers/htmx"
+	"github.com/marcosalvi-01/gowatch/internal/handlers/images"
 	"github.com/marcosalvi-01/gowatch/internal/handlers/pages"
 	"github.com/marcosalvi-01/gowatch/internal/handlers/static"
 	"github.com/marcosalvi-01/gowatch/internal/middleware"
@@ -22,6 +23,7 @@ var log = logging.Get("routes")
 func NewRouter(
 	db db.DB,
 	tmdbService *services.MovieService,
+	tmdbImageService *services.TMDBImageService,
 	watchedService *services.WatchedService,
 	listService *services.ListService,
 	authService *services.AuthService,
@@ -57,6 +59,12 @@ func NewRouter(
 	r.Head("/manifest.webmanifest", staticHandlers.Manifest)
 	r.Route("/static", func(r chi.Router) {
 		staticHandlers.RegisterRoutes(r)
+	})
+
+	log.Debug("registering image routes")
+	imageHandlers := images.NewHandlers(tmdbImageService)
+	r.Route("/images", func(r chi.Router) {
+		imageHandlers.RegisterRoutes(r)
 	})
 
 	log.Debug("registering HTMX routes")

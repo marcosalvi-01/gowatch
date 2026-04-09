@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -26,6 +27,8 @@ type Config struct {
 	TMDBAPIKey           string        `mapstructure:"tmdb_api_key" yaml:"tmdb_api_key"`
 	TMDBPosterPrefix     string        `mapstructure:"tmdb_poster_prefix" yaml:"tmdb_poster_prefix"`
 	CacheTTL             time.Duration `mapstructure:"cache_ttl" yaml:"cache_ttl"`
+	ImageCacheTTL        time.Duration `mapstructure:"image_cache_ttl" yaml:"tmdb_image_cache_ttl"`
+	ImageCleanupInterval time.Duration `mapstructure:"image_cleanup_interval" yaml:"image_cleanup_interval"`
 	SessionExpiry        time.Duration `mapstructure:"session_expiry" yaml:"session_expiry"`
 	ShutdownTimeout      time.Duration `mapstructure:"shutdown_timeout" yaml:"shutdown_timeout"`
 	HTTPS                bool          `mapstructure:"https" yaml:"https"`
@@ -41,7 +44,15 @@ func RunServer(cfg Config) {
 	log := logging.Get("server")
 	log.Info("initializing application")
 
-	log.Info("configuration loaded", "port", cfg.Port, "dbPath", cfg.DBPath, "dbName", cfg.DBName, "cacheTTL", cfg.CacheTTL)
+	log.Info(
+		"configuration loaded",
+		"port", cfg.Port,
+		"dbPath", cfg.DBPath,
+		"dbName", cfg.DBName,
+		"cacheTTL", cfg.CacheTTL,
+		"imageCacheTTL", cfg.ImageCacheTTL,
+		"imageCleanupInterval", cfg.ImageCleanupInterval,
+	)
 
 	db, err := db.NewSqliteDB(cfg.DBPath, cfg.DBName)
 	if err != nil {
@@ -60,11 +71,17 @@ func RunServer(cfg Config) {
 
 	log.Debug("initializing services")
 	movieService := services.NewMovieService(db, tmdbClient, cfg.CacheTTL)
+	imageCacheDir := filepath.Join(cfg.DBPath, "tmdb-images")
+	if err := os.MkdirAll(imageCacheDir, 0o750); err != nil {
+		log.Error("failed to create image cache directory", "path", imageCacheDir, "error", err)
+		panic(err)
+	}
+	tmdbImageService := services.NewTMDBImageService(imageCacheDir, cfg.ImageCacheTTL, &http.Client{Timeout: cfg.Timeout})
 	listService := services.NewListService(db, movieService)
 	watchedService := services.NewWatchedService(db, listService, movieService)
 	authService := services.NewAuthService(db, listService, cfg.SessionExpiry, cfg.HTTPS, cfg.AdminDefaultPassword)
 
-	router := routes.NewRouter(db, movieService, watchedService, listService, authService)
+	router := routes.NewRouter(db, movieService, tmdbImageService, watchedService, listService, authService)
 
 	server := &http.Server{
 		Addr:         ":" + cfg.Port,
@@ -73,8 +90,9 @@ func RunServer(cfg Config) {
 		WriteTimeout: cfg.Timeout,
 	}
 
-	ticker := time.NewTicker(cfg.SessionExpiry)
-	done := make(chan bool)
+	sessionCleanupTicker := time.NewTicker(cfg.SessionExpiry)
+	imageCacheCleanupTicker := time.NewTicker(cfg.ImageCleanupInterval)
+	done := make(chan struct{})
 
 	// clean expired sessions
 	go func() {
@@ -82,13 +100,27 @@ func RunServer(cfg Config) {
 			select {
 			case <-done:
 				return
-			case <-ticker.C:
+			case <-sessionCleanupTicker.C:
 				err := authService.CleanupExpiredSessions(context.Background())
 				if err != nil {
 					log.Error("failed to cleanup expired sessions", "error", err)
 					// Continue to next tick instead of returning
 				} else {
 					log.Debug("successfully cleaned up expired sessions")
+				}
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-imageCacheCleanupTicker.C:
+				err := tmdbImageService.CleanupExpiredCache()
+				if err != nil {
+					log.Error("failed to cleanup expired image cache", "error", err)
 				}
 			}
 		}
@@ -107,6 +139,9 @@ func RunServer(cfg Config) {
 
 	sig := <-sigChan
 	log.Info("received signal, shutting down gracefully", "signal", sig)
+	close(done)
+	sessionCleanupTicker.Stop()
+	imageCacheCleanupTicker.Stop()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()

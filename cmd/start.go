@@ -20,6 +20,8 @@ var startCmd = &cobra.Command{
 			TMDBAPIKey:           viper.GetString("tmdb_api_key"),
 			TMDBPosterPrefix:     viper.GetString("tmdb_poster_prefix"),
 			CacheTTL:             viper.GetDuration("cache_ttl"),
+			ImageCacheTTL:        viper.GetDuration("image_cache_ttl"),
+			ImageCleanupInterval: viper.GetDuration("image_cleanup_interval"),
 			SessionExpiry:        viper.GetDuration("session_expiry"),
 			ShutdownTimeout:      viper.GetDuration("shutdown_timeout"),
 			HTTPS:                viper.GetBool("https"),
@@ -55,6 +57,8 @@ func init() {
 	viper.SetDefault("db_name", "db.db")
 	viper.SetDefault("tmdb_poster_prefix", "https://image.tmdb.org/t/p/w500")
 	viper.SetDefault("cache_ttl", "168h")
+	viper.SetDefault("image_cache_ttl", "720h")
+	viper.SetDefault("image_cleanup_interval", "48h")
 	viper.SetDefault("session_expiry", "24h")
 	viper.SetDefault("shutdown_timeout", "30s")
 	viper.SetDefault("https", false)

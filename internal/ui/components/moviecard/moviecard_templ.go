@@ -14,9 +14,9 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/aspectratio"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/utils"
 )
 
-const tmdbBase = "https://image.tmdb.org/t/p/w500"
 const defaultIndicatorID = "#movie-loading"
 
 type Props struct {
@@ -198,9 +198,9 @@ func cardContent(props Props) templ.Component {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var9 string
-					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(tmdbBase + props.PosterPath)
+					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(utils.TMDBImageURL("w500", props.PosterPath))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/moviecard/moviecard.templ`, Line: 65, Col: 39}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/moviecard/moviecard.templ`, Line: 65, Col: 56}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 					if templ_7745c5c3_Err != nil {

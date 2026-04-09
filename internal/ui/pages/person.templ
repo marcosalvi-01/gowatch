@@ -19,9 +19,6 @@ import (
 )
 
 const (
-	personBackdropImageBaseURL  = "https://image.tmdb.org/t/p/w1280"
-	personProfileImageBaseURL   = "https://image.tmdb.org/t/p/w780"
-	personCreditPosterBaseURL   = "https://image.tmdb.org/t/p/w342"
 	personBiographyFallbackText = "No biography available yet."
 	personUnknownDetailValue    = "N/A"
 	personMovieMediaType        = "movie"
@@ -61,7 +58,7 @@ templ personHero(person models.PersonDetailsPage) {
 templ personBackdropHero(person models.PersonDetailsPage, backdropPath string) {
 	<div class="relative w-full h-[40vh] min-h-[350px] max-h-[500px] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] overflow-hidden">
 		<img
-			src={ personBackdropImageBaseURL + backdropPath }
+			src={ utils.TMDBImageURL("w1280", backdropPath) }
 			alt={ person.Name + " backdrop" }
 			class="absolute inset-0 w-full h-full object-cover object-top"
 		/>
@@ -98,7 +95,7 @@ templ personHeroProfile(person models.PersonDetailsPage) {
 		<div class="aspect-[2/3] rounded-xl overflow-hidden">
 			if person.ProfilePath != "" {
 				<img
-					src={ personProfileImageBaseURL + person.ProfilePath }
+					src={ utils.TMDBImageURL("w780", person.ProfilePath) }
 					alt={ person.Name + " profile" }
 					class="h-full w-full object-cover"
 				/>
@@ -549,7 +546,7 @@ templ personCreditPoster(posterPath, title string) {
 	<div class="h-20 w-14 shrink-0 overflow-hidden rounded border border-border/50 bg-muted">
 		if posterPath != "" {
 			<img
-				src={ personCreditPosterBaseURL + posterPath }
+				src={ utils.TMDBImageURL("w342", posterPath) }
 				alt={ title }
 				loading="lazy"
 				class="h-full w-full object-cover"
