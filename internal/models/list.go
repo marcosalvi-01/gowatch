@@ -25,3 +25,9 @@ type ListEntry struct {
 	ID   int64
 	Name string
 }
+
+type ListGridData struct {
+	List           List
+	UpcomingMovies []MovieItem
+	ReleasedMovies []MovieItem
+}

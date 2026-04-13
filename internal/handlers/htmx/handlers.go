@@ -568,7 +568,9 @@ func (h *Handlers) ListMovieGrid(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := listgrid.ListGrid(*list).Render(ctx, w); err != nil {
+	gridData := h.listService.BuildListGridData(list, time.Now())
+
+	if err := listgrid.ListGrid(gridData).Render(ctx, w); err != nil {
 		log.Error("failed to render list grid", "listID", listIDStr, "error", err)
 		RenderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred, please try again.", 0)
 		return
