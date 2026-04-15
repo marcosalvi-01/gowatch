@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"unicode"
 
 	"github.com/marcosalvi-01/gowatch/internal/common"
@@ -12,14 +13,16 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/middleware"
 	"github.com/marcosalvi-01/gowatch/internal/services"
 	"github.com/marcosalvi-01/gowatch/internal/ui/pages"
-	"github.com/marcosalvi-01/gowatch/internal/utils"
 	"github.com/marcosalvi-01/gowatch/logging"
 
 	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 )
 
-const htmxRequestHeaderValue = "true"
+const (
+	htmxRequestHeaderValue = "true"
+	maxSearchQueryLength   = 255
+)
 
 var log = logging.Get("pages")
 
@@ -211,34 +214,48 @@ func (h *Handlers) PersonPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query().Get("q")
+	rawQuery := r.URL.Query().Get("q")
+	// don't use utils.TrimAndValidateString here because empty queries are valid (show empty search state)
+	query := strings.TrimSpace(rawQuery)
 
-	sanitizedQuery, err := utils.TrimAndValidateString(query, 255)
-	if err != nil {
-		log.Error("invalid search query", "query", query, "error", err)
+	if len(query) > maxSearchQueryLength {
+		log.Error("invalid search query", "query", query, "error", "input exceeds maximum length")
 		http.Error(w, "Invalid search query", http.StatusBadRequest)
 		return
 	}
 
-	log.Debug("serving search page", "query", sanitizedQuery)
+	log.Debug("serving search page", "query", query)
 
-	results, err := h.tmdbService.SearchMulti(sanitizedQuery)
+	// empty results page if the query is empty
+	if query == "" {
+		if r.Header.Get("HX-Request") == htmxRequestHeaderValue {
+			w.Header().Add("HX-Trigger", "refreshSidebar")
+			templ.Handler(pages.Search("", nil), templ.WithFragments("content")).ServeHTTP(w, r)
+		} else {
+			templ.Handler(pages.Search("", nil)).ServeHTTP(w, r)
+		}
+
+		log.Info("search page served successfully", "query", query, "resultCount", 0)
+		return
+	}
+
+	results, err := h.tmdbService.SearchMulti(query)
 	if err != nil {
-		log.Error("failed to search for movies and people", "query", sanitizedQuery, "error", err)
+		log.Error("failed to search for movies and people", "query", query, "error", err)
 		render500Error(w, r)
 		return
 	}
 
-	log.Debug("found search results", "query", sanitizedQuery, "resultCount", len(results))
+	log.Debug("found search results", "query", query, "resultCount", len(results))
 
 	if r.Header.Get("HX-Request") == htmxRequestHeaderValue {
 		w.Header().Add("HX-Trigger", "refreshSidebar")
-		templ.Handler(pages.Search(sanitizedQuery, results), templ.WithFragments("content")).ServeHTTP(w, r)
+		templ.Handler(pages.Search(query, results), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
-		templ.Handler(pages.Search(sanitizedQuery, results)).ServeHTTP(w, r)
+		templ.Handler(pages.Search(query, results)).ServeHTTP(w, r)
 	}
 
-	log.Info("search page served successfully", "query", sanitizedQuery, "resultCount", len(results))
+	log.Info("search page served successfully", "query", query, "resultCount", len(results))
 }
 
 func (h *Handlers) ListPage(w http.ResponseWriter, r *http.Request) {

@@ -670,13 +670,14 @@ func SearchBar(searchContent string) templ.Component {
 			Value:       searchContent,
 			Name:        "q",
 			Attributes: templ.Attributes{
-				"hx-get":       "/search",
-				"hx-trigger":   "keyup[key=='Enter']",
-				"hx-target":    "#main-content",
-				"hx-swap":      "innerHTML scroll:#main-scroll-container:top",
-				"hx-push-url":  "true",
-				"hx-include":   "this",
-				"hx-indicator": "#search-loading",
+				"hx-get":         "/search",
+				"hx-trigger":     "input changed delay:300ms, search",
+				"hx-target":      "#main-content",
+				"hx-swap":        "innerHTML scroll:#main-scroll-container:top",
+				"hx-replace-url": "true",
+				"hx-include":     "this",
+				"hx-indicator":   "#search-loading",
+				"hx-sync":        "this:replace",
 			},
 		}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
