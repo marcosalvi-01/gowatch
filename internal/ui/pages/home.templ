@@ -47,7 +47,7 @@ templ Home(userName string, data models.HomeData) {
 
 templ homeSectionHeader(title string, iconFn func(...icon.Props) templ.Component) {
 	<h2 class="text-xl font-semibold flex items-center gap-2">
-		@iconFn(icon.Props{Size: 20, Class: "text-primary"})
+		@iconFn(icon.Props{Class: "size-5 text-primary"})
 		{ title }
 	</h2>
 	}
@@ -116,16 +116,12 @@ templ homeRecentActivityCard(movies []models.WatchedMovieInDay) {
 									<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight">{ movie.MovieDetails.Movie.Title }</h3>
 									<div class="flex items-center justify-between">
 										<div class="flex items-center">
-											@icon.Calendar(icon.Props{Size: 12})
+											@icon.Calendar(icon.Props{Class: "size-3"})
 											<p class="ml-2 text-xs opacity-90">{ utils.FormatYear(movie.MovieDetails.Movie.ReleaseDate) }</p>
 										</div>
 										if movie.Rating != nil {
 											<div class="flex items-center">
-												@icon.Star(icon.Props{
-													Size:   12,
-													Fill:   "orange",
-													Stroke: "orange",
-												})
+												@icon.Star(icon.Props{Class: "size-3 fill-[orange] stroke-[orange]"})
 												<span class="ml-1 text-xs">{ fmt.Sprintf("%.1f", *movie.Rating) }</span>
 											</div>
 										}
@@ -145,7 +141,7 @@ templ homeRecentActivityCard(movies []models.WatchedMovieInDay) {
 						}) {
 							<div class="flex flex-col items-center justify-center gap-2 p-4 text-center">
 								<div class="p-2 bg-primary/10 rounded-full">
-									@icon.ArrowRight(icon.Props{Size: 20, Class: "text-primary"})
+									@icon.ArrowRight(icon.Props{Class: "size-5 text-primary"})
 								</div>
 								<p class="font-medium text-sm">See More</p>
 							</div>
@@ -187,7 +183,7 @@ templ homeWatchNextSection(movies []models.MovieItem, watchlistMovieCount int) {
 									<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight">{ movie.MovieDetails.Movie.Title }</h3>
 									<div class="flex items-center justify-between">
 										<div class="flex items-center">
-											@icon.Calendar(icon.Props{Size: 12})
+											@icon.Calendar(icon.Props{Class: "size-3"})
 											<p class="ml-2 text-xs opacity-90">{ utils.FormatYear(movie.MovieDetails.Movie.ReleaseDate) }</p>
 										</div>
 										<span class="text-xs font-semibold text-primary">{ fmt.Sprintf("#%d", i+1) }</span>
@@ -206,7 +202,7 @@ templ homeWatchNextSection(movies []models.MovieItem, watchlistMovieCount int) {
 							}) {
 								<div class="flex flex-col items-center justify-center gap-2 p-4 text-center">
 									<div class="p-2 bg-primary/10 rounded-full">
-										@icon.ArrowRight(icon.Props{Size: 20, Class: "text-primary"})
+										@icon.ArrowRight(icon.Props{Class: "size-5 text-primary"})
 									</div>
 									<p class="font-medium text-sm">Watchlist</p>
 								</div>
@@ -265,7 +261,7 @@ templ HomeLists(lists []models.ListEntry) {
 							}) {
 								<div class="flex flex-col items-center justify-center gap-2 p-4 text-center">
 									<div class="p-2 bg-primary/10 rounded-full">
-										@icon.Plus(icon.Props{Size: 20, Class: "text-primary"})
+										@icon.Plus(icon.Props{Class: "size-5 text-primary"})
 									</div>
 									<p class="font-medium text-sm">New List</p>
 								</div>
@@ -279,7 +275,7 @@ templ HomeLists(lists []models.ListEntry) {
 }
 
 templ HomeLoading() {
-	<div id="home-loading" class="htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none overflow-hidden">
+	<div id="home-loading" class="htmx-indicator absolute inset-0 bg-background z-30 pointer-events-none overflow-hidden">
 		<div class="p-4 space-y-7 sm:space-y-8">
 			// Header
 			<div class="space-y-2">

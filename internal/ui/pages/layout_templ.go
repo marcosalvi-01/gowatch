@@ -258,7 +258,7 @@ func mainContentLoading() templ.Component {
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<div id=\"main-content-loading\" class=\"htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none\"><div class=\"flex flex-col justify-center items-center h-full p-8\"><div class=\"w-full max-w-3xl space-y-6\"><div class=\"space-y-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<div id=\"main-content-loading\" class=\"htmx-indicator absolute inset-0 bg-background z-30 pointer-events-none\"><div class=\"flex flex-col justify-center items-center h-full p-8\"><div class=\"w-full max-w-3xl space-y-6\"><div class=\"space-y-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -656,10 +656,7 @@ func SearchBar(searchContent string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = icon.Search(icon.Props{
-			Class: "absolute left-3 text-muted-foreground",
-			Size:  20,
-		}).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = icon.Search(icon.Props{Class: "absolute left-3 size-5 text-muted-foreground"}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

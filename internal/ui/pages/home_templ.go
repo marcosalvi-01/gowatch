@@ -174,7 +174,7 @@ func homeSectionHeader(title string, iconFn func(...icon.Props) templ.Component)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = iconFn(icon.Props{Size: 20, Class: "text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = iconFn(icon.Props{Class: "size-5 text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -538,7 +538,7 @@ func homeRecentActivityCard(movies []models.WatchedMovieInDay) templ.Component {
 								if templ_7745c5c3_Err != nil {
 									return templ_7745c5c3_Err
 								}
-								templ_7745c5c3_Err = icon.Calendar(icon.Props{Size: 12}).Render(ctx, templ_7745c5c3_Buffer)
+								templ_7745c5c3_Err = icon.Calendar(icon.Props{Class: "size-3"}).Render(ctx, templ_7745c5c3_Buffer)
 								if templ_7745c5c3_Err != nil {
 									return templ_7745c5c3_Err
 								}
@@ -564,11 +564,7 @@ func homeRecentActivityCard(movies []models.WatchedMovieInDay) templ.Component {
 									if templ_7745c5c3_Err != nil {
 										return templ_7745c5c3_Err
 									}
-									templ_7745c5c3_Err = icon.Star(icon.Props{
-										Size:   12,
-										Fill:   "orange",
-										Stroke: "orange",
-									}).Render(ctx, templ_7745c5c3_Buffer)
+									templ_7745c5c3_Err = icon.Star(icon.Props{Class: "size-3 fill-[orange] stroke-[orange]"}).Render(ctx, templ_7745c5c3_Buffer)
 									if templ_7745c5c3_Err != nil {
 										return templ_7745c5c3_Err
 									}
@@ -579,7 +575,7 @@ func homeRecentActivityCard(movies []models.WatchedMovieInDay) templ.Component {
 									var templ_7745c5c3_Var22 string
 									templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", *movie.Rating))
 									if templ_7745c5c3_Err != nil {
-										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 129, Col: 75}
+										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 125, Col: 75}
 									}
 									_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 									if templ_7745c5c3_Err != nil {
@@ -626,7 +622,7 @@ func homeRecentActivityCard(movies []models.WatchedMovieInDay) templ.Component {
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = icon.ArrowRight(icon.Props{Size: 20, Class: "text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
+						templ_7745c5c3_Err = icon.ArrowRight(icon.Props{Class: "size-5 text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
@@ -760,7 +756,7 @@ func homeWatchNextSection(movies []models.MovieItem, watchlistMovieCount int) te
 					var templ_7745c5c3_Var28 string
 					templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d in watchlist", watchlistMovieCount))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 172, Col: 100}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 168, Col: 100}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 					if templ_7745c5c3_Err != nil {
@@ -844,7 +840,7 @@ func homeWatchNextSection(movies []models.MovieItem, watchlistMovieCount int) te
 							var templ_7745c5c3_Var33 string
 							templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(movie.MovieDetails.Movie.Title)
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 187, Col: 101}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 183, Col: 101}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 							if templ_7745c5c3_Err != nil {
@@ -854,7 +850,7 @@ func homeWatchNextSection(movies []models.MovieItem, watchlistMovieCount int) te
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
 							}
-							templ_7745c5c3_Err = icon.Calendar(icon.Props{Size: 12}).Render(ctx, templ_7745c5c3_Buffer)
+							templ_7745c5c3_Err = icon.Calendar(icon.Props{Class: "size-3"}).Render(ctx, templ_7745c5c3_Buffer)
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
 							}
@@ -865,7 +861,7 @@ func homeWatchNextSection(movies []models.MovieItem, watchlistMovieCount int) te
 							var templ_7745c5c3_Var34 string
 							templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs(utils.FormatYear(movie.MovieDetails.Movie.ReleaseDate))
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 191, Col: 102}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 187, Col: 102}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 							if templ_7745c5c3_Err != nil {
@@ -878,7 +874,7 @@ func homeWatchNextSection(movies []models.MovieItem, watchlistMovieCount int) te
 							var templ_7745c5c3_Var35 string
 							templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("#%d", i+1))
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 193, Col: 84}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/home.templ`, Line: 189, Col: 84}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 							if templ_7745c5c3_Err != nil {
@@ -924,7 +920,7 @@ func homeWatchNextSection(movies []models.MovieItem, watchlistMovieCount int) te
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = icon.ArrowRight(icon.Props{Size: 20, Class: "text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
+						templ_7745c5c3_Err = icon.ArrowRight(icon.Props{Class: "size-5 text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
@@ -1094,7 +1090,7 @@ func HomeLists(lists []models.ListEntry) templ.Component {
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = icon.Plus(icon.Props{Size: 20, Class: "text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
+						templ_7745c5c3_Err = icon.Plus(icon.Props{Class: "size-5 text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
@@ -1163,7 +1159,7 @@ func HomeLoading() templ.Component {
 			templ_7745c5c3_Var42 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 68, "<div id=\"home-loading\" class=\"htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none overflow-hidden\"><div class=\"p-4 space-y-7 sm:space-y-8\"><div class=\"space-y-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 68, "<div id=\"home-loading\" class=\"htmx-indicator absolute inset-0 bg-background z-30 pointer-events-none overflow-hidden\"><div class=\"p-4 space-y-7 sm:space-y-8\"><div class=\"space-y-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

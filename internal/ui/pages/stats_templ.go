@@ -171,7 +171,7 @@ func statsSectionHeader(title string, iconFn func(...icon.Props) templ.Component
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = iconFn(icon.Props{Size: 20, Class: "text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = iconFn(icon.Props{Class: "size-5 text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1943,7 +1943,7 @@ func ratingMetricCard(label, value, detail string, iconFunc func(...icon.Props) 
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = iconFunc(icon.Props{Size: 18, Class: "text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = iconFunc(icon.Props{Class: "size-[18px] text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -2019,7 +2019,7 @@ func theaterVsHomeMetricCard(data []models.TheaterRating) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = icon.Film(icon.Props{Size: 18, Class: "text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
+					templ_7745c5c3_Err = icon.Film(icon.Props{Class: "size-[18px] text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -2084,7 +2084,7 @@ func theaterVsHomeMetricCard(data []models.TheaterRating) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = icon.Film(icon.Props{Size: 18, Class: "text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
+					templ_7745c5c3_Err = icon.Film(icon.Props{Class: "size-[18px] text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -3149,7 +3149,7 @@ func moviePosterThumb(posterPath, title string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = icon.Film(icon.Props{Size: 14}).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = icon.Film(icon.Props{Class: "size-[14px]"}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -3951,7 +3951,7 @@ func statsMetricCard(label, value string, iconFunc func(...icon.Props) templ.Com
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = iconFunc(icon.Props{Size: 16, Class: "text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = iconFunc(icon.Props{Class: "size-4 text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -4001,7 +4001,7 @@ func statsCharts(stats *models.WatchedStats) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = icon.ChartBar(icon.Props{Size: 20}).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = icon.ChartBar(icon.Props{Class: "size-5"}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -4185,7 +4185,7 @@ func statsCharts(stats *models.WatchedStats) templ.Component {
 				}
 				switch stats.MonthlyMoviesTrendDirection {
 				case models.TrendUp:
-					templ_7745c5c3_Err = icon.TrendingUp(icon.Props{Size: 16, Class: "text-green-500"}).Render(ctx, templ_7745c5c3_Buffer)
+					templ_7745c5c3_Err = icon.TrendingUp(icon.Props{Class: "size-4 text-green-500"}).Render(ctx, templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -4207,7 +4207,7 @@ func statsCharts(stats *models.WatchedStats) templ.Component {
 						return templ_7745c5c3_Err
 					}
 				case models.TrendDown:
-					templ_7745c5c3_Err = icon.TrendingDown(icon.Props{Size: 16, Class: "text-red-500"}).Render(ctx, templ_7745c5c3_Buffer)
+					templ_7745c5c3_Err = icon.TrendingDown(icon.Props{Class: "size-4 text-red-500"}).Render(ctx, templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -4439,7 +4439,7 @@ func statsCharts(stats *models.WatchedStats) templ.Component {
 				}
 				switch stats.MonthlyHoursTrendDirection {
 				case models.TrendUp:
-					templ_7745c5c3_Err = icon.TrendingUp(icon.Props{Size: 16, Class: "text-green-500"}).Render(ctx, templ_7745c5c3_Buffer)
+					templ_7745c5c3_Err = icon.TrendingUp(icon.Props{Class: "size-4 text-green-500"}).Render(ctx, templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -4461,7 +4461,7 @@ func statsCharts(stats *models.WatchedStats) templ.Component {
 						return templ_7745c5c3_Err
 					}
 				case models.TrendDown:
-					templ_7745c5c3_Err = icon.TrendingDown(icon.Props{Size: 16, Class: "text-red-500"}).Render(ctx, templ_7745c5c3_Buffer)
+					templ_7745c5c3_Err = icon.TrendingDown(icon.Props{Class: "size-4 text-red-500"}).Render(ctx, templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -5169,7 +5169,7 @@ func StatsLoading() templ.Component {
 			templ_7745c5c3_Var204 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 213, "<div id=\"stats-loading\" class=\"htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none overflow-hidden\"><div class=\"p-4 space-y-8\"><div class=\"space-y-4\"><div class=\"flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3\"><div class=\"space-y-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 213, "<div id=\"stats-loading\" class=\"htmx-indicator absolute inset-0 bg-background z-30 pointer-events-none overflow-hidden\"><div class=\"p-4 space-y-8\"><div class=\"space-y-4\"><div class=\"flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3\"><div class=\"space-y-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

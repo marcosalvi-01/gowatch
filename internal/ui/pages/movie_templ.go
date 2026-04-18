@@ -2279,7 +2279,7 @@ func detailsSection(movie models.MovieDetails) templ.Component {
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
 							}
-							templ_7745c5c3_Err = icon.ExternalLink(icon.Props{Size: 14}).Render(ctx, templ_7745c5c3_Buffer)
+							templ_7745c5c3_Err = icon.ExternalLink(icon.Props{Class: "size-[14px]"}).Render(ctx, templ_7745c5c3_Buffer)
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
 							}
@@ -3087,16 +3087,12 @@ func watchLocationIcon(inTheaters bool) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if inTheaters {
-			templ_7745c5c3_Err = icon.Popcorn(icon.Props{
-				Size: 18,
-			}).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = icon.Popcorn(icon.Props{Class: "size-[18px]"}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = icon.House(icon.Props{
-				Size: 18,
-			}).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = icon.House(icon.Props{Class: "size-[18px]"}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -3305,7 +3301,7 @@ func MovieLoading() templ.Component {
 			templ_7745c5c3_Var139 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 151, "<div id=\"movie-loading\" class=\"htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none overflow-hidden\"><div class=\"p-4 space-y-8\"><div class=\"mb-6\"><div class=\"p-4 sm:p-6 md:p-8 lg:p-10\"><div class=\"max-w-6xl mx-auto\"><div class=\"flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start\"><div class=\"hidden lg:block flex-shrink-0\"><div class=\"w-32 md:w-40 lg:w-48 xl:w-52\"><div class=\"aspect-[2/3] rounded-lg overflow-hidden shadow-lg\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 151, "<div id=\"movie-loading\" class=\"htmx-indicator absolute inset-0 bg-background z-30 pointer-events-none overflow-hidden\"><div class=\"p-4 space-y-8\"><div class=\"mb-6\"><div class=\"p-4 sm:p-6 md:p-8 lg:p-10\"><div class=\"max-w-6xl mx-auto\"><div class=\"flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start\"><div class=\"hidden lg:block flex-shrink-0\"><div class=\"w-32 md:w-40 lg:w-48 xl:w-52\"><div class=\"aspect-[2/3] rounded-lg overflow-hidden shadow-lg\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

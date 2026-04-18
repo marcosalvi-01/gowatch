@@ -75,7 +75,7 @@ func Error500() templ.Component {
 						}()
 					}
 					ctx = templ.InitializeContext(ctx)
-					templ_7745c5c3_Err = icon.TriangleAlert(icon.Props{Size: 64, Class: "mx-auto mb-6 text-destructive"}).Render(ctx, templ_7745c5c3_Buffer)
+					templ_7745c5c3_Err = icon.TriangleAlert(icon.Props{Class: "mx-auto mb-6 size-16 text-destructive"}).Render(ctx, templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}

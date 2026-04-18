@@ -118,16 +118,12 @@ templ movieCardDetails(movie models.MovieItem, releaseDateLabel string) {
 		</h3>
 		<div class="flex items-center justify-between text-xs">
 			<div class="flex items-center text-muted-foreground">
-				@icon.Calendar(icon.Props{Size: 12})
+				@icon.Calendar(icon.Props{Class: "size-3"})
 				<span class="ml-1">{ releaseDateLabel }</span>
 			</div>
 			if movie.MovieDetails.Movie.VoteAverage > 0 {
 				<div class="flex items-center">
-					@icon.Star(icon.Props{
-						Size:   12,
-						Fill:   "orange",
-						Stroke: "orange",
-					})
+					@icon.Star(icon.Props{Class: "size-3 fill-[orange] stroke-[orange]"})
 					<span class="ml-1">{ fmt.Sprintf("%.1f", movie.MovieDetails.Movie.VoteAverage) }</span>
 				</div>
 			}
@@ -168,7 +164,7 @@ templ listMovieCardTopHoverList(listID int64, movie models.MovieItem, isWatchlis
 					Variant: button.VariantDestructive,
 					Class:   "h-6 w-6 shrink-0",
 				}) {
-					@icon.Trash(icon.Props{Size: 12})
+					@icon.Trash(icon.Props{Class: "size-3"})
 				}
 			}
 		</div>

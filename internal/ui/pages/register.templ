@@ -23,7 +23,7 @@ templ Register() {
 					@card.Title(card.TitleProps{
 						Class: "flex items-center gap-2",
 					}) {
-						@icon.UserPlus(icon.Props{Size: 20})
+						@icon.UserPlus(icon.Props{Class: "size-5"})
 						Create Account
 					}
 				}
@@ -97,7 +97,7 @@ templ Register() {
 			}
 			// Simple footer
 			<p class="text-center text-xs text-muted-foreground">
-				@icon.Popcorn(icon.Props{Size: 24, Class: "inline-block mr-2 align-text-center"})
+				@icon.Popcorn(icon.Props{Class: "inline-block mr-2 size-6 align-text-center"})
 				Your personal movie diary awaits
 			</p>
 		</div>

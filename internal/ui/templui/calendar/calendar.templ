@@ -1,4 +1,4 @@
-// templui component calendar - version: v1.1.0 installed by templui v1.1.0
+// templui component calendar - version: v1.10.0 installed by templui v1.10.0
 // 📚 Documentation: https://templui.io/docs/components/calendar
 package calendar
 
@@ -35,15 +35,15 @@ var (
 )
 
 type Props struct {
-	ID                string
-	Class             string
-	LocaleTag         LocaleTag
-	Value             *time.Time
-	Name              string
-	InitialMonth      int  // Optional: 0-11 (Default: current or from Value). Controls the initially displayed month view.
-	InitialYear       int  // Optional: (Default: current or from Value). Controls the initially displayed year view.
-	StartOfWeek       *Day // Optional: 0-6 [Sun-Sat] (Default: 1).
-	RenderHiddenInput bool // Optional: Whether to render the hidden input (Default: true). Set to false when used inside DatePicker.
+	ID              string
+	Class           string
+	LocaleTag       LocaleTag
+	Value           *time.Time
+	Name            string
+	InitialMonth    int  // Optional: 0-11 (Default: current or from Value). Controls the initially displayed month view.
+	InitialYear     int  // Optional: (Default: current or from Value). Controls the initially displayed year view.
+	StartOfWeek     *Day // Optional: 0-6 [Sun-Sat] (Default: 1).
+	HideHiddenInput bool // Optional: Hide the hidden input when a parent component owns form submission.
 }
 
 templ Calendar(props ...Props) {
@@ -61,13 +61,6 @@ templ Calendar(props ...Props) {
 		}
 		if p.LocaleTag == "" {
 			p.LocaleTag = LocaleDefaultTag
-		}
-		// Default to rendering hidden input unless explicitly set to false
-		if p.RenderHiddenInput == false && len(props) > 0 {
-			// Only respect false if it was explicitly passed
-			p.RenderHiddenInput = props[0].RenderHiddenInput
-		} else {
-			p.RenderHiddenInput = true
 		}
 
 		initialStartOfWeek := Monday
@@ -106,8 +99,12 @@ templ Calendar(props ...Props) {
 		// Generate short month names (English only, JS will update with localized)
 		monthNames := []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
 	}}
-	<div class={ p.Class } id={ p.ID + "-wrapper" } data-tui-calendar-wrapper="true">
-		if p.RenderHiddenInput {
+	<div
+		class={ utils.TwMerge("inline-flex flex-col [--cell-size:2rem]", p.Class) }
+		id={ p.ID + "-wrapper" }
+		data-tui-calendar-wrapper="true"
+	>
+		if !p.HideHiddenInput {
 			<input
 				type="hidden"
 				name={ p.Name }
@@ -118,6 +115,7 @@ templ Calendar(props ...Props) {
 		}
 		<div
 			id={ p.ID }
+			class="inline-flex flex-col"
 			data-tui-calendar-container="true"
 			data-tui-calendar-locale-tag={ string(p.LocaleTag) }
 			data-tui-calendar-initial-month={ strconv.Itoa(initialMonth) }
@@ -126,7 +124,7 @@ templ Calendar(props ...Props) {
 			data-tui-calendar-start-of-week={ int(initialStartOfWeek) }
 		>
 			<!-- Calendar Header -->
-			<div class="flex items-center gap-2 mb-4">
+			<div class="flex w-full items-center gap-2 mb-4">
 				<button
 					type="button"
 					data-tui-calendar-prev
@@ -152,7 +150,7 @@ templ Calendar(props ...Props) {
 						</select>
 						<span class="select-none font-medium rounded-md px-2 flex items-center justify-center gap-1 text-sm h-7 pointer-events-none" aria-hidden="true">
 							<span id={ p.ID + "-month-value" }>{ monthNames[currentMonth] }</span>
-							@icon.ChevronDown(icon.Props{Size: 14, Class: "text-muted-foreground"})
+							@icon.ChevronDown(icon.Props{Class: "size-3.5 text-muted-foreground"})
 						</span>
 					</div>
 					<!-- Year Select -->
@@ -172,7 +170,7 @@ templ Calendar(props ...Props) {
 						</select>
 						<span class="select-none font-medium rounded-md px-2 flex items-center justify-center gap-1 text-sm h-7 pointer-events-none" aria-hidden="true">
 							<span id={ p.ID + "-year-value" }>{ strconv.Itoa(currentYear) }</span>
-							@icon.ChevronDown(icon.Props{Size: 14, Class: "text-muted-foreground"})
+							@icon.ChevronDown(icon.Props{Class: "size-3.5 text-muted-foreground"})
 						</span>
 					</div>
 				</div>
@@ -185,13 +183,17 @@ templ Calendar(props ...Props) {
 				</button>
 			</div>
 			<!-- Weekday Headers -->
-			<div data-tui-calendar-weekdays class="grid grid-cols-7 gap-1 mb-1 place-items-center"></div>
+			<div data-tui-calendar-weekdays class="inline-grid grid-cols-[repeat(7,var(--cell-size))] gap-1 mb-1 place-items-center"></div>
 			<!-- Calendar Day Grid -->
-			<div data-tui-calendar-days class="grid grid-cols-7 gap-1 place-items-center"></div>
+			<div data-tui-calendar-days class="inline-grid grid-cols-[repeat(7,var(--cell-size))] gap-1 place-items-center"></div>
 		</div>
 	</div>
 }
 
+var scriptOnce = templ.NewOnceHandle()
+
 templ Script() {
-	<script defer nonce={ templ.GetNonce(ctx) } src={ "/static/js/calendar.min.js?v=" + utils.ScriptVersion }></script>
+	@scriptOnce.Once() {
+		@utils.ComponentScript("calendar")
+	}
 }

@@ -65,16 +65,12 @@ templ Search(query string, results []models.SearchResult) {
 										<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight">{ result.Title }</h3>
 										<div class="flex items-center justify-between">
 											<div class="flex items-center">
-												@icon.Calendar(icon.Props{Size: 12})
+										@icon.Calendar(icon.Props{Class: "size-3"})
 												<p class="ml-2 text-xs opacity-90">{ result.SecondaryText }</p>
 											</div>
 											if result.VoteAverage > 0 {
 												<div class="flex items-center">
-													@icon.Star(icon.Props{
-														Size:   12,
-														Fill:   "orange",
-														Stroke: "orange",
-													})
+											@icon.Star(icon.Props{Class: "size-3 fill-[orange] stroke-[orange]"})
 													<span class="ml-1 text-xs">{ fmt.Sprintf("%.1f", result.VoteAverage) }</span>
 												</div>
 											}
@@ -82,7 +78,7 @@ templ Search(query string, results []models.SearchResult) {
 									} else {
 									<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight">{ result.Title }</h3>
 									<div class="flex items-center">
-										@icon.User(icon.Props{Size: 12})
+									@icon.User(icon.Props{Class: "size-3"})
 										<p class="ml-2 text-xs opacity-90">{ result.SecondaryText }</p>
 									</div>
 								}
@@ -107,11 +103,7 @@ templ Search(query string, results []models.SearchResult) {
 							}
 						</p>
 						<div class="text-gray-500 flex flex-col items-center">
-							@icon.Search(icon.Props{
-								Size:  40,
-								Color: "gray",
-								Class: "mb-2 opacity-50",
-							})
+						@icon.Search(icon.Props{Class: "mb-2 size-10 text-[gray] opacity-50"})
 							<p class="text-xs">No movies or people to display</p>
 						</div>
 					</div>
@@ -122,7 +114,7 @@ templ Search(query string, results []models.SearchResult) {
 }
 
 templ SearchLoading() {
-	<div id="search-loading" class="htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none overflow-hidden">
+	<div id="search-loading" class="htmx-indicator absolute inset-0 bg-background z-30 pointer-events-none overflow-hidden">
 		<div class="p-4">
 			<div class="flex flex-wrap gap-4 md:gap-6 w-full">
 				for range 20 {

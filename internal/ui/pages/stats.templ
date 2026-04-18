@@ -59,7 +59,7 @@ templ Stats(stats *models.WatchedStats, limit int) {
 
 templ statsSectionHeader(title string, iconFn func(...icon.Props) templ.Component) {
 	<h2 class="text-xl font-semibold flex items-center gap-2">
-		@iconFn(icon.Props{Size: 20, Class: "text-primary"})
+		@iconFn(icon.Props{Class: "size-5 text-primary"})
 		{ title }
 	</h2>
 }
@@ -421,7 +421,7 @@ templ ratingMetricCard(label, value, detail string, iconFunc func(...icon.Props)
 					<div class="mt-2 text-sm text-muted-foreground">{ detail }</div>
 				</div>
 				<div class="rounded-md bg-primary/10 p-2 shrink-0">
-					@iconFunc(icon.Props{Size: 18, Class: "text-primary"})
+					@iconFunc(icon.Props{Class: "size-[18px] text-primary"})
 				</div>
 			</div>
 		}
@@ -441,7 +441,7 @@ templ theaterVsHomeMetricCard(data []models.TheaterRating) {
 						<div class="mt-2 text-sm text-muted-foreground">No ratings yet</div>
 					</div>
 					<div class="rounded-md bg-primary/10 p-2 shrink-0">
-						@icon.Film(icon.Props{Size: 18, Class: "text-primary"})
+						@icon.Film(icon.Props{Class: "size-[18px] text-primary"})
 					</div>
 				</div>
 			} else {
@@ -462,7 +462,7 @@ templ theaterVsHomeMetricCard(data []models.TheaterRating) {
 						</div>
 					</div>
 					<div class="rounded-md bg-primary/10 p-2 shrink-0">
-						@icon.Film(icon.Props{Size: 18, Class: "text-primary"})
+						@icon.Film(icon.Props{Class: "size-[18px] text-primary"})
 					</div>
 				</div>
 			}
@@ -707,7 +707,7 @@ templ moviePosterThumb(posterPath, title string) {
 			/>
 		} else {
 			<div class="flex h-full w-full items-center justify-center text-muted-foreground">
-				@icon.Film(icon.Props{Size: 14})
+				@icon.Film(icon.Props{Class: "size-[14px]"})
 			</div>
 		}
 	</div>
@@ -886,7 +886,7 @@ templ statsMetricCard(label, value string, iconFunc func(...icon.Props) templ.Co
 		<div class="flex items-start justify-between gap-2">
 			<div class="text-xs text-muted-foreground uppercase tracking-wide">{ label }</div>
 			<div class="rounded-md bg-primary/10 p-1.5">
-				@iconFunc(icon.Props{Size: 16, Class: "text-primary"})
+				@iconFunc(icon.Props{Class: "size-4 text-primary"})
 			</div>
 		</div>
 		<div class="mt-3 text-xl sm:text-2xl font-semibold leading-none">{ value }</div>
@@ -897,7 +897,7 @@ templ statsCharts(stats *models.WatchedStats) {
 	<div class="space-y-8">
 		<div>
 			<h2 class="text-xl font-semibold flex items-center gap-2">
-				@icon.ChartBar(icon.Props{Size: 20})
+				@icon.ChartBar(icon.Props{Class: "size-5"})
 				Distribution
 			</h2>
 		</div>
@@ -938,10 +938,10 @@ templ statsCharts(stats *models.WatchedStats) {
 					<div class="mt-8 flex items-center justify-center gap-2 text-md">
 						switch stats.MonthlyMoviesTrendDirection {
 							case models.TrendUp:
-								@icon.TrendingUp(icon.Props{Size: 16, Class: "text-green-500"})
+								@icon.TrendingUp(icon.Props{Class: "size-4 text-green-500"})
 								<span class="text-green-500">+{ stats.MonthlyMoviesTrendValue }</span> movies this month
 							case models.TrendDown:
-								@icon.TrendingDown(icon.Props{Size: 16, Class: "text-red-500"})
+								@icon.TrendingDown(icon.Props{Class: "size-4 text-red-500"})
 								<span class="text-red-500">{ stats.MonthlyMoviesTrendValue }</span> movies this month
 							default:
 								<span class="text-muted-foreground">{ stats.MonthlyMoviesTrendValue }</span> movies this month
@@ -985,10 +985,10 @@ templ statsCharts(stats *models.WatchedStats) {
 					<div class="mt-8 flex items-center justify-center gap-2 text-md">
 						switch stats.MonthlyHoursTrendDirection {
 							case models.TrendUp:
-								@icon.TrendingUp(icon.Props{Size: 16, Class: "text-green-500"})
+								@icon.TrendingUp(icon.Props{Class: "size-4 text-green-500"})
 								<span class="text-green-500">+{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
 							case models.TrendDown:
-								@icon.TrendingDown(icon.Props{Size: 16, Class: "text-red-500"})
+								@icon.TrendingDown(icon.Props{Class: "size-4 text-red-500"})
 								<span class="text-red-500">{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
 							default:
 								<span class="text-muted-foreground">{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
@@ -1474,7 +1474,7 @@ func findTheaterRating(data []models.TheaterRating, inTheater bool) models.Theat
 }
 
 templ StatsLoading() {
-	<div id="stats-loading" class="htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none overflow-hidden">
+	<div id="stats-loading" class="htmx-indicator absolute inset-0 bg-background z-30 pointer-events-none overflow-hidden">
 		<div class="p-4 space-y-8">
 			// Header
 			<div class="space-y-4">

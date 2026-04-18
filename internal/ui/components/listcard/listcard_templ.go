@@ -86,7 +86,7 @@ func ListCard(props Props) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = icon.List(icon.Props{Size: 24, Class: "text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = icon.List(icon.Props{Class: "size-6 text-primary"}).Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
