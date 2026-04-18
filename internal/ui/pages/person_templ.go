@@ -2859,7 +2859,7 @@ func PersonLoading() templ.Component {
 			templ_7745c5c3_Var111 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 136, "<div id=\"person-loading\" class=\"htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none overflow-hidden\"><div class=\"p-4 space-y-8\"><div class=\"-m-4 mb-6 bg-muted/20 p-4 sm:p-6 md:p-8 lg:p-10\"><div class=\"max-w-6xl mx-auto\"><div class=\"flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start\"><div class=\"w-24 sm:w-32 md:w-40 lg:w-44 xl:w-48 flex-shrink-0 self-center lg:self-start\"><div class=\"aspect-[2/3] rounded-xl overflow-hidden\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 136, "<div id=\"person-loading\" class=\"htmx-indicator absolute inset-0 bg-background z-30 pointer-events-none overflow-hidden\"><div class=\"p-4 space-y-8\"><div class=\"-m-4 mb-6 bg-muted/20 p-4 sm:p-6 md:p-8 lg:p-10\"><div class=\"max-w-6xl mx-auto\"><div class=\"flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start\"><div class=\"w-24 sm:w-32 md:w-40 lg:w-44 xl:w-48 flex-shrink-0 self-center lg:self-start\"><div class=\"aspect-[2/3] rounded-xl overflow-hidden\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

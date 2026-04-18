@@ -258,7 +258,7 @@ func mainContentLoading() templ.Component {
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<div id=\"main-content-loading\" class=\"htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none\"><div class=\"flex flex-col justify-center items-center h-full p-8\"><div class=\"w-full max-w-3xl space-y-6\"><div class=\"space-y-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<div id=\"main-content-loading\" class=\"htmx-indicator absolute inset-0 bg-background z-30 pointer-events-none\"><div class=\"flex flex-col justify-center items-center h-full p-8\"><div class=\"w-full max-w-3xl space-y-6\"><div class=\"space-y-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

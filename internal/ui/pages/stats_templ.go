@@ -5169,7 +5169,7 @@ func StatsLoading() templ.Component {
 			templ_7745c5c3_Var204 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 213, "<div id=\"stats-loading\" class=\"htmx-indicator absolute inset-0 bg-background z-5 pointer-events-none overflow-hidden\"><div class=\"p-4 space-y-8\"><div class=\"space-y-4\"><div class=\"flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3\"><div class=\"space-y-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 213, "<div id=\"stats-loading\" class=\"htmx-indicator absolute inset-0 bg-background z-30 pointer-events-none overflow-hidden\"><div class=\"p-4 space-y-8\"><div class=\"space-y-4\"><div class=\"flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3\"><div class=\"space-y-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
