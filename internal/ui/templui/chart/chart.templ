@@ -1,4 +1,4 @@
-// templui component chart - version: v1.1.0 installed by templui v1.1.0
+// templui component chart - version: v1.10.0 installed by templui v1.10.0
 // 📚 Documentation: https://templui.io/docs/components/charts
 package chart
 
@@ -53,11 +53,17 @@ type Config struct {
 	BeginAtZero *bool    `json:"beginAtZero,omitempty"`
 }
 
+type ScriptConfig struct {
+	RawConfig       map[string]any `json:"rawConfig,omitempty"`
+	GeneratedConfig *Config        `json:"generatedConfig,omitempty"`
+}
+
 type Props struct {
 	ID          string
 	Variant     Variant
 	Data        Data
 	Options     Options
+	RawConfig   map[string]any
 	ShowLegend  bool
 	ShowXAxis   bool
 	ShowYAxis   bool
@@ -96,27 +102,37 @@ templ Chart(props ...Props) {
 		<canvas id={ canvasId } data-tui-chart-id={ dataId }></canvas>
 	</div>
 	{{
-		chartConfig := Config{
-			Type:        p.Variant,
-			Data:        p.Data,
-			Options:     p.Options,
-			ShowLegend:  p.ShowLegend,
-			ShowXAxis:   p.ShowXAxis,
-			ShowYAxis:   p.ShowYAxis,
-			ShowXLabels: p.ShowXLabels,
-			ShowYLabels: p.ShowYLabels,
-			ShowXGrid:   p.ShowXGrid,
-			ShowYGrid:   p.ShowYGrid,
-			Horizontal:  p.Horizontal,
-			Stacked:     p.Stacked,
-			YMin:        p.YMin,
-			YMax:        p.YMax,
-			BeginAtZero: p.BeginAtZero,
+		scriptConfig := ScriptConfig{
+			RawConfig: p.RawConfig,
+		}
+		if p.RawConfig == nil {
+			generatedConfig := Config{
+				Type:        p.Variant,
+				Data:        p.Data,
+				Options:     p.Options,
+				ShowLegend:  p.ShowLegend,
+				ShowXAxis:   p.ShowXAxis,
+				ShowYAxis:   p.ShowYAxis,
+				ShowXLabels: p.ShowXLabels,
+				ShowYLabels: p.ShowYLabels,
+				ShowXGrid:   p.ShowXGrid,
+				ShowYGrid:   p.ShowYGrid,
+				Horizontal:  p.Horizontal,
+				Stacked:     p.Stacked,
+				YMin:        p.YMin,
+				YMax:        p.YMax,
+				BeginAtZero: p.BeginAtZero,
+			}
+			scriptConfig.GeneratedConfig = &generatedConfig
 		}
 	}}
-	@templ.JSONScript(dataId, chartConfig)
+	@templ.JSONScript(dataId, scriptConfig)
 }
 
+var scriptOnce = templ.NewOnceHandle()
+
 templ Script() {
-	<script defer nonce={ templ.GetNonce(ctx) } src={ "/static/js/chart.min.js?v=" + utils.ScriptVersion }></script>
+	@scriptOnce.Once() {
+		@utils.ComponentScript("chart")
+	}
 }
