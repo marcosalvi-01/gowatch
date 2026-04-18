@@ -383,10 +383,7 @@ templ skeletonDashboard() {
 
 templ SearchBar(searchContent string) {
 	<div class="relative flex items-center flex-1">
-		@icon.Search(icon.Props{
-			Class: "absolute left-3 text-muted-foreground",
-			Size:  20,
-		})
+		@icon.Search(icon.Props{Class: "absolute left-3 size-5 text-muted-foreground"})
 		@input.Input(input.Props{
 			Type:        input.TypeSearch,
 			Placeholder: "Search movies or people...",

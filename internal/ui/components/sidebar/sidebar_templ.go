@@ -414,7 +414,7 @@ func Sidebar(props Props) templ.Component {
 										if templ_7745c5c3_Err != nil {
 											return templ_7745c5c3_Err
 										}
-										templ_7745c5c3_Err = icon.Import(icon.Props{Size: 16, Class: "mr-2"}).Render(ctx, templ_7745c5c3_Buffer)
+										templ_7745c5c3_Err = icon.Import(icon.Props{Class: "mr-2 size-4"}).Render(ctx, templ_7745c5c3_Buffer)
 										if templ_7745c5c3_Err != nil {
 											return templ_7745c5c3_Err
 										}
@@ -459,7 +459,7 @@ func Sidebar(props Props) templ.Component {
 									if templ_7745c5c3_Err != nil {
 										return templ_7745c5c3_Err
 									}
-									templ_7745c5c3_Err = icon.Download(icon.Props{Size: 16, Class: "mr-2"}).Render(ctx, templ_7745c5c3_Buffer)
+									templ_7745c5c3_Err = icon.Download(icon.Props{Class: "mr-2 size-4"}).Render(ctx, templ_7745c5c3_Buffer)
 									if templ_7745c5c3_Err != nil {
 										return templ_7745c5c3_Err
 									}
@@ -501,7 +501,7 @@ func Sidebar(props Props) templ.Component {
 									if templ_7745c5c3_Err != nil {
 										return templ_7745c5c3_Err
 									}
-									templ_7745c5c3_Err = icon.LogOut(icon.Props{Size: 16, Class: "mr-2"}).Render(ctx, templ_7745c5c3_Buffer)
+									templ_7745c5c3_Err = icon.LogOut(icon.Props{Class: "mr-2 size-4"}).Render(ctx, templ_7745c5c3_Buffer)
 									if templ_7745c5c3_Err != nil {
 										return templ_7745c5c3_Err
 									}
@@ -1341,7 +1341,7 @@ func createListTriggerButton() templ.Component {
 						}()
 					}
 					ctx = templ.InitializeContext(ctx)
-					templ_7745c5c3_Err = icon.Plus(icon.Props{Size: 18}).Render(ctx, templ_7745c5c3_Buffer)
+					templ_7745c5c3_Err = icon.Plus(icon.Props{Class: "size-[18px]"}).Render(ctx, templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}

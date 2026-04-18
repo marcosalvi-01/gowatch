@@ -126,7 +126,7 @@ func EmptyState(props Props) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = icon.FileUp(icon.Props{Size: 28}).Render(ctx, templ_7745c5c3_Buffer)
+					templ_7745c5c3_Err = icon.FileUp(icon.Props{Class: "size-7"}).Render(ctx, templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}

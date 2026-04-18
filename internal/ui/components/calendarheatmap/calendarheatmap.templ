@@ -67,7 +67,7 @@ templ CalendarHeatmapCard(data []models.DailyWatchCount) {
 										{{ tooltipID := fmt.Sprintf("calendar-heatmap-tooltip-%d-%d", dayIndex, week) }}
 										{{ tooltipLabel := fmt.Sprintf("%s - %d watches", currentDate.Format("2006-01-02"), count) }}
 										@tooltip.Tooltip() {
-											@tooltip.Trigger(tooltip.TriggerProps{For: tooltipID, Class: "inline-flex"}) {
+										@tooltip.Trigger(tooltip.TriggerProps{Class: "inline-flex"}) {
 												<div class={ heatmapCellClass(level) }></div>
 											}
 											@tooltip.Content(tooltip.ContentProps{ID: tooltipID, Position: tooltip.PositionTop, Class: "text-xs"}) {

@@ -594,7 +594,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 																	}()
 																}
 																ctx = templ.InitializeContext(ctx)
-																templ_7745c5c3_Err = icon.Key(icon.Props{Size: 16}).Render(ctx, templ_7745c5c3_Buffer)
+																templ_7745c5c3_Err = icon.Key(icon.Props{Class: "size-4"}).Render(ctx, templ_7745c5c3_Buffer)
 																if templ_7745c5c3_Err != nil {
 																	return templ_7745c5c3_Err
 																}
@@ -905,7 +905,7 @@ func AdminUsers(users []models.UserWithStats) templ.Component {
 																	}()
 																}
 																ctx = templ.InitializeContext(ctx)
-																templ_7745c5c3_Err = icon.Trash(icon.Props{Size: 16}).Render(ctx, templ_7745c5c3_Buffer)
+																templ_7745c5c3_Err = icon.Trash(icon.Props{Class: "size-4"}).Render(ctx, templ_7745c5c3_Buffer)
 																if templ_7745c5c3_Err != nil {
 																	return templ_7745c5c3_Err
 																}

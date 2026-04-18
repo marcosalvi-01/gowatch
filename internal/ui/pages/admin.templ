@@ -81,7 +81,7 @@ templ AdminUsers(users []models.UserWithStats) {
 																	Size:    button.SizeSm,
 																	Variant: button.VariantOutline,
 																}) {
-																	@icon.Key(icon.Props{Size: 16})
+															@icon.Key(icon.Props{Class: "size-4"})
 																}
 															}
 														}
@@ -127,7 +127,7 @@ templ AdminUsers(users []models.UserWithStats) {
 																	Variant: button.VariantDestructive,
 																	Type:    button.TypeButton,
 																}) {
-																	@icon.Trash(icon.Props{Size: 16})
+															@icon.Trash(icon.Props{Class: "size-4"})
 																}
 															}
 															@tooltip.Content() {

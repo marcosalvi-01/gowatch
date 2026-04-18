@@ -380,7 +380,7 @@ func personHeroProfile(person models.PersonDetailsPage) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = icon.User(icon.Props{Size: 30}).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = icon.User(icon.Props{Class: "size-[30px]"}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1407,7 +1407,7 @@ func personDetailsSection(person models.PersonDetailsPage) templ.Component {
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
 							}
-							templ_7745c5c3_Err = icon.ExternalLink(icon.Props{Size: 14}).Render(ctx, templ_7745c5c3_Buffer)
+							templ_7745c5c3_Err = icon.ExternalLink(icon.Props{Class: "size-[14px]"}).Render(ctx, templ_7745c5c3_Buffer)
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
 							}
@@ -1500,7 +1500,7 @@ func personDetailsSection(person models.PersonDetailsPage) templ.Component {
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
 							}
-							templ_7745c5c3_Err = icon.ExternalLink(icon.Props{Size: 14}).Render(ctx, templ_7745c5c3_Buffer)
+							templ_7745c5c3_Err = icon.ExternalLink(icon.Props{Class: "size-[14px]"}).Render(ctx, templ_7745c5c3_Buffer)
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
 							}
@@ -1922,7 +1922,7 @@ func actingCreditsSection(credits []models.PersonCredit) templ.Component {
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = icon.Star(icon.Props{Size: 12, Fill: "orange", Stroke: "orange"}).Render(ctx, templ_7745c5c3_Buffer)
+						templ_7745c5c3_Err = icon.Star(icon.Props{Class: "size-3 fill-[orange] stroke-[orange]"}).Render(ctx, templ_7745c5c3_Buffer)
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
@@ -2119,7 +2119,7 @@ func crewCreditsSection(credits []models.PersonCredit) templ.Component {
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = icon.Star(icon.Props{Size: 12, Fill: "orange", Stroke: "orange"}).Render(ctx, templ_7745c5c3_Buffer)
+						templ_7745c5c3_Err = icon.Star(icon.Props{Class: "size-3 fill-[orange] stroke-[orange]"}).Render(ctx, templ_7745c5c3_Buffer)
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
@@ -2470,7 +2470,7 @@ func personCreditCardBody(credit models.PersonCredit, roleText string, isMovieLi
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = icon.Star(icon.Props{Size: 12, Fill: "orange", Stroke: "orange"}).Render(ctx, templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = icon.Star(icon.Props{Class: "size-3 fill-[orange] stroke-[orange]"}).Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -2563,7 +2563,7 @@ func personCreditPoster(posterPath, title string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = icon.Film(icon.Props{Size: 14}).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = icon.Film(icon.Props{Class: "size-[14px]"}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

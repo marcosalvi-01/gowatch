@@ -487,7 +487,7 @@ templ detailsSection(movie models.MovieDetails) {
 						@table.Cell() {
 							<a href={ templ.URL("https://www.imdb.com/title/" + movie.IMDbID) } target="_blank" class="text-primary hover:underline flex items-center gap-1">
 								View on IMDB
-								@icon.ExternalLink(icon.Props{Size: 14})
+								@icon.ExternalLink(icon.Props{Class: "size-[14px]"})
 							</a>
 						}
 					}
@@ -685,13 +685,9 @@ templ watchHistoryItem(record models.WatchedMovieRecord) {
 templ watchLocationIcon(inTheaters bool) {
 	<div class="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center">
 		if inTheaters {
-			@icon.Popcorn(icon.Props{
-				Size: 18,
-			})
+			@icon.Popcorn(icon.Props{Class: "size-[18px]"})
 		} else {
-			@icon.House(icon.Props{
-				Size: 18,
-			})
+			@icon.House(icon.Props{Class: "size-[18px]"})
 		}
 	</div>
 }

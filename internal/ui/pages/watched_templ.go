@@ -193,7 +193,7 @@ func Watched(days []models.WatchedMoviesInDay) templ.Component {
 								if templ_7745c5c3_Err != nil {
 									return templ_7745c5c3_Err
 								}
-								templ_7745c5c3_Err = icon.Calendar(icon.Props{Size: 12}).Render(ctx, templ_7745c5c3_Buffer)
+								templ_7745c5c3_Err = icon.Calendar(icon.Props{Class: "size-3"}).Render(ctx, templ_7745c5c3_Buffer)
 								if templ_7745c5c3_Err != nil {
 									return templ_7745c5c3_Err
 								}
@@ -219,11 +219,7 @@ func Watched(days []models.WatchedMoviesInDay) templ.Component {
 									if templ_7745c5c3_Err != nil {
 										return templ_7745c5c3_Err
 									}
-									templ_7745c5c3_Err = icon.Star(icon.Props{
-										Size:   12,
-										Fill:   "orange",
-										Stroke: "orange",
-									}).Render(ctx, templ_7745c5c3_Buffer)
+									templ_7745c5c3_Err = icon.Star(icon.Props{Class: "size-3 fill-[orange] stroke-[orange]"}).Render(ctx, templ_7745c5c3_Buffer)
 									if templ_7745c5c3_Err != nil {
 										return templ_7745c5c3_Err
 									}
@@ -234,7 +230,7 @@ func Watched(days []models.WatchedMoviesInDay) templ.Component {
 									var templ_7745c5c3_Var10 string
 									templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", *movie.Rating))
 									if templ_7745c5c3_Err != nil {
-										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/watched.templ`, Line: 78, Col: 77}
+										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/watched.templ`, Line: 74, Col: 77}
 									}
 									_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 									if templ_7745c5c3_Err != nil {
@@ -311,7 +307,7 @@ func watchedHeader(count int) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = icon.Film(icon.Props{Size: 16}).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = icon.Film(icon.Props{Class: "size-4"}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -322,7 +318,7 @@ func watchedHeader(count int) templ.Component {
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d movies total", count))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/watched.templ`, Line: 102, Col: 48}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/watched.templ`, Line: 98, Col: 48}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
@@ -362,10 +358,7 @@ func movieCardTopHover(inTheater bool) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if inTheater {
-			templ_7745c5c3_Err = icon.Popcorn(icon.Props{
-				Size:  14,
-				Color: "white",
-			}).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = icon.Popcorn(icon.Props{Class: "size-[14px] text-white"}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

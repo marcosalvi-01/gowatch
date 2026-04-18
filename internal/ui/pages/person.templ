@@ -102,7 +102,7 @@ templ personHeroProfile(person models.PersonDetailsPage) {
 			} else {
 				<div class="h-full w-full flex flex-col items-center justify-center gap-3 text-muted-foreground dark:text-white/80">
 					<div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-black/5 dark:bg-white/10">
-						@icon.User(icon.Props{Size: 30})
+					@icon.User(icon.Props{Class: "size-[30px]"})
 					</div>
 					<div class="text-lg font-semibold tracking-wide">{ personInitials(person.Name) }</div>
 				</div>
@@ -258,7 +258,7 @@ templ personDetailsSection(person models.PersonDetailsPage) {
 							@table.Cell() {
 								<a href={ templ.URL("https://www.imdb.com/name/" + person.IMDbID) } target="_blank" class="text-primary hover:underline inline-flex items-center gap-1">
 									View on IMDB
-									@icon.ExternalLink(icon.Props{Size: 14})
+									@icon.ExternalLink(icon.Props{Class: "size-[14px]"})
 								</a>
 							}
 						}
@@ -271,7 +271,7 @@ templ personDetailsSection(person models.PersonDetailsPage) {
 							@table.Cell() {
 								<a href={ templ.URL(person.Homepage) } target="_blank" class="text-primary hover:underline inline-flex items-center gap-1">
 									Visit homepage
-									@icon.ExternalLink(icon.Props{Size: 14})
+									@icon.ExternalLink(icon.Props{Class: "size-[14px]"})
 								</a>
 							}
 						}
@@ -367,7 +367,7 @@ templ actingCreditsSection(credits []models.PersonCredit) {
 								<p class="text-xs opacity-90">{ personCreditDateText(credit.ReleaseDate) }</p>
 								if credit.VoteAverage > 0 {
 									<div class="flex items-center">
-										@icon.Star(icon.Props{Size: 12, Fill: "orange", Stroke: "orange"})
+										@icon.Star(icon.Props{Class: "size-3 fill-[orange] stroke-[orange]"})
 										<span class="ml-1 text-xs">{ fmt.Sprintf("%.1f", credit.VoteAverage) }</span>
 									</div>
 								}
@@ -419,7 +419,7 @@ templ crewCreditsSection(credits []models.PersonCredit) {
 								<p class="text-xs opacity-90">{ personCreditDateText(credit.ReleaseDate) }</p>
 								if credit.VoteAverage > 0 {
 									<div class="flex items-center">
-										@icon.Star(icon.Props{Size: 12, Fill: "orange", Stroke: "orange"})
+										@icon.Star(icon.Props{Class: "size-3 fill-[orange] stroke-[orange]"})
 										<span class="ml-1 text-xs">{ fmt.Sprintf("%.1f", credit.VoteAverage) }</span>
 									</div>
 								}
@@ -533,7 +533,7 @@ templ personCreditCardBody(credit models.PersonCredit, roleText string, isMovieL
 				<p class="text-xs text-muted-foreground">{ personCreditDateText(credit.ReleaseDate) }</p>
 				if credit.VoteAverage > 0 {
 					<div class="inline-flex items-center gap-1 text-xs text-muted-foreground">
-						@icon.Star(icon.Props{Size: 12, Fill: "orange", Stroke: "orange"})
+						@icon.Star(icon.Props{Class: "size-3 fill-[orange] stroke-[orange]"})
 						{ fmt.Sprintf("%.1f", credit.VoteAverage) }
 					</div>
 				}
@@ -553,7 +553,7 @@ templ personCreditPoster(posterPath, title string) {
 			/>
 		} else {
 			<div class="h-full w-full flex items-center justify-center text-muted-foreground">
-				@icon.Film(icon.Props{Size: 14})
+				@icon.Film(icon.Props{Class: "size-[14px]"})
 			</div>
 		}
 	</div>

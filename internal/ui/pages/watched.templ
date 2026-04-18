@@ -65,16 +65,12 @@ templ Watched(days []models.WatchedMoviesInDay) {
 											<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight line-clamp-2">{ movie.MovieDetails.Movie.Title }</h3>
 											<div class="flex items-center justify-between mt-auto pt-1">
 												<div class="flex items-center text-muted-foreground">
-													@icon.Calendar(icon.Props{Size: 12})
+											@icon.Calendar(icon.Props{Class: "size-3"})
 													<p class="ml-1 text-[10px] md:text-xs">{ utils.FormatYear(movie.MovieDetails.Movie.ReleaseDate) }</p>
 												</div>
 												if movie.Rating != nil {
 													<div class="flex items-center">
-														@icon.Star(icon.Props{
-															Size:   12,
-															Fill:   "orange",
-															Stroke: "orange",
-														})
+												@icon.Star(icon.Props{Class: "size-3 fill-[orange] stroke-[orange]"})
 														<span class="ml-1 text-xs">{ fmt.Sprintf("%.1f", *movie.Rating) }</span>
 													</div>
 												}
@@ -98,7 +94,7 @@ templ watchedHeader(count int) {
 			<p class="text-muted-foreground">A chronological history of everything you've seen</p>
 		</div>
 		<div class="flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-semibold border border-primary/20">
-			@icon.Film(icon.Props{Size: 16})
+			@icon.Film(icon.Props{Class: "size-4"})
 			<span>{ fmt.Sprintf("%d movies total", count) }</span>
 		</div>
 	</div>
@@ -107,10 +103,7 @@ templ watchedHeader(count int) {
 templ movieCardTopHover(inTheater bool) {
 	<div class="flex items-center gap-3 text-sm text-white">
 		if inTheater {
-			@icon.Popcorn(icon.Props{
-				Size:  14,
-				Color: "white",
-			})
+			@icon.Popcorn(icon.Props{Class: "size-[14px] text-white"})
 			In Theater
 		}
 	</div>

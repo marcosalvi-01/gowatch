@@ -23,7 +23,7 @@ templ Login() {
 					@card.Title(card.TitleProps{
 						Class: "flex items-center gap-2",
 					}) {
-						@icon.User(icon.Props{Size: 20})
+						@icon.User(icon.Props{Class: "size-5"})
 						Sign In
 					}
 				}
@@ -74,7 +74,7 @@ templ Login() {
 			}
 			// Simple footer
 			<p class="text-center text-xs text-muted-foreground">
-				@icon.Clapperboard(icon.Props{Size: 24, Class: "inline-block mr-2 align-text-center"})
+				@icon.Clapperboard(icon.Props{Class: "inline-block mr-2 size-6 align-text-center"})
 				It's just movies, not rocket science
 			</p>
 		</div>

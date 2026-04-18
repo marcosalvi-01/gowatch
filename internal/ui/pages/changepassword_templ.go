@@ -89,7 +89,7 @@ func ChangePassword() templ.Component {
 							}()
 						}
 						ctx = templ.InitializeContext(ctx)
-						templ_7745c5c3_Err = icon.Lock(icon.Props{Size: 20}).Render(ctx, templ_7745c5c3_Buffer)
+						templ_7745c5c3_Err = icon.Lock(icon.Props{Class: "size-5"}).Render(ctx, templ_7745c5c3_Buffer)
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}

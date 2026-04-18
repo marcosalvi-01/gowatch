@@ -89,14 +89,14 @@ templ Sidebar(props Props) {
 							}) {
 								@dropdown.Item() {
 									<span class="flex items-center">
-										@icon.Import(icon.Props{Size: 16, Class: "mr-2"})
+										@icon.Import(icon.Props{Class: "mr-2 size-4"})
 										Import data
 									</span>
 								}
 							}
 							@dropdown.Item() {
 								<a href="/api/v1/export" download="gowatch_data.json" class="flex items-center w-full">
-									@icon.Download(icon.Props{Size: 16, Class: "mr-2"})
+									@icon.Download(icon.Props{Class: "mr-2 size-4"})
 									Export data
 								</a>
 							}
@@ -107,7 +107,7 @@ templ Sidebar(props Props) {
 								},
 							}) {
 								<span class="flex items-center">
-									@icon.LogOut(icon.Props{Size: 16, Class: "mr-2"})
+									@icon.LogOut(icon.Props{Class: "mr-2 size-4"})
 									Log out
 								</span>
 							}
@@ -291,7 +291,7 @@ templ createListTriggerButton() {
 			@sidebar.MenuSubButton(sidebar.MenuSubButtonProps{
 				Class: "cursor-pointer",
 			}) {
-				@icon.Plus(icon.Props{Size: 18})
+				@icon.Plus(icon.Props{Class: "size-[18px]"})
 				Create New List
 			}
 		}

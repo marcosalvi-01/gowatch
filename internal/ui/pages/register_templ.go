@@ -89,7 +89,7 @@ func Register() templ.Component {
 							}()
 						}
 						ctx = templ.InitializeContext(ctx)
-						templ_7745c5c3_Err = icon.UserPlus(icon.Props{Size: 20}).Render(ctx, templ_7745c5c3_Buffer)
+						templ_7745c5c3_Err = icon.UserPlus(icon.Props{Class: "size-5"}).Render(ctx, templ_7745c5c3_Buffer)
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
@@ -391,7 +391,7 @@ func Register() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = icon.Popcorn(icon.Props{Size: 24, Class: "inline-block mr-2 align-text-center"}).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = icon.Popcorn(icon.Props{Class: "inline-block mr-2 size-6 align-text-center"}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
