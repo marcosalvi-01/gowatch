@@ -93,6 +93,28 @@ VALUES
 RETURNING
     *;
 
+-- name: UpdateWatched :one
+UPDATE
+    watched
+SET
+    watched_date = ?,
+    watched_in_theater = ?,
+    rating = ?
+WHERE
+    id = ?
+    AND user_id = ?
+RETURNING
+    movie_id;
+
+-- name: DeleteWatched :one
+DELETE FROM
+    watched
+WHERE
+    id = ?
+    AND user_id = ?
+RETURNING
+    movie_id;
+
 -- name: GetMovieByID :one
 SELECT
     *

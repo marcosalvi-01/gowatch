@@ -11,6 +11,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/collapsible"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/datepicker"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dropdown"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/input"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/popover"
@@ -187,6 +188,7 @@ templ Scripts() {
 	// for the sidebar
 	@templSidebar.Script()
 	@popover.Script()
+	@dropdown.Script()
 	@dialog.Script()
 	@avatar.Script()
 	@dialog.Script()

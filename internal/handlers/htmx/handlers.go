@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -38,6 +39,12 @@ const (
 	sidebarListsOpenCookieName    = "sidebar_lists_open"
 )
 
+type watchedFormData struct {
+	date       time.Time
+	inTheaters bool
+	rating     *float64
+}
+
 type Handlers struct {
 	watchedService *services.WatchedService
 	listService    *services.ListService
@@ -56,6 +63,8 @@ func NewHandlers(watchedService *services.WatchedService, listService *services.
 
 func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Post("/movies/watched", h.AddWatchedMovie)
+	r.Patch("/movies/watched/{id}", h.UpdateWatchedMovie)
+	r.Delete("/movies/watched/{id}", h.DeleteWatchedMovie)
 	r.Post("/import", h.ImportData)
 	r.Post("/lists", h.CreateList)
 	r.Delete("/lists", h.DeleteList)
@@ -172,34 +181,139 @@ func (h *Handlers) GetSidebar(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
 	movieIDParam := r.FormValue("movie_id")
-	movieID, err := strconv.Atoi(movieIDParam)
+	movieID, err := strconv.ParseInt(movieIDParam, 10, 64)
 	if err != nil {
 		log.Error("invalid movie ID parameter", "movieID", movieIDParam, "error", err)
 		RenderErrorToast(w, r, "Invalid Movie ID", "The movie ID provided is not valid. Please try again.", 4000)
 		return
 	}
 
+	formData, ok := parseWatchedForm(w, r)
+	if !ok {
+		return
+	}
+
+	log.Debug("adding watched movie", "movieID", movieID, "watchedDate", formData.date, "theater", formData.inTheaters, "rating", formData.rating)
+
+	err = h.watchedService.AddWatched(r.Context(), movieID, formData.date, formData.inTheaters, formData.rating)
+	if err != nil {
+		log.Error("failed to add new watched movie", "movieID", movieID, "watchedDate", formData.date, "theater", formData.inTheaters, "error", err)
+		RenderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
+		return
+	}
+
+	log.Info("successfully added watched movie", "movieID", movieID, "rating", formData.rating)
+
+	successMessage := fmt.Sprintf("Movie marked as watched on %s", formData.date.Format("Jan 2, 2006"))
+	if formData.rating != nil {
+		successMessage += fmt.Sprintf(" with rating %.1f/5", *formData.rating)
+	}
+
+	w.Header().Add("HX-Trigger", "refreshSidebar")
+	if err := h.renderMovieActivityOOB(w, r.Context(), movieID); err != nil {
+		log.Error("failed to render updated movie activity", "movieID", movieID, "error", err)
+		RenderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred while refreshing the movie activity.", 0)
+		return
+	}
+
+	RenderSuccessToast(w, r, "Movie Added Successfully", successMessage, 0)
+}
+
+func (h *Handlers) UpdateWatchedMovie(w http.ResponseWriter, r *http.Request) {
+	watchedID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		log.Error("invalid watched entry ID", "watchedID", chi.URLParam(r, "id"), "error", err)
+		RenderErrorToast(w, r, "Invalid Entry", "The watched entry you are trying to edit is not valid.", 4000)
+		return
+	}
+
+	formData, ok := parseWatchedForm(w, r)
+	if !ok {
+		return
+	}
+
+	log.Debug("updating watched movie", "watchedID", watchedID, "watchedDate", formData.date, "theater", formData.inTheaters, "rating", formData.rating)
+
+	movieID, err := h.watchedService.UpdateWatchedEntry(r.Context(), watchedID, formData.date, formData.inTheaters, formData.rating)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrWatchedEntryConflict):
+			RenderWarningToast(w, r, "Duplicate Watch Date", "You already have a watched entry for this movie on that date.", 4000)
+		case errors.Is(err, services.ErrWatchedEntryNotFound):
+			RenderWarningToast(w, r, "Entry Not Found", "That watched entry could not be found.", 4000)
+		default:
+			log.Error("failed to update watched movie", "watchedID", watchedID, "error", err)
+			RenderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred while updating the watched entry.", 0)
+		}
+		return
+	}
+
+	if err := h.renderMovieActivityOOB(w, r.Context(), movieID); err != nil {
+		log.Error("failed to render updated movie activity", "movieID", movieID, "error", err)
+		RenderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred while refreshing the movie activity.", 0)
+		return
+	}
+
+	successMessage := fmt.Sprintf("Watched entry updated for %s", formData.date.Format("Jan 2, 2006"))
+	if formData.rating != nil {
+		successMessage += fmt.Sprintf(" with rating %.1f/5", *formData.rating)
+	}
+
+	RenderSuccessToast(w, r, "Entry Updated", successMessage, 0)
+}
+
+func (h *Handlers) DeleteWatchedMovie(w http.ResponseWriter, r *http.Request) {
+	watchedID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		log.Error("invalid watched entry ID", "watchedID", chi.URLParam(r, "id"), "error", err)
+		RenderErrorToast(w, r, "Invalid Entry", "The watched entry you are trying to remove is not valid.", 4000)
+		return
+	}
+
+	log.Debug("deleting watched movie", "watchedID", watchedID)
+
+	movieID, err := h.watchedService.DeleteWatchedEntry(r.Context(), watchedID)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrWatchedEntryNotFound):
+			RenderWarningToast(w, r, "Entry Not Found", "That watched entry could not be found.", 4000)
+		default:
+			log.Error("failed to delete watched movie", "watchedID", watchedID, "error", err)
+			RenderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred while removing the watched entry.", 0)
+		}
+		return
+	}
+
+	w.Header().Add("HX-Trigger", "refreshSidebar")
+	if err := h.renderMovieActivityOOB(w, r.Context(), movieID); err != nil {
+		log.Error("failed to render updated movie activity", "movieID", movieID, "error", err)
+		RenderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred while refreshing the movie activity.", 0)
+		return
+	}
+
+	RenderSuccessToast(w, r, "Entry Removed", "The watched entry has been removed.", 0)
+}
+
+func parseWatchedForm(w http.ResponseWriter, r *http.Request) (watchedFormData, bool) {
 	watchedDateParam := r.FormValue("watched_date")
 	if watchedDateParam == "" {
 		log.Error("missing watched_date parameter")
 		RenderErrorToast(w, r, "Missing Date", "Please select the date when you watched the movie.", 4000)
-		return
+		return watchedFormData{}, false
 	}
 
 	watchedDate, err := time.Parse("2006-01-02", watchedDateParam)
 	if err != nil {
 		log.Error("invalid watched_date parameter", "watchedDate", watchedDateParam, "error", err)
 		RenderErrorToast(w, r, "Invalid Date Format", "The date format is invalid. Please select a valid date.", 4000)
-		return
+		return watchedFormData{}, false
 	}
 
 	if watchedDate.After(time.Now()) {
 		log.Error("watched date is in the future", "watchedDate", watchedDate)
 		RenderErrorToast(w, r, "Future Date Not Allowed", "You cannot mark a movie as watched for a future date.", 4000)
-		return
+		return watchedFormData{}, false
 	}
-
-	watchedAtTheater := r.FormValue("watched_at_theater") != ""
 
 	ratingParam := r.FormValue("rating")
 	var rating *float64
@@ -208,37 +322,42 @@ func (h *Handlers) AddWatchedMovie(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Error("invalid rating parameter", "rating", ratingParam, "error", err)
 			RenderErrorToast(w, r, "Invalid Rating", "The rating provided is not a valid number.", 4000)
-			return
+			return watchedFormData{}, false
 		}
 		if parsedRating < 0 || parsedRating > 5 {
 			log.Error("rating out of range", "rating", parsedRating)
 			RenderErrorToast(w, r, "Invalid Rating", "Rating must be between 0 and 5.", 4000)
-			return
+			return watchedFormData{}, false
 		}
-		rating = &parsedRating
-	}
-	if *rating == 0 {
-		rating = nil
+		if parsedRating != 0 {
+			rating = &parsedRating
+		}
 	}
 
-	log.Debug("adding watched movie", "movieID", movieID, "watchedDate", watchedDate, "theater", watchedAtTheater, "rating", rating)
+	return watchedFormData{
+		date:       watchedDate,
+		inTheaters: r.FormValue("watched_at_theater") != "",
+		rating:     rating,
+	}, true
+}
 
-	err = h.watchedService.AddWatched(r.Context(), int64(movieID), watchedDate, watchedAtTheater, rating)
+func (h *Handlers) renderMovieActivityOOB(w http.ResponseWriter, ctx context.Context, movieID int64) error {
+	records, err := h.watchedService.GetWatchedMovieRecordsByID(ctx, movieID)
 	if err != nil {
-		log.Error("failed to add new watched movie", "movieID", movieID, "watchedDate", watchedDate, "theater", watchedAtTheater, "error", err)
-		RenderErrorToast(w, r, "Unexpected error", "An unexpected error occurred, please try again", 0)
-		return
+		return fmt.Errorf("get watched movie records: %w", err)
 	}
 
-	log.Info("successfully added watched movie", "movieID", movieID, "rating", rating)
-
-	successMessage := fmt.Sprintf("Movie marked as watched on %s", watchedDate.Format("Jan 2, 2006"))
-	if rating != nil {
-		successMessage += fmt.Sprintf(" with rating %.1f/5", *rating)
+	var activityBuf bytes.Buffer
+	if err := pages.MovieActivity(records.Records).Render(ctx, &activityBuf); err != nil {
+		return fmt.Errorf("render movie activity: %w", err)
 	}
 
-	w.Header().Add("HX-Trigger", "refreshSidebar")
-	RenderSuccessToast(w, r, "Movie Added Successfully", successMessage, 0)
+	oobCtx := templ.WithChildren(ctx, templ.Raw(activityBuf.String()))
+	if err := oobwrapper.OOBWrapper("outerHTML:#movie-activity-section").Render(oobCtx, w); err != nil {
+		return fmt.Errorf("render movie activity oob wrapper: %w", err)
+	}
+
+	return nil
 }
 
 func (h *Handlers) CreateList(w http.ResponseWriter, r *http.Request) {

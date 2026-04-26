@@ -13,6 +13,7 @@ const (
 
 // WatchedMovie is a movie and some more info relative for the specific watch
 type WatchedMovie struct {
+	ID           int64
 	MovieDetails MovieDetails
 	Date         time.Time
 	InTheaters   bool
@@ -33,6 +34,7 @@ type WatchedMovieInDay struct {
 }
 
 type WatchedMovieRecord struct {
+	ID         int64
 	Date       time.Time
 	InTheaters bool
 	Rating     *float64

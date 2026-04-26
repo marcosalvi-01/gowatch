@@ -20,6 +20,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/collapsible"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/datepicker"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dropdown"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/input"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/popover"
@@ -410,6 +411,10 @@ func Scripts() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = popover.Script().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = dropdown.Script().Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

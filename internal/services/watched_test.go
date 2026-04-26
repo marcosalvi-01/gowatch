@@ -1,12 +1,15 @@
 package services
 
 import (
+	"context"
+	"errors"
 	"math"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/marcosalvi-01/gowatch/db"
+	"github.com/marcosalvi-01/gowatch/internal/common"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
@@ -46,6 +49,322 @@ func TestWatchedService_AddWatched(t *testing.T) {
 	}
 	if count != 1 {
 		t.Errorf("expected count 1, got %d", count)
+	}
+}
+
+func TestWatchedService_UpdateWatchedEntry(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
+
+	movie := &models.MovieDetails{
+		Movie: models.Movie{
+			ID:    1,
+			Title: "Test Movie",
+		},
+	}
+	if err := testDB.UpsertMovie(ctx, movie); err != nil {
+		t.Fatal(err)
+	}
+
+	originalDate := time.Date(2024, 1, 10, 0, 0, 0, 0, time.UTC)
+	if err := watchedService.AddWatched(ctx, 1, originalDate, false, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	records, err := watchedService.GetWatchedMovieRecordsByID(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(records.Records) != 1 {
+		t.Fatalf("expected 1 watched record, got %d", len(records.Records))
+	}
+
+	updatedDate := time.Date(2024, 1, 12, 0, 0, 0, 0, time.UTC)
+	rating := 4.5
+	movieID, err := watchedService.UpdateWatchedEntry(ctx, records.Records[0].ID, updatedDate, true, &rating)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if movieID != 1 {
+		t.Fatalf("expected movie ID 1, got %d", movieID)
+	}
+
+	updatedRecords, err := watchedService.GetWatchedMovieRecordsByID(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(updatedRecords.Records) != 1 {
+		t.Fatalf("expected 1 watched record after update, got %d", len(updatedRecords.Records))
+	}
+
+	updatedRecord := updatedRecords.Records[0]
+	if updatedRecord.ID != records.Records[0].ID {
+		t.Fatalf("expected watched record ID %d, got %d", records.Records[0].ID, updatedRecord.ID)
+	}
+	if !updatedRecord.Date.Equal(updatedDate) {
+		t.Fatalf("expected watched date %s, got %s", updatedDate, updatedRecord.Date)
+	}
+	if !updatedRecord.InTheaters {
+		t.Fatal("expected watched entry to be marked as in theaters")
+	}
+	if updatedRecord.Rating == nil || math.Abs(*updatedRecord.Rating-rating) > 0.0001 {
+		t.Fatalf("expected rating %.1f, got %+v", rating, updatedRecord.Rating)
+	}
+}
+
+func TestWatchedService_UpdateWatchedEntry_ZeroRatingClearsRating(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
+
+	movie := &models.MovieDetails{
+		Movie: models.Movie{
+			ID:    1,
+			Title: "Test Movie",
+		},
+	}
+	if err := testDB.UpsertMovie(ctx, movie); err != nil {
+		t.Fatal(err)
+	}
+
+	rating := 4.0
+	watchedDate := time.Date(2024, 1, 10, 0, 0, 0, 0, time.UTC)
+	if err := watchedService.AddWatched(ctx, 1, watchedDate, false, &rating); err != nil {
+		t.Fatal(err)
+	}
+
+	records, err := watchedService.GetWatchedMovieRecordsByID(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(records.Records) != 1 {
+		t.Fatalf("expected 1 watched record, got %d", len(records.Records))
+	}
+
+	zeroRating := 0.0
+	if _, err := watchedService.UpdateWatchedEntry(ctx, records.Records[0].ID, watchedDate, false, &zeroRating); err != nil {
+		t.Fatal(err)
+	}
+
+	updatedRecords, err := watchedService.GetWatchedMovieRecordsByID(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updatedRecords.Records[0].Rating != nil {
+		t.Fatalf("expected rating to be cleared, got %+v", updatedRecords.Records[0].Rating)
+	}
+}
+
+func TestWatchedService_UpdateWatchedEntry_DuplicateDateConflict(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
+
+	movie := &models.MovieDetails{
+		Movie: models.Movie{
+			ID:    1,
+			Title: "Test Movie",
+		},
+	}
+	if err := testDB.UpsertMovie(ctx, movie); err != nil {
+		t.Fatal(err)
+	}
+
+	firstDate := time.Date(2024, 1, 10, 0, 0, 0, 0, time.UTC)
+	secondDate := time.Date(2024, 1, 12, 0, 0, 0, 0, time.UTC)
+	if err := watchedService.AddWatched(ctx, 1, firstDate, false, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := watchedService.AddWatched(ctx, 1, secondDate, true, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	records, err := watchedService.GetWatchedMovieRecordsByID(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(records.Records) != 2 {
+		t.Fatalf("expected 2 watched records, got %d", len(records.Records))
+	}
+
+	var firstRecordID int64
+	for _, record := range records.Records {
+		if record.Date.Equal(firstDate) {
+			firstRecordID = record.ID
+			break
+		}
+	}
+	if firstRecordID == 0 {
+		t.Fatal("expected to find watched record for first date")
+	}
+
+	_, err = watchedService.UpdateWatchedEntry(ctx, firstRecordID, secondDate, false, nil)
+	if !errors.Is(err, ErrWatchedEntryConflict) {
+		t.Fatalf("expected ErrWatchedEntryConflict, got %v", err)
+	}
+}
+
+func TestWatchedService_UpdateWatchedEntry_NotFound(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
+
+	_, err = watchedService.UpdateWatchedEntry(ctx, 999, time.Date(2024, 1, 10, 0, 0, 0, 0, time.UTC), false, nil)
+	if !errors.Is(err, ErrWatchedEntryNotFound) {
+		t.Fatalf("expected ErrWatchedEntryNotFound, got %v", err)
+	}
+}
+
+func TestWatchedService_DeleteWatchedEntry(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
+
+	movie := &models.MovieDetails{
+		Movie: models.Movie{
+			ID:    1,
+			Title: "Test Movie",
+		},
+	}
+	if err := testDB.UpsertMovie(ctx, movie); err != nil {
+		t.Fatal(err)
+	}
+
+	watchedDate := time.Date(2024, 1, 10, 0, 0, 0, 0, time.UTC)
+	if err := watchedService.AddWatched(ctx, 1, watchedDate, false, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	records, err := watchedService.GetWatchedMovieRecordsByID(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(records.Records) != 1 {
+		t.Fatalf("expected 1 watched record, got %d", len(records.Records))
+	}
+
+	movieID, err := watchedService.DeleteWatchedEntry(ctx, records.Records[0].ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if movieID != 1 {
+		t.Fatalf("expected movie ID 1, got %d", movieID)
+	}
+
+	updatedRecords, err := watchedService.GetWatchedMovieRecordsByID(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(updatedRecords.Records) != 0 {
+		t.Fatalf("expected 0 watched records after delete, got %d", len(updatedRecords.Records))
+	}
+
+	count, err := watchedService.GetWatchedCount(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("expected watched count 0 after delete, got %d", count)
+	}
+}
+
+func TestWatchedService_DeleteWatchedEntry_NotFound(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
+
+	_, err = watchedService.DeleteWatchedEntry(ctx, 999)
+	if !errors.Is(err, ErrWatchedEntryNotFound) {
+		t.Fatalf("expected ErrWatchedEntryNotFound, got %v", err)
+	}
+}
+
+func TestWatchedService_DeleteWatchedEntry_NonOwned(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+	ctx := setupTestUser(t, testDB)
+	otherUser, err := testDB.CreateUser(context.Background(), "other@example.com", "Other User", "hash")
+	if err != nil {
+		t.Fatal(err)
+	}
+	otherCtx := context.WithValue(context.Background(), common.UserKey, otherUser)
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	watchedService := NewWatchedService(testDB, listService, movieService)
+
+	movie := &models.MovieDetails{
+		Movie: models.Movie{
+			ID:    1,
+			Title: "Test Movie",
+		},
+	}
+	if err := testDB.UpsertMovie(ctx, movie); err != nil {
+		t.Fatal(err)
+	}
+
+	watchedDate := time.Date(2024, 1, 10, 0, 0, 0, 0, time.UTC)
+	if err := watchedService.AddWatched(ctx, 1, watchedDate, false, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	records, err := watchedService.GetWatchedMovieRecordsByID(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(records.Records) != 1 {
+		t.Fatalf("expected 1 watched record, got %d", len(records.Records))
+	}
+
+	_, err = watchedService.DeleteWatchedEntry(otherCtx, records.Records[0].ID)
+	if !errors.Is(err, ErrWatchedEntryNotFound) {
+		t.Fatalf("expected ErrWatchedEntryNotFound, got %v", err)
 	}
 }
 

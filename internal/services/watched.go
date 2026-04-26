@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/marcosalvi-01/gowatch/db"
@@ -24,6 +25,11 @@ const (
 	minTMDBVoteCount          = 100
 	ratingBucketSize          = 0.5
 	maxMovieRating            = 5.0
+)
+
+var (
+	ErrWatchedEntryConflict = errors.New("watched entry conflict")
+	ErrWatchedEntryNotFound = errors.New("watched entry not found")
 )
 
 // WatchedService handles user's watched movie tracking
@@ -49,8 +55,10 @@ func (s *WatchedService) AddWatched(ctx context.Context, movieID int64, date tim
 	if movieID <= 0 {
 		return fmt.Errorf("AddWatched: invalid movie ID")
 	}
-	if rating != nil && (*rating < 0 || *rating > 5) {
-		return fmt.Errorf("AddWatched: rating must be between 0 and 5")
+	var err error
+	rating, err = normalizeWatchedRating(rating)
+	if err != nil {
+		return fmt.Errorf("AddWatched: %w", err)
 	}
 	user, err := common.GetUser(ctx)
 	if err != nil {
@@ -80,6 +88,73 @@ func (s *WatchedService) AddWatched(ctx context.Context, movieID int64, date tim
 
 	s.log.Info("AddWatched: successfully added watched movie", "movieID", movieID, "userID", user.ID)
 	return nil
+}
+
+func (s *WatchedService) UpdateWatchedEntry(ctx context.Context, watchedID int64, date time.Time, inTheaters bool, rating *float64) (int64, error) {
+	if watchedID <= 0 {
+		return 0, fmt.Errorf("UpdateWatchedEntry: invalid watched ID")
+	}
+
+	var err error
+	rating, err = normalizeWatchedRating(rating)
+	if err != nil {
+		return 0, fmt.Errorf("UpdateWatchedEntry: %w", err)
+	}
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("UpdateWatchedEntry: failed to get user", "error", err)
+		return 0, fmt.Errorf("UpdateWatchedEntry: failed to get user: %w", err)
+	}
+
+	s.log.Debug("UpdateWatchedEntry: updating watched movie", "watchedID", watchedID, "date", date, "inTheaters", inTheaters, "rating", rating, "userID", user.ID)
+
+	movieID, err := s.db.UpdateWatched(ctx, db.UpdateWatched{
+		ID:         watchedID,
+		UserID:     user.ID,
+		Date:       date,
+		InTheaters: inTheaters,
+		Rating:     rating,
+	})
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, ErrWatchedEntryNotFound
+	}
+	if err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed") {
+		return 0, ErrWatchedEntryConflict
+	}
+	if err != nil {
+		s.log.Error("UpdateWatchedEntry: failed to update watched entry", "watchedID", watchedID, "error", err, "userID", user.ID)
+		return 0, fmt.Errorf("UpdateWatchedEntry: failed to update watched entry: %w", err)
+	}
+
+	s.log.Info("UpdateWatchedEntry: successfully updated watched movie", "watchedID", watchedID, "movieID", movieID, "userID", user.ID)
+	return movieID, nil
+}
+
+func (s *WatchedService) DeleteWatchedEntry(ctx context.Context, watchedID int64) (int64, error) {
+	if watchedID <= 0 {
+		return 0, fmt.Errorf("DeleteWatchedEntry: invalid watched ID")
+	}
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("DeleteWatchedEntry: failed to get user", "error", err)
+		return 0, fmt.Errorf("DeleteWatchedEntry: failed to get user: %w", err)
+	}
+
+	s.log.Debug("DeleteWatchedEntry: deleting watched movie", "watchedID", watchedID, "userID", user.ID)
+
+	movieID, err := s.db.DeleteWatched(ctx, user.ID, watchedID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, ErrWatchedEntryNotFound
+	}
+	if err != nil {
+		s.log.Error("DeleteWatchedEntry: failed to delete watched entry", "watchedID", watchedID, "error", err, "userID", user.ID)
+		return 0, fmt.Errorf("DeleteWatchedEntry: failed to delete watched entry: %w", err)
+	}
+
+	s.log.Info("DeleteWatchedEntry: successfully deleted watched movie", "watchedID", watchedID, "movieID", movieID, "userID", user.ID)
+	return movieID, nil
 }
 
 func (s *WatchedService) GetAllWatchedMoviesInDay(ctx context.Context) ([]models.WatchedMoviesInDay, error) {
@@ -229,6 +304,7 @@ func (s *WatchedService) GetWatchedMovieRecordsByID(ctx context.Context, movieID
 	}
 	for _, r := range rows {
 		rec.Records = append(rec.Records, models.WatchedMovieRecord{
+			ID:         r.ID,
 			Date:       r.Date,
 			InTheaters: r.InTheaters,
 			Rating:     r.Rating,
@@ -240,6 +316,19 @@ func (s *WatchedService) GetWatchedMovieRecordsByID(ctx context.Context, movieID
 	})
 
 	return rec, nil
+}
+
+func normalizeWatchedRating(rating *float64) (*float64, error) {
+	if rating == nil {
+		return nil, nil
+	}
+	if *rating < 0 || *rating > maxMovieRating {
+		return nil, fmt.Errorf("rating must be between 0 and 5")
+	}
+	if *rating == 0 {
+		return nil, nil
+	}
+	return rating, nil
 }
 
 func (s *WatchedService) GetPersonWatchActivity(ctx context.Context, personID int64) (models.PersonWatchActivity, error) {

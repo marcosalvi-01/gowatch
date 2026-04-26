@@ -17,6 +17,8 @@ type DB interface {
 
 	// Watched history and activity.
 	InsertWatched(ctx context.Context, watched InsertWatched) error
+	UpdateWatched(ctx context.Context, watched UpdateWatched) (int64, error)
+	DeleteWatched(ctx context.Context, userID, watchedID int64) (int64, error)
 	GetWatchedJoinMovie(ctx context.Context, userID int64) ([]models.WatchedMovie, error)
 	GetWatchedJoinMovieByID(ctx context.Context, userID, movieID int64) ([]models.WatchedMovie, error)
 	GetWatchedMoviesByPerson(ctx context.Context, userID, personID int64) ([]models.PersonWatchMovieMatch, error)
@@ -111,6 +113,14 @@ type InsertMovieList struct {
 type InsertWatched struct {
 	UserID     int64
 	MovieID    int64
+	Date       time.Time
+	InTheaters bool
+	Rating     *float64
+}
+
+type UpdateWatched struct {
+	ID         int64
+	UserID     int64
 	Date       time.Time
 	InTheaters bool
 	Rating     *float64

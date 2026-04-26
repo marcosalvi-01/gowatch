@@ -11,6 +11,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/checkbox"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/datepicker"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dropdown"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/form"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/rating"
@@ -193,7 +194,7 @@ templ movieInfo(movie models.MovieDetails, isDark, isInWatchlist bool) {
 		@actionButtons(movie.Movie.ID)
 		// TODO: improve button layout/style? Maybe move it somewhere else/change its text?
 		<div
-			hx-get={fmt.Sprintf("/htmx/watchlist/%d", movie.Movie.ID)}
+			hx-get={ fmt.Sprintf("/htmx/watchlist/%d", movie.Movie.ID) }
 			hx-trigger="load, refreshWatchlist from:body"
 			hx-swap="innerHTML"
 			hx-target="this"
@@ -206,7 +207,6 @@ templ actionButtons(movieID int64) {
 		<form
 			hx-post="/htmx/movies/watched"
 			hx-target="#toast"
-			hx-include="[name='watched_date']"
 			hx-on::after-request="this.reset()"
 		>
 			<input type="hidden" name="movie_id" value={ movieID }/>
@@ -231,58 +231,7 @@ templ actionButtons(movieID int64) {
 						}
 					}
 					<div class="space-y-4">
-						<div class="space-y-2">
-							@form.Label(form.LabelProps{
-								For: "date-picker-form",
-							}) {
-								When did you watch this movie?
-							}
-							@datepicker.DatePicker(datepicker.Props{
-								ID:       "date-picker-form",
-								Name:     "watched_date",
-								HasError: false,
-								Value:    time.Now(),
-							})
-						</div>
-						<div class="space-y-2">
-							@form.Label(form.LabelProps{
-								For: "rating-input",
-							}) {
-								Your rating (optional)
-							}
-							@rating.Rating(rating.Props{
-								Value:     0,
-								ReadOnly:  false,
-								Precision: 0.5,
-								Name:      "rating",
-								ID:        "rating-input",
-							}) {
-								@rating.Group() {
-									for i := 1; i <= 5; i++ {
-										@rating.Item(rating.ItemProps{
-											Value: i,
-											Style: rating.StyleStar,
-										})
-									}
-								}
-							}
-						</div>
-						<div class="flex items-start space-x-3">
-							@checkbox.Checkbox(checkbox.Props{
-								ID:    "theater-checkbox",
-								Name:  "watched_at_theater",
-								Value: "theater",
-							})
-							@form.Label(form.LabelProps{
-								For:   "theater-checkbox",
-								Class: "cursor-pointer",
-							}) {
-								<div class="space-y-1">
-									<div class="text-sm font-medium">Watched at theater</div>
-									<div class="text-xs text-muted-foreground">Check if you saw this in a cinema</div>
-								</div>
-							}
-						</div>
+						@watchedFormFields("add-watched", time.Now(), 0, false)
 					</div>
 					@dialog.Footer() {
 						@dialog.Close() {
@@ -379,12 +328,25 @@ templ movieContent(movie models.MovieDetails, watchRecords models.WatchedMovieRe
 	<div class="space-y-8 pb-5">
 		@overviewSection(movie.Movie.Overview)
 		@genresSection(movie.Genres)
-		if len(watchRecords.Records) > 0 {
-			@userActivitySection(watchRecords.Records)
-		}
+		@MovieActivity(watchRecords.Records)
 		@detailsSection(movie)
 		@castSection(movie.Credits.Cast)
 		@crewSection(movie.Credits.Crew)
+	</div>
+}
+
+templ MovieActivity(records []models.WatchedMovieRecord) {
+	<div id="movie-activity-section">
+		if len(records) > 0 {
+			<div class="border-1 rounded-lg p-3">
+				<h2 class="text-xl font-semibold mb-4">Your Activity</h2>
+				<div class="space-y-6">
+					@activityStats(records)
+					@separator.Separator()
+					@watchHistory(records)
+				</div>
+			</div>
+		}
 	</div>
 }
 
@@ -600,17 +562,6 @@ templ crewMemberItem(crew models.Crew) {
 	</div>
 }
 
-templ userActivitySection(watchRecords []models.WatchedMovieRecord) {
-	<div class="border-1 rounded-lg p-3">
-		<h2 class="text-xl font-semibold mb-4">Your Activity</h2>
-		<div class="space-y-6">
-			@activityStats(watchRecords)
-			@separator.Separator()
-			@watchHistory(watchRecords)
-		</div>
-	</div>
-}
-
 templ activityStats(records []models.WatchedMovieRecord) {
 	<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
 		@activityStat("Times Watched", fmt.Sprintf("%d", len(records)))
@@ -642,6 +593,14 @@ templ watchHistory(records []models.WatchedMovieRecord) {
 }
 
 templ watchHistoryItem(record models.WatchedMovieRecord) {
+	{{
+		editDialogID := fmt.Sprintf("edit-watched-%d", record.ID)
+		deleteDialogID := fmt.Sprintf("delete-watched-%d", record.ID)
+		watchedRating := 0.0
+		if record.Rating != nil {
+			watchedRating = *record.Rating
+		}
+	}}
 	<div class="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
 		<div class="flex items-center space-x-3">
 			@watchLocationIcon(record.InTheaters)
@@ -678,7 +637,179 @@ templ watchHistoryItem(record models.WatchedMovieRecord) {
 			<div class="text-xs text-muted-foreground">
 				{ formatTimeAgo(record.Date) }
 			</div>
+			@dropdown.Dropdown() {
+				@dropdown.Trigger() {
+					@button.Button(button.Props{
+						Variant: button.VariantGhost,
+						Size:    button.SizeIcon,
+						Type:    button.TypeButton,
+					}) {
+						@icon.EllipsisVertical(icon.Props{Class: "size-4"})
+					}
+				}
+				@dropdown.Content(dropdown.ContentProps{
+					Class:     "w-40",
+					Placement: dropdown.PlacementBottomEnd,
+				}) {
+					@dialog.Trigger(dialog.TriggerProps{
+						For: editDialogID,
+					}) {
+						@dropdown.Item() {
+							<span class="flex items-center gap-2">
+								@icon.Pencil(icon.Props{Class: "size-4"})
+								Edit entry
+							</span>
+						}
+					}
+					@dialog.Trigger(dialog.TriggerProps{
+						For: deleteDialogID,
+					}) {
+						@dropdown.Item(dropdown.ItemProps{
+							Class: "text-destructive focus:text-destructive",
+						}) {
+							<span class="flex items-center gap-2">
+								@icon.Trash(icon.Props{Class: "size-4"})
+								Remove entry
+							</span>
+						}
+					}
+				}
+			}
+			<form
+				hx-patch={ fmt.Sprintf("/htmx/movies/watched/%d", record.ID) }
+				hx-target="#toast"
+			>
+				@dialog.Dialog(dialog.Props{
+					ID: editDialogID,
+				}) {
+					@dialog.Content(dialog.ContentProps{
+						Class: "max-w-md",
+					}) {
+						@dialog.Header() {
+							@dialog.Title() {
+								Edit Watched Entry
+							}
+							@dialog.Description() {
+								Update the date, rating, or location for this watch.
+							}
+						}
+						<div class="space-y-4">
+							@watchedFormFields(fmt.Sprintf("edit-watched-%d", record.ID), record.Date, watchedRating, record.InTheaters)
+						</div>
+						@dialog.Footer() {
+							@dialog.Close() {
+								@button.Button(button.Props{
+									Variant: button.VariantOutline,
+								}) {
+									Cancel
+								}
+							}
+							@dialog.Close() {
+								@button.Button(button.Props{
+									Type: button.TypeSubmit,
+								}) {
+									Save Changes
+								}
+							}
+						}
+					}
+				}
+			</form>
+			<form
+				hx-delete={ fmt.Sprintf("/htmx/movies/watched/%d", record.ID) }
+				hx-target="#toast"
+			>
+				@dialog.Dialog(dialog.Props{
+					ID: deleteDialogID,
+				}) {
+					@dialog.Content(dialog.ContentProps{
+						Class: "max-w-md",
+					}) {
+						@dialog.Header() {
+							@dialog.Title() {
+								Remove Watched Entry
+							}
+							@dialog.Description() {
+								Are you sure you want to remove the watched entry from { record.Date.Format("January 2, 2006") }? This action cannot be undone.
+							}
+						}
+						@dialog.Footer() {
+							@dialog.Close() {
+								@button.Button(button.Props{
+									Variant: button.VariantOutline,
+								}) {
+									Cancel
+								}
+							}
+							@dialog.Close() {
+								@button.Button(button.Props{
+									Variant: button.VariantDestructive,
+									Type:    button.TypeSubmit,
+								}) {
+									Remove Entry
+								}
+							}
+						}
+					}
+				}
+			</form>
 		</div>
+	</div>
+}
+
+templ watchedFormFields(idPrefix string, watchedDate time.Time, watchedRating float64, inTheaters bool) {
+	<div class="space-y-2">
+		@form.Label(form.LabelProps{
+			For: idPrefix + "-date",
+		}) {
+			When did you watch this movie?
+		}
+		@datepicker.DatePicker(datepicker.Props{
+			ID:       idPrefix + "-date",
+			Name:     "watched_date",
+			HasError: false,
+			Value:    watchedDate,
+		})
+	</div>
+	<div class="space-y-2">
+		@form.Label(form.LabelProps{
+			For: idPrefix + "-rating",
+		}) {
+			Your rating (optional)
+		}
+		@rating.Rating(rating.Props{
+			Value:     watchedRating,
+			ReadOnly:  false,
+			Precision: 0.5,
+			Name:      "rating",
+			ID:        idPrefix + "-rating",
+		}) {
+			@rating.Group() {
+				for i := 1; i <= 5; i++ {
+					@rating.Item(rating.ItemProps{
+						Value: i,
+						Style: rating.StyleStar,
+					})
+				}
+			}
+		}
+	</div>
+	<div class="flex items-start space-x-3">
+		@checkbox.Checkbox(checkbox.Props{
+			ID:      idPrefix + "-theater",
+			Name:    "watched_at_theater",
+			Value:   "theater",
+			Checked: inTheaters,
+		})
+		@form.Label(form.LabelProps{
+			For:   idPrefix + "-theater",
+			Class: "cursor-pointer",
+		}) {
+			<div class="space-y-1">
+				<div class="text-sm font-medium">Watched at theater</div>
+				<div class="text-xs text-muted-foreground">Check if you saw this in a cinema</div>
+			</div>
+		}
 	</div>
 }
 

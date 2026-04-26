@@ -166,6 +166,41 @@ func (d *SqliteDB) InsertWatched(ctx context.Context, watched InsertWatched) err
 	return nil
 }
 
+func (d *SqliteDB) UpdateWatched(ctx context.Context, watched UpdateWatched) (int64, error) {
+	log.Debug("updating watched record", "watchedID", watched.ID, "date", watched.Date, "inTheaters", watched.InTheaters)
+
+	movieID, err := d.queries.UpdateWatched(ctx, sqlc.UpdateWatchedParams{
+		WatchedDate:      date.New(watched.Date),
+		WatchedInTheater: watched.InTheaters,
+		Rating:           watched.Rating,
+		ID:               watched.ID,
+		UserID:           &watched.UserID,
+	})
+	if err != nil {
+		log.Error("failed to update watched record", "watchedID", watched.ID, "error", err)
+		return 0, fmt.Errorf("failed to update watched record %d: %w", watched.ID, err)
+	}
+
+	log.Debug("successfully updated watched record", "watchedID", watched.ID, "movieID", movieID)
+	return movieID, nil
+}
+
+func (d *SqliteDB) DeleteWatched(ctx context.Context, userID, watchedID int64) (int64, error) {
+	log.Debug("deleting watched record", "watchedID", watchedID)
+
+	movieID, err := d.queries.DeleteWatched(ctx, sqlc.DeleteWatchedParams{
+		ID:     watchedID,
+		UserID: &userID,
+	})
+	if err != nil {
+		log.Error("failed to delete watched record", "watchedID", watchedID, "error", err)
+		return 0, fmt.Errorf("failed to delete watched record %d: %w", watchedID, err)
+	}
+
+	log.Debug("successfully deleted watched record", "watchedID", watchedID, "movieID", movieID)
+	return movieID, nil
+}
+
 // GetMovieDetailsByID retrieves a specific movie by its ID
 func (d *SqliteDB) GetMovieDetailsByID(ctx context.Context, id int64) (*models.MovieDetails, error) {
 	log.Debug("retrieving movie details from database", "movieID", id)
@@ -297,6 +332,7 @@ func (d *SqliteDB) GetWatchedJoinMovie(ctx context.Context, userID int64) ([]mod
 	watched := make([]models.WatchedMovie, len(results))
 	for i, result := range results {
 		watched[i] = models.WatchedMovie{
+			ID:           result.Watched.ID,
 			MovieDetails: toModelsMovieDetails(result.Movie),
 			Date:         result.Watched.WatchedDate.Time,
 			InTheaters:   result.Watched.WatchedInTheater,
@@ -320,6 +356,7 @@ func (d *SqliteDB) GetWatchedJoinMovieByID(ctx context.Context, userID, movieID 
 	watched := make([]models.WatchedMovie, len(rows))
 	for i, r := range rows {
 		watched[i] = models.WatchedMovie{
+			ID:           r.Watched.ID,
 			MovieDetails: toModelsMovieDetails(r.Movie),
 			Date:         r.Watched.WatchedDate.Time,
 			InTheaters:   r.Watched.WatchedInTheater,

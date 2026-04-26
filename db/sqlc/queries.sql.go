@@ -232,6 +232,28 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 	return err
 }
 
+const deleteWatched = `-- name: DeleteWatched :one
+DELETE FROM
+    watched
+WHERE
+    id = ?
+    AND user_id = ?
+RETURNING
+    movie_id
+`
+
+type DeleteWatchedParams struct {
+	ID     int64
+	UserID *int64
+}
+
+func (q *Queries) DeleteWatched(ctx context.Context, arg DeleteWatchedParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, deleteWatched, arg.ID, arg.UserID)
+	var movie_id int64
+	err := row.Scan(&movie_id)
+	return movie_id, err
+}
+
 const getAllLists = `-- name: GetAllLists :many
 SELECT
     id, name, creation_date, description, user_id, is_watchlist
@@ -2964,6 +2986,41 @@ type UpdateUserPasswordParams struct {
 func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
 	_, err := q.db.ExecContext(ctx, updateUserPassword, arg.PasswordHash, arg.ID)
 	return err
+}
+
+const updateWatched = `-- name: UpdateWatched :one
+UPDATE
+    watched
+SET
+    watched_date = ?,
+    watched_in_theater = ?,
+    rating = ?
+WHERE
+    id = ?
+    AND user_id = ?
+RETURNING
+    movie_id
+`
+
+type UpdateWatchedParams struct {
+	WatchedDate      date.Date
+	WatchedInTheater bool
+	Rating           *float64
+	ID               int64
+	UserID           *int64
+}
+
+func (q *Queries) UpdateWatched(ctx context.Context, arg UpdateWatchedParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, updateWatched,
+		arg.WatchedDate,
+		arg.WatchedInTheater,
+		arg.Rating,
+		arg.ID,
+		arg.UserID,
+	)
+	var movie_id int64
+	err := row.Scan(&movie_id)
+	return movie_id, err
 }
 
 const upsertCast = `-- name: UpsertCast :exec
