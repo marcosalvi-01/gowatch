@@ -48,7 +48,12 @@ templ Watched(days []models.WatchedMoviesInDay) {
 										}
 									}
 								</div>
-								<div class="flex flex-wrap gap-6 sm:gap-4">
+							<div
+								class={
+									"flex flex-wrap gap-6 sm:gap-4",
+									templ.KV("justify-center sm:justify-start", len(day.Movies) == 1),
+								}
+							>
 									for _, movie := range day.Movies {
 										{{
 											moviecardProps := moviecard.Props{
@@ -88,14 +93,13 @@ templ Watched(days []models.WatchedMoviesInDay) {
 }
 
 templ watchedHeader(count int) {
-	<div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-		<div class="space-y-1">
-			<h1 class="text-3xl font-bold tracking-tight">Watched Movies</h1>
-			<p class="text-muted-foreground">A chronological history of everything you've seen</p>
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+		<div class="space-y-2">
+			<h1 class="text-2xl sm:text-3xl font-bold">Watched Movies</h1>
+			<p class="text-muted-foreground text-sm sm:text-base max-w-2xl">A chronological history of everything you've seen.</p>
 		</div>
-		<div class="flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-semibold border border-primary/20">
-			@icon.Film(icon.Props{Class: "size-4"})
-			<span>{ fmt.Sprintf("%d movies total", count) }</span>
+		<div class="w-full sm:w-56">
+			@statsMetricCard("Total Watched", fmt.Sprintf("%d", count), icon.Film)
 		</div>
 	</div>
 }
@@ -113,12 +117,12 @@ templ WatchedLoading() {
 	<div id="watched-loading" class="htmx-indicator absolute inset-0 bg-background z-30 pointer-events-none overflow-hidden">
 		<div class="p-4 space-y-8">
 			// Page title
-			<div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+			<div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
 				<div class="space-y-2">
 					@skeleton.Skeleton(skeleton.Props{Class: "h-9 w-64 rounded-lg"})
 					@skeleton.Skeleton(skeleton.Props{Class: "h-5 w-80 rounded-md"})
 				</div>
-				@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-32 rounded-full"})
+				@skeleton.Skeleton(skeleton.Props{Class: "h-24 w-full sm:w-56 rounded-lg"})
 			</div>
 			// Watched list
 			<div class="flex flex-wrap gap-6 items-start">
@@ -129,7 +133,12 @@ templ WatchedLoading() {
 							@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-32 rounded"})
 							@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-8 rounded"})
 						</div>
-						<div class="flex flex-wrap gap-4">
+						<div
+							class={
+								"flex flex-wrap gap-4",
+								templ.KV("justify-center sm:justify-start", size == 1),
+							}
+						>
 							for _ = range size {
 								<div class="flex flex-col space-y-2">
 									@skeleton.Skeleton(skeleton.Props{Class: "aspect-[2/3] w-[120px] md:w-[160px] rounded-lg"})

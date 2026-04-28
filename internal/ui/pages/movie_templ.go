@@ -2766,7 +2766,7 @@ func watchHistory(records []models.WatchedMovieRecord) templ.Component {
 			templ_7745c5c3_Var127 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 134, "<div><h3 class=\"text-sm font-medium mb-3\">Watch History</h3><div class=\"space-y-2 max-h-48 overflow-y-auto\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 134, "<div><h3 class=\"text-sm font-medium mb-3\">Watch History</h3><div class=\"space-y-2 max-h-48 overflow-auto\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -2811,7 +2811,7 @@ func watchHistoryItem(record models.WatchedMovieRecord) templ.Component {
 		if record.Rating != nil {
 			watchedRating = *record.Rating
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 136, "<div class=\"flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50\"><div class=\"flex items-center space-x-3\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 136, "<div class=\"flex w-max min-w-full items-center justify-between gap-4 py-2 pl-3 rounded-lg bg-muted/50\"><div class=\"flex items-center space-x-3\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
