@@ -2,6 +2,7 @@
 package pages
 
 import (
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/moviecard"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/sidebar"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/avatar"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
@@ -202,6 +203,7 @@ templ Scripts() {
 	@input.Script()
 	@checkbox.Script()
 	@rating.Script()
+	@moviecard.Script()
 }
 
 templ SidebarNavigationScript() {
