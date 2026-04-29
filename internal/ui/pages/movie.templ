@@ -9,6 +9,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/checkbox"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/collapsible"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/datepicker"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dropdown"
@@ -25,6 +26,8 @@ import (
 	"strings"
 	"time"
 )
+
+const movieVisibleCastLimit = 9
 
 templ Movie(movie models.MovieDetails, watchRecords models.WatchedMovieRecords, isInWatchlist bool) {
 	@Layout() {
@@ -461,15 +464,49 @@ templ detailsSection(movie models.MovieDetails) {
 
 templ castSection(cast []models.Cast) {
 	if len(cast) > 0 {
+		{{ sortedCast := sortCast(cast) }}
 		<div>
 			<h2 class="text-xl font-semibold mb-4">Cast</h2>
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-				for i, member := range sortCast(cast) {
-					if i < 9 {
-						@castMemberCard(member)
+				for i, member := range sortedCast {
+					if i >= movieVisibleCastLimit {
+						{{ break }}
 					}
+					@castMemberCard(member)
 				}
 			</div>
+			if len(sortedCast) > movieVisibleCastLimit {
+				@collapsible.Collapsible(collapsible.Props{Class: "group/collapsible mt-4"}) {
+					@collapsible.Content(collapsible.ContentProps{Class: "mb-4"}) {
+						<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+							for i, member := range sortedCast {
+								if i < movieVisibleCastLimit {
+									{{ continue }}
+								}
+								@castMemberCard(member)
+							}
+						</div>
+					}
+					@collapsible.Trigger(collapsible.TriggerProps{
+						Class: "inline-flex items-center gap-2 text-sm font-medium text-primary cursor-pointer hover:underline",
+						Attributes: templ.Attributes{
+							"role":       "button",
+							"tabindex":   "0",
+							"aria-label": "Toggle full cast",
+						},
+					}) {
+						<span class="group-data-[tui-collapsible-state=open]/collapsible:hidden">
+							{ fmt.Sprintf("Show %d more cast members", len(sortedCast)-movieVisibleCastLimit) }
+						</span>
+						<span class="hidden group-data-[tui-collapsible-state=open]/collapsible:inline">
+							Show less cast
+						</span>
+						@icon.ChevronRight(icon.Props{
+							Class: "size-4 transition-transform group-data-[tui-collapsible-state=open]/collapsible:rotate-90",
+						})
+					}
+				}
+			}
 		</div>
 	}
 }
@@ -507,22 +544,22 @@ templ castMemberCard(cast models.Cast) {
 	}
 }
 
-templ profileImage(profilePath, name string) {
-	@avatar.Avatar() {
-		@avatar.Image(avatar.ImageProps{
-			Src:   utils.TMDBImageURL("w185", profilePath),
-			Alt:   name,
-			Class: "object-cover",
-		})
-		@avatar.Fallback() {
-			{{
-				split := strings.Split(name, " ")
-				initials := string(split[0][0])
-				if len(split) >= 2 {
-					initials += string(split[1][0])
-				}
-			}}
-			{ initials }
+templ profileImage(profilePath, name string, class ...string) {
+	{{ avatarClass := "" }}
+	if len(class) > 0 {
+		{{ avatarClass = class[0] }}
+	}
+	@avatar.Avatar(avatar.Props{Class: avatarClass}) {
+		if profilePath != "" {
+			@avatar.Image(avatar.ImageProps{
+				Src:   utils.TMDBImageURL("w185", profilePath),
+				Alt:   name,
+				Class: "object-cover",
+			})
+		} else {
+			@avatar.Fallback(avatar.FallbackProps{Class: "text-xs font-medium"}) {
+				{ moviePersonInitials(name) }
+			}
 		}
 	}
 }
@@ -544,21 +581,24 @@ templ crewMemberItem(crew models.Crew) {
 	{{ personHref := personPagePath(crew.Person.ID) }}
 	<div class="space-y-1">
 		<dt class="text-sm font-medium text-muted-foreground">{ crew.Job }</dt>
-		if personHref != "" {
-			<dd
-				data-page="person"
-				hx-get={ personHref }
-				hx-target="#main-content"
-				hx-push-url="true"
-				hx-swap="scroll:#main-scroll-container:top"
-				hx-indicator="#person-loading"
-				class="text-sm font-medium text-primary hover:underline cursor-pointer"
-			>
-				{ crew.Person.Name }
-			</dd>
-		} else {
-			<dd class="text-sm font-medium">{ crew.Person.Name }</dd>
-		}
+		<div class="flex items-center gap-2">
+			@profileImage(crew.Person.ProfilePath, crew.Person.Name, "h-8 w-8")
+			if personHref != "" {
+				<dd
+					data-page="person"
+					hx-get={ personHref }
+					hx-target="#main-content"
+					hx-push-url="true"
+					hx-swap="scroll:#main-scroll-container:top"
+					hx-indicator="#person-loading"
+					class="min-w-0 text-sm font-medium text-primary hover:underline cursor-pointer truncate"
+				>
+					{ crew.Person.Name }
+				</dd>
+			} else {
+				<dd class="min-w-0 text-sm font-medium truncate">{ crew.Person.Name }</dd>
+			}
+		</div>
 	</div>
 }
 
@@ -855,6 +895,20 @@ func formatNumber(num int64) string {
 		result.WriteRune(digit)
 	}
 	return result.String()
+}
+
+func moviePersonInitials(name string) string {
+	nameParts := strings.Fields(name)
+	if len(nameParts) == 0 {
+		return "?"
+	}
+
+	initials := strings.ToUpper(string([]rune(nameParts[0])[0]))
+	if len(nameParts) > 1 {
+		initials += strings.ToUpper(string([]rune(nameParts[1])[0]))
+	}
+
+	return initials
 }
 
 func countTheaterWatches(records []models.WatchedMovieRecord) int {
