@@ -824,9 +824,7 @@ templ PersonLoading() {
 				<div class="max-w-6xl mx-auto">
 					<div class="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start">
 						<div class="w-24 sm:w-32 md:w-40 lg:w-44 xl:w-48 flex-shrink-0 self-center lg:self-start">
-							<div class="aspect-[2/3] rounded-xl overflow-hidden">
-								@skeleton.Skeleton(skeleton.Props{Class: "h-full w-full"})
-							</div>
+							<div class="aspect-[2/3] rounded-xl bg-muted animate-pulse"></div>
 						</div>
 						<div class="flex-1 min-w-0 space-y-3 sm:space-y-4">
 							@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-2/3 rounded-lg"})
