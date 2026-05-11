@@ -24,6 +24,7 @@ const (
 	htmxHistoryRestoreHeader = "HX-History-Restore-Request"
 	htmxRequestHeaderValue   = "true"
 	maxSearchQueryLength     = 255
+	sessionCookieName        = "session_id"
 )
 
 var log = logging.Get("pages")
@@ -97,6 +98,19 @@ func shouldRenderContentFragment(r *http.Request) bool {
 	}
 
 	return r.Header.Get(htmxHistoryRestoreHeader) != htmxRequestHeaderValue
+}
+
+func (h *Handlers) setSessionCookie(w http.ResponseWriter, value string, maxAge int) {
+	// #nosec G124 -- secure flag is environment-driven; HTTP local dev needs Secure=false.
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    value,
+		Path:     "/",
+		MaxAge:   maxAge,
+		HttpOnly: true,
+		Secure:   h.authService.HTTPS,
+		SameSite: http.SameSiteLaxMode,
+	})
 }
 
 func (h *Handlers) HomePage(w http.ResponseWriter, r *http.Request) {
@@ -374,15 +388,7 @@ func (h *Handlers) LoginPost(w http.ResponseWriter, r *http.Request) {
 
 	log.Info("login session created", "userID", user.ID)
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_id",
-		Value:    sessionID,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   h.authService.HTTPS,
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   int(h.authService.SessionExpiry),
-	})
+	h.setSessionCookie(w, sessionID, int(h.authService.SessionExpiry))
 
 	if user.PasswordResetRequired {
 		w.Header().Add("HX-Redirect", "/change-password")
@@ -467,15 +473,7 @@ func (h *Handlers) RegisterPost(w http.ResponseWriter, r *http.Request) {
 
 	log.Info("registration session created", "userID", userID)
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_id",
-		Value:    sessionID,
-		Path:     "/",
-		MaxAge:   int(h.authService.SessionExpiry),
-		HttpOnly: true,
-		Secure:   h.authService.HTTPS,
-		SameSite: http.SameSiteLaxMode,
-	})
+	h.setSessionCookie(w, sessionID, int(h.authService.SessionExpiry))
 
 	w.Header().Add("HX-Redirect", "/home")
 	w.WriteHeader(http.StatusOK)
@@ -519,7 +517,7 @@ func ValidatePassword(password string) (bool, string) {
 func (h *Handlers) LogoutPost(w http.ResponseWriter, r *http.Request) {
 	log.Debug("processing logout request")
 
-	cookie, err := r.Cookie("session_id")
+	cookie, err := r.Cookie(sessionCookieName)
 	if err != nil {
 		log.Warn("no session cookie found during logout")
 		http.Redirect(w, r, "/login", http.StatusFound)
@@ -533,15 +531,7 @@ func (h *Handlers) LogoutPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Clear the session cookie
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_id",
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-		Secure:   h.authService.HTTPS,
-		SameSite: http.SameSiteLaxMode,
-	})
+	h.setSessionCookie(w, "", -1)
 
 	w.Header().Add("HX-Redirect", "/login")
 	w.WriteHeader(http.StatusOK)
@@ -698,15 +688,7 @@ func (h *Handlers) ChangePasswordPost(w http.ResponseWriter, r *http.Request) {
 
 	log.Info("registration session created", "userID", user.ID)
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_id",
-		Value:    sessionID,
-		Path:     "/",
-		MaxAge:   int(h.authService.SessionExpiry),
-		HttpOnly: true,
-		Secure:   h.authService.HTTPS,
-		SameSite: http.SameSiteLaxMode,
-	})
+	h.setSessionCookie(w, sessionID, int(h.authService.SessionExpiry))
 
 	w.Header().Add("HX-Redirect", "/home")
 	w.WriteHeader(http.StatusOK)

@@ -37,6 +37,9 @@ const (
 	sidebarStateCookieName        = "sidebar_state"
 	sidebarSelectedPathCookieName = "sidebar_selected_path"
 	sidebarListsOpenCookieName    = "sidebar_lists_open"
+	sidebarStateExpandedValue     = "false"
+	sidebarPageHome               = "home"
+	sidebarPageWatchlist          = "watchlist"
 )
 
 type watchedFormData struct {
@@ -125,7 +128,7 @@ func (h *Handlers) GetSidebar(w http.ResponseWriter, r *http.Request) {
 	collapsed := false
 	stateCookie, err := r.Cookie(sidebarStateCookieName)
 	if err == nil {
-		collapsed = stateCookie.Value == "false"
+		collapsed = stateCookie.Value == sidebarStateExpandedValue
 	}
 
 	count, err := h.watchedService.GetWatchedCount(ctx)
@@ -772,11 +775,11 @@ func sidebarPathFromURL(urlStr string) string {
 func sidebarCurrentPageFromPath(path string) string {
 	switch path {
 	case "/", "/home":
-		return "home"
+		return sidebarPageHome
 	case "/watched":
 		return "watched"
 	case "/watchlist":
-		return "watchlist"
+		return sidebarPageWatchlist
 	case "/stats":
 		return "stats"
 	case "/admin/users":

@@ -6,13 +6,15 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/toast"
 )
 
+const toastID = "toast"
+
 func RenderErrorToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
 	if duration == 0 {
 		duration = 4000
 	}
 
 	if err := toast.Toast(toast.Props{
-		ID:            "toast",
+		ID:            toastID,
 		Title:         title,
 		Description:   description,
 		Variant:       toast.VariantError,
@@ -32,7 +34,7 @@ func RenderSuccessToast(w http.ResponseWriter, r *http.Request, title, descripti
 	}
 
 	if err := toast.Toast(toast.Props{
-		ID:            "toast",
+		ID:            toastID,
 		Title:         title,
 		Description:   description,
 		Variant:       toast.VariantSuccess,
@@ -52,7 +54,7 @@ func RenderWarningToast(w http.ResponseWriter, r *http.Request, title, descripti
 	}
 
 	if err := toast.Toast(toast.Props{
-		ID:            "toast",
+		ID:            toastID,
 		Title:         title,
 		Description:   description,
 		Variant:       toast.VariantWarning,

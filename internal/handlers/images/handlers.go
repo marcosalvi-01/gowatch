@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/marcosalvi-01/gowatch/internal/services"
@@ -61,7 +62,33 @@ func (h *Handlers) TMDBImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", cacheMaxAgeSeconds(h.imageService.CacheTTL())))
-	http.ServeFile(w, r, cachePath)
+	if err := serveCachedImageFile(w, r, cachePath); err != nil {
+		log.Error("failed to serve cached TMDB image", "cachePath", cachePath, "error", err)
+		http.Error(w, "failed to load image", http.StatusInternalServerError)
+		return
+	}
+}
+
+func serveCachedImageFile(w http.ResponseWriter, r *http.Request, cachePath string) error {
+	// #nosec G304,G703 -- path comes from image service cache resolver with prior validation.
+	file, err := os.Open(cachePath)
+	if err != nil {
+		return fmt.Errorf("open cached image: %w", err)
+	}
+	defer func() {
+		_ = file.Close()
+	}()
+
+	info, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("stat cached image: %w", err)
+	}
+	if info.IsDir() {
+		return fmt.Errorf("cached image path is directory")
+	}
+
+	http.ServeContent(w, r, info.Name(), info.ModTime(), file)
+	return nil
 }
 
 func cacheMaxAgeSeconds(cacheTTL time.Duration) int64 {
