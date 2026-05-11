@@ -55,7 +55,7 @@ setup:
 	@echo "Installing Go dependencies..."
 	go mod download
 	go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
-	go install github.com/a-h/templ/cmd/templ@latest
+	go install github.com/a-h/templ/cmd/templ@v0.3.1020
 	go install github.com/templui/templui/cmd/templui@latest
 	go install github.com/air-verse/air@latest
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
