@@ -56,7 +56,7 @@ templ cardContent(props Props) {
 	@card.Card(card.Props{
 		Class: "w-[90px] sm:w-[120px] md:w-[160px] border-0 group",
 	}) {
-		<div class="overflow-hidden w-full rounded-lg relative">
+		<div class="overflow-hidden w-full rounded-lg relative border-2 border-zinc-800">
 			@aspectratio.AspectRatio(aspectratio.Props{
 				ID:    "poster",
 				Ratio: aspectratio.RatioPoster,
@@ -99,7 +99,6 @@ templ cardContent(props Props) {
 					</div>
 				}
 			}
-			<div class="pointer-events-none absolute inset-0 rounded-lg border-2 border-zinc-800"></div>
 		</div>
 	}
 }
