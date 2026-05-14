@@ -9,6 +9,10 @@ formatters:
   enable:
     - gofumpt
     - goimports
+  exclusions:
+    paths:
+      - "internal/ui/templui/.*"
+      - "internal/ui/utils/templui\\.go$"
 
 linters:
   default: standard
