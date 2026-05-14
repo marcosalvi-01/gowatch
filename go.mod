@@ -10,7 +10,7 @@ require (
 	github.com/pressly/goose/v3 v3.25.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
-	github.com/templui/templui v1.10.0
+	github.com/templui/templui v1.11.1
 	golang.org/x/crypto v0.46.0
 	golang.org/x/sync v0.19.0
 	modernc.org/sqlite v1.39.1
