@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"log/slog"
-	"sort"
 
 	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/logging"
@@ -93,35 +92,7 @@ func selectWatchNextMovies(movies []models.MovieItem, limit int) []models.MovieI
 
 	sorted := make([]models.MovieItem, len(movies))
 	copy(sorted, movies)
-
-	sort.Slice(sorted, func(i, j int) bool {
-		left := sorted[i]
-		right := sorted[j]
-
-		leftHasPosition := left.Position != nil
-		rightHasPosition := right.Position != nil
-
-		switch {
-		case leftHasPosition && rightHasPosition:
-			if *left.Position != *right.Position {
-				return *left.Position < *right.Position
-			}
-		case leftHasPosition:
-			return true
-		case rightHasPosition:
-			return false
-		}
-
-		if !left.DateAdded.Equal(right.DateAdded) {
-			return left.DateAdded.Before(right.DateAdded)
-		}
-
-		if left.MovieDetails.Movie.Title != right.MovieDetails.Movie.Title {
-			return left.MovieDetails.Movie.Title < right.MovieDetails.Movie.Title
-		}
-
-		return left.MovieDetails.Movie.ID < right.MovieDetails.Movie.ID
-	})
+	sortListMovies(sorted, models.ListMovieSortCustom)
 
 	if len(sorted) > limit {
 		return sorted[:limit]

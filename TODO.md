@@ -1,7 +1,6 @@
 # bugs:
 
 - [ ] fix addtolistdialog to return full dialog content with buttons and handle empty lists and add loading indicator
-- [ ] sidebar on mobile shows the user avatar section not at the bottom
 
 # feats:
 

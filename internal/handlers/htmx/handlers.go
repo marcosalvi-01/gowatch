@@ -74,6 +74,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 
 	r.Post("/lists/items", h.AddMovieToList)
 	r.Delete("/lists/items", h.DeleteMovieFromList)
+	r.Patch("/lists/{id}/items/order", h.ReorderListMovie)
 
 	r.Post("/watchlist/add", h.AddToWatchlist)
 	r.Get("/watchlist/{id}", h.RenderAddToWatchlistButton)
@@ -571,6 +572,35 @@ func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {
 	RenderSuccessToast(w, r, "Removed from List", "Movie has been removed from the list", 0)
 }
 
+func (h *Handlers) ReorderListMovie(w http.ResponseWriter, r *http.Request) {
+	listIDStr := chi.URLParam(r, "id")
+	movieIDStr := r.FormValue("movie_id")
+	move := r.FormValue("move")
+
+	listID, err := strconv.ParseInt(listIDStr, 10, 64)
+	if err != nil {
+		log.Error("invalid list id for reorder", "listID", listIDStr, "error", err)
+		RenderErrorToast(w, r, "Invalid List", "The list you are trying to reorder is not valid.", 0)
+		return
+	}
+
+	movieID, err := strconv.ParseInt(movieIDStr, 10, 64)
+	if err != nil {
+		log.Error("invalid movie id for reorder", "movieID", movieIDStr, "error", err)
+		RenderErrorToast(w, r, "Invalid Movie", "The movie you are trying to reorder is not valid.", 0)
+		return
+	}
+
+	if err := h.listService.ReorderListMovie(r.Context(), listID, movieID, move); err != nil {
+		log.Error("failed to reorder list movie", "listID", listID, "movieID", movieID, "move", move, "error", err)
+		RenderErrorToast(w, r, "Failed to Reorder Movie", "An unexpected error occurred while updating the list order.", 0)
+		return
+	}
+
+	w.Header().Add("HX-Trigger", "refreshSidebar, refreshListGrid")
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *Handlers) HomeLists(w http.ResponseWriter, r *http.Request) {
 	lists, err := h.listService.GetAllLists(r.Context())
 	if err != nil {
@@ -683,16 +713,14 @@ func (h *Handlers) ListMovieGrid(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	list, err := h.listService.GetListDetails(ctx, listID)
+	viewData, err := h.listService.GetListViewData(ctx, listID, r.URL.Query().Get("sort"), r.URL.Query().Get("edit"), time.Now())
 	if err != nil {
 		log.Error("failed to get list details", "listID", listIDStr, "error", err)
 		RenderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred, please try again.", 0)
 		return
 	}
 
-	gridData := h.listService.BuildListGridData(list, time.Now())
-
-	if err := listgrid.ListGrid(gridData).Render(ctx, w); err != nil {
+	if err := listgrid.ListGrid(viewData).Render(ctx, w); err != nil {
 		log.Error("failed to render list grid", "listID", listIDStr, "error", err)
 		RenderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred, please try again.", 0)
 		return

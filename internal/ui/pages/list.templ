@@ -6,17 +6,17 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/separator"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/selectbox"
 	"strconv"
 )
 
-templ List(list *models.List) {
+templ List(data models.ListViewData) {
 	@Layout() {
 		@templ.Fragment("content") {
-			@listHeader(list)
-			@separator.Separator()
+			@listHeader(data)
 			<div
-				hx-get={ fmt.Sprintf("/htmx/lists/%d/movie-grid", list.ID) }
+				id="list-movie-grid"
+				hx-get={ data.GridURL }
 				hx-trigger="load, refreshListGrid from:body"
 				hx-swap="innerHTML"
 				hx-target="this"
@@ -25,32 +25,122 @@ templ List(list *models.List) {
 	}
 }
 
-templ listHeader(list *models.List) {
-	<div class="space-y-4 mb-8">
-		<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-			<div class="space-y-2">
-				<h1 class="text-2xl sm:text-3xl font-bold">{ list.Name }</h1>
-				if list.Description != nil && *list.Description != "" {
-					<p class="text-muted-foreground text-sm sm:text-base max-w-2xl">
-						{ *list.Description }
-					</p>
-				}
-			</div>
-			<div class="flex flex-col sm:flex-row gap-3">
-				@listActions(list)
+templ listHeader(data models.ListViewData) {
+	<div class="space-y-6 mb-8">
+		<div class="rounded-2xl border bg-card/40 p-5 sm:p-6">
+			<div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+				<div class="space-y-3">
+					<div class="flex items-center gap-3">
+						<div class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+							@icon.List(icon.Props{Class: "size-5"})
+						</div>
+						<div class="space-y-1">
+							<h1 class="text-2xl sm:text-3xl font-bold tracking-tight">{ data.List.Name }</h1>
+							<p class="text-sm text-muted-foreground">Curated movie list with custom order support.</p>
+						</div>
+					</div>
+					if data.List.Description != nil && *data.List.Description != "" {
+						<p class="text-muted-foreground text-sm sm:text-base max-w-3xl leading-relaxed">
+							{ *data.List.Description }
+						</p>
+					}
+					<div class="flex flex-wrap gap-2 text-xs sm:text-sm text-muted-foreground">
+						<span class="inline-flex items-center rounded-full border px-3 py-1 font-medium bg-background/70">
+							@icon.Film(icon.Props{Class: "size-3.5 mr-2"})
+							{ fmt.Sprintf("%d movies", len(data.List.Movies)) }
+						</span>
+						<span class="inline-flex items-center rounded-full border px-3 py-1 font-medium bg-background/70">
+							@icon.Calendar(icon.Props{Class: "size-3.5 mr-2"})
+							Created { data.List.CreationDate.Format("Jan 2006") }
+						</span>
+						if data.HasAverageRating {
+							<span class="inline-flex items-center rounded-full border px-3 py-1 font-medium bg-background/70">
+								@icon.Star(icon.Props{Class: "size-3.5 mr-2 fill-[orange] stroke-[orange]"})
+								{ fmt.Sprintf("%.1f avg rating", data.AverageRating) }
+							</span>
+						}
+					</div>
+				</div>
+				<div class="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[16rem] lg:items-end">
+					@listSortForm(data.PageURL, data.Sort)
+					<div class="flex flex-wrap justify-end gap-2">
+						@listEditOrderAction(data)
+						@listActions(data.List)
+					</div>
+				</div>
 			</div>
 		</div>
-		<div
-			id="list-stats"
-			hx-get={ fmt.Sprintf("/htmx/lists/%d/stats", list.ID) }
-			hx-trigger="load, refreshListStats from:body"
-			hx-swap="innerHTML"
-		></div>
 	</div>
+}
+
+templ listSortForm(pageURL string, currentSort models.ListMovieSort) {
+	<form
+		class="w-full"
+		hx-get={ pageURL }
+		hx-target="#main-content"
+		hx-trigger="change"
+		hx-push-url="true"
+		hx-swap="innerHTML"
+	>
+		<div class="space-y-2">
+			<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Display order</p>
+			@selectbox.SelectBox(selectbox.Props{Class: "w-full lg:w-64"}) {
+				@selectbox.Trigger(selectbox.TriggerProps{Name: "sort", Class: "w-full lg:w-64"}) {
+					@selectbox.Value(selectbox.ValueProps{Placeholder: "Sort movies"})
+				}
+				@selectbox.Content(selectbox.ContentProps{NoSearch: true}) {
+					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortCustom), Selected: currentSort == models.ListMovieSortCustom}) {
+						Custom order
+					}
+					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortDateAddedDesc), Selected: currentSort == models.ListMovieSortDateAddedDesc}) {
+						Recently added
+					}
+					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortDateAddedAsc), Selected: currentSort == models.ListMovieSortDateAddedAsc}) {
+						Oldest added
+					}
+					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortTitleAsc), Selected: currentSort == models.ListMovieSortTitleAsc}) {
+						Title A-Z
+					}
+					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortRatingDesc), Selected: currentSort == models.ListMovieSortRatingDesc}) {
+						Highest rated
+					}
+					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortReleaseDateDesc), Selected: currentSort == models.ListMovieSortReleaseDateDesc}) {
+						Newest release
+					}
+				}
+			}
+		</div>
+	</form>
 }
 
 templ listActions(list *models.List) {
 	@deleteListDialog(list)
+}
+
+templ listEditOrderAction(data models.ListViewData) {
+	if data.Sort == models.ListMovieSortCustom {
+		{{
+			label := "Edit order"
+			variant := button.VariantOutline
+			if data.IsEditingOrder {
+				label = "Done"
+				variant = button.VariantDefault
+			}
+		}}
+		@button.Button(button.Props{
+			Variant: variant,
+			Class:   "h-8 gap-2 px-3",
+			Attributes: templ.Attributes{
+				"hx-get":      data.ToggleEditURL,
+				"hx-target":   "#main-content",
+				"hx-push-url": "true",
+				"hx-swap":     "innerHTML",
+			},
+		}) {
+			@icon.ListChevronsUpDown(icon.Props{Class: "size-4"})
+			{ label }
+		}
+	}
 }
 
 templ deleteListDialog(list *models.List) {

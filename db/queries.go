@@ -588,6 +588,41 @@ func (d *SqliteDB) UpsertMovieInList(ctx context.Context, userID int64, insertMo
 	return nil
 }
 
+func (d *SqliteDB) UpdateListMoviePositions(ctx context.Context, userID, listID int64, movieIDs []int64) error {
+	log.Debug("updating list movie positions", "listID", listID, "movieCount", len(movieIDs))
+
+	tx, err := d.db.Begin()
+	if err != nil {
+		log.Error("failed to start database transaction for list reorder", "listID", listID, "error", err)
+		return fmt.Errorf("failed to start db transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	qtx := d.queries.WithTx(tx)
+
+	for i, movieID := range movieIDs {
+		position := int64(i + 1)
+		if err := qtx.UpdateListMoviePosition(ctx, sqlc.UpdateListMoviePositionParams{
+			Position: &position,
+			MovieID:  movieID,
+			ListID:   listID,
+			ID:       listID,
+			UserID:   &userID,
+		}); err != nil {
+			log.Error("failed to update list movie position", "listID", listID, "movieID", movieID, "position", position, "error", err)
+			return fmt.Errorf("failed to update movie %d position in list %d: %w", movieID, listID, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Error("failed to commit list reorder transaction", "listID", listID, "error", err)
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	log.Info("successfully updated list movie positions", "listID", listID, "movieCount", len(movieIDs))
+	return nil
+}
+
 func (d *SqliteDB) GetAllLists(ctx context.Context, userID int64) ([]InsertList, error) {
 	log.Debug("retrieving all lists from database")
 

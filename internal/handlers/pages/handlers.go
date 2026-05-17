@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/marcosalvi-01/gowatch/internal/common"
@@ -299,21 +300,21 @@ func (h *Handlers) ListPage(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("serving list page", "listID", id)
 
-	list, err := h.listService.GetListDetails(ctx, id)
+	viewData, err := h.listService.GetListViewData(ctx, id, r.URL.Query().Get("sort"), r.URL.Query().Get("edit"), time.Now())
 	if err != nil {
 		log.Error("failed to get list details", "listID", id, "error", err)
 		render500Error(w, r)
 		return
 	}
-	log.Debug("fetched list details", "listID", id, "movieCount", len(list.Movies))
+	log.Debug("fetched list details", "listID", id, "movieCount", len(viewData.List.Movies))
 
 	if shouldRenderContentFragment(r) {
-		templ.Handler(pages.List(list), templ.WithFragments("content")).ServeHTTP(w, r)
+		templ.Handler(pages.List(viewData), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
-		templ.Handler(pages.List(list)).ServeHTTP(w, r)
+		templ.Handler(pages.List(viewData)).ServeHTTP(w, r)
 	}
 
-	log.Info("list page served successfully", "listID", id, "name", list.Name, "movieCount", len(list.Movies))
+	log.Info("list page served successfully", "listID", id, "name", viewData.List.Name, "movieCount", len(viewData.List.Movies))
 }
 
 func (h *Handlers) StatsPage(w http.ResponseWriter, r *http.Request) {

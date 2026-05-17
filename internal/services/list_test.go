@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -402,4 +403,299 @@ func TestListService_ImportLists_SkipsInvalidListAndContinues(t *testing.T) {
 	if lists[0].Name != "Valid List" {
 		t.Fatalf("expected list name 'Valid List', got %q", lists[0].Name)
 	}
+}
+
+func TestListService_AddMovieToList_AssignsCustomPosition(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	ctx := setupTestUser(t, testDB)
+
+	for i := 1; i <= 2; i++ {
+		if err := testDB.UpsertMovie(ctx, &models.MovieDetails{Movie: models.Movie{ID: int64(i), Title: fmt.Sprintf("Movie %d", i)}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	list, err := listService.CreateList(ctx, "Ranked", nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := listService.AddMovieToList(ctx, list.ID, 1, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := listService.AddMovieToList(ctx, list.ID, 2, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	listDetails, err := listService.GetListDetails(ctx, list.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	positions := make(map[int64]int64, len(listDetails.Movies))
+	for _, movie := range listDetails.Movies {
+		if movie.Position == nil {
+			t.Fatalf("expected movie %d to have position", movie.MovieDetails.Movie.ID)
+		}
+		positions[movie.MovieDetails.Movie.ID] = *movie.Position
+	}
+
+	if positions[1] != 1 {
+		t.Fatalf("expected movie 1 position 1, got %d", positions[1])
+	}
+	if positions[2] != 2 {
+		t.Fatalf("expected movie 2 position 2, got %d", positions[2])
+	}
+}
+
+func TestListService_GetListViewData_SortsMoviesForDisplay(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	ctx := setupTestUser(t, testDB)
+
+	movie1Release := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	movie2Release := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
+	movie3Release := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	movies := []*models.MovieDetails{
+		{Movie: models.Movie{ID: 1, Title: "Zulu", VoteAverage: 7.2, ReleaseDate: &movie1Release}},
+		{Movie: models.Movie{ID: 2, Title: "Alpha", VoteAverage: 8.8, ReleaseDate: &movie2Release}},
+		{Movie: models.Movie{ID: 3, Title: "Bravo", VoteAverage: 6.4, ReleaseDate: &movie3Release}},
+	}
+	for _, movie := range movies {
+		if err := testDB.UpsertMovie(ctx, movie); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	list, err := listService.CreateList(ctx, "Favorites", nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	position := int64(1)
+	if err := testDB.AddMovieToList(ctx, getTestUserID(t, ctx), db.InsertMovieList{
+		MovieID:   1,
+		ListID:    list.ID,
+		DateAdded: time.Date(2024, 1, 3, 10, 0, 0, 0, time.UTC),
+		Position:  &position,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := testDB.AddMovieToList(ctx, getTestUserID(t, ctx), db.InsertMovieList{
+		MovieID:   2,
+		ListID:    list.ID,
+		DateAdded: time.Date(2024, 1, 2, 10, 0, 0, 0, time.UTC),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := testDB.AddMovieToList(ctx, getTestUserID(t, ctx), db.InsertMovieList{
+		MovieID:   3,
+		ListID:    list.ID,
+		DateAdded: time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	testCases := []struct {
+		name     string
+		sortMode models.ListMovieSort
+		wantIDs  []int64
+	}{
+		{name: "custom", sortMode: models.ListMovieSortCustom, wantIDs: []int64{1, 3, 2}},
+		{name: "recently added", sortMode: models.ListMovieSortDateAddedDesc, wantIDs: []int64{1, 2, 3}},
+		{name: "title", sortMode: models.ListMovieSortTitleAsc, wantIDs: []int64{2, 3, 1}},
+		{name: "rating", sortMode: models.ListMovieSortRatingDesc, wantIDs: []int64{2, 1, 3}},
+		{name: "release date", sortMode: models.ListMovieSortReleaseDateDesc, wantIDs: []int64{1, 2, 3}},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			viewData, err := listService.GetListViewData(ctx, list.ID, string(testCase.sortMode), "", time.Now())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			gotIDs := make([]int64, len(viewData.List.Movies))
+			for i, movie := range viewData.List.Movies {
+				gotIDs[i] = movie.MovieDetails.Movie.ID
+			}
+
+			if !reflect.DeepEqual(gotIDs, testCase.wantIDs) {
+				t.Fatalf("expected ids %v, got %v", testCase.wantIDs, gotIDs)
+			}
+		})
+	}
+}
+
+func TestListService_ReorderListMovie_PersistsCustomOrder(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	ctx := setupTestUser(t, testDB)
+	userID := getTestUserID(t, ctx)
+
+	for i := 1; i <= 3; i++ {
+		if err := testDB.UpsertMovie(ctx, &models.MovieDetails{Movie: models.Movie{ID: int64(i), Title: fmt.Sprintf("Movie %d", i)}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	list, err := listService.CreateList(ctx, "Ranked", nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 1; i <= 3; i++ {
+		position := int64(i)
+		if err := testDB.AddMovieToList(ctx, userID, db.InsertMovieList{
+			MovieID:   int64(i),
+			ListID:    list.ID,
+			DateAdded: time.Date(2024, 1, i, 10, 0, 0, 0, time.UTC),
+			Position:  &position,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := listService.ReorderListMovie(ctx, list.ID, 2, listMovieMoveUp); err != nil {
+		t.Fatal(err)
+	}
+
+	viewData, err := listService.GetListViewData(ctx, list.ID, string(models.ListMovieSortCustom), "", time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	gotIDs := make([]int64, len(viewData.List.Movies))
+	for i, movie := range viewData.List.Movies {
+		gotIDs[i] = movie.MovieDetails.Movie.ID
+		if movie.Position == nil {
+			t.Fatalf("expected movie %d to have position", movie.MovieDetails.Movie.ID)
+		}
+		if *movie.Position != int64(i+1) {
+			t.Fatalf("expected movie %d position %d, got %d", movie.MovieDetails.Movie.ID, i+1, *movie.Position)
+		}
+	}
+
+	wantIDs := []int64{2, 1, 3}
+	if !reflect.DeepEqual(gotIDs, wantIDs) {
+		t.Fatalf("expected ids %v, got %v", wantIDs, gotIDs)
+	}
+}
+
+func TestListService_ReorderListMovie_MovesToFirstAndLast(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+
+	movieService := NewMovieService(testDB, nil, time.Hour)
+	listService := NewListService(testDB, movieService)
+	ctx := setupTestUser(t, testDB)
+	userID := getTestUserID(t, ctx)
+
+	for i := 1; i <= 4; i++ {
+		if err := testDB.UpsertMovie(ctx, &models.MovieDetails{Movie: models.Movie{ID: int64(i), Title: fmt.Sprintf("Movie %d", i)}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	list, err := listService.CreateList(ctx, "Ranked", nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 1; i <= 4; i++ {
+		position := int64(i)
+		if err := testDB.AddMovieToList(ctx, userID, db.InsertMovieList{
+			MovieID:   int64(i),
+			ListID:    list.ID,
+			DateAdded: time.Date(2024, 1, i, 10, 0, 0, 0, time.UTC),
+			Position:  &position,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := listService.ReorderListMovie(ctx, list.ID, 3, listMovieMoveFirst); err != nil {
+		t.Fatal(err)
+	}
+	if err := listService.ReorderListMovie(ctx, list.ID, 1, listMovieMoveLast); err != nil {
+		t.Fatal(err)
+	}
+
+	viewData, err := listService.GetListViewData(ctx, list.ID, string(models.ListMovieSortCustom), "", time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	gotIDs := make([]int64, len(viewData.List.Movies))
+	for i, movie := range viewData.List.Movies {
+		gotIDs[i] = movie.MovieDetails.Movie.ID
+		if movie.Position == nil {
+			t.Fatalf("expected movie %d to have position", movie.MovieDetails.Movie.ID)
+		}
+		if *movie.Position != int64(i+1) {
+			t.Fatalf("expected movie %d position %d, got %d", movie.MovieDetails.Movie.ID, i+1, *movie.Position)
+		}
+	}
+
+	wantIDs := []int64{3, 2, 4, 1}
+	if !reflect.DeepEqual(gotIDs, wantIDs) {
+		t.Fatalf("expected ids %v, got %v", wantIDs, gotIDs)
+	}
+}
+
+func TestIsListMovieOrderEditing(t *testing.T) {
+	testCases := []struct {
+		name     string
+		raw      string
+		sortMode models.ListMovieSort
+		want     bool
+	}{
+		{name: "custom edit enabled with one", raw: "1", sortMode: models.ListMovieSortCustom, want: true},
+		{name: "custom edit enabled with true", raw: "true", sortMode: models.ListMovieSortCustom, want: true},
+		{name: "custom edit disabled", raw: "0", sortMode: models.ListMovieSortCustom, want: false},
+		{name: "non custom ignores edit", raw: "1", sortMode: models.ListMovieSortTitleAsc, want: false},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := IsListMovieOrderEditing(testCase.raw, testCase.sortMode)
+			if got != testCase.want {
+				t.Fatalf("expected %t, got %t", testCase.want, got)
+			}
+		})
+	}
+}
+
+func getTestUserID(t *testing.T, ctx context.Context) int64 {
+	t.Helper()
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return user.ID
 }

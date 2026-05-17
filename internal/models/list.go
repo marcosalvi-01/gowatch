@@ -2,6 +2,17 @@ package models
 
 import "time"
 
+type ListMovieSort string
+
+const (
+	ListMovieSortCustom          ListMovieSort = "custom"
+	ListMovieSortDateAddedDesc   ListMovieSort = "date_added_desc"
+	ListMovieSortDateAddedAsc    ListMovieSort = "date_added_asc"
+	ListMovieSortTitleAsc        ListMovieSort = "title_asc"
+	ListMovieSortRatingDesc      ListMovieSort = "rating_desc"
+	ListMovieSortReleaseDateDesc ListMovieSort = "release_date_desc"
+)
+
 // List is a list of movies
 type List struct {
 	ID           int64
@@ -26,8 +37,15 @@ type ListEntry struct {
 	Name string
 }
 
-type ListGridData struct {
-	List           List
-	UpcomingMovies []MovieItem
-	ReleasedMovies []MovieItem
+type ListViewData struct {
+	List             *List
+	Sort             ListMovieSort
+	IsEditingOrder   bool
+	PageURL          string
+	GridURL          string
+	ToggleEditURL    string
+	HasAverageRating bool
+	AverageRating    float32
+	UpcomingMovies   []MovieItem
+	ReleasedMovies   []MovieItem
 }

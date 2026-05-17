@@ -976,6 +976,15 @@ FROM
 WHERE
     list.user_id = ?
     AND list.id = ?
+ORDER BY
+    CASE
+        WHEN list_movie.position IS NULL THEN 1
+        ELSE 0
+    END,
+    list_movie.position ASC,
+    list_movie.date_added ASC,
+    movie.title ASC,
+    movie.id ASC
 `
 
 type GetListJoinMovieByIDParams struct {
@@ -2947,6 +2956,43 @@ WHERE
 
 func (q *Queries) SetAdmin(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, setAdmin, id)
+	return err
+}
+
+const updateListMoviePosition = `-- name: UpdateListMoviePosition :exec
+UPDATE list_movie
+SET
+    position = ?
+WHERE
+    movie_id = ?
+    AND list_id = ?
+    AND EXISTS (
+        SELECT
+            1
+        FROM
+            list
+        WHERE
+            list.id = ?
+            AND list.user_id = ?
+    )
+`
+
+type UpdateListMoviePositionParams struct {
+	Position *int64
+	MovieID  int64
+	ListID   int64
+	ID       int64
+	UserID   *int64
+}
+
+func (q *Queries) UpdateListMoviePosition(ctx context.Context, arg UpdateListMoviePositionParams) error {
+	_, err := q.db.ExecContext(ctx, updateListMoviePosition,
+		arg.Position,
+		arg.MovieID,
+		arg.ListID,
+		arg.ID,
+		arg.UserID,
+	)
 	return err
 }
 

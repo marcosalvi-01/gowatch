@@ -118,11 +118,23 @@ func (s *ListService) AddMovieToList(ctx context.Context, listID, movieID int64,
 		return err
 	}
 
+	list, err := s.db.GetList(ctx, user.ID, listID)
+	if err != nil {
+		s.log.Error("failed to get list before adding movie", "listID", listID, "movieID", movieID, "error", err)
+		return fmt.Errorf("failed to get list with id '%d' from db: %w", listID, err)
+	}
+
+	var position *int64
+	if !list.IsWatchlist {
+		nextPosition := nextCustomListPosition(list.Movies)
+		position = &nextPosition
+	}
+
 	err = s.db.AddMovieToList(ctx, user.ID, db.InsertMovieList{
 		MovieID:   movieID,
 		ListID:    listID,
 		DateAdded: time.Now(),
-		Position:  nil,
+		Position:  position,
 		Note:      note,
 	})
 	if err != nil {
@@ -151,6 +163,16 @@ func (s *ListService) GetListDetails(ctx context.Context, listID int64) (*models
 	s.log.Debug("fetched list details", "listID", listID, "movieCount", len(list.Movies))
 
 	return list, nil
+}
+
+func (s *ListService) GetListViewData(ctx context.Context, listID int64, rawSort, rawEdit string, now time.Time) (models.ListViewData, error) {
+	list, err := s.GetListDetails(ctx, listID)
+	if err != nil {
+		return models.ListViewData{}, err
+	}
+
+	sortMode := ParseListMovieSort(rawSort)
+	return s.BuildListViewData(list, sortMode, IsListMovieOrderEditing(rawEdit, sortMode), now), nil
 }
 
 func (s *ListService) DeleteList(ctx context.Context, id int64) error {
@@ -194,6 +216,39 @@ func (s *ListService) DeleteMovieFromList(ctx context.Context, listID, movieID i
 	}
 	s.log.Info("successfully removed movie from list", "listID", listID, "movieID", movieID)
 
+	return nil
+}
+
+func (s *ListService) ReorderListMovie(ctx context.Context, listID, movieID int64, move string) error {
+	s.log.Debug("reordering movie in list", "listID", listID, "movieID", movieID, "move", move)
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		s.log.Error("failed to get userID", "error", err)
+		return err
+	}
+
+	list, err := s.db.GetList(ctx, user.ID, listID)
+	if err != nil {
+		s.log.Error("failed to get list for reorder", "listID", listID, "movieID", movieID, "error", err)
+		return fmt.Errorf("failed to get list with id '%d' from db: %w", listID, err)
+	}
+
+	if list.IsWatchlist {
+		return fmt.Errorf("watchlist cannot be manually reordered")
+	}
+
+	movieIDs, err := reorderMovieIDsForCustomSort(list.Movies, movieID, move)
+	if err != nil {
+		return err
+	}
+
+	if err := s.db.UpdateListMoviePositions(ctx, user.ID, listID, movieIDs); err != nil {
+		s.log.Error("failed to persist movie reorder", "listID", listID, "movieID", movieID, "move", move, "error", err)
+		return fmt.Errorf("failed to update movie order for list '%d': %w", listID, err)
+	}
+
+	s.log.Info("successfully reordered movie in list", "listID", listID, "movieID", movieID, "move", move)
 	return nil
 }
 

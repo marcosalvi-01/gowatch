@@ -322,7 +322,16 @@ FROM
     JOIN movie ON movie.id = list_movie.movie_id
 WHERE
     list.user_id = ?
-    AND list.id = ?;
+    AND list.id = ?
+ORDER BY
+    CASE
+        WHEN list_movie.position IS NULL THEN 1
+        ELSE 0
+    END,
+    list_movie.position ASC,
+    list_movie.date_added ASC,
+    movie.title ASC,
+    movie.id ASC;
 
 -- name: AddMovieToList :exec
 INSERT INTO
@@ -371,6 +380,23 @@ SET
     date_added = excluded.date_added,
     position = excluded.position,
     note = excluded.note;
+
+-- name: UpdateListMoviePosition :exec
+UPDATE list_movie
+SET
+    position = ?
+WHERE
+    movie_id = ?
+    AND list_id = ?
+    AND EXISTS (
+        SELECT
+            1
+        FROM
+            list
+        WHERE
+            list.id = ?
+            AND list.user_id = ?
+    );
 
 -- name: GetAllLists :many
 SELECT

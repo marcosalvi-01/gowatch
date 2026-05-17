@@ -68,6 +68,7 @@ type DB interface {
 	ExportLists(ctx context.Context, userID int64) ([]models.List, error)
 	AddMovieToList(ctx context.Context, userID int64, insertMovieList InsertMovieList) error
 	UpsertMovieInList(ctx context.Context, userID int64, insertMovieList InsertMovieList) error
+	UpdateListMoviePositions(ctx context.Context, userID, listID int64, movieIDs []int64) error
 	DeleteListByID(ctx context.Context, userID, listID int64) error
 	DeleteMovieFromList(ctx context.Context, userID, listID, movieID int64) error
 	GetWatchlistID(ctx context.Context, userID int64) (int64, error)

@@ -1,27 +1,77 @@
 package services
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
 	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
-func (s *ListService) BuildListGridData(list *models.List, now time.Time) models.ListGridData {
+func (s *ListService) BuildListViewData(list *models.List, sortMode models.ListMovieSort, isEditingOrder bool, now time.Time) models.ListViewData {
 	if list == nil {
-		return models.ListGridData{}
+		return models.ListViewData{}
 	}
 
-	data := models.ListGridData{
-		List: *list,
+	data := models.ListViewData{
+		List:    list,
+		Sort:    sortMode,
+		PageURL: fmt.Sprintf("/list/%d", list.ID),
 	}
+	data.GridURL = buildListMovieGridURL(list.ID, sortMode, isEditingOrder)
 
-	if !list.IsWatchlist {
+	if list.IsWatchlist {
+		data.Sort = models.ListMovieSortCustom
+		data.UpcomingMovies, data.ReleasedMovies = splitWatchlistMoviesForDisplay(list.Movies, now)
 		return data
 	}
+	if sortMode != models.ListMovieSortCustom {
+		isEditingOrder = false
+	}
 
-	data.UpcomingMovies, data.ReleasedMovies = splitWatchlistMoviesForDisplay(list.Movies, now)
+	data.IsEditingOrder = isEditingOrder
+	data.ToggleEditURL = buildListPageURL(list.ID, sortMode, !isEditingOrder)
+	sortListMovies(data.List.Movies, sortMode)
+	data.AverageRating, data.HasAverageRating = averageMovieRating(data.List.Movies)
+
 	return data
+}
+
+func buildListMovieGridURL(listID int64, sort models.ListMovieSort, isEditingOrder bool) string {
+	return fmt.Sprintf("/htmx/lists/%d/movie-grid%s", listID, buildListQueryString(sort, isEditingOrder))
+}
+
+func buildListPageURL(listID int64, sort models.ListMovieSort, isEditingOrder bool) string {
+	return fmt.Sprintf("/list/%d%s", listID, buildListQueryString(sort, isEditingOrder))
+}
+
+func buildListQueryString(sort models.ListMovieSort, isEditingOrder bool) string {
+	query := fmt.Sprintf("?sort=%s", sort)
+	if sort == models.ListMovieSortCustom && isEditingOrder {
+		query += "&edit=1"
+	}
+
+	return query
+}
+
+func averageMovieRating(movies []models.MovieItem) (float32, bool) {
+	var total float32
+	count := 0
+
+	for _, movie := range movies {
+		if movie.MovieDetails.Movie.VoteAverage <= 0 {
+			continue
+		}
+
+		total += movie.MovieDetails.Movie.VoteAverage
+		count++
+	}
+
+	if count == 0 {
+		return 0, false
+	}
+
+	return total / float32(count), true
 }
 
 // splitWatchlistMoviesForDisplay separates watchlist movies into upcoming and released buckets and applies display ordering.

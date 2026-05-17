@@ -70,7 +70,7 @@ func TestSortWatchlistUpcomingMovies_HandlesNilReleaseDate(t *testing.T) {
 	assertWatchlistMovieIDs(t, movies, []int64{1, 2})
 }
 
-func TestBuildListGridData_BuildsWatchlistSections(t *testing.T) {
+func TestBuildListViewData_BuildsWatchlistSections(t *testing.T) {
 	now := time.Date(2026, 4, 13, 15, 0, 0, 0, time.UTC)
 	releaseSoon := time.Date(2026, 4, 20, 0, 0, 0, 0, time.UTC)
 	releasePast := time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)
@@ -86,7 +86,7 @@ func TestBuildListGridData_BuildsWatchlistSections(t *testing.T) {
 	}
 
 	service := &ListService{}
-	data := service.BuildListGridData(list, now)
+	data := service.BuildListViewData(list, models.ListMovieSortCustom, false, now)
 
 	if data.List.ID != list.ID {
 		t.Fatalf("expected list ID %d, got %d", list.ID, data.List.ID)
