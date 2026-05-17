@@ -891,7 +891,7 @@ LIMIT
 
 -- name: GetMonthlyGenreBreakdown :many
 SELECT
-    watched.watched_date,
+    CAST(strftime('%Y-%m', watched.watched_date) AS TEXT) AS watched_month,
     genre.name AS genre_name,
     COUNT(*) AS movie_count
 FROM
@@ -903,10 +903,10 @@ WHERE
     watched.watched_date >= date('now', 'start of month', '-12 months')
     AND watched.user_id = ?
 GROUP BY
-    watched.watched_date,
+    watched_month,
     genre_name
 ORDER BY
-    watched.watched_date,
+    watched_month,
     movie_count DESC;
 
 -- Rating stats.

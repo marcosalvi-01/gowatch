@@ -1,0 +1,34 @@
+package infohint
+
+import (
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/tooltip"
+	"strings"
+)
+
+templ iconTooltip(helpText, ariaLabel string) {
+	if helpText != "" {
+		{{ tooltipID := strings.ToLower(strings.ReplaceAll(ariaLabel, " ", "-")) + "-tooltip" }}
+		@tooltip.Tooltip() {
+			@tooltip.Trigger(tooltip.TriggerProps{Class: "inline-flex items-center text-muted-foreground hover:text-foreground cursor-help"}) {
+				<span aria-label={ ariaLabel }>
+					@icon.Info(icon.Props{Class: "size-4"})
+				</span>
+			}
+			@tooltip.Content(tooltip.ContentProps{ID: tooltipID, Position: tooltip.PositionTop, Class: "max-w-xs text-xs leading-relaxed"}) {
+				{ helpText }
+			}
+		}
+	}
+}
+
+templ Corner(helpText, ariaLabel string) {
+	@iconTooltip(helpText, ariaLabel)
+}
+
+templ LabelMutedXs(label, helpText string) {
+	<div class="text-xs text-muted-foreground mb-1 inline-flex items-center gap-1">
+		<span>{ label }</span>
+		@Corner(helpText, label+" help")
+	</div>
+}

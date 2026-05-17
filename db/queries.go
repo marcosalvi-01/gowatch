@@ -1186,11 +1186,11 @@ func (d *SqliteDB) GetMonthlyGenreBreakdown(ctx context.Context, userID int64) (
 
 	monthMap := make(map[string]map[string]int)
 	for _, row := range rawData {
-		monthStr := row.WatchedDate.Format("2006-01")
+		monthStr := row.WatchedMonth
 		if monthMap[monthStr] == nil {
 			monthMap[monthStr] = make(map[string]int)
 		}
-		monthMap[monthStr][row.GenreName] = int(row.MovieCount)
+		monthMap[monthStr][row.GenreName] += int(row.MovieCount)
 	}
 
 	// Convert to slice and sort by month

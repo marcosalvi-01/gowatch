@@ -3,8 +3,8 @@ package pages
 import (
 	"fmt"
 	"github.com/marcosalvi-01/gowatch/internal/models"
-	"github.com/marcosalvi-01/gowatch/internal/utils"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/calendarheatmap"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/infohint"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/statscollectioncard"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/avatar"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
@@ -12,6 +12,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/selectbox"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
+	"github.com/marcosalvi-01/gowatch/internal/utils"
 	"strconv"
 	"strings"
 	"time"
@@ -64,6 +65,15 @@ templ statsSectionHeader(title string, iconFn func(...icon.Props) templ.Componen
 	</h2>
 }
 
+templ statsCardHeader(title, helpText string) {
+	@card.Header(card.HeaderProps{Class: "flex-row items-start justify-between space-y-0 gap-3"}) {
+		@card.Title() {
+			{ title }
+		}
+		@infohint.Corner(helpText, title+" help")
+	}
+}
+
 templ statsAtGlance(stats *models.WatchedStats) {
 	<div class="space-y-4">
 		@statsSectionHeader("At a Glance", icon.Sparkles)
@@ -82,7 +92,10 @@ templ statsAtGlance(stats *models.WatchedStats) {
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 			@card.Card() {
 				@card.Content(card.ContentProps{Class: "p-4 sm:p-6"}) {
-					<div class="py-4 text-center">
+					<div class="flex justify-end">
+						@infohint.Corner("Shows how many days in a row you have watched at least one movie up to your latest watch date.", "Current Streak help")
+					</div>
+					<div class="pt-2 text-center">
 						<div class="text-sm text-muted-foreground mb-1">Current Streak</div>
 						<div class="text-3xl font-bold text-primary">{ fmt.Sprintf("%d days", stats.LongestStreak.CurrentDays) }</div>
 					</div>
@@ -90,7 +103,10 @@ templ statsAtGlance(stats *models.WatchedStats) {
 			}
 			@card.Card() {
 				@card.Content(card.ContentProps{Class: "p-4 sm:p-6"}) {
-					<div class="py-4 text-center">
+					<div class="flex justify-end">
+						@infohint.Corner("Shows the single day when you logged the most watched movies.", "Most Watched Day help")
+					</div>
+					<div class="pt-2 text-center">
 						<div class="text-sm text-muted-foreground mb-1">Most Watched Day</div>
 						if stats.MostWatchedDay != nil {
 							<div class="text-lg font-semibold">{ stats.MostWatchedDay.Date.Format("2 Jan 2006") }</div>
@@ -102,7 +118,10 @@ templ statsAtGlance(stats *models.WatchedStats) {
 				}
 			}
 			@card.Card(card.Props{Class: "h-full"}) {
-				@card.Content(card.ContentProps{Class: "p-4 sm:p-6 h-full flex items-center"}) {
+				@card.Content(card.ContentProps{Class: "relative p-4 sm:p-6 h-full flex items-center"}) {
+					<div class="absolute right-4 top-4 sm:right-6 sm:top-6">
+						@infohint.Corner("Shows your average number of watched movies per day, week, and month across your full watch history.", "Averages help")
+					</div>
 					<div class="grid grid-cols-3 w-full text-center">
 						<div>
 							<div class="text-xs text-muted-foreground pb-2">Avg/Day</div>
@@ -129,11 +148,7 @@ templ statsActivitySection(stats *models.WatchedStats) {
 		@calendarheatmap.CalendarHeatmapCard(stats.DailyWatchCountsLastYear)
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 			@card.Card(card.Props{Class: "h-full"}) {
-				@card.Header() {
-					@card.Title() {
-						Watches by Year
-					}
-				}
+				@statsCardHeader("Watches by Year", "Shows how many movies you watched in each year across your full watch history.")
 				@card.Content(card.ContentProps{Class: "pt-4"}) {
 					@chart.Chart(chart.Props{
 						Variant:     chart.VariantBar,
@@ -148,11 +163,7 @@ templ statsActivitySection(stats *models.WatchedStats) {
 				}
 			}
 			@card.Card(card.Props{Class: "h-full"}) {
-				@card.Header() {
-					@card.Title() {
-						Movies per Month
-					}
-				}
+				@statsCardHeader("Movies per Month", "Shows the last 12 months of your watched movies. Each bar is the total number of watches in that month.")
 				@card.Content(card.ContentProps{Class: "pt-4"}) {
 					@chart.Chart(chart.Props{
 						Variant:     chart.VariantBar,
@@ -167,11 +178,7 @@ templ statsActivitySection(stats *models.WatchedStats) {
 				}
 			}
 			@card.Card(card.Props{Class: "h-full"}) {
-				@card.Header() {
-					@card.Title() {
-						Weekday Distribution
-					}
-				}
+				@statsCardHeader("Weekday Distribution", "Shows which days of the week you watch movies most often, based on all your watched entries.")
 				@card.Content(card.ContentProps{Class: "pt-4"}) {
 					@chart.Chart(chart.Props{
 						Variant:     chart.VariantBar,
@@ -194,11 +201,7 @@ templ statsTasteSection(stats *models.WatchedStats) {
 		@statsSectionHeader("Taste & Discovery", icon.Palette)
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 			@card.Card(card.Props{Class: "h-full"}) {
-				@card.Header() {
-					@card.Title() {
-						Genres
-					}
-				}
+				@statsCardHeader("Genres", "Shows your most watched genres across all watched movies. A movie can count in more than one genre if it has multiple genre tags.")
 				@card.Content(card.ContentProps{Class: "pt-4"}) {
 					@chart.Chart(chart.Props{
 						Variant:    chart.VariantPie,
@@ -210,11 +213,7 @@ templ statsTasteSection(stats *models.WatchedStats) {
 				}
 			}
 			@card.Card(card.Props{Class: "h-full"}) {
-				@card.Header() {
-					@card.Title() {
-						Theater vs Home
-					}
-				}
+				@statsCardHeader("Theater vs Home", "Shows how many watched entries were marked as theater watches compared with home watches.")
 				@card.Content(card.ContentProps{Class: "pt-4"}) {
 					@chart.Chart(chart.Props{
 						Variant:    chart.VariantDoughnut,
@@ -226,11 +225,7 @@ templ statsTasteSection(stats *models.WatchedStats) {
 				}
 			}
 			@card.Card(card.Props{Class: "h-full"}) {
-				@card.Header() {
-					@card.Title() {
-						Movie Release Years
-					}
-				}
+				@statsCardHeader("Movie Release Years", "Shows how many watched movies were released in each year, based on the movie's release date rather than when you watched it.")
 				@card.Content(card.ContentProps{Class: "pt-4"}) {
 					@chart.Chart(chart.Props{
 						Variant:     chart.VariantBar,
@@ -246,11 +241,7 @@ templ statsTasteSection(stats *models.WatchedStats) {
 			}
 		</div>
 		@card.Card() {
-			@card.Header() {
-				@card.Title() {
-					Genres by Month
-				}
-			}
+			@statsCardHeader("Genres by Month", "Shows the last 12 months of your watched movies. Each colored bar segment counts a genre tag from the movies you watched, so one movie can add to more than one genre.")
 			@card.Content(card.ContentProps{Class: "pt-4"}) {
 				@chart.Chart(chart.Props{
 					Variant:     chart.VariantBar,
@@ -292,11 +283,7 @@ templ statsRatingsSection(stats *models.WatchedStats) {
 		</div>
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 			@card.Card(card.Props{Class: "h-full"}) {
-				@card.Header() {
-					@card.Title() {
-						Rating Distribution
-					}
-				}
+				@statsCardHeader("Rating Distribution", "Shows how often you use each rating score, based only on watched entries that you rated.")
 				@card.Content(card.ContentProps{Class: "pt-4"}) {
 					@chart.Chart(chart.Props{
 						Variant:     chart.VariantBar,
@@ -311,11 +298,7 @@ templ statsRatingsSection(stats *models.WatchedStats) {
 				}
 			}
 			@card.Card(card.Props{Class: "h-full"}) {
-				@card.Header() {
-					@card.Title() {
-						Average Rating by Month
-					}
-				}
+				@statsCardHeader("Average Rating by Month", "Shows the average of your ratings for each month. Months without ratings are not included.")
 				@card.Content(card.ContentProps{Class: "pt-4"}) {
 					{{ yMin := 0.0 }}
 					{{ yMax := 5.0 }}
@@ -334,11 +317,7 @@ templ statsRatingsSection(stats *models.WatchedStats) {
 				}
 			}
 			@card.Card(card.Props{Class: "h-full"}) {
-				@card.Header() {
-					@card.Title() {
-						Rating by Release Decade
-					}
-				}
+				@statsCardHeader("Rating by Release Decade", "Shows the average rating you gave to movies from each release decade, using only movies you rated.")
 				@card.Content(card.ContentProps{Class: "pt-4"}) {
 					{{ yMin := 0.0 }}
 					{{ yMax := 5.0 }}
@@ -359,8 +338,8 @@ templ statsRatingsSection(stats *models.WatchedStats) {
 		</div>
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 			@highestRatedMoviesCard(stats.Ratings.HighestRatedMovies)
-			@ratedPeopleCard("Favorite Directors", stats.Ratings.FavoriteDirectors)
-			@ratedPeopleCard("Favorite Actors", stats.Ratings.FavoriteActors)
+			@ratedPeopleCard("Favorite Directors", "Shows the directors whose movies you rate highest on average, based on your rated movies.", stats.Ratings.FavoriteDirectors)
+			@ratedPeopleCard("Favorite Actors", "Shows the actors whose movies you rate highest on average, based on your rated movies.", stats.Ratings.FavoriteActors)
 		</div>
 		@rewatchRatingDriftCard(stats.Ratings.RewatchDrift)
 	</div>
@@ -371,12 +350,12 @@ templ statsPeopleSection(stats *models.WatchedStats, limit int) {
 		@statsSectionHeader("People & Languages", icon.Users)
 		<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
 			@topMoviesCard(stats.MostWatchedMovies)
-			@topActorsCard("Most Watched Male Actors", int64(2), stats.MostWatchedActors, limit)
-			@topActorsCard("Most Watched Female Actors", int64(1), stats.MostWatchedActors, limit)
-			@topCrewCard("Top Directors", stats.TopDirectors)
-			@topCrewCard("Top Writers", stats.TopWriters)
-			@topCrewCard("Top Composers", stats.TopComposers)
-			@topCrewCard("Top Cinematographers", stats.TopCinematographers)
+			@topActorsCard("Most Watched Male Actors", "Shows the male actors who appear most often in the movies you watched.", int64(2), stats.MostWatchedActors, limit)
+			@topActorsCard("Most Watched Female Actors", "Shows the female actors who appear most often in the movies you watched.", int64(1), stats.MostWatchedActors, limit)
+			@topCrewCard("Top Directors", "Shows the directors who appear most often in the movies you watched.", stats.TopDirectors)
+			@topCrewCard("Top Writers", "Shows the writers who appear most often in the movies you watched.", stats.TopWriters)
+			@topCrewCard("Top Composers", "Shows the composers who appear most often in the movies you watched.", stats.TopComposers)
+			@topCrewCard("Top Cinematographers", "Shows the cinematographers who appear most often in the movies you watched.", stats.TopCinematographers)
 			@topLanguagesCard(stats.TopLanguages)
 		</div>
 	</div>
@@ -388,11 +367,7 @@ templ statsRuntimeFinancialSection(stats *models.WatchedStats) {
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 			@runtimeExtremesCard(stats.LongestMovieWatched, stats.ShortestMovieWatched)
 			@card.Card(card.Props{Class: "h-full"}) {
-				@card.Header() {
-					@card.Title() {
-						Budget Distribution
-					}
-				}
+				@statsCardHeader("Budget Distribution", "Shows how your watched movies are split across budget ranges such as indie, mid-budget, and blockbuster.")
 				@card.Content(card.ContentProps{Class: "pt-4"}) {
 					@chart.Chart(chart.Props{
 						Variant:    chart.VariantDoughnut,
@@ -405,8 +380,8 @@ templ statsRuntimeFinancialSection(stats *models.WatchedStats) {
 			}
 		</div>
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-			@movieFinancialCard("Top ROI Movies", stats.TopReturnOnInvestmentMovies, true)
-			@movieFinancialCard("Biggest Budget Movies", stats.BiggestBudgetMovies, false)
+			@movieFinancialCard("Top ROI Movies", "Shows the watched movies with the biggest return compared with their budget.", stats.TopReturnOnInvestmentMovies, true)
+			@movieFinancialCard("Biggest Budget Movies", "Shows the watched movies with the highest reported production budgets.", stats.BiggestBudgetMovies, false)
 		</div>
 	</div>
 }
@@ -471,7 +446,7 @@ templ theaterVsHomeMetricCard(data []models.TheaterRating) {
 }
 
 templ highestRatedMoviesCard(movies []models.RatedMovie) {
-	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Highest Rated Movies", Count: len(movies)}) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Highest Rated Movies", HelpText: "Shows the movies with the highest average rating from your own rated watches.", Count: len(movies)}) {
 		for _, movie := range movies {
 			<div
 				data-page="movie"
@@ -495,8 +470,8 @@ templ highestRatedMoviesCard(movies []models.RatedMovie) {
 	}
 }
 
-templ ratedPeopleCard(title string, people []models.RatedPerson) {
-	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: title, Count: len(people)}) {
+templ ratedPeopleCard(title, helpText string, people []models.RatedPerson) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: title, HelpText: helpText, Count: len(people)}) {
 		for _, person := range people {
 			{{ personHref := personPagePath(person.ID) }}
 			if personHref != "" {
@@ -529,7 +504,7 @@ templ ratedPeopleCard(title string, people []models.RatedPerson) {
 }
 
 templ rewatchRatingDriftCard(drifts []models.RewatchRatingDrift) {
-	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Rewatch Rating Drift", Count: len(drifts)}) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Rewatch Rating Drift", HelpText: "Shows movies you rated more than once and how much your rating changed between the first and latest rated watch.", Count: len(drifts)}) {
 		for _, drift := range drifts {
 			<div
 				data-page="movie"
@@ -561,9 +536,8 @@ templ rewatchRatingDriftCard(drifts []models.RewatchRatingDrift) {
 	}
 }
 
-
 templ topMoviesCard(movies []models.TopMovie) {
-	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Most Watched Movies", Count: len(movies)}) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Most Watched Movies", HelpText: "Shows the movies you logged most often, including rewatches.", Count: len(movies)}) {
 		for _, movie := range movies {
 			<div
 				data-page="movie"
@@ -586,9 +560,9 @@ templ topMoviesCard(movies []models.TopMovie) {
 	}
 }
 
-templ topActorsCard(title string, gender int64, actors []models.TopActor, limit int) {
+templ topActorsCard(title, helpText string, gender int64, actors []models.TopActor, limit int) {
 	{{ filteredActors := filterTopActorsByGender(actors, gender, limit) }}
-	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: title, Count: len(filteredActors)}) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: title, HelpText: helpText, Count: len(filteredActors)}) {
 		for _, actor := range filteredActors {
 			{{ personHref := personPagePath(actor.ID) }}
 			if personHref != "" {
@@ -636,8 +610,8 @@ func filterTopActorsByGender(actors []models.TopActor, gender int64, limit int) 
 	return filtered
 }
 
-templ topCrewCard(title string, people []models.TopCrewMember) {
-	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: title, Count: len(people)}) {
+templ topCrewCard(title, helpText string, people []models.TopCrewMember) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: title, HelpText: helpText, Count: len(people)}) {
 		for _, person := range people {
 			{{ personHref := personPagePath(person.ID) }}
 			if personHref != "" {
@@ -686,7 +660,7 @@ templ actorRowAvatar(name, profilePath string) {
 }
 
 templ topLanguagesCard(languages []models.LanguageCount) {
-	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Top Languages", Count: len(languages)}) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Top Languages", HelpText: "Shows the original languages of the movies you watched most often.", Count: len(languages)}) {
 		for _, language := range languages {
 			<div class="flex items-center justify-between rounded-md border border-border/50 bg-muted/15 px-3 py-2">
 				<div class="text-sm font-medium uppercase tracking-wide">{ strings.ToUpper(language.Language) }</div>
@@ -715,11 +689,7 @@ templ moviePosterThumb(posterPath, title string) {
 
 templ runtimeExtremesCard(longest, shortest *models.RuntimeMovie) {
 	@card.Card(card.Props{Class: "h-full"}) {
-		@card.Header() {
-			@card.Title() {
-				Longest / Shortest Watched
-			}
-		}
+		@statsCardHeader("Longest / Shortest Watched", "Shows the longest and shortest runtime among movies you have watched.")
 		@card.Content(card.ContentProps{Class: "pt-4"}) {
 			<div class="space-y-4">
 				if longest != nil {
@@ -732,7 +702,7 @@ templ runtimeExtremesCard(longest, shortest *models.RuntimeMovie) {
 						hx-indicator="#movie-loading"
 						class="rounded-lg border border-border/60 bg-muted/15 p-4 cursor-pointer hover:bg-muted/30 transition-colors"
 					>
-						<div class="text-xs text-muted-foreground mb-1">Longest</div>
+						@infohint.LabelMutedXs("Longest", "The watched movie with the longest runtime.")
 						<div class="flex items-center gap-3">
 							@moviePosterThumb(longest.PosterPath, longest.Title)
 							<div class="min-w-0">
@@ -743,7 +713,7 @@ templ runtimeExtremesCard(longest, shortest *models.RuntimeMovie) {
 					</div>
 				} else {
 					<div class="rounded-lg border border-border/60 bg-muted/15 p-4">
-						<div class="text-xs text-muted-foreground mb-1">Longest</div>
+						@infohint.LabelMutedXs("Longest", "The watched movie with the longest runtime.")
 						<div class="text-sm text-muted-foreground">No data available</div>
 					</div>
 				}
@@ -757,7 +727,7 @@ templ runtimeExtremesCard(longest, shortest *models.RuntimeMovie) {
 						hx-indicator="#movie-loading"
 						class="rounded-lg border border-border/60 bg-muted/15 p-4 cursor-pointer hover:bg-muted/30 transition-colors"
 					>
-						<div class="text-xs text-muted-foreground mb-1">Shortest</div>
+						@infohint.LabelMutedXs("Shortest", "The watched movie with the shortest runtime.")
 						<div class="flex items-center gap-3">
 							@moviePosterThumb(shortest.PosterPath, shortest.Title)
 							<div class="min-w-0">
@@ -768,7 +738,7 @@ templ runtimeExtremesCard(longest, shortest *models.RuntimeMovie) {
 					</div>
 				} else {
 					<div class="rounded-lg border border-border/60 bg-muted/15 p-4">
-						<div class="text-xs text-muted-foreground mb-1">Shortest</div>
+						@infohint.LabelMutedXs("Shortest", "The watched movie with the shortest runtime.")
 						<div class="text-sm text-muted-foreground">No data available</div>
 					</div>
 				}
@@ -777,8 +747,8 @@ templ runtimeExtremesCard(longest, shortest *models.RuntimeMovie) {
 	}
 }
 
-templ movieFinancialCard(title string, movies []models.MovieFinancial, showROI bool) {
-	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: title, Count: len(movies)}) {
+templ movieFinancialCard(title, helpText string, movies []models.MovieFinancial, showROI bool) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: title, HelpText: helpText, Count: len(movies)}) {
 		for _, movie := range movies {
 			<div
 				data-page="movie"

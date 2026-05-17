@@ -3,6 +3,7 @@ package calendarheatmap
 import (
 	"fmt"
 	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/infohint"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/tooltip"
 	"time"
@@ -10,10 +11,11 @@ import (
 
 templ CalendarHeatmapCard(data []models.DailyWatchCount) {
 	@card.Card(card.Props{Class: "h-full"}) {
-		@card.Header() {
+		@card.Header(card.HeaderProps{Class: "flex-row items-start justify-between space-y-0 gap-3"}) {
 			@card.Title() {
 				Calendar Heatmap
 			}
+			@infohint.Corner("Shows the last 12 months of your watch activity. Cells are colored differently based on the number of movies watched that day.", "Calendar Heatmap help")
 		}
 		@card.Content(card.ContentProps{Class: "pt-4 h-full min-w-0"}) {
 			{{

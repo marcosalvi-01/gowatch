@@ -3,6 +3,7 @@ package statscollectioncard
 
 import (
 	"fmt"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/infohint"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
 	"github.com/marcosalvi-01/gowatch/internal/ui/utils"
@@ -10,6 +11,7 @@ import (
 
 type Props struct {
 	Title       string
+	HelpText    string
 	Count       int
 	EmptyText   string
 	CardClass   string
@@ -24,11 +26,14 @@ templ StatsCollectionCard(props Props) {
 			@card.Title() {
 				{ props.Title }
 			}
-			if props.Count > 0 {
-				@badge.Badge(badge.Props{Variant: badge.VariantSecondary}) {
-					{ fmt.Sprintf("%d", props.Count) }
+			<div class="flex items-center gap-2">
+				if props.Count > 0 {
+					@badge.Badge(badge.Props{Variant: badge.VariantSecondary}) {
+						{ fmt.Sprintf("%d", props.Count) }
+					}
 				}
-			}
+				@infohint.Corner(props.HelpText, props.Title+" help")
+			</div>
 		}
 		@card.Content(card.ContentProps{Class: "pt-4"}) {
 			if props.Count > 0 {
