@@ -20,7 +20,7 @@ func TestHandlers_PersonPage_InvalidIDReturnsBadRequest(t *testing.T) {
 	h := &Handlers{}
 
 	req := httptest.NewRequest(http.MethodGet, "/person/not-a-number", nil)
-	req = req.WithContext(withRouteParam(req.Context(), "id", "not-a-number"))
+	req = req.WithContext(withRouteParam(req.Context(), "not-a-number"))
 	res := httptest.NewRecorder()
 
 	h.PersonPage(res, req)
@@ -36,7 +36,7 @@ func TestHandlers_PersonPage_ServiceFailureReturnsInternalServerError(t *testing
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/person/42", nil)
-	req = req.WithContext(withRouteParam(req.Context(), "id", "42"))
+	req = req.WithContext(withRouteParam(req.Context(), "42"))
 	res := httptest.NewRecorder()
 
 	h.PersonPage(res, req)
@@ -117,7 +117,7 @@ func TestHandlers_ListPage_CustomEditModeToggle(t *testing.T) {
 
 	t.Run("view mode by default", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/list/1?sort=custom", nil)
-		req = req.WithContext(withRouteParam(context.WithValue(req.Context(), common.UserKey, user), "id", strconv.FormatInt(list.ID, 10)))
+		req = req.WithContext(withRouteParam(context.WithValue(req.Context(), common.UserKey, user), strconv.FormatInt(list.ID, 10)))
 		res := httptest.NewRecorder()
 
 		h.ListPage(res, req)
@@ -133,7 +133,7 @@ func TestHandlers_ListPage_CustomEditModeToggle(t *testing.T) {
 
 	t.Run("done button in edit mode", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/list/1?sort=custom&edit=1", nil)
-		req = req.WithContext(withRouteParam(context.WithValue(req.Context(), common.UserKey, user), "id", strconv.FormatInt(list.ID, 10)))
+		req = req.WithContext(withRouteParam(context.WithValue(req.Context(), common.UserKey, user), strconv.FormatInt(list.ID, 10)))
 		res := httptest.NewRecorder()
 
 		h.ListPage(res, req)
@@ -149,7 +149,7 @@ func TestHandlers_ListPage_CustomEditModeToggle(t *testing.T) {
 
 	t.Run("non custom sort ignores edit flag", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/list/1?sort=title_asc&edit=1", nil)
-		req = req.WithContext(withRouteParam(context.WithValue(req.Context(), common.UserKey, user), "id", strconv.FormatInt(list.ID, 10)))
+		req = req.WithContext(withRouteParam(context.WithValue(req.Context(), common.UserKey, user), strconv.FormatInt(list.ID, 10)))
 		res := httptest.NewRecorder()
 
 		h.ListPage(res, req)
@@ -164,9 +164,9 @@ func TestHandlers_ListPage_CustomEditModeToggle(t *testing.T) {
 	})
 }
 
-func withRouteParam(ctx context.Context, key, value string) context.Context {
+func withRouteParam(ctx context.Context, value string) context.Context {
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add(key, value)
+	rctx.URLParams.Add("id", value)
 
 	return context.WithValue(ctx, chi.RouteCtxKey, rctx)
 }
