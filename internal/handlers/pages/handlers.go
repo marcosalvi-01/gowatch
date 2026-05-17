@@ -9,6 +9,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/marcosalvi-01/gowatch/internal/account"
 	"github.com/marcosalvi-01/gowatch/internal/common"
 	"github.com/marcosalvi-01/gowatch/internal/handlers/htmx"
 	"github.com/marcosalvi-01/gowatch/internal/middleware"
@@ -35,7 +36,7 @@ type Handlers struct {
 	watchedService *services.WatchedService
 	listService    *services.ListService
 	homeService    *services.HomeService
-	authService    *services.AuthService
+	authService    *account.Service
 }
 
 func NewHandlers(
@@ -43,7 +44,7 @@ func NewHandlers(
 	watchedService *services.WatchedService,
 	listService *services.ListService,
 	homeService *services.HomeService,
-	authService *services.AuthService,
+	authService *account.Service,
 ) *Handlers {
 	return &Handlers{
 		tmdbService:    tmdbService,
@@ -67,7 +68,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Post("/login", h.LoginPost)
 
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware(*h.authService))
+		r.Use(middleware.AuthMiddleware(h.authService))
 
 		r.Get("/watched", h.WatchedPage)
 		r.Get("/home", h.HomePage)

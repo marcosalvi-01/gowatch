@@ -4,11 +4,16 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/marcosalvi-01/gowatch/internal/account"
 	"github.com/marcosalvi-01/gowatch/internal/common"
-	"github.com/marcosalvi-01/gowatch/internal/services"
 )
 
-func AuthMiddleware(authService services.AuthService) func(next http.Handler) http.Handler {
+type authService interface {
+	GetSession(ctx context.Context, sessionID string) (*account.Session, error)
+	GetUserByID(ctx context.Context, userID int64) (*account.User, error)
+}
+
+func AuthMiddleware(authService authService) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cookie, err := r.Cookie("session_id")

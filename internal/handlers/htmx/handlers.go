@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/marcosalvi-01/gowatch/internal/account"
 	"github.com/marcosalvi-01/gowatch/internal/common"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/internal/services"
@@ -52,10 +53,10 @@ type Handlers struct {
 	watchedService *services.WatchedService
 	listService    *services.ListService
 	homeService    *services.HomeService
-	authService    *services.AuthService
+	authService    *account.Service
 }
 
-func NewHandlers(watchedService *services.WatchedService, listService *services.ListService, homeService *services.HomeService, authService *services.AuthService) *Handlers {
+func NewHandlers(watchedService *services.WatchedService, listService *services.ListService, homeService *services.HomeService, authService *account.Service) *Handlers {
 	return &Handlers{
 		watchedService: watchedService,
 		listService:    listService,

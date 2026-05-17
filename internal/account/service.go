@@ -1,4 +1,4 @@
-package services
+package account
 
 import (
 	"context"
@@ -9,29 +9,48 @@ import (
 	"strings"
 	"time"
 
-	"github.com/marcosalvi-01/gowatch/db"
-	"github.com/marcosalvi-01/gowatch/internal/common"
-	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/logging"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AuthService struct {
-	db                   db.DB
-	listService          *ListService
+type Store interface {
+	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	CreateSession(ctx context.Context, sessionID string, userID int64, expiresAt time.Time) error
+	GetSession(ctx context.Context, sessionID string) (*Session, error)
+	DeleteSession(ctx context.Context, sessionID string) error
+	GetUserByID(ctx context.Context, userID int64) (*User, error)
+	CleanupExpiredSessions(ctx context.Context) error
+	CreateUser(ctx context.Context, email, name, passwordHash string) (*User, error)
+	CountUsers(ctx context.Context) (int64, error)
+	AssignNilUserWatched(ctx context.Context, userID *int64) error
+	AssignNilUserLists(ctx context.Context, userID *int64) error
+	SetAdmin(ctx context.Context, userID int64) error
+	GetAllUsersWithStats(ctx context.Context) ([]UserWithStats, error)
+	DeleteUser(ctx context.Context, userID int64) error
+	UpdateUserPassword(ctx context.Context, userID int64, passwordHash string) error
+	UpdatePasswordResetRequired(ctx context.Context, userID int64, reset bool) error
+}
+
+type WatchlistInitializer interface {
+	EnsureWatchlistExistsForUser(ctx context.Context, userID int64) error
+}
+
+type Service struct {
+	store                Store
+	watchlists           WatchlistInitializer
 	log                  *slog.Logger
 	SessionExpiry        time.Duration
 	HTTPS                bool
 	DefaultAdminPassword string
 }
 
-func NewAuthService(db db.DB, listService *ListService, sessionExpiry time.Duration, https bool, defaultAdminPassword string) *AuthService {
+func NewService(store Store, watchlists WatchlistInitializer, sessionExpiry time.Duration, https bool, defaultAdminPassword string) *Service {
 	log := logging.Get("auth service")
 	log.Debug("creating new AuthService instance")
-	return &AuthService{
-		db:                   db,
-		listService:          listService,
+	return &Service{
+		store:                store,
+		watchlists:           watchlists,
 		log:                  log,
 		SessionExpiry:        sessionExpiry,
 		HTTPS:                https,
@@ -39,8 +58,8 @@ func NewAuthService(db db.DB, listService *ListService, sessionExpiry time.Durat
 	}
 }
 
-func (a *AuthService) AuthenticateUser(ctx context.Context, email, password string) (*models.User, error) {
-	user, err := a.db.GetUserByEmail(ctx, email)
+func (a *Service) AuthenticateUser(ctx context.Context, email, password string) (*User, error) {
+	user, err := a.store.GetUserByEmail(ctx, email)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve user for email %s: %w", email, err)
 	}
@@ -51,14 +70,14 @@ func (a *AuthService) AuthenticateUser(ctx context.Context, email, password stri
 	return user, nil
 }
 
-func (a *AuthService) CreateSession(ctx context.Context, userID int64) (string, error) {
+func (a *Service) CreateSession(ctx context.Context, userID int64) (string, error) {
 	sessionID, err := generateSessionID()
 	if err != nil {
 		return "", fmt.Errorf("failed to generate session ID: %w", err)
 	}
 
 	expiresAt := time.Now().Add(a.SessionExpiry)
-	err = a.db.CreateSession(ctx, sessionID, userID, expiresAt)
+	err = a.store.CreateSession(ctx, sessionID, userID, expiresAt)
 	if err != nil {
 		return "", fmt.Errorf("failed to create session for user %d: %w", userID, err)
 	}
@@ -66,8 +85,8 @@ func (a *AuthService) CreateSession(ctx context.Context, userID int64) (string, 
 	return sessionID, nil
 }
 
-func (a *AuthService) GetSession(ctx context.Context, sessionID string) (*models.Session, error) {
-	session, err := a.db.GetSession(ctx, sessionID)
+func (a *Service) GetSession(ctx context.Context, sessionID string) (*Session, error) {
+	session, err := a.store.GetSession(ctx, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve session %s: %w", sessionID, err)
 	}
@@ -75,49 +94,45 @@ func (a *AuthService) GetSession(ctx context.Context, sessionID string) (*models
 	return session, nil
 }
 
-func (a *AuthService) Logout(ctx context.Context, sessionID string) error {
-	err := a.db.DeleteSession(ctx, sessionID)
+func (a *Service) Logout(ctx context.Context, sessionID string) error {
+	err := a.store.DeleteSession(ctx, sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to delete session %s: %w", sessionID, err)
 	}
 	return nil
 }
 
-func (a *AuthService) GetUserByID(ctx context.Context, id int64) (*models.User, error) {
-	user, err := a.db.GetUserByID(ctx, id)
+func (a *Service) GetUserByID(ctx context.Context, id int64) (*User, error) {
+	user, err := a.store.GetUserByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve user %d: %w", id, err)
 	}
 	return user, nil
 }
 
-func (a *AuthService) CleanupExpiredSessions(ctx context.Context) error {
-	err := a.db.CleanupExpiredSessions(ctx)
+func (a *Service) CleanupExpiredSessions(ctx context.Context) error {
+	err := a.store.CleanupExpiredSessions(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to cleanup expired sessions: %w", err)
 	}
 	return nil
 }
 
-func (a *AuthService) CreateUser(ctx context.Context, email, name, password string) (int64, error) {
+func (a *Service) CreateUser(ctx context.Context, email, name, password string) (int64, error) {
 	hash, err := hashPassword(password)
 	if err != nil {
 		return 0, fmt.Errorf("failed to hash password for user %s: %w", email, err)
 	}
 
-	user, err := a.db.CreateUser(ctx, email, name, hash)
+	user, err := a.store.CreateUser(ctx, email, name, hash)
 	if err != nil {
 		a.log.Error("failed to create user in database", "email", email, "error", err)
 		return 0, fmt.Errorf("failed to create user %s: %w", email, err)
 	}
 
-	ctx = context.WithValue(ctx, common.UserKey, user)
-
 	a.log.Info("user created, now creating watchlist", "userID", user.ID)
 
-	// CRITICAL: Ensure watchlist exists. Failure prevents account creation
-	err = a.listService.EnsureWatchlistExists(ctx)
-	if err != nil {
+	if err := a.watchlists.EnsureWatchlistExistsForUser(ctx, user.ID); err != nil {
 		a.log.Error("failed to create watchlist for new user", "userID", user.ID, "email", email, "error", err)
 		return 0, fmt.Errorf("failed to initialize user account (watchlist creation failed): %w", err)
 	}
@@ -126,8 +141,8 @@ func (a *AuthService) CreateUser(ctx context.Context, email, name, password stri
 	return user.ID, nil
 }
 
-func (a *AuthService) CountUsers(ctx context.Context) (int64, error) {
-	count, err := a.db.CountUsers(ctx)
+func (a *Service) CountUsers(ctx context.Context) (int64, error) {
+	count, err := a.store.CountUsers(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count users: %w", err)
 	}
@@ -135,40 +150,40 @@ func (a *AuthService) CountUsers(ctx context.Context) (int64, error) {
 	return count, nil
 }
 
-func (a *AuthService) AssignNilUserWatched(ctx context.Context, userID *int64) error {
-	err := a.db.AssignNilUserWatched(ctx, userID)
+func (a *Service) AssignNilUserWatched(ctx context.Context, userID *int64) error {
+	err := a.store.AssignNilUserWatched(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to assign nil user to watched records for user %d: %w", *userID, err)
 	}
 	return nil
 }
 
-func (a *AuthService) AssignNilUserLists(ctx context.Context, userID *int64) error {
-	err := a.db.AssignNilUserLists(ctx, userID)
+func (a *Service) AssignNilUserLists(ctx context.Context, userID *int64) error {
+	err := a.store.AssignNilUserLists(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to assign nil user to list records for user %d: %w", *userID, err)
 	}
 	return nil
 }
 
-func (a *AuthService) SetUserAsAdmin(ctx context.Context, userID int64) error {
-	err := a.db.SetAdmin(ctx, userID)
+func (a *Service) SetUserAsAdmin(ctx context.Context, userID int64) error {
+	err := a.store.SetAdmin(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to set user %d as admin: %w", userID, err)
 	}
 	return nil
 }
 
-func (a *AuthService) GetAllUsersWithStats(ctx context.Context) ([]models.UserWithStats, error) {
-	users, err := a.db.GetAllUsersWithStats(ctx)
+func (a *Service) GetAllUsersWithStats(ctx context.Context) ([]UserWithStats, error) {
+	users, err := a.store.GetAllUsersWithStats(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all users with stats: %w", err)
 	}
 	return users, nil
 }
 
-func (a *AuthService) DeleteUser(ctx context.Context, userID int64) error {
-	err := a.db.DeleteUser(ctx, userID)
+func (a *Service) DeleteUser(ctx context.Context, userID int64) error {
+	err := a.store.DeleteUser(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to delete user %d: %w", userID, err)
 	}
@@ -177,28 +192,28 @@ func (a *AuthService) DeleteUser(ctx context.Context, userID int64) error {
 
 // UpdateUserPassword updates the password of an user.
 //
-// The password should be passed as plain text, this function will hash it before updating the database
-func (a *AuthService) UpdateUserPassword(ctx context.Context, userID int64, password string) error {
+// The password should be passed as plain text, this function will hash it before updating the database.
+func (a *Service) UpdateUserPassword(ctx context.Context, userID int64, password string) error {
 	hash, err := hashPassword(password)
 	if err != nil {
 		return fmt.Errorf("failed to hash password for user %d: %w", userID, err)
 	}
 
-	err = a.db.UpdateUserPassword(ctx, userID, hash)
+	err = a.store.UpdateUserPassword(ctx, userID, hash)
 	if err != nil {
 		return fmt.Errorf("failed to update password for user %d: %w", userID, err)
 	}
 	return nil
 }
 
-// RequirePasswordReset resets the password of an user to the default email prefix + . + name, returns it and set the flag to reset the password for the user
-func (a *AuthService) RequirePasswordReset(ctx context.Context, userID int64) (string, error) {
+// RequirePasswordReset resets the password of an user to the default email prefix + . + name,
+// returns it and sets the reset-password flag for the user.
+func (a *Service) RequirePasswordReset(ctx context.Context, userID int64) (string, error) {
 	user, err := a.GetUserByID(ctx, userID)
 	if err != nil {
 		return "", fmt.Errorf("failed to get user for password reset: %w", err)
 	}
 
-	// email prefix + . + name (john@example.com + doe = john.doe)
 	newPass := fmt.Sprintf("%s.%s", strings.Split(user.Email, "@")[0], user.Name)
 
 	err = a.UpdateUserPassword(ctx, userID, newPass)
@@ -206,7 +221,7 @@ func (a *AuthService) RequirePasswordReset(ctx context.Context, userID int64) (s
 		return "", fmt.Errorf("failed to update password during reset: %w", err)
 	}
 
-	err = a.db.UpdatePasswordResetRequired(ctx, userID, true)
+	err = a.store.UpdatePasswordResetRequired(ctx, userID, true)
 	if err != nil {
 		return "", fmt.Errorf("failed to set password reset flag: %w", err)
 	}
@@ -214,8 +229,8 @@ func (a *AuthService) RequirePasswordReset(ctx context.Context, userID int64) (s
 	return newPass, nil
 }
 
-func (a *AuthService) ClearPasswordResetRequired(ctx context.Context, userID int64) error {
-	err := a.db.UpdatePasswordResetRequired(ctx, userID, false)
+func (a *Service) ClearPasswordResetRequired(ctx context.Context, userID int64) error {
+	err := a.store.UpdatePasswordResetRequired(ctx, userID, false)
 	if err != nil {
 		return fmt.Errorf("failed to clear password reset flag: %w", err)
 	}
@@ -230,7 +245,7 @@ func generateSessionID() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-// hashPassword accepts max 72 bytes passwords
+// hashPassword accepts max 72 bytes passwords.
 func hashPassword(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {

@@ -10,7 +10,7 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"fmt"
-	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/account"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
@@ -21,7 +21,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/utils"
 )
 
-func AdminUsers(users []models.UserWithStats) templ.Component {
+func AdminUsers(users []account.UserWithStats) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {

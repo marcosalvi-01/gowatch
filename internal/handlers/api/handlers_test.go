@@ -10,13 +10,14 @@ import (
 	"time"
 
 	"github.com/marcosalvi-01/gowatch/db"
+	"github.com/marcosalvi-01/gowatch/internal/account"
 	"github.com/marcosalvi-01/gowatch/internal/common"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/internal/services"
 )
 
 func getTestCtx() context.Context {
-	return context.WithValue(context.Background(), common.UserKey, &models.User{ID: 1})
+	return context.WithValue(context.Background(), common.UserKey, &account.User{ID: 1})
 }
 
 func setupTestUser(t *testing.T, testDB db.DB) {

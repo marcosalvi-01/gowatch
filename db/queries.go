@@ -10,6 +10,7 @@ import (
 
 	"github.com/marcosalvi-01/gowatch/db/sqlc"
 	"github.com/marcosalvi-01/gowatch/db/types/date"
+	"github.com/marcosalvi-01/gowatch/internal/account"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
@@ -1534,7 +1535,7 @@ func (d *SqliteDB) CreateSession(ctx context.Context, id string, userID int64, e
 	return nil
 }
 
-func (d *SqliteDB) GetSession(ctx context.Context, id string) (*models.Session, error) {
+func (d *SqliteDB) GetSession(ctx context.Context, id string) (*account.Session, error) {
 	log.Debug("retrieving session", "sessionID", id)
 
 	session, err := d.queries.GetSession(ctx, id)
@@ -1544,7 +1545,7 @@ func (d *SqliteDB) GetSession(ctx context.Context, id string) (*models.Session, 
 	}
 
 	log.Debug("retrieved session", "sessionID", id, "userID", session.UserID)
-	return &models.Session{
+	return &account.Session{
 		UserID:    session.UserID,
 		ExpiresAt: session.ExpiresAt,
 	}, nil
@@ -1576,7 +1577,7 @@ func (d *SqliteDB) CleanupExpiredSessions(ctx context.Context) error {
 	return nil
 }
 
-func (d *SqliteDB) CreateUser(ctx context.Context, email, name, passwordHash string) (*models.User, error) {
+func (d *SqliteDB) CreateUser(ctx context.Context, email, name, passwordHash string) (*account.User, error) {
 	log.Debug("creating new user", "email", email)
 
 	user, err := d.queries.CreateUser(ctx, sqlc.CreateUserParams{
@@ -1590,7 +1591,7 @@ func (d *SqliteDB) CreateUser(ctx context.Context, email, name, passwordHash str
 	}
 
 	log.Debug("successfully created user", "user_id", user.ID, "email", email)
-	return &models.User{
+	return &account.User{
 		ID:                    user.ID,
 		Email:                 user.Email,
 		Name:                  user.Name,
@@ -1601,7 +1602,7 @@ func (d *SqliteDB) CreateUser(ctx context.Context, email, name, passwordHash str
 	}, nil
 }
 
-func (d *SqliteDB) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+func (d *SqliteDB) GetUserByEmail(ctx context.Context, email string) (*account.User, error) {
 	log.Debug("retrieving user by email", "email", email)
 
 	user, err := d.queries.GetUserByEmail(ctx, email)
@@ -1611,7 +1612,7 @@ func (d *SqliteDB) GetUserByEmail(ctx context.Context, email string) (*models.Us
 	}
 
 	log.Debug("successfully retrieved user", "email", email, "user_id", user.ID)
-	return &models.User{
+	return &account.User{
 		ID:                    user.ID,
 		Email:                 user.Email,
 		Name:                  user.Name,
@@ -1622,7 +1623,7 @@ func (d *SqliteDB) GetUserByEmail(ctx context.Context, email string) (*models.Us
 	}, nil
 }
 
-func (d *SqliteDB) GetUserByID(ctx context.Context, id int64) (*models.User, error) {
+func (d *SqliteDB) GetUserByID(ctx context.Context, id int64) (*account.User, error) {
 	log.Debug("retrieving user by ID", "userID", id)
 
 	user, err := d.queries.GetUserByID(ctx, id)
@@ -1632,7 +1633,7 @@ func (d *SqliteDB) GetUserByID(ctx context.Context, id int64) (*models.User, err
 	}
 
 	log.Debug("successfully retrieved user", "userID", id, "email", user.Email)
-	return &models.User{
+	return &account.User{
 		ID:                    user.ID,
 		Email:                 user.Email,
 		Name:                  user.Name,
@@ -1695,7 +1696,7 @@ func (d *SqliteDB) SetAdmin(ctx context.Context, userID int64) error {
 	return nil
 }
 
-func (d *SqliteDB) GetAllUsersWithStats(ctx context.Context) ([]models.UserWithStats, error) {
+func (d *SqliteDB) GetAllUsersWithStats(ctx context.Context) ([]account.UserWithStats, error) {
 	log.Debug("retrieving all users with stats")
 
 	rows, err := d.queries.GetAllUsersWithStats(ctx)
@@ -1704,10 +1705,10 @@ func (d *SqliteDB) GetAllUsersWithStats(ctx context.Context) ([]models.UserWithS
 		return nil, fmt.Errorf("failed to fetch users with stats: %w", err)
 	}
 
-	users := make([]models.UserWithStats, len(rows))
+	users := make([]account.UserWithStats, len(rows))
 	for i, r := range rows {
-		users[i] = models.UserWithStats{
-			User: models.User{
+		users[i] = account.UserWithStats{
+			User: account.User{
 				ID:           r.ID,
 				Email:        r.Email,
 				Name:         r.Name,

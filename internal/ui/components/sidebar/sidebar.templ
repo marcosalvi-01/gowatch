@@ -3,6 +3,7 @@ package sidebar
 
 import (
 	"fmt"
+	"github.com/marcosalvi-01/gowatch/internal/account"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/avatar"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
@@ -25,7 +26,7 @@ type Props struct {
 	WatchedCount int64
 	Lists        []models.ListEntry
 	Watchlist    *models.List
-	User         *models.User
+	User         *account.User
 }
 
 // Sidebar is the sidebar for the application. It manages state of the page using a script.

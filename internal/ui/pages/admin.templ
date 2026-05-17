@@ -2,7 +2,7 @@ package pages
 
 import (
 	"fmt"
-	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/account"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
@@ -13,7 +13,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/utils"
 )
 
-templ AdminUsers(users []models.UserWithStats) {
+templ AdminUsers(users []account.UserWithStats) {
 	@Layout() {
 		@templ.Fragment("content") {
 			<div class="py-6 space-y-6">

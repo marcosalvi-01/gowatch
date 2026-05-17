@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/marcosalvi-01/gowatch/internal/account"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
@@ -75,21 +76,21 @@ type DB interface {
 
 	// Sessions.
 	CreateSession(ctx context.Context, sessionID string, userID int64, expiresAt time.Time) error
-	GetSession(ctx context.Context, sessionID string) (*models.Session, error)
+	GetSession(ctx context.Context, sessionID string) (*account.Session, error)
 	DeleteSession(ctx context.Context, sessionID string) error
 	CleanupExpiredSessions(ctx context.Context) error
 
 	// Users and authentication.
-	CreateUser(ctx context.Context, email, name, passwordHash string) (*models.User, error)
-	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
-	GetUserByID(ctx context.Context, userID int64) (*models.User, error)
+	CreateUser(ctx context.Context, email, name, passwordHash string) (*account.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*account.User, error)
+	GetUserByID(ctx context.Context, userID int64) (*account.User, error)
 
 	// User data maintenance and admin.
 	AssignNilUserLists(ctx context.Context, userID *int64) error
 	AssignNilUserWatched(ctx context.Context, userID *int64) error
 	CountUsers(ctx context.Context) (int64, error)
 	SetAdmin(ctx context.Context, userID int64) error
-	GetAllUsersWithStats(ctx context.Context) ([]models.UserWithStats, error)
+	GetAllUsersWithStats(ctx context.Context) ([]account.UserWithStats, error)
 	DeleteUser(ctx context.Context, userID int64) error
 	UpdateUserPassword(ctx context.Context, userID int64, passwordHash string) error
 	UpdatePasswordResetRequired(ctx context.Context, userID int64, reset bool) error

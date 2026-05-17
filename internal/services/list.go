@@ -288,24 +288,33 @@ func (s *ListService) EnsureWatchlistExists(ctx context.Context) error {
 		return err
 	}
 
-	s.log.Debug("checking if watchlist exists", "userID", user.ID)
+	return s.EnsureWatchlistExistsForUser(ctx, user.ID)
+}
 
-	_, err = s.db.GetWatchlistID(ctx, user.ID)
+func (s *ListService) EnsureWatchlistExistsForUser(ctx context.Context, userID int64) error {
+	s.log.Debug("checking if watchlist exists", "userID", userID)
+
+	_, err := s.db.GetWatchlistID(ctx, userID)
 	if err == nil {
-		s.log.Debug("watchlist already exists", "userID", user.ID)
+		s.log.Debug("watchlist already exists", "userID", userID)
 		return nil
 	}
 
-	s.log.Info("watchlist doesn't exist, creating it", "userID", user.ID)
+	s.log.Info("watchlist doesn't exist, creating it", "userID", userID)
 
 	description := "Your personal watchlist"
-	listID, err := s.CreateList(ctx, "Watchlist", &description, true)
+	_, err = s.db.InsertList(ctx, db.InsertList{
+		UserID:      userID,
+		Name:        "Watchlist",
+		Description: &description,
+		IsWatchlist: true,
+	})
 	if err != nil {
-		s.log.Error("failed to create watchlist", "userID", user.ID, "error", err)
+		s.log.Error("failed to create watchlist", "userID", userID, "error", err)
 		return fmt.Errorf("failed to create watchlist: %w", err)
 	}
 
-	s.log.Info("successfully created watchlist", "userID", user.ID, "listID", listID)
+	s.log.Info("successfully created watchlist", "userID", userID)
 	return nil
 }
 

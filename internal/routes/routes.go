@@ -6,6 +6,7 @@ package routes
 
 import (
 	"github.com/marcosalvi-01/gowatch/db"
+	"github.com/marcosalvi-01/gowatch/internal/account"
 	"github.com/marcosalvi-01/gowatch/internal/handlers/api"
 	"github.com/marcosalvi-01/gowatch/internal/handlers/htmx"
 	"github.com/marcosalvi-01/gowatch/internal/handlers/images"
@@ -26,7 +27,7 @@ func NewRouter(
 	tmdbImageService *services.TMDBImageService,
 	watchedService *services.WatchedService,
 	listService *services.ListService,
-	authService *services.AuthService,
+	authService *account.Service,
 ) chi.Router {
 	log.Info("creating HTTP router")
 
@@ -41,7 +42,7 @@ func NewRouter(
 	log.Debug("registering API routes")
 	apiHandlers := api.NewHandlers(db, watchedService, listService)
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware(*authService))
+		r.Use(middleware.AuthMiddleware(authService))
 		r.Use(middleware.JSONMiddleware)
 		apiHandlers.RegisterRoutes(r)
 	})
@@ -70,7 +71,7 @@ func NewRouter(
 	log.Debug("registering HTMX routes")
 	htmxHandlers := htmx.NewHandlers(watchedService, listService, homeService, authService)
 	r.Route("/htmx", func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware(*authService))
+		r.Use(middleware.AuthMiddleware(authService))
 		r.Use(middleware.HTMLMiddleware)
 		htmxHandlers.RegisterRoutes(r)
 	})

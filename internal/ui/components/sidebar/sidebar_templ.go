@@ -12,6 +12,7 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"fmt"
+	"github.com/marcosalvi-01/gowatch/internal/account"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/avatar"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
@@ -34,7 +35,7 @@ type Props struct {
 	WatchedCount int64
 	Lists        []models.ListEntry
 	Watchlist    *models.List
-	User         *models.User
+	User         *account.User
 }
 
 // Sidebar is the sidebar for the application. It manages state of the page using a script.
@@ -303,7 +304,7 @@ func Sidebar(props Props) templ.Component {
 									var templ_7745c5c3_Var13 string
 									templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(props.User.Name)
 									if templ_7745c5c3_Err != nil {
-										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 71, Col: 67}
+										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 72, Col: 67}
 									}
 									_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 									if templ_7745c5c3_Err != nil {
@@ -362,7 +363,7 @@ func Sidebar(props Props) templ.Component {
 									var templ_7745c5c3_Var16 string
 									templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(props.User.Email)
 									if templ_7745c5c3_Err != nil {
-										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 81, Col: 26}
+										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 82, Col: 26}
 									}
 									_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 									if templ_7745c5c3_Err != nil {
@@ -715,7 +716,7 @@ func watchedMenuItem(currentPage string, watchedCount int64) templ.Component {
 						var templ_7745c5c3_Var28 string
 						templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", watchedCount))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 165, Col: 38}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 166, Col: 38}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 						if templ_7745c5c3_Err != nil {
@@ -910,7 +911,7 @@ func watchlistMenuItem(watchlist *models.List, currentPage string) templ.Compone
 							var templ_7745c5c3_Var36 string
 							templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", len(watchlist.Movies)))
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 215, Col: 48}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 216, Col: 48}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 							if templ_7745c5c3_Err != nil {
@@ -1247,7 +1248,7 @@ func listItems(lists []models.ListEntry, currentPage string) templ.Component {
 					var templ_7745c5c3_Var50 string
 					templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(list.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 280, Col: 21}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/sidebar/sidebar.templ`, Line: 281, Col: 21}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 					if templ_7745c5c3_Err != nil {

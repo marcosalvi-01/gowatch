@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/marcosalvi-01/gowatch/db"
+	"github.com/marcosalvi-01/gowatch/internal/account"
 	"github.com/marcosalvi-01/gowatch/internal/routes"
 	"github.com/marcosalvi-01/gowatch/internal/services"
 	"github.com/marcosalvi-01/gowatch/logging"
@@ -79,7 +80,7 @@ func RunServer(cfg Config) {
 	tmdbImageService := services.NewTMDBImageService(imageCacheDir, cfg.ImageCacheTTL, &http.Client{Timeout: cfg.Timeout})
 	listService := services.NewListService(db, movieService)
 	watchedService := services.NewWatchedService(db, listService, movieService)
-	authService := services.NewAuthService(db, listService, cfg.SessionExpiry, cfg.HTTPS, cfg.AdminDefaultPassword)
+	authService := account.NewService(db, listService, cfg.SessionExpiry, cfg.HTTPS, cfg.AdminDefaultPassword)
 
 	router := routes.NewRouter(db, movieService, tmdbImageService, watchedService, listService, authService)
 
