@@ -141,6 +141,14 @@
       }
     }
 
+    // Makes the slide-in animation work on Safari. The panel starts off-screen
+    // and slides in when we set open=true below. For the slide to show, the
+    // browser must first render the off-screen start position. Chrome/Firefox do
+    // that on their own; Safari skips straight to the end (panel just pops in).
+    // Reading offsetWidth forces the browser to render that start position now,
+    // before the next line moves it. Looks pointless, isn't.
+    void dialog.offsetWidth;
+
     updateState(root, true);
   }
 
@@ -185,9 +193,20 @@
       const dialog = getDialog(dialogRoot);
       if (!dialog) return;
 
+      // Already set up? Skip it. The MutationObserver re-runs this on every DOM
+      // change anywhere on the page; without this guard we'd re-write state on
+      // every existing dialog each time, which with reactive frameworks (e.g.
+      // Datastar patching content inside an open dialog) spirals into an
+      // observer feedback loop. Same skip-on-init pattern the other components
+      // use. See #562.
+      if (dialog.dataset.tuiDialogInitialized === "true") return;
+
       ensureDialog(dialog);
 
       if (dialog.getAttribute("data-tui-dialog-initial-open") === "true") {
+        // One-shot: consume the attribute so a later re-init (e.g. an
+        // unrelated MutationObserver tick) never re-opens a closed dialog.
+        dialog.removeAttribute("data-tui-dialog-initial-open");
         openDialog(dialogRoot);
       } else {
         updateState(dialogRoot, dialog.open);
@@ -213,6 +232,14 @@
   } else {
     initDialogs();
   }
+
+  // Initialize dialogs added to the DOM after load (e.g. swapped in via HTMX),
+  // so a server-rendered dialog with Open:true still gets showModal() and its
+  // backdrop overlay.
+  new MutationObserver(() => initDialogs()).observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
 
   window.tui = window.tui || {};
   window.tui.dialog = {

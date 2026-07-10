@@ -242,6 +242,17 @@ import "./floating_ui_dom.js";
     });
   }
 
+  // Like closeAllRoots, but skips DOM ancestors of activeRoot. Used for the
+  // automatic exclusive cleanup so a popover nested inside another popover
+  // (e.g. SelectBox inside Popover) closes peers without killing its parent.
+  function closeOtherRoots(activeRoot) {
+    getRoots().forEach((root) => {
+      if (root === activeRoot || !isOpenRoot(root)) return;
+      if (root.contains(activeRoot)) return;
+      closeRoot(root);
+    });
+  }
+
   function closeAll(exceptId = null) {
     closeAllRoots(exceptId ? getRootById(exceptId) : null);
   }
@@ -252,7 +263,7 @@ import "./floating_ui_dom.js";
     if (!content || !trigger) return;
 
     if (content.getAttribute("data-tui-popover-exclusive") === "true") {
-      closeAllRoots(root);
+      closeOtherRoots(root);
     }
 
     if (!showContent(content)) return;
@@ -303,6 +314,7 @@ import "./floating_ui_dom.js";
       if (root === activeRoot || !isHoverRoot(root)) {
         return;
       }
+      if (root.contains(activeRoot)) return;
 
       clearHoverTimeouts(root);
       closeRoot(root);
@@ -314,7 +326,7 @@ import "./floating_ui_dom.js";
     if (!content || !isHoverRoot(root)) return;
 
     const delay =
-      parseInt(content.getAttribute("data-tui-popover-hover-delay"), 10) || 100;
+      parseInt(content.getAttribute("data-tui-popover-hover-delay"), 10) || 0;
     const timeouts = hoverTimeouts.get(root) || {};
 
     clearOtherHoverRoots(root);
@@ -330,7 +342,7 @@ import "./floating_ui_dom.js";
 
     const delay =
       parseInt(content.getAttribute("data-tui-popover-hover-out-delay"), 10) ||
-      200;
+      0;
     const timeouts = hoverTimeouts.get(root) || {};
 
     clearTimeout(timeouts.enter);
@@ -471,6 +483,18 @@ import "./floating_ui_dom.js";
       );
       handleHoverLeave(contentRoot, movingToTrigger);
     }
+  });
+
+  // Keyboard a11y: hover popovers also open on focus, close on blur.
+  document.addEventListener("focusin", (e) => {
+    const trigger = e.target.closest('[data-tui-popover-trigger][data-tui-popover-type="hover"]');
+    const root = trigger?.closest("[data-tui-popover-root]");
+    if (root) handleHoverEnter(root, trigger);
+  });
+  document.addEventListener("focusout", (e) => {
+    const trigger = e.target.closest('[data-tui-popover-trigger][data-tui-popover-type="hover"]');
+    const root = trigger?.closest("[data-tui-popover-root]");
+    if (root) handleHoverLeave(root, getContent(root)?.contains(e.relatedTarget));
   });
 
   document.addEventListener("keydown", (event) => {
