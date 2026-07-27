@@ -21,6 +21,7 @@ type ImportListEntry struct {
 	Name        string               `json:"name"`
 	Description *string              `json:"description,omitempty"`
 	IsWatchlist bool                 `json:"is_watchlist,omitempty"`
+	DisplaySort ListMovieSort        `json:"display_sort,omitempty"`
 	Movies      []ImportListMovieRef `json:"movies"`
 }
 

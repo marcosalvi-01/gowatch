@@ -304,10 +304,11 @@ INSERT INTO
         creation_date,
         description,
         user_id,
-		is_watchlist
+		is_watchlist,
+        display_sort
     )
 VALUES
-    (?, ?, ?, ?, ?)
+    (?, ?, ?, ?, ?, ?)
 RETURNING
     id;
 
@@ -440,6 +441,23 @@ DELETE FROM
 WHERE
     user_id = ?
     AND id = ?;
+
+-- name: UpdateListDisplaySort :exec
+UPDATE list
+SET
+    display_sort = ?
+WHERE
+    id = ?
+    AND user_id = ?;
+
+-- name: UpdateListDetails :exec
+UPDATE list
+SET
+    name = ?,
+    description = ?
+WHERE
+    id = ?
+    AND user_id = ?;
 
 -- name: DeleteMovieFromList :exec
 DELETE FROM

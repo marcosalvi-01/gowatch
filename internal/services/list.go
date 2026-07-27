@@ -87,6 +87,7 @@ func (s *ListService) CreateList(ctx context.Context, name string, description *
 		Name:        name,
 		Description: description,
 		IsWatchlist: isWatchlist,
+		DisplaySort: defaultListMovieSort(isWatchlist),
 	})
 	if err != nil {
 		s.log.Error("failed to create list", "name", name, "error", err)
@@ -165,14 +166,57 @@ func (s *ListService) GetListDetails(ctx context.Context, listID int64) (*models
 	return list, nil
 }
 
-func (s *ListService) GetListViewData(ctx context.Context, listID int64, rawSort, rawEdit string, now time.Time) (models.ListViewData, error) {
+func (s *ListService) GetListViewData(ctx context.Context, listID int64, rawEdit string, now time.Time) (models.ListViewData, error) {
 	list, err := s.GetListDetails(ctx, listID)
 	if err != nil {
 		return models.ListViewData{}, err
 	}
 
-	sortMode := ParseListMovieSort(rawSort)
-	return s.BuildListViewData(list, sortMode, IsListMovieOrderEditing(rawEdit, sortMode), now), nil
+	isEditing := IsListEditing(rawEdit)
+
+	return s.BuildListViewData(list, isEditing, now), nil
+}
+
+func (s *ListService) SetListDisplaySort(ctx context.Context, listID int64, displaySort models.ListMovieSort) error {
+	if !IsValidListMovieSort(displaySort) {
+		return fmt.Errorf("invalid display sort %q", displaySort)
+	}
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	if _, err := s.db.GetList(ctx, user.ID, listID); err != nil {
+		return fmt.Errorf("get list %d: %w", listID, err)
+	}
+
+	if err := s.db.UpdateListDisplaySort(ctx, user.ID, listID, displaySort); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *ListService) UpdateListDetails(ctx context.Context, listID int64, name string, description *string) error {
+	if name == "" {
+		return fmt.Errorf("list name cannot be empty")
+	}
+
+	user, err := common.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	list, err := s.db.GetList(ctx, user.ID, listID)
+	if err != nil {
+		return fmt.Errorf("get list %d: %w", listID, err)
+	}
+	if list.IsWatchlist {
+		return fmt.Errorf("cannot update watchlist details")
+	}
+
+	return s.db.UpdateListDetails(ctx, user.ID, listID, name, description)
 }
 
 func (s *ListService) DeleteList(ctx context.Context, id int64) error {
@@ -234,8 +278,8 @@ func (s *ListService) ReorderListMovie(ctx context.Context, listID, movieID int6
 		return fmt.Errorf("failed to get list with id '%d' from db: %w", listID, err)
 	}
 
-	if list.IsWatchlist {
-		return fmt.Errorf("watchlist cannot be manually reordered")
+	if list.DisplaySort != models.ListMovieSortCustom {
+		return fmt.Errorf("list can only be manually reordered in custom order")
 	}
 
 	movieIDs, err := reorderMovieIDsForCustomSort(list.Movies, movieID, move)
@@ -387,6 +431,7 @@ func (s *ListService) ExportLists(ctx context.Context) (models.ImportListsLog, e
 			Name:        list.Name,
 			Description: list.Description,
 			IsWatchlist: list.IsWatchlist,
+			DisplaySort: list.DisplaySort,
 			Movies:      exportMovies,
 		}
 	}
@@ -429,6 +474,10 @@ func (s *ListService) ImportLists(ctx context.Context, lists models.ImportListsL
 	s.log.Info("ImportLists: import details", "totalLists", len(lists), "totalMovies", totalMovies)
 
 	for _, importList := range lists {
+		displaySort := importList.DisplaySort
+		if !IsValidListMovieSort(displaySort) {
+			displaySort = defaultListMovieSort(importList.IsWatchlist)
+		}
 		var targetListID int64
 
 		if importList.IsWatchlist {
@@ -466,6 +515,11 @@ func (s *ListService) ImportLists(ctx context.Context, lists models.ImportListsL
 				targetListID = newList.ID
 				existingCustomLists[importList.Name] = newList.ID
 			}
+		}
+
+		if err := s.SetListDisplaySort(ctx, targetListID, displaySort); err != nil {
+			s.log.Error("ImportLists: failed to update display sort", "listID", targetListID, "displaySort", displaySort, "error", err)
+			continue
 		}
 
 		// Upsert movies in the target list

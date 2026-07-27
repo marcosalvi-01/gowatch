@@ -8,50 +8,58 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
-func (s *ListService) BuildListViewData(list *models.List, sortMode models.ListMovieSort, isEditingOrder bool, now time.Time) models.ListViewData {
+const watchlistPageURL = "/watchlist"
+
+func defaultListMovieSort(isWatchlist bool) models.ListMovieSort {
+	if isWatchlist {
+		return models.ListMovieSortReleaseStatus
+	}
+
+	return models.ListMovieSortCustom
+}
+
+func (s *ListService) BuildListViewData(list *models.List, isEditing bool, now time.Time) models.ListViewData {
 	if list == nil {
 		return models.ListViewData{}
 	}
 
 	data := models.ListViewData{
-		List:    list,
-		Sort:    sortMode,
-		PageURL: fmt.Sprintf("/list/%d", list.ID),
-	}
-	data.GridURL = buildListMovieGridURL(list.ID, sortMode, isEditingOrder)
-
-	if list.IsWatchlist {
-		data.Sort = models.ListMovieSortCustom
-		data.UpcomingMovies, data.ReleasedMovies = splitWatchlistMoviesForDisplay(list.Movies, now)
-		return data
-	}
-	if sortMode != models.ListMovieSortCustom {
-		isEditingOrder = false
+		List:          list,
+		Sort:          list.DisplaySort,
+		IsEditing:     isEditing,
+		GridURL:       buildListMovieGridURL(list.ID, isEditing),
+		ToggleEditURL: buildListPageURL(list, !isEditing),
 	}
 
-	data.IsEditingOrder = isEditingOrder
-	data.ToggleEditURL = buildListPageURL(list.ID, sortMode, !isEditingOrder)
-	sortListMovies(data.List.Movies, sortMode)
+	if data.Sort == models.ListMovieSortReleaseStatus {
+		data.UpcomingMovies, data.ReleasedMovies = splitMoviesByReleaseStatus(data.List.Movies, now)
+	} else {
+		sortListMovies(data.List.Movies, data.Sort)
+	}
 	data.AverageRating, data.HasAverageRating = averageMovieRating(data.List.Movies)
 
 	return data
 }
 
-func buildListMovieGridURL(listID int64, sort models.ListMovieSort, isEditingOrder bool) string {
-	return fmt.Sprintf("/htmx/lists/%d/movie-grid%s", listID, buildListQueryString(sort, isEditingOrder))
-}
-
-func buildListPageURL(listID int64, sort models.ListMovieSort, isEditingOrder bool) string {
-	return fmt.Sprintf("/list/%d%s", listID, buildListQueryString(sort, isEditingOrder))
-}
-
-func buildListQueryString(sort models.ListMovieSort, isEditingOrder bool) string {
-	query := fmt.Sprintf("?sort=%s", sort)
-	if sort == models.ListMovieSortCustom && isEditingOrder {
-		query += "&edit=1"
+func buildListMovieGridURL(listID int64, isEditing bool) string {
+	url := fmt.Sprintf("/htmx/lists/%d/movie-grid", listID)
+	if isEditing {
+		return url + "?edit=1"
 	}
 
-	return query
+	return url
+}
+
+func buildListPageURL(list *models.List, isEditing bool) string {
+	pageURL := fmt.Sprintf("/list/%d", list.ID)
+	if list.IsWatchlist {
+		pageURL = watchlistPageURL
+	}
+	if isEditing {
+		return pageURL + "?edit=1"
+	}
+
+	return pageURL
 }
 
 func averageMovieRating(movies []models.MovieItem) (float32, bool) {
@@ -74,15 +82,15 @@ func averageMovieRating(movies []models.MovieItem) (float32, bool) {
 	return total / float32(count), true
 }
 
-// splitWatchlistMoviesForDisplay separates watchlist movies into upcoming and released buckets and applies display ordering.
-func splitWatchlistMoviesForDisplay(movies []models.MovieItem, now time.Time) ([]models.MovieItem, []models.MovieItem) {
+// splitMoviesByReleaseStatus separates movies into upcoming and released buckets and applies display ordering.
+func splitMoviesByReleaseStatus(movies []models.MovieItem, now time.Time) ([]models.MovieItem, []models.MovieItem) {
 	today := normalizeDayUTC(now)
 
 	upcoming := make([]models.MovieItem, 0, len(movies))
 	released := make([]models.MovieItem, 0, len(movies))
 
 	for _, movie := range movies {
-		if isUpcomingWatchlistMovie(movie, today) {
+		if isUpcomingMovie(movie, today) {
 			upcoming = append(upcoming, movie)
 			continue
 		}
@@ -90,13 +98,13 @@ func splitWatchlistMoviesForDisplay(movies []models.MovieItem, now time.Time) ([
 		released = append(released, movie)
 	}
 
-	sortWatchlistUpcomingMovies(upcoming)
-	sortWatchlistReleasedMovies(released)
+	sortUpcomingMovies(upcoming)
+	sortReleasedMovies(released)
 
 	return upcoming, released
 }
 
-func isUpcomingWatchlistMovie(movie models.MovieItem, today time.Time) bool {
+func isUpcomingMovie(movie models.MovieItem, today time.Time) bool {
 	releaseDate := movie.MovieDetails.Movie.ReleaseDate
 	if releaseDate == nil {
 		return false
@@ -105,7 +113,7 @@ func isUpcomingWatchlistMovie(movie models.MovieItem, today time.Time) bool {
 	return normalizeDayUTC(*releaseDate).After(today)
 }
 
-func sortWatchlistUpcomingMovies(movies []models.MovieItem) {
+func sortUpcomingMovies(movies []models.MovieItem) {
 	sort.Slice(movies, func(i, j int) bool {
 		left := movies[i]
 		right := movies[j]
@@ -139,7 +147,7 @@ func sortWatchlistUpcomingMovies(movies []models.MovieItem) {
 	})
 }
 
-func sortWatchlistReleasedMovies(movies []models.MovieItem) {
+func sortReleasedMovies(movies []models.MovieItem) {
 	sort.Slice(movies, func(i, j int) bool {
 		left := movies[i]
 		right := movies[j]

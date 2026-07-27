@@ -69,6 +69,8 @@ type DB interface {
 	AddMovieToList(ctx context.Context, userID int64, insertMovieList InsertMovieList) error
 	UpsertMovieInList(ctx context.Context, userID int64, insertMovieList InsertMovieList) error
 	UpdateListMoviePositions(ctx context.Context, userID, listID int64, movieIDs []int64) error
+	UpdateListDisplaySort(ctx context.Context, userID, listID int64, displaySort models.ListMovieSort) error
+	UpdateListDetails(ctx context.Context, userID, listID int64, name string, description *string) error
 	DeleteListByID(ctx context.Context, userID, listID int64) error
 	DeleteMovieFromList(ctx context.Context, userID, listID, movieID int64) error
 	GetWatchlistID(ctx context.Context, userID int64) (int64, error)
@@ -101,6 +103,7 @@ type InsertList struct {
 	Name        string
 	Description *string
 	IsWatchlist bool
+	DisplaySort models.ListMovieSort
 }
 
 type InsertMovieList struct {

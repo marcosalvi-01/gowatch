@@ -300,10 +300,19 @@ func (h *Handlers) ListPage(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("serving list page", "listID", id)
 
-	viewData, err := h.listService.GetListViewData(ctx, id, r.URL.Query().Get("sort"), r.URL.Query().Get("edit"), time.Now())
+	viewData, err := h.listService.GetListViewData(ctx, id, r.URL.Query().Get("edit"), time.Now())
 	if err != nil {
 		log.Error("failed to get list details", "listID", id, "error", err)
 		render500Error(w, r)
+		return
+	}
+	if viewData.List.IsWatchlist {
+		if r.Header.Get(htmxRequestHeader) == htmxRequestHeaderValue {
+			w.Header().Set("HX-Redirect", "/watchlist")
+			w.WriteHeader(http.StatusOK)
+		} else {
+			http.Redirect(w, r, "/watchlist", http.StatusFound)
+		}
 		return
 	}
 	log.Debug("fetched list details", "listID", id, "movieCount", len(viewData.List.Movies))
@@ -714,11 +723,12 @@ func (h *Handlers) Watchlist(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Debug("fetched watchlist details", "userID", userID, "movieCount", len(list.Movies))
+	viewData := h.listService.BuildListViewData(list, services.IsListEditing(r.URL.Query().Get("edit")), time.Now())
 
 	if shouldRenderContentFragment(r) {
-		templ.Handler(pages.Watchlist(list), templ.WithFragments("content")).ServeHTTP(w, r)
+		templ.Handler(pages.List(viewData), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
-		templ.Handler(pages.Watchlist(list)).ServeHTTP(w, r)
+		templ.Handler(pages.List(viewData)).ServeHTTP(w, r)
 	}
 
 	log.Info("watchlist page served successfully", "userID", userID, "movieCount", len(list.Movies))

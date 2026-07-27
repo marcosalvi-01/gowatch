@@ -15,25 +15,22 @@ const (
 	listMovieMoveLast  = "last"
 )
 
-func ParseListMovieSort(raw string) models.ListMovieSort {
-	switch models.ListMovieSort(raw) {
+func IsValidListMovieSort(sortMode models.ListMovieSort) bool {
+	switch sortMode {
 	case models.ListMovieSortCustom,
 		models.ListMovieSortDateAddedDesc,
 		models.ListMovieSortDateAddedAsc,
 		models.ListMovieSortTitleAsc,
 		models.ListMovieSortRatingDesc,
-		models.ListMovieSortReleaseDateDesc:
-		return models.ListMovieSort(raw)
+		models.ListMovieSortReleaseDateDesc,
+		models.ListMovieSortReleaseStatus:
+		return true
 	default:
-		return models.ListMovieSortCustom
+		return false
 	}
 }
 
-func IsListMovieOrderEditing(raw string, sortMode models.ListMovieSort) bool {
-	if sortMode != models.ListMovieSortCustom {
-		return false
-	}
-
+func IsListEditing(raw string) bool {
 	return raw == "1" || strings.EqualFold(raw, "true")
 }
 

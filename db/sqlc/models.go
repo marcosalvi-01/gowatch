@@ -48,6 +48,7 @@ type List struct {
 	Description  *string
 	UserID       *int64
 	IsWatchlist  bool
+	DisplaySort  string
 }
 
 type ListMovie struct {

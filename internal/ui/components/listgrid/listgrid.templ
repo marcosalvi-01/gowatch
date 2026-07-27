@@ -10,7 +10,6 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
 	"github.com/marcosalvi-01/gowatch/internal/utils"
 	"strconv"
-	"time"
 )
 
 templ ListGrid(data models.ListViewData) {
@@ -31,22 +30,22 @@ templ ListGrid(data models.ListViewData) {
 			})
 		}
 	} else {
-		if data.List.IsWatchlist {
+		if data.Sort == models.ListMovieSortReleaseStatus {
 			<div class="space-y-8 pt-4">
-				@comingSoonMovieSection(data.List.ID, data.UpcomingMovies)
-				@releasedMovieSection(data.List.ID, data.ReleasedMovies)
+				@comingSoonMovieSection(data.List.ID, data.UpcomingMovies, data.IsEditing, data.List.IsWatchlist)
+				@releasedMovieSection(data.List.ID, data.ReleasedMovies, data.IsEditing, data.List.IsWatchlist)
 			</div>
 		} else {
 			<div class="space-y-6 pt-4">
 				<div class="space-y-1">
 					<h2 class="text-xl font-semibold">Movies</h2>
-					if data.Sort == models.ListMovieSortCustom && data.IsEditingOrder {
+					if data.Sort == models.ListMovieSortCustom && data.IsEditing {
 						<p class="text-sm text-muted-foreground">Reorder movies with arrow controls.</p>
 					}
 				</div>
 				<div class="flex flex-wrap gap-4 md:gap-6 w-full">
 					for index, movie := range data.List.Movies {
-						@listMovieItem(data.List.ID, movie, data.Sort, data.IsEditingOrder, len(data.List.Movies), index)
+						@listMovieItem(data.List.ID, movie, data.Sort, data.IsEditing, data.List.IsWatchlist, len(data.List.Movies), index)
 					}
 				</div>
 			</div>
@@ -54,67 +53,93 @@ templ ListGrid(data models.ListViewData) {
 	}
 }
 
-templ comingSoonMovieSection(listID int64, movies []models.MovieItem) {
+templ comingSoonMovieSection(listID int64, movies []models.MovieItem, isEditing, isWatchlist bool) {
 	if len(movies) > 0 {
 		<div class="space-y-4">
 			<h2 class="text-xl font-semibold">Coming Soon</h2>
 			<div class="flex flex-wrap gap-4 md:gap-6 w-full">
 				for _, movie := range movies {
-					@watchlistMovieItem(listID, movie, comingSoonReleaseDateLabel(movie))
+@releaseStatusMovieItem(listID, movie, comingSoonReleaseDateLabel(movie), isEditing, isWatchlist)
 				}
 			</div>
 		</div>
 	}
 }
 
-templ releasedMovieSection(listID int64, movies []models.MovieItem) {
+templ releasedMovieSection(listID int64, movies []models.MovieItem, isEditing, isWatchlist bool) {
 	if len(movies) > 0 {
 		<div class="space-y-4">
 			<h2 class="text-xl font-semibold">Released</h2>
 			<div class="flex flex-wrap gap-4 md:gap-6 w-full">
 				for _, movie := range movies {
-					@watchlistMovieItem(listID, movie, utils.FormatYear(movie.MovieDetails.Movie.ReleaseDate))
+@releaseStatusMovieItem(listID, movie, utils.FormatYear(movie.MovieDetails.Movie.ReleaseDate), isEditing, isWatchlist)
 				}
 			</div>
 		</div>
 	}
 }
 
-templ watchlistMovieItem(listID int64, movie models.MovieItem, releaseDateLabel string) {
-	<div class="relative group">
+templ releaseStatusMovieItem(listID int64, movie models.MovieItem, releaseDateLabel string, isEditing, isWatchlist bool) {
+	{{
+		class := "relative group space-y-2"
+		if !isWatchlist {
+			class = "w-[90px] sm:w-[120px] md:w-[160px] space-y-2"
+		}
+	}}
+	<div class={ class }>
 		{{
 			moviecardProps := moviecard.Props{
 				Title:             movie.MovieDetails.Movie.Title,
 				Href:              "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
 				PosterPath:        movie.MovieDetails.Movie.PosterPath,
 				Hoverable:         true,
-				TopHoverComponent: listMovieCardTopHoverList(listID, movie, true),
+				TopHoverComponent: listMovieCardTopHoverInfo(movie),
 			}
 		}}
 		@moviecard.MovieCard(moviecardProps) {
 			@movieCardDetails(movie, releaseDateLabel)
 		}
-		@listConfirmRemoveMovieDialog(listID, movie, true)
+		if isEditing {
+			@listMovieRemoveAction(listID, movie)
+		}
+		if isEditing {
+			@listConfirmRemoveMovieDialog(listID, movie, isWatchlist)
+		}
+		if !isWatchlist {
+			@listMovieNote(movie)
+		}
 	</div>
 }
 
-templ listMovieItem(listID int64, movie models.MovieItem, sortMode models.ListMovieSort, isEditingOrder bool, movieCount, index int) {
-	<div class="w-[90px] sm:w-[120px] md:w-[160px] space-y-2">
-		<div class="relative group">
+templ listMovieItem(listID int64, movie models.MovieItem, sortMode models.ListMovieSort, isEditingOrder, isWatchlist bool, movieCount, index int) {
+	{{
+		class := "w-[90px] sm:w-[120px] md:w-[160px] space-y-2"
+		if isWatchlist {
+			class = "relative group space-y-2"
+		}
+		if isEditingOrder {
+			class = "w-[90px] sm:w-[120px] md:w-[160px] flex flex-col items-center space-y-2"
+		}
+	}}
+	<div class={ class }>
+		<div class="relative group w-full">
 			{{
 				moviecardProps := moviecard.Props{
 					Title:             movie.MovieDetails.Movie.Title,
 					Href:              "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
 					PosterPath:        movie.MovieDetails.Movie.PosterPath,
 					Hoverable:         true,
-					TopHoverComponent: listMovieCardTopHoverList(listID, movie, false),
+					TopHoverComponent: listMovieCardTopHoverInfo(movie),
 				}
 			}}
 			@moviecard.MovieCard(moviecardProps) {
 				@movieCardDetails(movie, utils.FormatYear(movie.MovieDetails.Movie.ReleaseDate))
 			}
-			@listConfirmRemoveMovieDialog(listID, movie, false)
 		</div>
+		if isEditingOrder {
+			@listMovieRemoveAction(listID, movie)
+			@listConfirmRemoveMovieDialog(listID, movie, isWatchlist)
+		}
 		@listMovieMeta(listID, movie, sortMode, isEditingOrder, movieCount, index)
 	</div>
 }
@@ -139,12 +164,40 @@ templ listMovieMeta(listID int64, movie models.MovieItem, sortMode models.ListMo
 			</div>
 		</form>
 	} else if movie.Note != nil && *movie.Note != "" {
+		@listMovieNote(movie)
+	}
+}
+
+templ listMovieNote(movie models.MovieItem) {
+	if movie.Note != nil && *movie.Note != "" {
 		<div class="flex flex-row items-center gap-3 rounded-lg border bg-muted/40 px-2 py-1.5 text-[11px] text-muted-foreground">
 			<div class="shrink-0">
 				@icon.NotebookPen(icon.Props{Class: "size-3"})
 			</div>
 			<p class="line-clamp-2 leading-relaxed">{ *movie.Note }</p>
 		</div>
+	}
+}
+
+templ listMovieCardTopHoverInfo(movie models.MovieItem) {
+	<div class="flex min-h-[20px] items-center gap-1 text-xs text-muted-foreground">
+		@icon.Clock3(icon.Props{Class: "size-5"})
+		<span>Added { movie.DateAdded.Format("Jan 2, 2006") }</span>
+	</div>
+}
+
+templ listMovieRemoveAction(listID int64, movie models.MovieItem) {
+	@dialog.Trigger(dialog.TriggerProps{
+		For: "list-movie-menu-" + strconv.Itoa(int(listID)) + "-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+	}) {
+		@button.Button(button.Props{
+			Variant: button.VariantDestructive,
+			Size:    button.SizeSm,
+			Class:   "w-full gap-2",
+		}) {
+			@icon.Trash(icon.Props{Class: "size-3"})
+			Remove
+		}
 	}
 }
 
@@ -183,42 +236,6 @@ templ movieCardDetails(movie models.MovieItem, releaseDateLabel string) {
 			}
 		</div>
 	</div>
-}
-
-templ listMovieCardTopHoverList(listID int64, movie models.MovieItem, isWatchlist bool) {
-	if isWatchlist {
-		<div class="flex items-center justify-between">
-			<span class="text-xs text-muted-foreground">Added { watchlistFormatTimeAgoShort(movie.DateAdded) }</span>
-			@dialog.Trigger(dialog.TriggerProps{
-				For: "list-movie-menu-" + strconv.Itoa(int(listID)) + "-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
-			}) {
-				@button.Button(button.Props{
-					Size:    button.SizeSm,
-					Class:   "h-6 w-6 shrink-0",
-					Variant: button.VariantDestructive,
-				}) {
-					@icon.Trash()
-				}
-			}
-		</div>
-	} else {
-		<div class="flex items-start gap-2 justify-between">
-			<div class="flex min-h-[20px] items-center gap-1 text-xs text-muted-foreground">
-				@icon.Clock3(icon.Props{Class: "size-5"})
-				<span>{ movie.DateAdded.Format("Jan 2, 2006") }</span>
-			</div>
-			@dialog.Trigger(dialog.TriggerProps{
-				For: "list-movie-menu-" + strconv.Itoa(int(listID)) + "-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
-			}) {
-				@button.Button(button.Props{
-					Variant: button.VariantDestructive,
-					Class:   "h-6 w-6 shrink-0",
-				}) {
-					@icon.Trash(icon.Props{Class: "size-3"})
-				}
-			}
-		</div>
-	}
 }
 
 templ listConfirmRemoveMovieDialog(listID int64, movie models.MovieItem, isWatchlist bool) {
@@ -283,40 +300,6 @@ templ listConfirmRemoveMovieDialog(listID int64, movie models.MovieItem, isWatch
 			}
 		}
 	</form>
-}
-
-func watchlistFormatTimeAgoShort(t time.Time) string {
-	now := time.Now()
-	diff := now.Sub(t)
-
-	switch {
-	case diff < 24*time.Hour:
-		return "today"
-	case diff < 7*24*time.Hour:
-		days := int(diff.Hours() / 24)
-		if days == 1 {
-			return "1 day ago"
-		}
-		return fmt.Sprintf("%d days ago", days)
-	case diff < 30*24*time.Hour:
-		weeks := int(diff.Hours() / (24 * 7))
-		if weeks == 1 {
-			return "1 week ago"
-		}
-		return fmt.Sprintf("%d weeks ago", weeks)
-	case diff < 365*24*time.Hour:
-		months := int(diff.Hours() / (24 * 30))
-		if months == 1 {
-			return "1 month ago"
-		}
-		return fmt.Sprintf("%d months ago", months)
-	default:
-		years := int(diff.Hours() / (24 * 365))
-		if years == 1 {
-			return "1 year ago"
-		}
-		return fmt.Sprintf("%d years ago", years)
-	}
 }
 
 func comingSoonReleaseDateLabel(movie models.MovieItem) string {

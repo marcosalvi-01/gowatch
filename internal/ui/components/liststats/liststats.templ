@@ -9,7 +9,6 @@ import (
 templ ListStats(list models.List) {
 	<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
 		if list.IsWatchlist {
-			@watchlistListStat("Movies", fmt.Sprintf("%d", len(list.Movies)))
 			if len(list.Movies) > 0 {
 				@watchlistListStat("Estimated Watch Time", watchlistCalculateTotalRuntime(list.Movies))
 			}

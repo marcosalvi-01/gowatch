@@ -439,6 +439,7 @@ func (d *SqliteDB) InsertList(ctx context.Context, list InsertList) (int64, erro
 		CreationDate: time.Now().Format("2006-01-02 15:04:05.999999999 -0700 MST"),
 		Description:  list.Description,
 		IsWatchlist:  list.IsWatchlist,
+		DisplaySort:  string(list.DisplaySort),
 	})
 	if err != nil {
 		log.Error("failed to insert list", "name", list.Name, "error", err)
@@ -488,6 +489,7 @@ func (d *SqliteDB) GetList(ctx context.Context, userID, id int64) (*models.List,
 			CreationDate: creationDate,
 			Description:  list.Description,
 			IsWatchlist:  list.IsWatchlist,
+			DisplaySort:  models.ListMovieSort(list.DisplaySort),
 			Movies:       []models.MovieItem{},
 		}, nil
 	}
@@ -528,6 +530,7 @@ func (d *SqliteDB) GetList(ctx context.Context, userID, id int64) (*models.List,
 		CreationDate: creationDate,
 		Description:  list.Description,
 		IsWatchlist:  list.IsWatchlist,
+		DisplaySort:  models.ListMovieSort(list.DisplaySort),
 		Movies:       movies,
 	}, nil
 }
@@ -623,6 +626,36 @@ func (d *SqliteDB) UpdateListMoviePositions(ctx context.Context, userID, listID 
 	return nil
 }
 
+func (d *SqliteDB) UpdateListDisplaySort(ctx context.Context, userID, listID int64, displaySort models.ListMovieSort) error {
+	log.Debug("updating list display sort", "listID", listID, "displaySort", displaySort)
+
+	err := d.queries.UpdateListDisplaySort(ctx, sqlc.UpdateListDisplaySortParams{
+		DisplaySort: string(displaySort),
+		ID:          listID,
+		UserID:      &userID,
+	})
+	if err != nil {
+		log.Error("failed to update list display sort", "listID", listID, "displaySort", displaySort, "error", err)
+		return fmt.Errorf("failed to update display sort for list %d: %w", listID, err)
+	}
+
+	return nil
+}
+
+func (d *SqliteDB) UpdateListDetails(ctx context.Context, userID, listID int64, name string, description *string) error {
+	err := d.queries.UpdateListDetails(ctx, sqlc.UpdateListDetailsParams{
+		Name:        name,
+		Description: description,
+		ID:          listID,
+		UserID:      &userID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update details for list %d: %w", listID, err)
+	}
+
+	return nil
+}
+
 func (d *SqliteDB) GetAllLists(ctx context.Context, userID int64) ([]InsertList, error) {
 	log.Debug("retrieving all lists from database")
 
@@ -639,6 +672,7 @@ func (d *SqliteDB) GetAllLists(ctx context.Context, userID int64) ([]InsertList,
 			Name:        result.Name,
 			Description: result.Description,
 			IsWatchlist: result.IsWatchlist,
+			DisplaySort: models.ListMovieSort(result.DisplaySort),
 		}
 	}
 
@@ -1799,6 +1833,7 @@ func (d *SqliteDB) ExportLists(ctx context.Context, userID int64) ([]models.List
 				CreationDate: creationDate,
 				Description:  result.List.Description,
 				IsWatchlist:  result.List.IsWatchlist,
+				DisplaySort:  models.ListMovieSort(result.List.DisplaySort),
 				Movies:       []models.MovieItem{},
 			})
 			idx = len(lists) - 1

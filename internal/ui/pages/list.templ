@@ -35,10 +35,20 @@ templ listHeader(data models.ListViewData) {
 							@icon.List(icon.Props{Class: "size-5"})
 						</div>
 						<div class="space-y-1">
-							<h1 class="text-2xl sm:text-3xl font-bold tracking-tight">{ data.List.Name }</h1>
+						{{
+							title := data.List.Name
+							if data.List.IsWatchlist {
+								title = "My Watchlist"
+							}
+						}}
+						if data.IsEditing && !data.List.IsWatchlist {
+							@listDetailsForm(data)
+						} else {
+							<h1 class="text-2xl sm:text-3xl font-bold tracking-tight">{ title }</h1>
+						}
 						</div>
 					</div>
-					if data.List.Description != nil && *data.List.Description != "" {
+					if !data.IsEditing && data.List.Description != nil && *data.List.Description != "" {
 						<p class="text-muted-foreground text-sm sm:text-base max-w-3xl leading-relaxed">
 							{ *data.List.Description }
 						</p>
@@ -59,12 +69,22 @@ templ listHeader(data models.ListViewData) {
 							</span>
 						}
 					</div>
+					if data.List.IsWatchlist {
+						<div
+							id="list-stats"
+							hx-get={ fmt.Sprintf("/htmx/lists/%d/stats", data.List.ID) }
+							hx-trigger="load, refreshListStats from:body"
+							hx-swap="innerHTML"
+						></div>
+					}
 				</div>
 				<div class="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[16rem] lg:items-end">
-					@listSortForm(data.PageURL, data.Sort)
+					@listSortForm(data)
 					<div class="flex flex-wrap justify-end gap-2">
-						@listEditOrderAction(data)
-						@listActions(data.List)
+						@listEditAction(data)
+						if data.IsEditing && !data.List.IsWatchlist {
+							@listActions(data.List)
+						}
 					</div>
 				</div>
 			</div>
@@ -72,39 +92,66 @@ templ listHeader(data models.ListViewData) {
 	</div>
 }
 
-templ listSortForm(pageURL string, currentSort models.ListMovieSort) {
+templ listDetailsForm(data models.ListViewData) {
+	<form id="list-details-form" class="space-y-2">
+		<input
+			class="h-10 w-full rounded-md border border-input bg-background px-3 text-2xl sm:text-3xl font-bold tracking-tight"
+			name="title"
+			value={ data.List.Name }
+			maxlength="100"
+			required
+		/>
+		<textarea
+			class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base leading-relaxed"
+			name="description"
+			maxlength="500"
+			placeholder="Add a description"
+		>
+			if data.List.Description != nil {
+				{ *data.List.Description }
+			}
+		</textarea>
+	</form>
+}
+
+
+templ listSortForm(data models.ListViewData) {
 	<form
 		class="w-full"
-		hx-get={ pageURL }
-		hx-target="#main-content"
+		hx-patch={ fmt.Sprintf("/htmx/lists/%d/display-sort", data.List.ID) }
+		hx-target="#toast"
 		hx-trigger="change"
-		hx-push-url="true"
-		hx-swap="innerHTML"
 	>
+		if data.IsEditing {
+			<input type="hidden" name="edit" value="1"/>
+		}
 		<div class="space-y-2">
 			<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Display order</p>
 			@selectbox.SelectBox(selectbox.Props{Class: "w-full lg:w-64"}) {
-				@selectbox.Trigger(selectbox.TriggerProps{Name: "sort", Class: "w-full lg:w-64"}) {
+				@selectbox.Trigger(selectbox.TriggerProps{Name: "sort", Class: "w-full lg:w-64", Disabled: !data.IsEditing}) {
 					@selectbox.Value(selectbox.ValueProps{Placeholder: "Sort movies"})
 				}
 				@selectbox.Content(selectbox.ContentProps{NoSearch: true}) {
-					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortCustom), Selected: currentSort == models.ListMovieSortCustom}) {
+					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortCustom), Selected: data.Sort == models.ListMovieSortCustom}) {
 						Custom order
 					}
-					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortDateAddedDesc), Selected: currentSort == models.ListMovieSortDateAddedDesc}) {
+					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortDateAddedDesc), Selected: data.Sort == models.ListMovieSortDateAddedDesc}) {
 						Recently added
 					}
-					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortDateAddedAsc), Selected: currentSort == models.ListMovieSortDateAddedAsc}) {
+					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortDateAddedAsc), Selected: data.Sort == models.ListMovieSortDateAddedAsc}) {
 						Oldest added
 					}
-					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortTitleAsc), Selected: currentSort == models.ListMovieSortTitleAsc}) {
+					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortTitleAsc), Selected: data.Sort == models.ListMovieSortTitleAsc}) {
 						Title A-Z
 					}
-					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortRatingDesc), Selected: currentSort == models.ListMovieSortRatingDesc}) {
+					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortRatingDesc), Selected: data.Sort == models.ListMovieSortRatingDesc}) {
 						Highest rated
 					}
-					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortReleaseDateDesc), Selected: currentSort == models.ListMovieSortReleaseDateDesc}) {
+					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortReleaseDateDesc), Selected: data.Sort == models.ListMovieSortReleaseDateDesc}) {
 						Newest release
+					}
+					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortReleaseStatus), Selected: data.Sort == models.ListMovieSortReleaseStatus}) {
+						Upcoming / Released
 					}
 				}
 			}
@@ -116,29 +163,38 @@ templ listActions(list *models.List) {
 	@deleteListDialog(list)
 }
 
-templ listEditOrderAction(data models.ListViewData) {
-	if data.Sort == models.ListMovieSortCustom {
-		{{
-			label := "Edit order"
+templ listEditAction(data models.ListViewData) {
+	{{
+			label := "Edit list"
 			variant := button.VariantOutline
-			if data.IsEditingOrder {
-				label = "Done"
-				variant = button.VariantDefault
-			}
-		}}
-		@button.Button(button.Props{
-			Variant: variant,
-			Class:   "h-8 gap-2 px-3",
-			Attributes: templ.Attributes{
+			attributes := templ.Attributes{
 				"hx-get":      data.ToggleEditURL,
 				"hx-target":   "#main-content",
 				"hx-push-url": "true",
 				"hx-swap":     "innerHTML",
-			},
-		}) {
-			@icon.ListChevronsUpDown(icon.Props{Class: "size-4"})
+			}
+			if data.List.IsWatchlist {
+				label = "Edit watchlist"
+			}
+			if data.IsEditing {
+				label = "Done"
+				variant = button.VariantDefault
+				if !data.List.IsWatchlist {
+					attributes = templ.Attributes{
+						"hx-patch":   fmt.Sprintf("/htmx/lists/%d", data.List.ID),
+						"hx-include": "#list-details-form",
+						"hx-target":  "#toast",
+					}
+				}
+			}
+	}}
+	@button.Button(button.Props{
+			Variant: variant,
+			Class:   "h-8 gap-2 px-3",
+			Attributes: attributes,
+	}) {
+			@icon.Pencil(icon.Props{Class: "size-4"})
 			{ label }
-		}
 	}
 }
 

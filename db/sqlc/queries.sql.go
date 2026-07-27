@@ -256,7 +256,7 @@ func (q *Queries) DeleteWatched(ctx context.Context, arg DeleteWatchedParams) (i
 
 const getAllLists = `-- name: GetAllLists :many
 SELECT
-    id, name, creation_date, description, user_id, is_watchlist
+    id, name, creation_date, description, user_id, is_watchlist, display_sort
 FROM
     list
 WHERE
@@ -281,6 +281,7 @@ func (q *Queries) GetAllLists(ctx context.Context, userID *int64) ([]List, error
 			&i.Description,
 			&i.UserID,
 			&i.IsWatchlist,
+			&i.DisplaySort,
 		); err != nil {
 			return nil, err
 		}
@@ -297,7 +298,7 @@ func (q *Queries) GetAllLists(ctx context.Context, userID *int64) ([]List, error
 
 const getAllListsWithMovies = `-- name: GetAllListsWithMovies :many
 SELECT
-    list.id, list.name, list.creation_date, list.description, list.user_id, list.is_watchlist,
+    list.id, list.name, list.creation_date, list.description, list.user_id, list.is_watchlist, list.display_sort,
     movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
     list_movie.movie_id, list_movie.list_id, list_movie.date_added, list_movie.position, list_movie.note
 FROM
@@ -334,6 +335,7 @@ func (q *Queries) GetAllListsWithMovies(ctx context.Context, userID *int64) ([]G
 			&i.List.Description,
 			&i.List.UserID,
 			&i.List.IsWatchlist,
+			&i.List.DisplaySort,
 			&i.Movie.ID,
 			&i.Movie.Title,
 			&i.Movie.OriginalTitle,
@@ -937,7 +939,7 @@ func (q *Queries) GetHighestRatedMovies(ctx context.Context, arg GetHighestRated
 
 const getListByID = `-- name: GetListByID :one
 SELECT
-    id, name, creation_date, description, user_id, is_watchlist
+    id, name, creation_date, description, user_id, is_watchlist, display_sort
 FROM
     list
 WHERE
@@ -960,6 +962,7 @@ func (q *Queries) GetListByID(ctx context.Context, arg GetListByIDParams) (List,
 		&i.Description,
 		&i.UserID,
 		&i.IsWatchlist,
+		&i.DisplaySort,
 	)
 	return i, err
 }
@@ -968,7 +971,7 @@ const getListJoinMovieByID = `-- name: GetListJoinMovieByID :many
 SELECT
     movie.id, movie.title, movie.original_title, movie.original_language, movie.overview, movie.release_date, movie.poster_path, movie.backdrop_path, movie.popularity, movie.vote_count, movie.vote_average, movie.budget, movie.homepage, movie.imdb_id, movie.revenue, movie.runtime, movie.status, movie.tagline, movie.updated_at,
     list_movie.movie_id, list_movie.list_id, list_movie.date_added, list_movie.position, list_movie.note,
-    list.id, list.name, list.creation_date, list.description, list.user_id, list.is_watchlist
+    list.id, list.name, list.creation_date, list.description, list.user_id, list.is_watchlist, list.display_sort
 FROM
     list
     JOIN list_movie ON list_movie.list_id = list.id
@@ -1038,6 +1041,7 @@ func (q *Queries) GetListJoinMovieByID(ctx context.Context, arg GetListJoinMovie
 			&i.List.Description,
 			&i.List.UserID,
 			&i.List.IsWatchlist,
+			&i.List.DisplaySort,
 		); err != nil {
 			return nil, err
 		}
@@ -2877,10 +2881,11 @@ INSERT INTO
         creation_date,
         description,
         user_id,
-		is_watchlist
+		is_watchlist,
+        display_sort
     )
 VALUES
-    (?, ?, ?, ?, ?)
+    (?, ?, ?, ?, ?, ?)
 RETURNING
     id
 `
@@ -2891,6 +2896,7 @@ type InsertListParams struct {
 	Description  *string
 	UserID       *int64
 	IsWatchlist  bool
+	DisplaySort  string
 }
 
 // Lists and watchlist.
@@ -2901,6 +2907,7 @@ func (q *Queries) InsertList(ctx context.Context, arg InsertListParams) (int64, 
 		arg.Description,
 		arg.UserID,
 		arg.IsWatchlist,
+		arg.DisplaySort,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -2956,6 +2963,53 @@ WHERE
 
 func (q *Queries) SetAdmin(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, setAdmin, id)
+	return err
+}
+
+const updateListDetails = `-- name: UpdateListDetails :exec
+UPDATE list
+SET
+    name = ?,
+    description = ?
+WHERE
+    id = ?
+    AND user_id = ?
+`
+
+type UpdateListDetailsParams struct {
+	Name        string
+	Description *string
+	ID          int64
+	UserID      *int64
+}
+
+func (q *Queries) UpdateListDetails(ctx context.Context, arg UpdateListDetailsParams) error {
+	_, err := q.db.ExecContext(ctx, updateListDetails,
+		arg.Name,
+		arg.Description,
+		arg.ID,
+		arg.UserID,
+	)
+	return err
+}
+
+const updateListDisplaySort = `-- name: UpdateListDisplaySort :exec
+UPDATE list
+SET
+    display_sort = ?
+WHERE
+    id = ?
+    AND user_id = ?
+`
+
+type UpdateListDisplaySortParams struct {
+	DisplaySort string
+	ID          int64
+	UserID      *int64
+}
+
+func (q *Queries) UpdateListDisplaySort(ctx context.Context, arg UpdateListDisplaySortParams) error {
+	_, err := q.db.ExecContext(ctx, updateListDisplaySort, arg.DisplaySort, arg.ID, arg.UserID)
 	return err
 }
 

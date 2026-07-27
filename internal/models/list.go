@@ -11,6 +11,7 @@ const (
 	ListMovieSortTitleAsc        ListMovieSort = "title_asc"
 	ListMovieSortRatingDesc      ListMovieSort = "rating_desc"
 	ListMovieSortReleaseDateDesc ListMovieSort = "release_date_desc"
+	ListMovieSortReleaseStatus   ListMovieSort = "release_status"
 )
 
 // List is a list of movies
@@ -20,6 +21,7 @@ type List struct {
 	CreationDate time.Time
 	Description  *string
 	IsWatchlist  bool
+	DisplaySort  ListMovieSort
 
 	Movies []MovieItem
 }
@@ -40,8 +42,7 @@ type ListEntry struct {
 type ListViewData struct {
 	List             *List
 	Sort             ListMovieSort
-	IsEditingOrder   bool
-	PageURL          string
+	IsEditing        bool
 	GridURL          string
 	ToggleEditURL    string
 	HasAverageRating bool

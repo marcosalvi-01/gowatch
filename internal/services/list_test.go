@@ -112,6 +112,65 @@ func TestListService_CreateList_EmptyName(t *testing.T) {
 	}
 }
 
+func TestListService_DisplaySortPersists(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+
+	listService := NewListService(testDB, NewMovieService(testDB, nil, time.Hour))
+	ctx := setupTestUser(t, testDB)
+
+	list, err := listService.CreateList(ctx, "Sorted", nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if list.DisplaySort != models.ListMovieSortCustom {
+		t.Fatalf("expected custom default, got %q", list.DisplaySort)
+	}
+
+	if err := listService.SetListDisplaySort(ctx, list.ID, models.ListMovieSortTitleAsc); err != nil {
+		t.Fatal(err)
+	}
+
+	updated, err := listService.GetListDetails(ctx, list.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.DisplaySort != models.ListMovieSortTitleAsc {
+		t.Fatalf("expected title sort, got %q", updated.DisplaySort)
+	}
+
+	description := "Updated description"
+	if err := listService.UpdateListDetails(ctx, list.ID, "Updated title", &description); err != nil {
+		t.Fatal(err)
+	}
+	updated, err = listService.GetListDetails(ctx, list.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Name != "Updated title" || updated.Description == nil || *updated.Description != description {
+		t.Fatalf("expected updated list details, got name=%q description=%v", updated.Name, updated.Description)
+	}
+
+	if err := listService.SetListDisplaySort(ctx, list.ID, "invalid"); err == nil {
+		t.Fatal("expected invalid display sort error")
+	}
+	if err := listService.SetListDisplaySort(ctx, list.ID+1, models.ListMovieSortTitleAsc); err == nil {
+		t.Fatal("expected missing list error")
+	}
+
+	otherUser, err := testDB.CreateUser(context.Background(), "other@example.com", "Other User", "hash")
+	if err != nil {
+		t.Fatal(err)
+	}
+	otherCtx := context.WithValue(context.Background(), common.UserKey, otherUser)
+	if err := listService.SetListDisplaySort(otherCtx, list.ID, models.ListMovieSortTitleAsc); err == nil {
+		t.Fatal("expected foreign list error")
+	}
+}
+
 func TestListService_AddMovieToList_InvalidIDs(t *testing.T) {
 	testDB, err := db.NewTestDB()
 	if err != nil {
@@ -179,6 +238,7 @@ func TestListService_ImportLists_MergesByNameAndPreservesMetadata(t *testing.T) 
 		{
 			Name:        "Favorites",
 			Description: &desc,
+			DisplaySort: models.ListMovieSortTitleAsc,
 			Movies: []models.ImportListMovieRef{
 				{MovieID: 1, DateAdded: firstDate, Position: &position, Note: &note},
 				{MovieID: 2, DateAdded: secondDate},
@@ -190,12 +250,20 @@ func TestListService_ImportLists_MergesByNameAndPreservesMetadata(t *testing.T) 
 		t.Fatal(err)
 	}
 
+	lists, err := listService.GetAllLists(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := listService.SetListDisplaySort(ctx, lists[0].ID, models.ListMovieSortRatingDesc); err != nil {
+		t.Fatal(err)
+	}
+
 	// Importing the same data twice should merge into the same list without duplicates.
 	if err := listService.ImportLists(ctx, importData); err != nil {
 		t.Fatal(err)
 	}
 
-	lists, err := listService.GetAllLists(ctx)
+	lists, err = listService.GetAllLists(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,6 +277,9 @@ func TestListService_ImportLists_MergesByNameAndPreservesMetadata(t *testing.T) 
 	}
 	if len(listDetails.Movies) != 2 {
 		t.Fatalf("expected 2 movies in merged list, got %d", len(listDetails.Movies))
+	}
+	if listDetails.DisplaySort != models.ListMovieSortTitleAsc {
+		t.Fatalf("expected imported display sort %q, got %q", models.ListMovieSortTitleAsc, listDetails.DisplaySort)
 	}
 
 	moviesByID := make(map[int64]models.MovieItem, len(listDetails.Movies))
@@ -242,6 +313,46 @@ func TestListService_ImportLists_MergesByNameAndPreservesMetadata(t *testing.T) 
 	}
 }
 
+func TestListService_ImportLists_PreservesWatchlistCustomSort(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+
+	listService := NewListService(testDB, NewMovieService(testDB, nil, time.Hour))
+	ctx := setupTestUser(t, testDB)
+	position := int64(1)
+	importData := models.ImportListsLog{
+		{
+			Name:        "Watchlist",
+			IsWatchlist: true,
+			DisplaySort: models.ListMovieSortCustom,
+			Movies: []models.ImportListMovieRef{
+				{MovieID: 1, Position: &position},
+			},
+		},
+	}
+
+	if err := testDB.UpsertMovie(ctx, &models.MovieDetails{Movie: models.Movie{ID: 1, Title: "Movie"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := listService.ImportLists(ctx, importData); err != nil {
+		t.Fatal(err)
+	}
+
+	watchlist, err := listService.GetWatchlist(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if watchlist.DisplaySort != models.ListMovieSortCustom {
+		t.Fatalf("expected custom watchlist sort, got %q", watchlist.DisplaySort)
+	}
+	if len(watchlist.Movies) != 1 || watchlist.Movies[0].Position == nil || *watchlist.Movies[0].Position != position {
+		t.Fatalf("expected imported custom position %d, got %+v", position, watchlist.Movies)
+	}
+}
+
 func TestListService_ExportLists_IsStable(t *testing.T) {
 	testDB, err := db.NewTestDB()
 	if err != nil {
@@ -267,7 +378,8 @@ func TestListService_ExportLists_IsStable(t *testing.T) {
 
 	importData := models.ImportListsLog{
 		{
-			Name: "List A",
+			Name:        "List A",
+			DisplaySort: models.ListMovieSortRatingDesc,
 			Movies: []models.ImportListMovieRef{
 				{MovieID: 1, DateAdded: time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC)},
 			},
@@ -295,6 +407,9 @@ func TestListService_ExportLists_IsStable(t *testing.T) {
 
 	if !reflect.DeepEqual(exported1, exported2) {
 		t.Fatal("expected repeated exports to be stable")
+	}
+	if exported1[0].DisplaySort != models.ListMovieSortRatingDesc {
+		t.Fatalf("expected exported display sort %q, got %q", models.ListMovieSortRatingDesc, exported1[0].DisplaySort)
 	}
 }
 
@@ -524,7 +639,11 @@ func TestListService_GetListViewData_SortsMoviesForDisplay(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			viewData, err := listService.GetListViewData(ctx, list.ID, string(testCase.sortMode), "", time.Now())
+			if err := listService.SetListDisplaySort(ctx, list.ID, testCase.sortMode); err != nil {
+				t.Fatal(err)
+			}
+
+			viewData, err := listService.GetListViewData(ctx, list.ID, "", time.Now())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -580,7 +699,7 @@ func TestListService_ReorderListMovie_PersistsCustomOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	viewData, err := listService.GetListViewData(ctx, list.ID, string(models.ListMovieSortCustom), "", time.Now())
+	viewData, err := listService.GetListViewData(ctx, list.ID, "", time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -644,7 +763,7 @@ func TestListService_ReorderListMovie_MovesToFirstAndLast(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	viewData, err := listService.GetListViewData(ctx, list.ID, string(models.ListMovieSortCustom), "", time.Now())
+	viewData, err := listService.GetListViewData(ctx, list.ID, "", time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -666,22 +785,44 @@ func TestListService_ReorderListMovie_MovesToFirstAndLast(t *testing.T) {
 	}
 }
 
-func TestIsListMovieOrderEditing(t *testing.T) {
+func TestListService_ReorderListMovie_RequiresCustomSort(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+
+	listService := NewListService(testDB, NewMovieService(testDB, nil, time.Hour))
+	ctx := setupTestUser(t, testDB)
+
+	for _, isWatchlist := range []bool{false, true} {
+		list, err := listService.CreateList(ctx, "Sorted", nil, isWatchlist)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := listService.SetListDisplaySort(ctx, list.ID, models.ListMovieSortTitleAsc); err != nil {
+			t.Fatal(err)
+		}
+		if err := listService.ReorderListMovie(ctx, list.ID, 1, listMovieMoveUp); err == nil {
+			t.Fatalf("expected non-custom reorder error for watchlist=%t", isWatchlist)
+		}
+	}
+}
+
+func TestIsListEditing(t *testing.T) {
 	testCases := []struct {
-		name     string
-		raw      string
-		sortMode models.ListMovieSort
-		want     bool
+		name string
+		raw  string
+		want bool
 	}{
-		{name: "custom edit enabled with one", raw: "1", sortMode: models.ListMovieSortCustom, want: true},
-		{name: "custom edit enabled with true", raw: "true", sortMode: models.ListMovieSortCustom, want: true},
-		{name: "custom edit disabled", raw: "0", sortMode: models.ListMovieSortCustom, want: false},
-		{name: "non custom ignores edit", raw: "1", sortMode: models.ListMovieSortTitleAsc, want: false},
+		{name: "edit enabled with one", raw: "1", want: true},
+		{name: "edit enabled with true", raw: "true", want: true},
+		{name: "edit disabled", raw: "0", want: false},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := IsListMovieOrderEditing(testCase.raw, testCase.sortMode)
+			got := IsListEditing(testCase.raw)
 			if got != testCase.want {
 				t.Fatalf("expected %t, got %t", testCase.want, got)
 			}

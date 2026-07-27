@@ -247,6 +247,7 @@ func TestMapTMDBPersonDetailsToPersonDetailsPage_InvalidDatesDoNotFail(t *testin
 
 	if person == nil {
 		t.Fatal("expected mapped person details, got nil")
+		return
 	}
 
 	if person.Name != unknownPersonName {
@@ -434,6 +435,7 @@ func TestMapTMDBPersonDetailsToPersonDetailsPage_SortsCreditsByVotesAndInvolveme
 
 	if person == nil {
 		t.Fatal("expected mapped person details, got nil")
+		return
 	}
 
 	if gotActingIDs, expectedActingIDs := personCreditIDs(person.ActingCredits), []int64{200, 300, 100}; !reflect.DeepEqual(gotActingIDs, expectedActingIDs) {
@@ -468,6 +470,7 @@ func TestMapTMDBPersonDetailsToPersonDetailsPage_PrioritizesRecurringTVOverGuest
 
 	if person == nil {
 		t.Fatal("expected mapped person details, got nil")
+		return
 	}
 
 	if gotActingIDs, expectedActingIDs := personCreditIDs(person.ActingCredits), []int64{20, 30, 10}; !reflect.DeepEqual(gotActingIDs, expectedActingIDs) {
@@ -504,6 +507,7 @@ func TestMapTMDBPersonDetailsToPersonDetailsPage_PrioritizesRecurringTVCrewOverG
 
 	if person == nil {
 		t.Fatal("expected mapped person details, got nil")
+		return
 	}
 
 	if gotCrewIDs, expectedCrewIDs := personCreditIDs(person.CrewCredits), []int64{20, 30, 10}; !reflect.DeepEqual(gotCrewIDs, expectedCrewIDs) {
@@ -537,6 +541,7 @@ func TestMapTMDBPersonDetailsToPersonDetailsPage_UsesTVCrewFallbackMetadata(t *t
 
 	if person == nil {
 		t.Fatal("expected mapped person details, got nil")
+		return
 	}
 
 	if len(person.CrewCredits) != 1 {
@@ -580,6 +585,7 @@ func TestMapTMDBPersonDetailsToPersonDetailsPage_KnownForFallsBackToSortedCrewCr
 
 	if person == nil {
 		t.Fatal("expected mapped person details, got nil")
+		return
 	}
 
 	if gotKnownForIDs, expectedKnownForIDs := personCreditIDs(person.KnownFor), []int64{22, 11}; !reflect.DeepEqual(gotKnownForIDs, expectedKnownForIDs) {
@@ -605,6 +611,7 @@ func TestMapTMDBPersonDetailsToPersonDetailsPage_PreservesTMDBOrderWhenVoteAvera
 
 	if person == nil {
 		t.Fatal("expected mapped person details, got nil")
+		return
 	}
 
 	if gotActingIDs, expectedActingIDs := personCreditIDs(person.ActingCredits), []int64{31, 42}; !reflect.DeepEqual(gotActingIDs, expectedActingIDs) {
@@ -630,6 +637,7 @@ func TestMapTMDBPersonDetailsToPersonDetailsPage_LowVoteOutliersDoNotLeadSorting
 
 	if person == nil {
 		t.Fatal("expected mapped person details, got nil")
+		return
 	}
 
 	if gotActingIDs, expectedActingIDs := personCreditIDs(person.ActingCredits), []int64{1, 2}; !reflect.DeepEqual(gotActingIDs, expectedActingIDs) {

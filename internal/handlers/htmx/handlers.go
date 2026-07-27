@@ -74,6 +74,8 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 
 	r.Post("/lists/items", h.AddMovieToList)
 	r.Delete("/lists/items", h.DeleteMovieFromList)
+	r.Patch("/lists/{id}/display-sort", h.UpdateListDisplaySort)
+	r.Patch("/lists/{id}", h.UpdateListDetails)
 	r.Patch("/lists/{id}/items/order", h.ReorderListMovie)
 
 	r.Post("/watchlist/add", h.AddToWatchlist)
@@ -572,6 +574,59 @@ func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {
 	RenderSuccessToast(w, r, "Removed from List", "Movie has been removed from the list", 0)
 }
 
+func (h *Handlers) UpdateListDisplaySort(w http.ResponseWriter, r *http.Request) {
+	listIDStr := chi.URLParam(r, "id")
+	listID, err := strconv.ParseInt(listIDStr, 10, 64)
+	if err != nil {
+		RenderErrorToast(w, r, "Invalid List", "The selected list is not valid.", 0)
+		return
+	}
+
+	displaySort := models.ListMovieSort(r.FormValue("sort"))
+	if err := h.listService.SetListDisplaySort(r.Context(), listID, displaySort); err != nil {
+		log.Error("failed to update list display sort", "listID", listID, "displaySort", displaySort, "error", err)
+		RenderErrorToast(w, r, "Failed to Update Order", "Could not save the display order.", 0)
+		return
+	}
+
+	w.Header().Add("HX-Trigger", "refreshListGrid")
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handlers) UpdateListDetails(w http.ResponseWriter, r *http.Request) {
+	listID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		RenderErrorToast(w, r, "Invalid List", "The selected list is not valid.", 0)
+		return
+	}
+
+	title, err := utils.TrimAndValidateString(r.FormValue("title"), 100)
+	if err != nil {
+		RenderErrorToast(w, r, "Invalid Title", "Please provide a valid title for your list.", 4000)
+		return
+	}
+
+	description, err := utils.TrimAndValidateString(r.FormValue("description"), 500)
+	if err != nil {
+		RenderErrorToast(w, r, "Invalid Description", "Description is too long.", 4000)
+		return
+	}
+
+	var descriptionPtr *string
+	if description != "" {
+		descriptionPtr = &description
+	}
+
+	if err := h.listService.UpdateListDetails(r.Context(), listID, title, descriptionPtr); err != nil {
+		log.Error("failed to update list details", "listID", listID, "error", err)
+		RenderErrorToast(w, r, "Failed to Update List", "Could not save list details.", 0)
+		return
+	}
+
+	w.Header().Set("HX-Redirect", fmt.Sprintf("/list/%d", listID))
+	w.WriteHeader(http.StatusOK)
+}
+
 func (h *Handlers) ReorderListMovie(w http.ResponseWriter, r *http.Request) {
 	listIDStr := chi.URLParam(r, "id")
 	movieIDStr := r.FormValue("movie_id")
@@ -713,7 +768,7 @@ func (h *Handlers) ListMovieGrid(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	viewData, err := h.listService.GetListViewData(ctx, listID, r.URL.Query().Get("sort"), r.URL.Query().Get("edit"), time.Now())
+	viewData, err := h.listService.GetListViewData(ctx, listID, r.URL.Query().Get("edit"), time.Now())
 	if err != nil {
 		log.Error("failed to get list details", "listID", listIDStr, "error", err)
 		RenderErrorToast(w, r, "Unexpected Error", "An unexpected error occurred, please try again.", 0)

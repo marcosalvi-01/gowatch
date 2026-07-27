@@ -105,26 +105,37 @@ func TestHandlers_ListPage_CustomEditModeToggle(t *testing.T) {
 	}
 
 	listService := services.NewListService(testDB, services.NewMovieService(testDB, nil, time.Hour))
-	list, err := listService.CreateList(context.WithValue(ctx, common.UserKey, user), "Sci-Fi", nil, false)
+	userCtx := context.WithValue(ctx, common.UserKey, user)
+	list, err := listService.CreateList(userCtx, "Sci-Fi", nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := listService.AddMovieToList(context.WithValue(ctx, common.UserKey, user), list.ID, movie.Movie.ID, nil); err != nil {
+	if err := listService.AddMovieToList(userCtx, list.ID, movie.Movie.ID, nil); err != nil {
+		t.Fatal(err)
+	}
+	watchlist, err := listService.CreateList(userCtx, "Watchlist", nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := listService.AddMovieToList(userCtx, watchlist.ID, movie.Movie.ID, nil); err != nil {
 		t.Fatal(err)
 	}
 
 	h := &Handlers{listService: listService}
 
 	t.Run("view mode by default", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/list/1?sort=custom", nil)
+		req := httptest.NewRequest(http.MethodGet, "/list/1", nil)
 		req = req.WithContext(withRouteParam(context.WithValue(req.Context(), common.UserKey, user), strconv.FormatInt(list.ID, 10)))
 		res := httptest.NewRecorder()
 
 		h.ListPage(res, req)
 
 		body := res.Body.String()
-		if !strings.Contains(body, "Edit order") {
-			t.Fatal("expected Edit order button in default custom view mode")
+		if !strings.Contains(body, "Edit list") {
+			t.Fatal("expected Edit list button in default custom view mode")
+		}
+		if strings.Contains(body, "Delete List") {
+			t.Fatal("did not expect Delete List button in view mode")
 		}
 		if strings.Contains(body, "Done") {
 			t.Fatal("did not expect Done button in default custom view mode")
@@ -132,7 +143,7 @@ func TestHandlers_ListPage_CustomEditModeToggle(t *testing.T) {
 	})
 
 	t.Run("done button in edit mode", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/list/1?sort=custom&edit=1", nil)
+		req := httptest.NewRequest(http.MethodGet, "/list/1?edit=1", nil)
 		req = req.WithContext(withRouteParam(context.WithValue(req.Context(), common.UserKey, user), strconv.FormatInt(list.ID, 10)))
 		res := httptest.NewRecorder()
 
@@ -142,24 +153,93 @@ func TestHandlers_ListPage_CustomEditModeToggle(t *testing.T) {
 		if !strings.Contains(body, "Done") {
 			t.Fatal("expected Done button in custom edit mode")
 		}
-		if !strings.Contains(body, "/htmx/lists/1/movie-grid?sort=custom&amp;edit=1") {
-			t.Fatal("expected grid URL to preserve custom edit mode")
+		if !strings.Contains(body, "/htmx/lists/1/movie-grid") {
+			t.Fatal("expected grid URL")
+		}
+		if !strings.Contains(body, "Delete List") {
+			t.Fatal("expected Delete List button in edit mode")
+		}
+		if !strings.Contains(body, `name="title"`) || !strings.Contains(body, `name="description"`) {
+			t.Fatal("expected list details fields in edit mode")
+		}
+		if strings.Contains(body, "Save changes") {
+			t.Fatal("did not expect separate save button")
 		}
 	})
 
-	t.Run("non custom sort ignores edit flag", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/list/1?sort=title_asc&edit=1", nil)
+	t.Run("non custom sort starts in view mode", func(t *testing.T) {
+		if err := listService.SetListDisplaySort(userCtx, list.ID, models.ListMovieSortTitleAsc); err != nil {
+			t.Fatal(err)
+		}
+		req := httptest.NewRequest(http.MethodGet, "/list/1", nil)
+		//nolint:contextcheck // withRouteParam derives context from this request.
 		req = req.WithContext(withRouteParam(context.WithValue(req.Context(), common.UserKey, user), strconv.FormatInt(list.ID, 10)))
 		res := httptest.NewRecorder()
 
 		h.ListPage(res, req)
 
 		body := res.Body.String()
+		if !strings.Contains(body, "Edit list") {
+			t.Fatal("expected Edit list button for non-custom sort")
+		}
 		if strings.Contains(body, "Done") {
-			t.Fatal("did not expect Done button for non-custom sort")
+			t.Fatal("did not expect Done button in view mode")
+		}
+		if !strings.Contains(body, "Display order") {
+			t.Fatal("expected display order control in view mode")
+		}
+	})
+
+	t.Run("non custom sort can be edited", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/list/1?edit=1", nil)
+		req = req.WithContext(withRouteParam(context.WithValue(req.Context(), common.UserKey, user), strconv.FormatInt(list.ID, 10)))
+		res := httptest.NewRecorder()
+
+		h.ListPage(res, req)
+
+		body := res.Body.String()
+		if !strings.Contains(body, "Done") {
+			t.Fatal("expected Done button in edit mode")
+		}
+		if !strings.Contains(body, "/htmx/lists/1/movie-grid") {
+			t.Fatal("expected grid URL")
 		}
 		if strings.Contains(body, "Reorder movies with arrow controls.") {
 			t.Fatal("did not expect reorder helper text for non-custom sort")
+		}
+	})
+
+	t.Run("watchlist uses shared page and canonical route", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/list/2", nil)
+		req = req.WithContext(withRouteParam(context.WithValue(req.Context(), common.UserKey, user), strconv.FormatInt(watchlist.ID, 10)))
+		res := httptest.NewRecorder()
+
+		h.ListPage(res, req)
+
+		if res.Code != http.StatusFound {
+			t.Fatalf("expected redirect status %d, got %d", http.StatusFound, res.Code)
+		}
+		if location := res.Header().Get("Location"); location != "/watchlist" {
+			t.Fatalf("expected watchlist redirect, got %q", location)
+		}
+
+		req = httptest.NewRequest(http.MethodGet, "/watchlist?edit=1", nil)
+		req = req.WithContext(context.WithValue(req.Context(), common.UserKey, user))
+		res = httptest.NewRecorder()
+
+		h.Watchlist(res, req)
+
+		body := res.Body.String()
+		for _, expected := range []string{"My Watchlist", "Upcoming / Released", "Done"} {
+			if !strings.Contains(body, expected) {
+				t.Fatalf("expected watchlist page to contain %q", expected)
+			}
+		}
+		if !strings.Contains(body, "Custom order") {
+			t.Fatal("expected custom order for watchlist")
+		}
+		if strings.Contains(body, "Save changes") {
+			t.Fatal("did not expect list details form for watchlist")
 		}
 	})
 }
