@@ -1408,7 +1408,7 @@ func CreateListDialog() templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "<form hx-post=\"/htmx/lists\" hx-target=\"#toast\" hx-on::after-request=\"this.reset()\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, " <form hx-post=\"/htmx/lists\" hx-target=\"#toast\" hx-on::after-request=\"this.reset(); if (event.detail.successful) { window.tui?.dialog?.open('add-movie-to-list-dialog') }\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

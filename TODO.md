@@ -19,7 +19,6 @@
 
 - [ ] add pagination (or htmx progressive loading) to watched movies
 - [ ] load movie activity section asynchronously with HTMX
-- [ ] better mobile ui (change the hover stuff to click?)
 - [ ] faster import of movies (do the lists before?)
 - [ ] inline one-off functions
 - [ ] use typed errors where necessary (either do it everywhere or nowhere)

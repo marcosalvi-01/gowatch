@@ -190,11 +190,17 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	isInWatchlist := h.listService.IsMovieInWatchlist(ctx, id)
+	lists, err := h.listService.GetAllLists(ctx)
+	if err != nil {
+		log.Error("failed to get lists", "movieID", id, "error", err)
+		render500Error(w, r)
+		return
+	}
 
 	if shouldRenderContentFragment(r) {
-		templ.Handler(pages.Movie(*movie, rec, isInWatchlist), templ.WithFragments("content")).ServeHTTP(w, r)
+		templ.Handler(pages.Movie(*movie, rec, isInWatchlist, len(lists) > 0), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
-		templ.Handler(pages.Movie(*movie, rec, isInWatchlist)).ServeHTTP(w, r)
+		templ.Handler(pages.Movie(*movie, rec, isInWatchlist, len(lists) > 0)).ServeHTTP(w, r)
 	}
 
 	log.Info("movie page served successfully", "movieID", id, "title", movie.Movie.Title)

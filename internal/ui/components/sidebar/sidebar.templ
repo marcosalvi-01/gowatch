@@ -302,10 +302,11 @@ templ CreateListDialog() {
 	@dialog.Dialog(dialog.Props{
 		ID: "add-to-list-dialog",
 	}) {
+		// Movie page keeps add-list dialog mounted so newly created list can be selected immediately.
 		<form
 			hx-post="/htmx/lists"
 			hx-target="#toast"
-			hx-on::after-request="this.reset()"
+			hx-on::after-request="this.reset(); if (event.detail.successful) { window.tui?.dialog?.open('add-movie-to-list-dialog') }"
 		>
 			@dialog.Content(dialog.ContentProps{
 				Class: "max-w-md",

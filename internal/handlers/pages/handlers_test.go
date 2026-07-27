@@ -1,6 +1,7 @@
 package pages
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/common"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/internal/services"
+	uipages "github.com/marcosalvi-01/gowatch/internal/ui/pages"
 )
 
 func TestHandlers_PersonPage_InvalidIDReturnsBadRequest(t *testing.T) {
@@ -83,6 +85,55 @@ func TestHandlers_SearchPage_QueryTooLongReturnsBadRequest(t *testing.T) {
 
 	if res.Code != http.StatusBadRequest {
 		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, res.Code)
+	}
+}
+
+func TestMovieListAction(t *testing.T) {
+	testCases := []struct {
+		name       string
+		hasLists   bool
+		expected   []string
+		unexpected string
+	}{
+		{
+			name:     "no lists opens create list dialog",
+			hasLists: false,
+			expected: []string{
+				`data-tui-dialog-target="add-to-list-dialog"`,
+				`id="add-movie-to-list-dialog"`,
+			},
+		},
+		{
+			name:       "lists opens add movie dialog",
+			hasLists:   true,
+			expected:   []string{`id="add-movie-to-list-dialog"`},
+			unexpected: `data-tui-dialog-target="add-to-list-dialog"`,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			var body bytes.Buffer
+			err := uipages.Movie(
+				models.MovieDetails{Movie: models.Movie{ID: 1, Title: "Alien"}},
+				models.WatchedMovieRecords{},
+				false,
+				testCase.hasLists,
+			).Render(context.Background(), &body)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			html := body.String()
+			for _, expected := range testCase.expected {
+				if !strings.Contains(html, expected) {
+					t.Fatalf("expected rendered movie page to contain %q", expected)
+				}
+			}
+			if testCase.unexpected != "" && strings.Contains(html, testCase.unexpected) {
+				t.Fatalf("did not expect rendered movie page to contain %q", testCase.unexpected)
+			}
+		})
 	}
 }
 

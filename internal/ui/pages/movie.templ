@@ -29,27 +29,27 @@ import (
 
 const movieVisibleCastLimit = 9
 
-templ Movie(movie models.MovieDetails, watchRecords models.WatchedMovieRecords, isInWatchlist bool) {
+templ Movie(movie models.MovieDetails, watchRecords models.WatchedMovieRecords, isInWatchlist, hasLists bool) {
 	@Layout() {
 		@templ.Fragment("content") {
-			@movieHero(movie, isInWatchlist)
+			@movieHero(movie, isInWatchlist, hasLists)
 			@movieContent(movie, watchRecords)
 		}
 	}
 }
 
-templ movieHero(movie models.MovieDetails, isInWatchlist bool) {
+templ movieHero(movie models.MovieDetails, isInWatchlist, hasLists bool) {
 	<div class="relative -m-4 mb-6">
 		if movie.Movie.BackdropPath != "" {
-			@backdropHero(movie, isInWatchlist)
+			@backdropHero(movie, isInWatchlist, hasLists)
 		} else {
-			@fallbackHero(movie, isInWatchlist)
+			@fallbackHero(movie, isInWatchlist, hasLists)
 		}
 		@separator.Separator()
 	</div>
 }
 
-templ backdropHero(movie models.MovieDetails, isInWatchlist bool) {
+templ backdropHero(movie models.MovieDetails, isInWatchlist, hasLists bool) {
 	<div class="relative w-full h-[40vh] min-h-[350px] max-h-[500px] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] overflow-hidden">
 		<!-- Background Image -->
 		<img
@@ -65,25 +65,25 @@ templ backdropHero(movie models.MovieDetails, isInWatchlist bool) {
 		<div class="absolute inset-0 flex items-center">
 			<div class="w-full p-4 sm:p-6 md:p-8 lg:p-10">
 				<div class="max-w-6xl mx-auto w-full">
-					@heroContent(movie, true, isInWatchlist)
+					@heroContent(movie, true, isInWatchlist, hasLists)
 				</div>
 			</div>
 		</div>
 	</div>
 }
 
-templ fallbackHero(movie models.MovieDetails, isInWatchlist bool) {
+templ fallbackHero(movie models.MovieDetails, isInWatchlist, hasLists bool) {
 	<div class="p-4 sm:p-6 md:p-8 lg:p-10 bg-muted/20">
 		<div class="max-w-6xl mx-auto">
-			@heroContent(movie, false, isInWatchlist)
+			@heroContent(movie, false, isInWatchlist, hasLists)
 		</div>
 	</div>
 }
 
-templ heroContent(movie models.MovieDetails, isDark, isInWatchlist bool) {
+templ heroContent(movie models.MovieDetails, isDark, isInWatchlist, hasLists bool) {
 	<div class="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start">
 		@posterSection(movie, isDark)
-		@movieInfo(movie, isDark, isInWatchlist)
+		@movieInfo(movie, isDark, isInWatchlist, hasLists)
 	</div>
 }
 
@@ -103,7 +103,7 @@ templ posterSection(movie models.MovieDetails, isDark bool) {
 	}
 }
 
-templ movieInfo(movie models.MovieDetails, isDark, isInWatchlist bool) {
+templ movieInfo(movie models.MovieDetails, isDark, isInWatchlist, hasLists bool) {
 	<div class="flex-1 min-w-0 space-y-3 sm:space-y-4">
 		<!-- Title -->
 		<div>
@@ -194,7 +194,7 @@ templ movieInfo(movie models.MovieDetails, isDark, isInWatchlist bool) {
 			</div>
 		}
 		<!-- Action Buttons -->
-		@actionButtons(movie.Movie.ID)
+		@actionButtons(movie.Movie.ID, hasLists)
 		// TODO: improve button layout/style? Maybe move it somewhere else/change its text?
 		<div
 			hx-get={ fmt.Sprintf("/htmx/watchlist/%d", movie.Movie.ID) }
@@ -205,7 +205,7 @@ templ movieInfo(movie models.MovieDetails, isDark, isInWatchlist bool) {
 	</div>
 }
 
-templ actionButtons(movieID int64) {
+templ actionButtons(movieID int64, hasLists bool) {
 	<div class="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 sm:pt-4">
 		<form
 			hx-post="/htmx/movies/watched"
@@ -265,12 +265,14 @@ templ actionButtons(movieID int64) {
 			@dialog.Dialog(dialog.Props{
 				ID: "add-movie-to-list-dialog",
 			}) {
-				@dialog.Trigger() {
-					@button.Button(button.Props{
-						Variant: button.VariantOutline,
-					}) {
-						@icon.Plus()
-						Add to List
+				if hasLists {
+					@dialog.Trigger() {
+						@button.Button(button.Props{
+							Variant: button.VariantOutline,
+						}) {
+							@icon.Plus()
+							Add to List
+						}
 					}
 				}
 				@dialog.Content(dialog.ContentProps{
@@ -324,6 +326,18 @@ templ actionButtons(movieID int64) {
 				}
 			}
 		</form>
+		if !hasLists {
+			@dialog.Trigger(dialog.TriggerProps{
+				For: "add-to-list-dialog",
+			}) {
+				@button.Button(button.Props{
+					Variant: button.VariantOutline,
+				}) {
+					@icon.Plus()
+					Create List
+				}
+			}
+		}
 	</div>
 }
 
