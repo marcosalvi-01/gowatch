@@ -50,7 +50,7 @@ templ movieHero(movie models.MovieDetails, isInWatchlist, hasLists bool) {
 }
 
 templ backdropHero(movie models.MovieDetails, isInWatchlist, hasLists bool) {
-	<div class="relative w-full h-[40vh] min-h-[350px] max-h-[500px] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] overflow-hidden">
+	<div class="relative w-full h-[36vh] min-h-[280px] max-h-[500px] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] overflow-hidden">
 		<!-- Background Image -->
 		<img
 			src={ utils.TMDBImageURL("w1280", movie.Movie.BackdropPath) }
@@ -81,7 +81,7 @@ templ fallbackHero(movie models.MovieDetails, isInWatchlist, hasLists bool) {
 }
 
 templ heroContent(movie models.MovieDetails, isDark, isInWatchlist, hasLists bool) {
-	<div class="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start">
+	<div class="flex flex-col sm:flex-row gap-4 sm:gap-6 lg:gap-8 items-start">
 		@posterSection(movie, isDark)
 		@movieInfo(movie, isDark, isInWatchlist, hasLists)
 	</div>
@@ -89,8 +89,8 @@ templ heroContent(movie models.MovieDetails, isDark, isInWatchlist, hasLists boo
 
 templ posterSection(movie models.MovieDetails, isDark bool) {
 	if movie.Movie.PosterPath != "" {
-		<div class="hidden lg:block flex-shrink-0">
-			<div class="w-32 md:w-40 lg:w-48 xl:w-52">
+		<div class="hidden sm:block flex-shrink-0">
+			<div class="w-24 md:w-40 lg:w-48 xl:w-52">
 				<div class="aspect-[2/3] rounded-lg overflow-hidden shadow-lg">
 					<img
 						src={ utils.TMDBImageURL("w500", movie.Movie.PosterPath) }
@@ -195,19 +195,13 @@ templ movieInfo(movie models.MovieDetails, isDark, isInWatchlist, hasLists bool)
 		}
 		<!-- Action Buttons -->
 		@actionButtons(movie.Movie.ID, hasLists)
-		// TODO: improve button layout/style? Maybe move it somewhere else/change its text?
-		<div
-			hx-get={ fmt.Sprintf("/htmx/watchlist/%d", movie.Movie.ID) }
-			hx-trigger="load, refreshWatchlist from:body"
-			hx-swap="innerHTML"
-			hx-target="this"
-		></div>
 	</div>
 }
 
 templ actionButtons(movieID int64, hasLists bool) {
-	<div class="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 sm:pt-4">
+	<div class="grid w-full grid-cols-1 gap-2 pt-2 sm:grid-cols-3 sm:gap-3 sm:pt-4">
 		<form
+			class="w-full"
 			hx-post="/htmx/movies/watched"
 			hx-target="#toast"
 			hx-on::after-request="this.reset()"
@@ -217,7 +211,7 @@ templ actionButtons(movieID int64, hasLists bool) {
 				ID: "default-dialog-watched",
 			}) {
 				@dialog.Trigger() {
-					@button.Button() {
+					@button.Button(button.Props{Class: "w-full justify-center"}) {
 						@icon.Check()
 						Mark as Watched
 					}
@@ -257,6 +251,10 @@ templ actionButtons(movieID int64, hasLists bool) {
 		</form>
 		// TODO add hx-indicator for loading state?
 		<form
+			class={
+				"w-full",
+				templ.KV("hidden", !hasLists),
+			}
 			hx-post="/htmx/lists/items"
 			hx-target="#toast"
 			hx-on::after-request="this.reset()"
@@ -266,9 +264,10 @@ templ actionButtons(movieID int64, hasLists bool) {
 				ID: "add-movie-to-list-dialog",
 			}) {
 				if hasLists {
-					@dialog.Trigger() {
+					@dialog.Trigger(dialog.TriggerProps{Class: "w-full"}) {
 						@button.Button(button.Props{
 							Variant: button.VariantOutline,
+							Class:   "w-full justify-center",
 						}) {
 							@icon.Plus()
 							Add to List
@@ -328,75 +327,98 @@ templ actionButtons(movieID int64, hasLists bool) {
 		</form>
 		if !hasLists {
 			@dialog.Trigger(dialog.TriggerProps{
-				For: "add-to-list-dialog",
+				For:   "add-to-list-dialog",
+				Class: "w-full",
 			}) {
 				@button.Button(button.Props{
 					Variant: button.VariantOutline,
+					Class:   "w-full justify-center",
 				}) {
 					@icon.Plus()
 					Create List
 				}
 			}
 		}
+		<div
+			class="w-full [&_button]:w-full [&_button]:justify-center"
+			hx-get={ fmt.Sprintf("/htmx/watchlist/%d", movieID) }
+			hx-trigger="load, refreshWatchlist from:body"
+			hx-swap="innerHTML"
+			hx-target="this"
+		></div>
 	</div>
 }
 
 templ movieContent(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) {
-	<div class="space-y-8 pb-5">
-		@overviewSection(movie.Movie.Overview)
-		@genresSection(movie.Genres)
+	<div class="space-y-7 pb-5 sm:space-y-8">
 		@MovieActivity(watchRecords.Records)
-		@detailsSection(movie)
+		@movieMetadata(movie)
 		@castSection(movie.Credits.Cast)
 		@crewSection(movie.Credits.Crew)
 	</div>
 }
 
+templ movieSectionHeader(title string, iconFn func(...icon.Props) templ.Component) {
+	<h2 class="flex items-center gap-2 text-xl font-semibold">
+		@iconFn(icon.Props{Class: "size-5 text-primary"})
+		{ title }
+	</h2>
+}
+
 templ MovieActivity(records []models.WatchedMovieRecord) {
 	<div id="movie-activity-section">
-		if len(records) > 0 {
-			<div class="border-1 rounded-lg p-3">
-				<h2 class="text-xl font-semibold mb-4">Your Activity</h2>
-				<div class="space-y-6">
-					@activityStats(records)
-					@separator.Separator()
-					@watchHistory(records)
-				</div>
-			</div>
-		}
+		<div class="space-y-4">
+			@movieSectionHeader("Your Activity", icon.Activity)
+			@card.Card(card.Props{Class: "bg-card/40"}) {
+				if len(records) > 0 {
+					@card.Content(card.ContentProps{Class: "space-y-6 p-5 sm:p-6"}) {
+						@activityStats(records)
+						@separator.Separator()
+						@watchHistory(records)
+					}
+				} else {
+					@card.Content(card.ContentProps{Class: "flex items-center gap-3 p-5 sm:p-6"}) {
+						@icon.Film(icon.Props{Class: "size-5 text-muted-foreground"})
+						<div>
+							<p class="font-medium">No activity yet</p>
+							<p class="text-sm text-muted-foreground">Mark this movie as watched to start tracking your history.</p>
+						</div>
+					}
+				}
+			}
+		</div>
 	</div>
 }
 
-templ overviewSection(overview string) {
-	if overview != "" {
-		<div>
-			<h2 class="text-xl font-semibold mb-4">Overview</h2>
-			<p class="text-sm sm:text-base leading-relaxed text-muted-foreground max-w-4xl">
-				{ overview }
-			</p>
-		</div>
-	}
-}
-
-templ genresSection(genres []models.Genre) {
-	if len(genres) > 0 {
-		<div>
-			<h3 class="text-lg font-medium mb-3">Genres</h3>
-			<div class="flex flex-wrap gap-2">
-				for _, genre := range genres {
-					@badge.Badge(badge.Props{Variant: "primary"}) {
-						{ genre.Name }
-					}
+templ movieMetadata(movie models.MovieDetails) {
+	<div class="space-y-4">
+		@movieSectionHeader("Movie Details", icon.FileText)
+		@card.Card(card.Props{Class: "bg-card/40"}) {
+			@card.Content(card.ContentProps{Class: "space-y-6 p-5 sm:p-6"}) {
+				if movie.Movie.Overview != "" {
+					<div class="space-y-3">
+						<h3 class="text-base font-semibold">Overview</h3>
+						<p class="max-w-4xl text-sm leading-relaxed text-muted-foreground sm:text-base">{ movie.Movie.Overview }</p>
+					</div>
 				}
-			</div>
-		</div>
-	}
-}
-
-templ detailsSection(movie models.MovieDetails) {
-	<div>
-		<h2 class="text-xl font-semibold mb-4">Details</h2>
-		@table.Table() {
+				if len(movie.Genres) > 0 {
+					<div class="space-y-3">
+						<h3 class="text-base font-semibold">Genres</h3>
+						<div class="flex flex-wrap gap-2">
+							for _, genre := range movie.Genres {
+								@badge.Badge(badge.Props{Variant: "primary"}) {
+									{ genre.Name }
+								}
+							}
+						</div>
+					</div>
+				}
+				if movie.Movie.Overview != "" || len(movie.Genres) > 0 {
+					@separator.Separator()
+				}
+				<div class="space-y-3">
+					<h3 class="text-base font-semibold">Release Information</h3>
+					@table.Table() {
 			@table.Body() {
 				@table.Row() {
 					@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
@@ -471,6 +493,9 @@ templ detailsSection(movie models.MovieDetails) {
 						}
 					}
 				}
+					}
+					}
+				</div>
 			}
 		}
 	</div>
@@ -479,8 +504,8 @@ templ detailsSection(movie models.MovieDetails) {
 templ castSection(cast []models.Cast) {
 	if len(cast) > 0 {
 		{{ sortedCast := sortCast(cast) }}
-		<div>
-			<h2 class="text-xl font-semibold mb-4">Cast</h2>
+		<div class="space-y-4">
+			@movieSectionHeader("Cast", icon.Users)
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 				for i, member := range sortedCast {
 					if i >= movieVisibleCastLimit {
@@ -579,45 +604,83 @@ templ profileImage(profilePath, name string, class ...string) {
 }
 
 templ crewSection(crew []models.Crew) {
-	<div>
-		<h2 class="text-xl font-semibold mb-4">Key Crew</h2>
-		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-			for _, member := range sortCrewByImportance(crew) {
-				if isKeyCrew(member.Job) {
-					@crewMemberItem(member)
+	{{ keyCrew := sortCrewByImportance(crew) }}
+	if len(keyCrew) > 0 {
+		<div class="space-y-4">
+			@movieSectionHeader("Key Crew", icon.BriefcaseBusiness)
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+				for i, member := range keyCrew {
+					if i >= movieVisibleCastLimit {
+						{{ break }}
+					}
+					@crewMemberCard(member)
+				}
+			</div>
+			if len(keyCrew) > movieVisibleCastLimit {
+				@collapsible.Collapsible(collapsible.Props{Class: "group/collapsible mt-4"}) {
+					@collapsible.Content(collapsible.ContentProps{Class: "mb-4"}) {
+						<div class="grid grid-cols-1 gap-4 pt-1 sm:grid-cols-2 lg:grid-cols-3">
+							for i, member := range keyCrew {
+								if i < movieVisibleCastLimit {
+									{{ continue }}
+								}
+								@crewMemberCard(member)
+							}
+						</div>
+					}
+					@collapsible.Trigger(collapsible.TriggerProps{
+						Class: "inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-primary hover:underline",
+						Attributes: templ.Attributes{
+							"role":       "button",
+							"tabindex":   "0",
+							"aria-label": "Toggle full crew",
+						},
+					}) {
+						<span class="group-data-[tui-collapsible-state=open]/collapsible:hidden">
+							{ fmt.Sprintf("Show %d more crew members", len(keyCrew)-movieVisibleCastLimit) }
+						</span>
+						<span class="hidden group-data-[tui-collapsible-state=open]/collapsible:inline">
+							Show less crew
+						</span>
+						@icon.ChevronRight(icon.Props{
+							Class: "size-4 transition-transform group-data-[tui-collapsible-state=open]/collapsible:rotate-90",
+						})
+					}
 				}
 			}
 		</div>
-	</div>
+	}
 }
 
-templ crewMemberItem(crew models.Crew) {
+templ crewMemberCard(crew models.Crew) {
 	{{ personHref := personPagePath(crew.Person.ID) }}
-	<div class="space-y-1">
-		<dt class="text-sm font-medium text-muted-foreground">{ crew.Job }</dt>
-		<div class="flex items-center gap-2">
+	@card.Card(card.Props{Class: "transition-colors duration-300"}) {
+		<div class="flex items-center gap-3 p-2">
 			@profileImage(crew.Person.ProfilePath, crew.Person.Name, "h-8 w-8")
-			if personHref != "" {
-				<dd
+			<div class="min-w-0">
+				<p class="text-xs text-muted-foreground">{ crew.Job }</p>
+				if personHref != "" {
+					<p
 					data-page="person"
 					hx-get={ personHref }
 					hx-target="#main-content"
 					hx-push-url="true"
 					hx-swap="scroll:#main-scroll-container:top"
 					hx-indicator="#person-loading"
-					class="min-w-0 text-sm font-medium text-primary hover:underline cursor-pointer truncate"
+						class="text-sm font-medium text-primary hover:underline cursor-pointer truncate"
 				>
 					{ crew.Person.Name }
-				</dd>
-			} else {
-				<dd class="min-w-0 text-sm font-medium truncate">{ crew.Person.Name }</dd>
-			}
+					</p>
+				} else {
+					<p class="text-sm font-medium truncate">{ crew.Person.Name }</p>
+				}
+			</div>
 		</div>
-	</div>
+	}
 }
 
 templ activityStats(records []models.WatchedMovieRecord) {
-	<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+	<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
 		@activityStat("Times Watched", fmt.Sprintf("%d", len(records)))
 		@activityStat("In Theater", fmt.Sprintf("%d", countTheaterWatches(records)))
 		@activityStat("At Home", fmt.Sprintf("%d", len(records)-countTheaterWatches(records)))
@@ -629,7 +692,7 @@ templ activityStats(records []models.WatchedMovieRecord) {
 }
 
 templ activityStat(label, value string) {
-	<div class="text-center">
+	<div class="rounded-lg bg-muted/50 p-3 text-center">
 		<div class="text-2xl font-bold text-primary">{ value }</div>
 		<div class="text-xs text-muted-foreground">{ label }</div>
 	</div>
@@ -655,10 +718,10 @@ templ watchHistoryItem(record models.WatchedMovieRecord) {
 			watchedRating = *record.Rating
 		}
 	}}
-	<div class="flex w-max min-w-full items-center justify-between gap-4 py-2 pl-3 rounded-lg bg-muted/50">
-		<div class="flex items-center space-x-3">
+	<div class="flex w-full items-center justify-between gap-3 rounded-lg bg-muted/50 py-2 pl-3">
+		<div class="flex min-w-0 items-center gap-3">
 			@watchLocationIcon(record.InTheaters)
-			<div>
+			<div class="min-w-0">
 				<div class="text-sm font-medium">
 					if record.InTheaters {
 						Theater
@@ -669,7 +732,7 @@ templ watchHistoryItem(record models.WatchedMovieRecord) {
 				<div class="text-xs text-muted-foreground">{ record.Date.Format("January 2, 2006") }</div>
 			</div>
 			if record.Rating != nil {
-				<div class="flex items-center ml-4">
+				<div class="flex shrink-0 items-center">
 					@rating.Rating(rating.Props{
 						Value:     (*record.Rating),
 						ReadOnly:  true,
@@ -687,8 +750,8 @@ templ watchHistoryItem(record models.WatchedMovieRecord) {
 				</div>
 			}
 		</div>
-		<div class="flex items-center space-x-2">
-			<div class="text-xs text-muted-foreground">
+		<div class="flex shrink-0 items-center gap-2">
+			<div class="hidden text-xs text-muted-foreground sm:block">
 				{ formatTimeAgo(record.Date) }
 			</div>
 			@dropdown.Dropdown() {
@@ -1069,19 +1132,20 @@ func getDirector(crew []models.Crew) models.Crew {
 templ MovieLoading() {
 	<div id="movie-loading" class="htmx-indicator absolute inset-0 bg-background z-30 pointer-events-none overflow-hidden">
 		<div class="p-4 space-y-8">
-			// Hero section
-			<div class="mb-6">
-				<div class="p-4 sm:p-6 md:p-8 lg:p-10">
+			// Hero section mirrors rendered dimensions to avoid a layout jump.
+			<div class="relative -m-4 mb-6 h-[36vh] min-h-[280px] max-h-[500px] bg-muted/50">
+				<div class="flex h-full items-center p-4 sm:p-6 md:p-8 lg:p-10">
 					<div class="max-w-6xl mx-auto">
-						<div class="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start">
+						<div class="flex flex-col sm:flex-row gap-4 sm:gap-6 lg:gap-8 items-start">
 							// Poster section
-							<div class="hidden lg:block flex-shrink-0">
-								<div class="w-32 md:w-40 lg:w-48 xl:w-52">
+							<div class="hidden sm:block flex-shrink-0">
+								<div class="w-24 md:w-40 lg:w-48 xl:w-52">
 									<div class="aspect-[2/3] rounded-lg bg-muted shadow-lg animate-pulse"></div>
 								</div>
 							</div>
 							// Movie info section
 							<div class="flex-1 min-w-0 space-y-3 sm:space-y-4">
+								@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-3/4 max-w-xl rounded-lg sm:h-10"})
 								// Year and Director
 								<div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
 									@skeleton.Skeleton(skeleton.Props{Class: "h-5 w-16 rounded-lg"})
@@ -1092,9 +1156,10 @@ templ MovieLoading() {
 									@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-2/3 rounded-lg"})
 								</div>
 								// Action Buttons
-								<div class="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 sm:pt-4">
+								<div class="grid w-full grid-cols-1 gap-2 pt-2 sm:grid-cols-3 sm:gap-3 sm:pt-4">
 									@skeleton.Skeleton(skeleton.Props{Class: "h-10 w-32 rounded-lg"})
 									@skeleton.Skeleton(skeleton.Props{Class: "h-10 w-28 rounded-lg"})
+									@skeleton.Skeleton(skeleton.Props{Class: "h-10 w-32 rounded-lg"})
 								</div>
 							</div>
 						</div>
