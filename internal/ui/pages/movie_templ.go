@@ -179,7 +179,7 @@ func backdropHero(movie models.MovieDetails, isInWatchlist, hasLists bool) templ
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"relative w-full h-[36vh] min-h-[280px] max-h-[500px] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] overflow-hidden\"><!-- Background Image --><img src=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"relative w-full min-h-[280px] overflow-hidden sm:h-[45vh] sm:max-h-[500px] md:h-[50vh] lg:h-[55vh]\"><!-- Background Image --><img src=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -205,7 +205,7 @@ func backdropHero(movie models.MovieDetails, isInWatchlist, hasLists bool) templ
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\" class=\"absolute inset-0 w-full h-full object-cover object-top\"><!-- Gradient Overlays --><div class=\"absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent\"></div><div class=\"absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent\"></div><div class=\"absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-black/20 sm:from-black/60 sm:via-transparent sm:to-black/20\"></div><!-- Content Container - Now uses flex items-center for better centering --><div class=\"absolute inset-0 flex items-center\"><div class=\"w-full p-4 sm:p-6 md:p-8 lg:p-10\"><div class=\"max-w-6xl mx-auto w-full\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\" class=\"absolute inset-0 w-full h-full object-cover object-top\"><!-- Gradient Overlays --><div class=\"absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent\"></div><div class=\"absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent\"></div><div class=\"absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-black/20 sm:from-black/60 sm:via-transparent sm:to-black/20\"></div><!-- Content Container - Now uses flex items-center for better centering --><div class=\"relative flex items-start sm:absolute sm:inset-0 sm:items-center\"><div class=\"w-full p-4 sm:p-6 md:p-8 lg:p-10\"><div class=\"max-w-6xl mx-auto w-full\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -279,7 +279,7 @@ func heroContent(movie models.MovieDetails, isDark, isInWatchlist, hasLists bool
 			templ_7745c5c3_Var9 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div class=\"flex flex-col sm:flex-row gap-4 sm:gap-6 lg:gap-8 items-start\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div class=\"flex flex-row gap-4 sm:gap-6 lg:gap-8 items-start\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -321,7 +321,7 @@ func posterSection(movie models.MovieDetails, isDark bool) templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		if movie.Movie.PosterPath != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<div class=\"hidden sm:block flex-shrink-0\"><div class=\"w-24 md:w-40 lg:w-48 xl:w-52\"><div class=\"aspect-[2/3] rounded-lg overflow-hidden shadow-lg\"><img src=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<div class=\"flex-shrink-0\"><div class=\"w-20 sm:w-24 md:w-40 lg:w-48 xl:w-52\"><div class=\"aspect-[2/3] rounded-lg overflow-hidden shadow-lg\"><img src=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -4540,7 +4540,7 @@ func MovieLoading() templ.Component {
 			templ_7745c5c3_Var189 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 211, "<div id=\"movie-loading\" class=\"htmx-indicator absolute inset-0 bg-background z-30 pointer-events-none overflow-hidden\"><div class=\"p-4 space-y-8\"><div class=\"relative -m-4 mb-6 h-[36vh] min-h-[280px] max-h-[500px] bg-muted/50\"><div class=\"flex h-full items-center p-4 sm:p-6 md:p-8 lg:p-10\"><div class=\"max-w-6xl mx-auto\"><div class=\"flex flex-col sm:flex-row gap-4 sm:gap-6 lg:gap-8 items-start\"><div class=\"hidden sm:block flex-shrink-0\"><div class=\"w-24 md:w-40 lg:w-48 xl:w-52\"><div class=\"aspect-[2/3] rounded-lg bg-muted shadow-lg animate-pulse\"></div></div></div><div class=\"flex-1 min-w-0 space-y-3 sm:space-y-4\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 211, "<div id=\"movie-loading\" class=\"htmx-indicator absolute inset-0 bg-background z-30 pointer-events-none overflow-hidden\"><div class=\"p-4 space-y-8\"><div class=\"relative -m-4 mb-6 min-h-[280px] bg-muted/50 sm:h-[45vh] sm:max-h-[500px] md:h-[50vh] lg:h-[55vh]\"><div class=\"flex h-full items-center p-4 sm:p-6 md:p-8 lg:p-10\"><div class=\"max-w-6xl mx-auto\"><div class=\"flex flex-row gap-4 sm:gap-6 lg:gap-8 items-start\"><div class=\"flex-shrink-0\"><div class=\"w-20 sm:w-24 md:w-40 lg:w-48 xl:w-52\"><div class=\"aspect-[2/3] rounded-lg bg-muted shadow-lg animate-pulse\"></div></div></div><div class=\"flex-1 min-w-0 space-y-3 sm:space-y-4\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
