@@ -1394,6 +1394,102 @@ func (q *Queries) GetPerson(ctx context.Context, id int64) (Person, error) {
 	return i, err
 }
 
+const getRatedPersonRanks = `-- name: GetRatedPersonRanks :many
+WITH rated_movies AS (
+    SELECT
+        watched.movie_id,
+        AVG(CAST(watched.rating AS REAL)) AS average_rating
+    FROM
+        watched
+    WHERE
+        watched.user_id = ?
+        AND watched.rating IS NOT NULL
+    GROUP BY
+        watched.movie_id
+), person_roles AS (
+    SELECT DISTINCT
+        "cast".movie_id,
+        "cast".person_id,
+        'actor' AS role_key
+    FROM
+        "cast"
+    UNION
+    SELECT DISTINCT
+        crew.movie_id,
+        crew.person_id,
+        CASE
+            WHEN crew.job = 'Director' THEN 'director'
+            WHEN crew.job IN (
+                'Writer',
+                'Screenplay',
+                'Story',
+                'Novel',
+                'Original Story',
+                'Characters'
+            ) THEN 'writer'
+            WHEN crew.job IN ('Original Music Composer', 'Composer', 'Music') THEN 'composer'
+            WHEN crew.job IN ('Director of Photography', 'Cinematography') THEN 'cinematographer'
+            ELSE NULL
+        END AS role_key
+    FROM
+        crew
+)
+SELECT
+    person_roles.role_key,
+    person_roles.person_id AS id,
+    CAST(COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL) AS average_rating,
+    COUNT(*) AS rated_movie_count
+FROM
+    rated_movies
+    JOIN person_roles ON rated_movies.movie_id = person_roles.movie_id
+WHERE
+    person_roles.role_key IS NOT NULL
+GROUP BY
+    person_roles.role_key,
+    person_roles.person_id
+ORDER BY
+    person_roles.role_key ASC,
+    average_rating DESC,
+    rated_movie_count DESC,
+    person_roles.person_id ASC
+`
+
+type GetRatedPersonRanksRow struct {
+	RoleKey         string
+	ID              int64
+	AverageRating   float64
+	RatedMovieCount int64
+}
+
+// role_key values must match models.PersonRoles and PersonFilmographyCrewRoleKey.
+func (q *Queries) GetRatedPersonRanks(ctx context.Context, userID *int64) ([]GetRatedPersonRanksRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRatedPersonRanks, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRatedPersonRanksRow
+	for rows.Next() {
+		var i GetRatedPersonRanksRow
+		if err := rows.Scan(
+			&i.RoleKey,
+			&i.ID,
+			&i.AverageRating,
+			&i.RatedMovieCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getRatingByReleaseDecade = `-- name: GetRatingByReleaseDecade :many
 WITH rated_movies AS (
     SELECT
@@ -2403,6 +2499,7 @@ type GetWatchedCrewMembersRow struct {
 	WatchCount  int64
 }
 
+// role_key values must match models.PersonRoles and PersonFilmographyCrewRoleKey.
 func (q *Queries) GetWatchedCrewMembers(ctx context.Context, userID *int64) ([]GetWatchedCrewMembersRow, error) {
 	rows, err := q.db.QueryContext(ctx, getWatchedCrewMembers, userID)
 	if err != nil {

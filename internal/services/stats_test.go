@@ -189,6 +189,103 @@ func TestWatchedActorRankByGender(t *testing.T) {
 	}
 }
 
+func TestWatchedCrewMemberRank(t *testing.T) {
+	crewMembers := []models.TopCrewMemberStat{
+		{ID: 1, RoleKey: models.TopCrewRoleDirector, WatchCount: 5},
+		{ID: 2, RoleKey: models.TopCrewRoleDirector, WatchCount: 5},
+		{ID: 3, RoleKey: models.TopCrewRoleDirector, WatchCount: 3},
+		{ID: 4, RoleKey: models.TopCrewRoleWriter, WatchCount: 4},
+	}
+
+	tiedRank := watchedCrewMemberRank(crewMembers, models.TopCrewRoleDirector, 2)
+	if tiedRank == nil || *tiedRank != 1 {
+		t.Fatalf("expected tied director rank 1, got %v", tiedRank)
+	}
+
+	thirdRank := watchedCrewMemberRank(crewMembers, models.TopCrewRoleDirector, 3)
+	if thirdRank == nil || *thirdRank != 2 {
+		t.Fatalf("expected director rank 2, got %v", thirdRank)
+	}
+
+	missingRank := watchedCrewMemberRank(crewMembers, models.TopCrewRoleComposer, 1)
+	if missingRank != nil {
+		t.Fatalf("expected nil rank for missing composer, got %v", *missingRank)
+	}
+}
+
+func watchedCrewMemberRank(crewMembers []models.TopCrewMemberStat, role models.TopCrewRole, personID int64) *int64 {
+	var rank int64
+	var previousWatchCount int64
+	hasPrevious := false
+
+	for _, member := range crewMembers {
+		if member.RoleKey != role {
+			continue
+		}
+		if !hasPrevious {
+			rank = 1
+			previousWatchCount = member.WatchCount
+			hasPrevious = true
+		} else if member.WatchCount < previousWatchCount {
+			rank++
+			previousWatchCount = member.WatchCount
+		}
+		if member.ID == personID {
+			result := rank
+			return &result
+		}
+	}
+	return nil
+}
+
+func TestRatedPersonRank(t *testing.T) {
+	ranks := []models.RatedPersonRank{
+		{RoleKey: "director", ID: 1, AverageRating: 5.0, RatedMovieCount: 2},
+		{RoleKey: "director", ID: 2, AverageRating: 5.0, RatedMovieCount: 3},
+		{RoleKey: "director", ID: 3, AverageRating: 4.0, RatedMovieCount: 3},
+	}
+
+	tiedRank, average, ratedCount := ratedPersonRank(ranks, "director", 2, 2)
+	if tiedRank == nil || *tiedRank != 1 || average != 5.0 || ratedCount != 3 {
+		t.Fatalf("expected tied favorite director rank 1, got rank=%v average=%v count=%d", tiedRank, average, ratedCount)
+	}
+
+	belowThresholdRank, _, _ := ratedPersonRank(ranks, "director", 1, 4)
+	if belowThresholdRank != nil {
+		t.Fatalf("expected favorite rank to require minimum rated movies, got %v", *belowThresholdRank)
+	}
+
+	thirdRank, _, _ := ratedPersonRank(ranks, "director", 3, 2)
+	if thirdRank == nil || *thirdRank != 2 {
+		t.Fatalf("expected favorite director rank 2, got %v", thirdRank)
+	}
+}
+
+func ratedPersonRank(ranks []models.RatedPersonRank, role string, personID, minRatedMovies int64) (*int64, float64, int64) {
+	var rank int64
+	var previousAverage float64
+	hasPrevious := false
+
+	for _, person := range ranks {
+		if person.RoleKey != role || person.RatedMovieCount < minRatedMovies {
+			continue
+		}
+		if !hasPrevious {
+			rank = 1
+			previousAverage = person.AverageRating
+			hasPrevious = true
+		} else if person.AverageRating < previousAverage {
+			rank++
+			previousAverage = person.AverageRating
+		}
+		if person.ID == personID {
+			result := rank
+			return &result, person.AverageRating, person.RatedMovieCount
+		}
+	}
+	return nil, 0, 0
+}
+
 func TestCalculateMonthlyMoviesTrend(t *testing.T) {
 	s := &WatchedService{log: slog.New(slog.DiscardHandler)}
 

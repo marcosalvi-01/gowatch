@@ -1083,6 +1083,34 @@ func (d *SqliteDB) GetWatchedCrewMembers(ctx context.Context, userID int64) ([]m
 	return result, nil
 }
 
+func (d *SqliteDB) GetRatedPersonRanks(ctx context.Context, userID int64) ([]models.RatedPersonRank, error) {
+	log.Debug("getting rated person ranks", "userID", userID)
+
+	data, err := d.queries.GetRatedPersonRanks(ctx, &userID)
+	if err != nil {
+		log.Error("failed to get rated person ranks", "userID", userID, "error", err)
+		return nil, fmt.Errorf("failed to get rated person ranks: %w", err)
+	}
+
+	result := make([]models.RatedPersonRank, len(data))
+	for i, row := range data {
+		roleKey, err := scanStringValue(row.RoleKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse rated person role key for person %d: %w", row.ID, err)
+		}
+
+		result[i] = models.RatedPersonRank{
+			RoleKey:         roleKey,
+			ID:              row.ID,
+			AverageRating:   row.AverageRating,
+			RatedMovieCount: row.RatedMovieCount,
+		}
+	}
+
+	log.Debug("retrieved rated person ranks", "userID", userID, "count", len(result))
+	return result, nil
+}
+
 func (d *SqliteDB) GetTopLanguages(ctx context.Context, userID int64, limit int) ([]models.LanguageCount, error) {
 	log.Debug("getting top languages", "limit", limit)
 

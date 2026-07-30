@@ -96,6 +96,25 @@ func watchedActorRankByGender(actors []models.TopActor, personID int64) *int64 {
 	return nil
 }
 
+func watchedCrewMemberRanks(crewMembers []models.TopCrewMemberStat) map[models.TopCrewRole]map[int64]*int64 {
+	ranks := make(map[models.TopCrewRole]map[int64]*int64)
+	currentRank := make(map[models.TopCrewRole]int64)
+	previousWatchCount := make(map[models.TopCrewRole]int64)
+	for _, member := range crewMembers {
+		if _, ok := ranks[member.RoleKey]; !ok {
+			ranks[member.RoleKey] = make(map[int64]*int64)
+			currentRank[member.RoleKey] = 1
+			previousWatchCount[member.RoleKey] = member.WatchCount
+		} else if member.WatchCount < previousWatchCount[member.RoleKey] {
+			currentRank[member.RoleKey]++
+			previousWatchCount[member.RoleKey] = member.WatchCount
+		}
+		rank := currentRank[member.RoleKey]
+		ranks[member.RoleKey][member.ID] = &rank
+	}
+	return ranks
+}
+
 func filterTopCrewMembersByRole(data []models.TopCrewMemberStat, role models.TopCrewRole, limit int) []models.TopCrewMember {
 	filtered := make([]models.TopCrewMember, 0, len(data))
 	for _, member := range data {

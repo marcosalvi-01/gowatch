@@ -232,6 +232,17 @@ func (h *Handlers) PersonPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	filmographyState := pages.ParsePersonFilmographyState(r.URL.Query())
+	hxTarget := r.Header.Get("HX-Target")
+	if strings.HasPrefix(hxTarget, "person-filmography-more-") {
+		templ.Handler(pages.PersonFilmographyPage(*personDetails, filmographyState)).ServeHTTP(w, r)
+		return
+	}
+	if hxTarget == "person-filmography" {
+		templ.Handler(pages.PersonFilmography(*personDetails, filmographyState)).ServeHTTP(w, r)
+		return
+	}
+
 	activity, err := h.watchedService.GetPersonWatchActivity(ctx, id)
 	if err != nil {
 		log.Error("failed to get person watch activity", "personID", id, "error", err)
@@ -240,9 +251,9 @@ func (h *Handlers) PersonPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if shouldRenderContentFragment(r) {
-		templ.Handler(pages.Person(*personDetails, activity), templ.WithFragments("content")).ServeHTTP(w, r)
+		templ.Handler(pages.Person(*personDetails, activity, filmographyState), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
-		templ.Handler(pages.Person(*personDetails, activity)).ServeHTTP(w, r)
+		templ.Handler(pages.Person(*personDetails, activity, filmographyState)).ServeHTTP(w, r)
 	}
 
 	log.Info("person page served successfully", "personID", id, "name", personDetails.Name)

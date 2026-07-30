@@ -24,6 +24,7 @@ type DB interface {
 	GetWatchedMoviesByPerson(ctx context.Context, userID, personID int64) ([]models.PersonWatchMovieMatch, error)
 	GetWatchedActors(ctx context.Context, userID int64) ([]models.TopActor, error)
 	GetWatchedCrewMembers(ctx context.Context, userID int64) ([]models.TopCrewMemberStat, error)
+	GetRatedPersonRanks(ctx context.Context, userID int64) ([]models.RatedPersonRank, error)
 	GetRecentWatchedMovies(ctx context.Context, userID int64, limit int) ([]models.WatchedMovieInDay, error)
 	GetWatchedCount(ctx context.Context, userID int64) (int64, error)
 	GetWatchedDateRange(ctx context.Context, userID int64) (*models.DateRange, error)

@@ -25,6 +25,7 @@ const (
 	minTMDBVoteCount          = 100
 	ratingBucketSize          = 0.5
 	maxMovieRating            = 5.0
+	personRoleActor           = "actor"
 )
 
 var (
@@ -350,7 +351,10 @@ func (s *WatchedService) GetPersonWatchActivity(ctx context.Context, personID in
 		return models.PersonWatchActivity{}, fmt.Errorf("GetPersonWatchActivity: get watched movies by person: %w", err)
 	}
 
-	activity := models.PersonWatchActivity{Movies: []models.PersonWatchedMovie{}}
+	activity := models.PersonWatchActivity{
+		Movies: []models.PersonWatchedMovie{},
+		Ranks:  []models.PersonWatchRank{},
+	}
 	movieIndexByID := make(map[int64]int, len(movies))
 
 	for _, movie := range movies {
@@ -391,7 +395,102 @@ func (s *WatchedService) GetPersonWatchActivity(ctx context.Context, personID in
 		activity.ActorRank = watchedActorRankByGender(actors, personID)
 	}
 
+	if activity.CrewMovieCount > 0 {
+		crewMembers, err := s.db.GetWatchedCrewMembers(ctx, user.ID)
+		if err != nil {
+			s.log.Error("GetPersonWatchActivity: failed to get watched crew members", "personID", personID, "error", err)
+			return models.PersonWatchActivity{}, fmt.Errorf("GetPersonWatchActivity: get watched crew members: %w", err)
+		}
+
+		crewRanks := watchedCrewMemberRanks(crewMembers)
+		for _, role := range models.PersonRoles {
+			if role.WatchRole == "" {
+				continue
+			}
+			appendPersonWatchRank(&activity, role.Key, role.Label, crewRanks[role.WatchRole][personID])
+		}
+	}
+	appendPersonWatchRank(&activity, personRoleActor, "Actor", activity.ActorRank)
+
+	if len(activity.Ranks) > 0 {
+		ratedRanks, err := s.db.GetRatedPersonRanks(ctx, user.ID)
+		if err != nil {
+			s.log.Error("GetPersonWatchActivity: failed to get rated person ranks", "personID", personID, "error", err)
+			return models.PersonWatchActivity{}, fmt.Errorf("GetPersonWatchActivity: get rated person ranks: %w", err)
+		}
+		applyFavoritePersonRanks(activity.Ranks, ratedPersonRanksByRole(ratedRanks), personID)
+	}
+
 	return activity, nil
+}
+
+func appendPersonWatchRank(activity *models.PersonWatchActivity, role, label string, rank *int64) {
+	if rank == nil {
+		return
+	}
+
+	activity.Ranks = append(activity.Ranks, models.PersonWatchRank{
+		Role:            role,
+		Label:           label,
+		MostWatchedRank: rank,
+	})
+}
+
+func applyFavoritePersonRanks(ranks []models.PersonWatchRank, ratedRanks map[string]map[int64]ratedPersonRankEntry, personID int64) {
+	for i := range ranks {
+		minRatedMovies := int64(0)
+		if role, ok := models.PersonRoleDefinitionByKey(ranks[i].Role); ok {
+			minRatedMovies = role.MinimumRatings
+		}
+		if ranks[i].Role == personRoleActor {
+			minRatedMovies = minFavoriteActorMovies
+		}
+
+		person, ok := ratedRanks[ranks[i].Role][personID]
+		if !ok || person.RatedMovieCount < minRatedMovies {
+			continue
+		}
+
+		ranks[i].FavoriteRank = person.Rank
+		ranks[i].FavoriteAverageRating = person.AverageRating
+		ranks[i].FavoriteRatedMovieCount = person.RatedMovieCount
+	}
+}
+
+type ratedPersonRankEntry struct {
+	Rank            *int64
+	AverageRating   float64
+	RatedMovieCount int64
+}
+
+func ratedPersonRanksByRole(ranks []models.RatedPersonRank) map[string]map[int64]ratedPersonRankEntry {
+	result := make(map[string]map[int64]ratedPersonRankEntry)
+	currentRank := make(map[string]int64)
+	previousAverage := make(map[string]float64)
+	for _, person := range ranks {
+		minimumRatings := int64(2)
+		if person.RoleKey == personRoleActor {
+			minimumRatings = minFavoriteActorMovies
+		}
+		if person.RatedMovieCount < minimumRatings {
+			continue
+		}
+		if _, ok := result[person.RoleKey]; !ok {
+			result[person.RoleKey] = make(map[int64]ratedPersonRankEntry)
+			currentRank[person.RoleKey] = 1
+			previousAverage[person.RoleKey] = person.AverageRating
+		} else if person.AverageRating < previousAverage[person.RoleKey] {
+			currentRank[person.RoleKey]++
+			previousAverage[person.RoleKey] = person.AverageRating
+		}
+		rank := currentRank[person.RoleKey]
+		result[person.RoleKey][person.ID] = ratedPersonRankEntry{
+			Rank:            &rank,
+			AverageRating:   person.AverageRating,
+			RatedMovieCount: person.RatedMovieCount,
+		}
+	}
+	return result
 }
 
 func appendUniquePersonWatchRole(existing []models.PersonWatchRole, role models.PersonWatchRole) []models.PersonWatchRole {

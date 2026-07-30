@@ -944,6 +944,14 @@ func TestWatchedService_GetPersonWatchActivity(t *testing.T) {
 	if *activity.ActorRank != 2 {
 		t.Fatalf("expected actor rank 2, got %d", *activity.ActorRank)
 	}
+	expectedRanks := []models.PersonWatchRank{
+		{Role: "director", Label: "Director", MostWatchedRank: int64Ptr(1)},
+		{Role: "writer", Label: "Writer", MostWatchedRank: int64Ptr(1)},
+		{Role: "actor", Label: "Actor", MostWatchedRank: int64Ptr(2)},
+	}
+	if !reflect.DeepEqual(activity.Ranks, expectedRanks) {
+		t.Fatalf("unexpected person ranks\nexpected: %+v\ngot: %+v", expectedRanks, activity.Ranks)
+	}
 	if len(activity.Movies) != 2 {
 		t.Fatalf("expected 2 watched movies, got %d", len(activity.Movies))
 	}

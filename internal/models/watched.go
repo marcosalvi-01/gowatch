@@ -71,7 +71,24 @@ type PersonWatchActivity struct {
 	ActingMovieCount int
 	CrewMovieCount   int
 	ActorRank        *int64
+	Ranks            []PersonWatchRank
 	Movies           []PersonWatchedMovie
+}
+
+type PersonWatchRank struct {
+	Role                    string
+	Label                   string
+	MostWatchedRank         *int64
+	FavoriteRank            *int64
+	FavoriteAverageRating   float64
+	FavoriteRatedMovieCount int64
+}
+
+type RatedPersonRank struct {
+	RoleKey         string
+	ID              int64
+	AverageRating   float64
+	RatedMovieCount int64
 }
 
 type PersonWatchedMovie struct {
