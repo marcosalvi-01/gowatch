@@ -391,7 +391,7 @@ templ personActivityStat(label, value string) {
 templ personWatchRankings(ranks []models.PersonWatchRank) {
 	<div class="space-y-3">
 		<h3 class="text-sm font-semibold">Your Rankings</h3>
-		<div class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+		<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
 			for _, rank := range ranks {
 				@personWatchRankCard(rank)
 			}
@@ -400,7 +400,7 @@ templ personWatchRankings(ranks []models.PersonWatchRank) {
 }
 
 templ personWatchRankCard(rank models.PersonWatchRank) {
-	<div class="w-[18rem] shrink-0 rounded-lg border border-border/60 bg-muted/15 p-3 sm:w-[20rem]">
+	<div class="w-full rounded-lg border border-border/60 bg-muted/15 p-3 sm:w-[20rem]">
 		<p class="mb-2 text-sm font-semibold">{ rank.Label }</p>
 		<div class="grid grid-cols-2 gap-3">
 			<div>
@@ -500,7 +500,7 @@ templ personFilmographyPrepared(person models.PersonDetailsPage, state PersonFil
 				@personFilmographyMoreLink(person.ID, prepared.State, prepared.State.Page+1, false)
 			}
 		} else {
-			<div class="flex flex-wrap gap-4 md:gap-6">
+			<div class="grid grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4 md:flex md:flex-wrap md:gap-6">
 				for _, credit := range prepared.Visible {
 					@personFilmographyCard(credit)
 				}
@@ -577,7 +577,7 @@ templ personFilmographyTimeline(groups []personFilmographyYearGroup) {
 					<h3 class="text-lg font-semibold">{ group.Label }</h3>
 					<div class="h-px flex-1 bg-border"></div>
 				</div>
-				<div class="flex flex-wrap gap-4 md:gap-6">
+				<div class="grid grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4 md:flex md:flex-wrap md:gap-6">
 					for _, credit := range group.Credits {
 						@personFilmographyCard(credit)
 					}
@@ -588,13 +588,14 @@ templ personFilmographyTimeline(groups []personFilmographyYearGroup) {
 }
 
 templ personFilmographyCard(credit personFilmographyCredit) {
-	@moviecard.MovieCard(moviecard.Props{
-		Title:              credit.Credit.Title,
-		PosterPath:         credit.Credit.PosterPath,
-		Hoverable:          true,
-		Href:               personCreditHref(credit.Credit),
-		IndicatorID:        "#movie-loading",
-		TopStaticComponent: personCreditTypeChip(credit.Credit.MediaType),
+		@moviecard.MovieCard(moviecard.Props{
+			Title:              credit.Credit.Title,
+			PosterPath:         credit.Credit.PosterPath,
+			Hoverable:          true,
+			Href:               personCreditHref(credit.Credit),
+			IndicatorID:        "#movie-loading",
+			Class:              "w-full border-0 group md:w-[160px]",
+			TopStaticComponent: personCreditTypeChip(credit.Credit.MediaType),
 	}) {
 		<h3 class="mb-1 text-xs font-bold leading-tight md:text-sm">{ credit.Credit.Title }</h3>
 		<p class="line-clamp-2 text-xs opacity-90">{ strings.Join(credit.RoleNames, " • ") }</p>
@@ -625,8 +626,8 @@ templ personFilmographyMoreLink(personID int64, state PersonFilmographyState, pa
 	<div
 		id={ fmt.Sprintf("person-filmography-more-%d", page) }
 		class={
-			"flex flex-wrap gap-4 pt-4 md:gap-6",
-			templ.KV("basis-full", isGrid),
+			"grid grid-cols-3 gap-3 pt-4 sm:grid-cols-4 sm:gap-4 md:flex md:flex-wrap md:gap-6",
+			templ.KV("col-span-full md:basis-full", isGrid),
 		}
 		hx-get={ personFilmographyPath(personID, state, page) }
 		hx-trigger="intersect once root:#main-scroll-container threshold:0.1"
@@ -634,7 +635,7 @@ templ personFilmographyMoreLink(personID int64, state PersonFilmographyState, pa
 		hx-swap="outerHTML"
 	>
 		for range 6 {
-			<div class="w-[90px] space-y-2 sm:w-[120px] md:w-[160px]">
+			<div class="w-full space-y-2 md:w-[160px]">
 				@skeleton.Skeleton(skeleton.Props{Class: "aspect-[2/3] w-full rounded-lg"})
 				@skeleton.Skeleton(skeleton.Props{Class: "h-3 w-4/5 rounded"})
 				@skeleton.Skeleton(skeleton.Props{Class: "h-3 w-1/2 rounded"})
@@ -1168,9 +1169,9 @@ templ PersonLoading() {
 			</div>
 			<div>
 				@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-32 mb-4 rounded-lg"})
-				<div class="flex gap-4 overflow-x-auto pb-2 px-1 -mx-1 scrollbar-hide">
+				<div class="grid grid-cols-3 gap-3 px-1 pb-2 sm:grid-cols-4 sm:gap-4">
 					for range 6 {
-						<div class="flex-shrink-0 w-[90px] sm:w-[120px] md:w-[160px] space-y-2">
+						<div class="w-full space-y-2 md:w-[160px]">
 							@skeleton.Skeleton(skeleton.Props{Class: "aspect-[2/3] w-full rounded-lg"})
 							@skeleton.Skeleton(skeleton.Props{Class: "h-3 w-4/5 rounded"})
 							@skeleton.Skeleton(skeleton.Props{Class: "h-3 w-1/2 rounded"})

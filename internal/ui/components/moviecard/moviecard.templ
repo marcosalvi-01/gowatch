@@ -15,6 +15,7 @@ type Props struct {
 	PosterPath         string
 	Href               string
 	IndicatorID        string
+	Class              string
 	Hoverable          bool
 	TopStaticComponent templ.Component
 	TopHoverComponent  templ.Component
@@ -53,8 +54,12 @@ templ MovieCard(props Props) {
 }
 
 templ cardContent(props Props) {
+	{{ class := props.Class }}
+	if class == "" {
+		{{ class = "w-[90px] sm:w-[120px] md:w-[160px] border-0 group" }}
+	}
 	@card.Card(card.Props{
-		Class: "w-[90px] sm:w-[120px] md:w-[160px] border-0 group",
+		Class: class,
 	}) {
 		<div class="overflow-hidden w-full rounded-lg relative border-2 border-zinc-800">
 			@aspectratio.AspectRatio(aspectratio.Props{
