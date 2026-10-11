@@ -27,6 +27,7 @@ func NewRouter(
 	watchedService *services.WatchedService,
 	listService *services.ListService,
 	authService *services.AuthService,
+	seerrService *services.SeerrService,
 ) chi.Router {
 	log.Info("creating HTTP router")
 
@@ -47,7 +48,7 @@ func NewRouter(
 	})
 
 	log.Debug("registering pages routes")
-	pagesHandlers := pages.NewHandlers(tmdbService, watchedService, listService, homeService, authService)
+	pagesHandlers := pages.NewHandlers(tmdbService, watchedService, listService, homeService, authService, seerrService)
 	r.Route("/", func(r chi.Router) {
 		r.Use(middleware.HTMLMiddleware)
 		pagesHandlers.RegisterRoutes(r)
@@ -68,7 +69,7 @@ func NewRouter(
 	})
 
 	log.Debug("registering HTMX routes")
-	htmxHandlers := htmx.NewHandlers(watchedService, listService, homeService, authService)
+	htmxHandlers := htmx.NewHandlers(watchedService, listService, homeService, authService, seerrService)
 	r.Route("/htmx", func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware(*authService))
 		r.Use(middleware.HTMLMiddleware)

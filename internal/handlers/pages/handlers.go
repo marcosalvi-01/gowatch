@@ -36,6 +36,7 @@ type Handlers struct {
 	listService    *services.ListService
 	homeService    *services.HomeService
 	authService    *services.AuthService
+	seerrService   *services.SeerrService
 }
 
 func NewHandlers(
@@ -44,6 +45,7 @@ func NewHandlers(
 	listService *services.ListService,
 	homeService *services.HomeService,
 	authService *services.AuthService,
+	seerrService *services.SeerrService,
 ) *Handlers {
 	return &Handlers{
 		tmdbService:    tmdbService,
@@ -51,6 +53,7 @@ func NewHandlers(
 		listService:    listService,
 		homeService:    homeService,
 		authService:    authService,
+		seerrService:   seerrService,
 	}
 }
 
@@ -173,6 +176,8 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	canRequestSeerr := h.seerrService.Configuration().BaseURL != ""
+
 	log.Debug("serving movie page", "movieID", id)
 
 	movie, err := h.tmdbService.GetMovieDetails(ctx, id)
@@ -198,9 +203,9 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if shouldRenderContentFragment(r) {
-		templ.Handler(pages.Movie(*movie, rec, isInWatchlist, len(lists) > 0), templ.WithFragments("content")).ServeHTTP(w, r)
+		templ.Handler(pages.Movie(*movie, rec, isInWatchlist, len(lists) > 0, canRequestSeerr), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
-		templ.Handler(pages.Movie(*movie, rec, isInWatchlist, len(lists) > 0)).ServeHTTP(w, r)
+		templ.Handler(pages.Movie(*movie, rec, isInWatchlist, len(lists) > 0, canRequestSeerr)).ServeHTTP(w, r)
 	}
 
 	log.Info("movie page served successfully", "movieID", id, "title", movie.Movie.Title)
@@ -579,7 +584,6 @@ func (h *Handlers) AdminUsersPage(w http.ResponseWriter, r *http.Request) {
 		render500Error(w, r)
 		return
 	}
-
 	if shouldRenderContentFragment(r) {
 		templ.Handler(pages.AdminUsers(users), templ.WithFragments("content")).ServeHTTP(w, r)
 	} else {
