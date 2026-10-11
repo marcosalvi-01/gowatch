@@ -1,6 +1,6 @@
 module github.com/marcosalvi-01/gowatch
 
-go 1.26
+go 1.27
 
 require (
 	github.com/Oudwins/tailwind-merge-go v0.2.1

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/marcosalvi-01/gowatch/db"
+	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/internal/routes"
 	"github.com/marcosalvi-01/gowatch/internal/services"
 	"github.com/marcosalvi-01/gowatch/logging"
@@ -25,6 +26,8 @@ type Config struct {
 	DBPath               string        `mapstructure:"db_path" yaml:"db_path"`
 	DBName               string        `mapstructure:"db_name" yaml:"db_name"`
 	TMDBAPIKey           string        `mapstructure:"tmdb_api_key" yaml:"tmdb_api_key"`
+	SeerrBaseURL         string        `mapstructure:"seerr_base_url" yaml:"seerr_base_url"`
+	SeerrAPIKey          string        `mapstructure:"seerr_api_key" yaml:"seerr_api_key"`
 	TMDBPosterPrefix     string        `mapstructure:"tmdb_poster_prefix" yaml:"tmdb_poster_prefix"`
 	CacheTTL             time.Duration `mapstructure:"cache_ttl" yaml:"cache_ttl"`
 	ImageCacheTTL        time.Duration `mapstructure:"image_cache_ttl" yaml:"tmdb_image_cache_ttl"`
@@ -80,8 +83,16 @@ func RunServer(cfg Config) {
 	listService := services.NewListService(db, movieService)
 	watchedService := services.NewWatchedService(db, listService, movieService)
 	authService := services.NewAuthService(db, listService, cfg.SessionExpiry, cfg.HTTPS, cfg.AdminDefaultPassword)
+	seerrService, err := services.NewSeerrService(models.SeerrIntegration{
+		BaseURL: cfg.SeerrBaseURL,
+		APIKey:  cfg.SeerrAPIKey,
+	}, &http.Client{Timeout: cfg.Timeout})
+	if err != nil {
+		log.Error("invalid Seerr configuration", "error", err)
+		panic(err)
+	}
 
-	router := routes.NewRouter(db, movieService, tmdbImageService, watchedService, listService, authService)
+	router := routes.NewRouter(db, movieService, tmdbImageService, watchedService, listService, authService, seerrService)
 
 	server := &http.Server{
 		Addr:         ":" + cfg.Port,

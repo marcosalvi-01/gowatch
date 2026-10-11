@@ -29,27 +29,27 @@ import (
 
 const movieVisibleCastLimit = 9
 
-templ Movie(movie models.MovieDetails, watchRecords models.WatchedMovieRecords, isInWatchlist, hasLists bool) {
+templ Movie(movie models.MovieDetails, watchRecords models.WatchedMovieRecords, isInWatchlist, hasLists, canRequestSeerr bool) {
 	@Layout() {
 		@templ.Fragment("content") {
-			@movieHero(movie, isInWatchlist, hasLists)
+			@movieHero(movie, isInWatchlist, hasLists, canRequestSeerr)
 			@movieContent(movie, watchRecords)
 		}
 	}
 }
 
-templ movieHero(movie models.MovieDetails, isInWatchlist, hasLists bool) {
+templ movieHero(movie models.MovieDetails, isInWatchlist, hasLists, canRequestSeerr bool) {
 	<div class="relative -m-4 mb-6">
 		if movie.Movie.BackdropPath != "" {
-			@backdropHero(movie, isInWatchlist, hasLists)
+			@backdropHero(movie, isInWatchlist, hasLists, canRequestSeerr)
 		} else {
-			@fallbackHero(movie, isInWatchlist, hasLists)
+			@fallbackHero(movie, isInWatchlist, hasLists, canRequestSeerr)
 		}
 		@separator.Separator()
 	</div>
 }
 
-templ backdropHero(movie models.MovieDetails, isInWatchlist, hasLists bool) {
+templ backdropHero(movie models.MovieDetails, isInWatchlist, hasLists, canRequestSeerr bool) {
 	<div class="relative w-full min-h-[280px] overflow-hidden sm:h-[45vh] sm:max-h-[500px] md:h-[50vh] lg:h-[55vh]">
 		<!-- Background Image -->
 		<img
@@ -65,25 +65,25 @@ templ backdropHero(movie models.MovieDetails, isInWatchlist, hasLists bool) {
 		<div class="relative flex items-start sm:absolute sm:inset-0 sm:items-center">
 			<div class="w-full p-4 sm:p-6 md:p-8 lg:p-10">
 				<div class="max-w-6xl mx-auto w-full">
-					@heroContent(movie, true, isInWatchlist, hasLists)
+					@heroContent(movie, true, isInWatchlist, hasLists, canRequestSeerr)
 				</div>
 			</div>
 		</div>
 	</div>
 }
 
-templ fallbackHero(movie models.MovieDetails, isInWatchlist, hasLists bool) {
+templ fallbackHero(movie models.MovieDetails, isInWatchlist, hasLists, canRequestSeerr bool) {
 	<div class="p-4 sm:p-6 md:p-8 lg:p-10 bg-muted/20">
 		<div class="max-w-6xl mx-auto">
-			@heroContent(movie, false, isInWatchlist, hasLists)
+			@heroContent(movie, false, isInWatchlist, hasLists, canRequestSeerr)
 		</div>
 	</div>
 }
 
-templ heroContent(movie models.MovieDetails, isDark, isInWatchlist, hasLists bool) {
+templ heroContent(movie models.MovieDetails, isDark, isInWatchlist, hasLists, canRequestSeerr bool) {
 	<div class="flex flex-row gap-4 sm:gap-6 lg:gap-8 items-start">
 		@posterSection(movie, isDark)
-		@movieInfo(movie, isDark, isInWatchlist, hasLists)
+		@movieInfo(movie, isDark, isInWatchlist, hasLists, canRequestSeerr)
 	</div>
 }
 
@@ -103,7 +103,7 @@ templ posterSection(movie models.MovieDetails, isDark bool) {
 	}
 }
 
-templ movieInfo(movie models.MovieDetails, isDark, isInWatchlist, hasLists bool) {
+templ movieInfo(movie models.MovieDetails, isDark, isInWatchlist, hasLists, canRequestSeerr bool) {
 	<div class="flex-1 min-w-0 space-y-3 sm:space-y-4">
 		<!-- Title -->
 		<div>
@@ -194,12 +194,12 @@ templ movieInfo(movie models.MovieDetails, isDark, isInWatchlist, hasLists bool)
 			</div>
 		}
 		<!-- Action Buttons -->
-		@actionButtons(movie.Movie.ID, hasLists)
+		@actionButtons(movie.Movie.ID, hasLists, canRequestSeerr)
 	</div>
 }
 
-templ actionButtons(movieID int64, hasLists bool) {
-	<div class="grid w-full grid-cols-1 gap-2 pt-2 sm:grid-cols-3 sm:gap-3 sm:pt-4">
+templ actionButtons(movieID int64, hasLists, canRequestSeerr bool) {
+	<div class="grid w-full grid-cols-1 gap-2 pt-2 sm:grid-cols-2 lg:grid-cols-4 sm:gap-3 sm:pt-4">
 		<form
 			class="w-full"
 			hx-post="/htmx/movies/watched"
@@ -341,12 +341,103 @@ templ actionButtons(movieID int64, hasLists bool) {
 		}
 		<div
 			class="w-full [&_button]:w-full [&_button]:justify-center"
+			aria-live="polite"
 			hx-get={ fmt.Sprintf("/htmx/watchlist/%d", movieID) }
 			hx-trigger="load, refreshWatchlist from:body"
 			hx-swap="innerHTML"
 			hx-target="this"
-		></div>
+		>
+			@button.Button(button.Props{Variant: button.VariantOutline, Class: "w-full justify-center text-muted-foreground", Disabled: true}) {
+				@icon.LoaderCircle(icon.Props{Class: "size-4 animate-spin"})
+				Checking Watchlist...
+			}
+		</div>
+		if canRequestSeerr {
+			<div
+				id={ fmt.Sprintf("seerr-movie-action-%d", movieID) }
+				aria-live="polite"
+				hx-get={ fmt.Sprintf("/htmx/movies/%d/seerr-state", movieID) }
+				hx-trigger="load, refreshSeerrMovieState from:body"
+				hx-target="this"
+				hx-swap="innerHTML"
+			>
+				@button.Button(button.Props{Variant: button.VariantOutline, Class: "w-full justify-center text-muted-foreground", Disabled: true}) {
+					@icon.LoaderCircle(icon.Props{Class: "size-4 animate-spin"})
+					Checking Seerr...
+				}
+			</div>
+		}
 	</div>
+}
+
+templ SeerrMovieAction(movieID int64, state, seerrURL string) {
+	switch state {
+		case "requestable", "retryable":
+			<form
+				hx-post={ fmt.Sprintf("/htmx/movies/%d/seerr-request", movieID) }
+				hx-target="#toast"
+				hx-disabled-elt="find button"
+			>
+				@button.Button(button.Props{
+					Variant: button.VariantDefault,
+					Class:   "w-full justify-center",
+					Type:    button.TypeSubmit,
+				}) {
+					@icon.Send(icon.Props{Class: "size-4"})
+					if state == "retryable" {
+						Retry failed request
+					} else {
+						Request in Seerr
+					}
+				}
+			</form>
+		case "pending_approval":
+			@button.Button(button.Props{
+				Variant: button.VariantOutline,
+				Class:   "w-full justify-center text-muted-foreground",
+				Href:    seerrURL,
+			}) {
+				@icon.Clock3(icon.Props{Class: "size-4"})
+				Pending Seerr approval
+			}
+		case "processing":
+			@button.Button(button.Props{
+				Variant: button.VariantOutline,
+				Class:   "w-full justify-center border-primary/50 text-primary hover:bg-primary/10",
+				Href:    seerrURL,
+			}) {
+				@icon.Clock3(icon.Props{Class: "size-4"})
+				Requested in Seerr
+			}
+		case "available":
+			@button.Button(button.Props{
+				Variant: button.VariantOutline,
+				Class:   "w-full justify-center",
+				Href:    seerrURL,
+			}) {
+				@icon.CircleCheck(icon.Props{Class: "size-4"})
+				Available in Seerr
+			}
+		case "disabled":
+			@button.Button(button.Props{
+				Variant:  button.VariantGhost,
+				Class:    "w-full justify-center text-muted-foreground",
+				Disabled: true,
+			}) {
+				@icon.Ban(icon.Props{Class: "size-4"})
+				Sign in to request through Seerr
+			}
+		default:
+			@button.Button(button.Props{
+				Variant:  button.VariantOutline,
+				Class:    "w-full justify-center border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10",
+				Href:     seerrURL,
+				Disabled: seerrURL == "",
+			}) {
+				@icon.TriangleAlert(icon.Props{Class: "size-4"})
+				Error checking Seerr
+			}
+	}
 }
 
 templ movieContent(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) {
@@ -419,81 +510,81 @@ templ movieMetadata(movie models.MovieDetails) {
 				<div class="space-y-3">
 					<h3 class="text-base font-semibold">Release Information</h3>
 					@table.Table() {
-			@table.Body() {
-				@table.Row() {
-					@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
-						Release Date
-					}
-					@table.Cell() {
-						{ utils.FormatLongDate(movie.Movie.ReleaseDate) }
-					}
-				}
-				@table.Row() {
-					@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
-						Runtime
-					}
-					@table.Cell() {
-						{ fmt.Sprintf("%d minutes", movie.Runtime) }
-					}
-				}
-				@table.Row() {
-					@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
-						Rating
-					}
-					@table.Cell() {
-						{ fmt.Sprintf("%.1f/10 (%s votes)", movie.Movie.VoteAverage, formatNumber(movie.Movie.VoteCount)) }
-					}
-				}
-				@table.Row() {
-					@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
-						Original Language
-					}
-					@table.Cell() {
-						{ movie.Movie.OriginalLanguage }
-					}
-				}
-				if movie.Budget > 0 {
-					@table.Row() {
-						@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
-							Budget
+						@table.Body() {
+							@table.Row() {
+								@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
+									Release Date
+								}
+								@table.Cell() {
+									{ utils.FormatLongDate(movie.Movie.ReleaseDate) }
+								}
+							}
+							@table.Row() {
+								@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
+									Runtime
+								}
+								@table.Cell() {
+									{ fmt.Sprintf("%d minutes", movie.Runtime) }
+								}
+							}
+							@table.Row() {
+								@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
+									Rating
+								}
+								@table.Cell() {
+									{ fmt.Sprintf("%.1f/10 (%s votes)", movie.Movie.VoteAverage, formatNumber(movie.Movie.VoteCount)) }
+								}
+							}
+							@table.Row() {
+								@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
+									Original Language
+								}
+								@table.Cell() {
+									{ movie.Movie.OriginalLanguage }
+								}
+							}
+							if movie.Budget > 0 {
+								@table.Row() {
+									@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
+										Budget
+									}
+									@table.Cell() {
+										{ formatMoney(movie.Budget) }
+									}
+								}
+							}
+							if movie.Revenue > 0 {
+								@table.Row() {
+									@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
+										Revenue
+									}
+									@table.Cell() {
+										{ formatMoney(movie.Revenue) }
+									}
+								}
+							}
+							@table.Row() {
+								@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
+									Status
+								}
+								@table.Cell() {
+									{ movie.Status }
+								}
+							}
+							if movie.IMDbID != "" {
+								@table.Row() {
+									@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
+										IMDB
+									}
+									@table.Cell() {
+										<a href={ templ.URL("https://www.imdb.com/title/" + movie.IMDbID) } target="_blank" class="text-primary hover:underline flex items-center gap-1">
+											View on IMDB
+											@icon.ExternalLink(icon.Props{Class: "size-[14px]"})
+										</a>
+									}
+								}
+							}
 						}
-						@table.Cell() {
-							{ formatMoney(movie.Budget) }
-						}
-					}
-				}
-				if movie.Revenue > 0 {
-					@table.Row() {
-						@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
-							Revenue
-						}
-						@table.Cell() {
-							{ formatMoney(movie.Revenue) }
-						}
-					}
-				}
-				@table.Row() {
-					@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
-						Status
-					}
-					@table.Cell() {
-						{ movie.Status }
-					}
-				}
-				if movie.IMDbID != "" {
-					@table.Row() {
-						@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
-							IMDB
-						}
-						@table.Cell() {
-							<a href={ templ.URL("https://www.imdb.com/title/" + movie.IMDbID) } target="_blank" class="text-primary hover:underline flex items-center gap-1">
-								View on IMDB
-								@icon.ExternalLink(icon.Props{Class: "size-[14px]"})
-							</a>
-						}
-					}
-				}
-					}
 					}
 				</div>
 			}
@@ -563,7 +654,7 @@ templ castMemberCard(cast models.Cast) {
 				hx-push-url="true"
 				hx-swap="scroll:#main-scroll-container:top"
 				hx-indicator="#person-loading"
-				class="flex items-center space-x-3 p-2 cursor-pointer hover:bg-white/20"
+				class="flex items-center space-x-3 rounded-md p-2 cursor-pointer hover:bg-white/20"
 			>
 				@profileImage(cast.Person.ProfilePath, cast.Person.Name)
 				<div class="flex-1 min-w-0">
@@ -655,28 +746,32 @@ templ crewSection(crew []models.Crew) {
 templ crewMemberCard(crew models.Crew) {
 	{{ personHref := personPagePath(crew.Person.ID) }}
 	@card.Card(card.Props{Class: "transition-colors duration-300"}) {
-		<div class="flex items-center gap-3 p-2">
-			@profileImage(crew.Person.ProfilePath, crew.Person.Name, "h-8 w-8")
-			<div class="min-w-0">
-				<p class="text-xs text-muted-foreground">{ crew.Job }</p>
-				if personHref != "" {
-					<p
-					data-page="person"
-					hx-get={ personHref }
-					hx-target="#main-content"
-					hx-push-url="true"
-					hx-swap="scroll:#main-scroll-container:top"
-					hx-indicator="#person-loading"
-						class="text-sm font-medium text-primary hover:underline cursor-pointer truncate"
-				>
-					{ crew.Person.Name }
-					</p>
-				} else {
-					<p class="text-sm font-medium truncate">{ crew.Person.Name }</p>
-				}
+		if personHref != "" {
+			<div
+				data-page="person"
+				hx-get={ personHref }
+				hx-target="#main-content"
+				hx-push-url="true"
+				hx-swap="scroll:#main-scroll-container:top"
+				hx-indicator="#person-loading"
+				class="flex items-center gap-3 rounded-md p-2 cursor-pointer hover:bg-white/20"
+			>
+				@crewMemberInfo(crew)
 			</div>
-		</div>
+		} else {
+			<div class="flex items-center gap-3 p-2">
+				@crewMemberInfo(crew)
+			</div>
+		}
 	}
+}
+
+templ crewMemberInfo(crew models.Crew) {
+	@profileImage(crew.Person.ProfilePath, crew.Person.Name, "h-8 w-8")
+	<div class="min-w-0">
+		<p class="text-xs text-muted-foreground">{ crew.Job }</p>
+		<p class="text-sm font-medium truncate">{ crew.Person.Name }</p>
+	</div>
 }
 
 templ activityStats(records []models.WatchedMovieRecord) {
@@ -1063,58 +1158,29 @@ func formatTimeAgo(t time.Time) string {
 	}
 }
 
-func isKeyCrew(job string) bool {
-	keyJobs := []string{
-		"Director",
-		"Producer",
-		"Executive Producer",
-		"Screenplay",
-		"Writer",
-		"Cinematography",
-		"Music",
-		"Editor",
-		"Production Designer",
-	}
-	return slices.Contains(keyJobs, job)
-}
-
 func sortCrewByImportance(crew []models.Crew) []models.Crew {
 	importanceOrder := map[string]int{
-		"Director":            1,
-		"Producer":            2,
-		"Executive Producer":  3,
-		"Screenplay":          4,
-		"Writer":              5,
-		"Cinematography":      6,
-		"Music":               7,
-		"Editor":              8,
-		"Production Designer": 9,
+		"Director":                1,
+		"Director of Photography": 2,
+		"Cinematography":          2,
+		"Screenplay":              3,
+		"Writer":                  3,
+		"Music":                   4,
+		"Producer":                5,
+		"Executive Producer":      6,
+		"Editor":                  7,
+		"Production Designer":     8,
 	}
 
 	var keyCrew []models.Crew
 	for _, member := range crew {
-		if isKeyCrew(member.Job) {
+		if _, ok := importanceOrder[member.Job]; ok {
 			keyCrew = append(keyCrew, member)
 		}
 	}
 
 	slices.SortFunc(keyCrew, func(a, b models.Crew) int {
-		orderA := importanceOrder[a.Job]
-		orderB := importanceOrder[b.Job]
-
-		// If both have defined order, sort by importance
-		if orderA != 0 && orderB != 0 {
-			return cmp.Compare(orderA, orderB)
-		}
-		// If only one has defined order, prioritize it
-		if orderA != 0 {
-			return -1
-		}
-		if orderB != 0 {
-			return 1
-		}
-		// If neither has defined order, sort alphabetically
-		return cmp.Compare(a.Job, b.Job)
+		return cmp.Compare(importanceOrder[a.Job], importanceOrder[b.Job])
 	})
 
 	return keyCrew

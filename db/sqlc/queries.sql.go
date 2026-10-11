@@ -102,7 +102,7 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 
 const createSession = `-- name: CreateSession :exec
 INSERT INTO
-    session (id, user_id, expires_at)
+    SESSION (id, user_id, expires_at)
 VALUES
     (?, ?, ?)
 `
@@ -152,7 +152,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 
 const deleteExpiredSessions = `-- name: DeleteExpiredSessions :exec
 DELETE FROM
-    session
+    SESSION
 WHERE
     expires_at <= datetime('now')
 `
@@ -192,9 +192,9 @@ WHERE
         FROM
             list
         WHERE
-    list.id = list_id
-    AND list.user_id = ?
-)
+            list.id = list_id
+            AND list.user_id = ?
+    )
 `
 
 type DeleteMovieFromListParams struct {
@@ -210,7 +210,7 @@ func (q *Queries) DeleteMovieFromList(ctx context.Context, arg DeleteMovieFromLi
 
 const deleteSession = `-- name: DeleteSession :exec
 DELETE FROM
-    session
+    SESSION
 WHERE
     id = ?
 `
@@ -446,8 +446,8 @@ func (q *Queries) GetAllUsersWithStats(ctx context.Context) ([]GetAllUsersWithSt
 
 const getBiggestBudgetMovies = `-- name: GetBiggestBudgetMovies :many
 WITH watched_movies AS (
-    SELECT DISTINCT
-        watched.movie_id
+    SELECT
+        DISTINCT watched.movie_id
     FROM
         watched
     WHERE
@@ -524,8 +524,8 @@ func (q *Queries) GetBiggestBudgetMovies(ctx context.Context, arg GetBiggestBudg
 
 const getBudgetTierDistribution = `-- name: GetBudgetTierDistribution :many
 WITH watched_movies AS (
-    SELECT DISTINCT
-        watched.movie_id,
+    SELECT
+        DISTINCT watched.movie_id,
         movie.budget
     FROM
         watched
@@ -708,7 +708,9 @@ const getFavoriteActorsByRating = `-- name: GetFavoriteActorsByRating :many
 WITH rated_movies AS (
     SELECT
         watched.movie_id,
-        CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating
+        CAST(
+            COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL
+        ) AS average_rating
     FROM
         watched
     WHERE
@@ -718,8 +720,8 @@ WITH rated_movies AS (
         watched.movie_id
 ),
 cast_members AS (
-    SELECT DISTINCT
-        "cast".movie_id,
+    SELECT
+        DISTINCT "cast".movie_id,
         "cast".person_id
     FROM
         "cast"
@@ -729,7 +731,9 @@ SELECT
     person.name,
     person.profile_path,
     person.gender,
-    CAST(COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL) AS average_rating,
+    CAST(
+        COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL
+    ) AS average_rating,
     COUNT(*) AS rated_movie_count
 FROM
     rated_movies
@@ -789,7 +793,9 @@ const getFavoriteDirectorsByRating = `-- name: GetFavoriteDirectorsByRating :man
 WITH rated_movies AS (
     SELECT
         watched.movie_id,
-        CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating
+        CAST(
+            COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL
+        ) AS average_rating
     FROM
         watched
     WHERE
@@ -799,8 +805,8 @@ WITH rated_movies AS (
         watched.movie_id
 ),
 directors AS (
-    SELECT DISTINCT
-        crew.movie_id,
+    SELECT
+        DISTINCT crew.movie_id,
         crew.person_id
     FROM
         crew
@@ -811,7 +817,9 @@ SELECT
     person.id,
     person.name,
     person.profile_path,
-    CAST(COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL) AS average_rating,
+    CAST(
+        COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL
+    ) AS average_rating,
     COUNT(*) AS rated_movie_count
 FROM
     rated_movies
@@ -868,7 +876,9 @@ const getHighestRatedMovies = `-- name: GetHighestRatedMovies :many
 WITH rated_movies AS (
     SELECT
         watched.movie_id,
-        CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating,
+        CAST(
+            COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL
+        ) AS average_rating,
         COUNT(watched.rating) AS rated_watch_count
     FROM
         watched
@@ -1101,8 +1111,10 @@ func (q *Queries) GetLongestWatchedMovie(ctx context.Context, userID *int64) (Ge
 
 const getMonthlyAverageRatingLastYear = `-- name: GetMonthlyAverageRatingLastYear :many
 SELECT
-    CAST(strftime('%Y-%m', watched.watched_date) AS TEXT) AS month,
-    CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating,
+    CAST(strftime('%Y-%m', watched.watched_date) AS TEXT) AS MONTH,
+    CAST(
+        COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL
+    ) AS average_rating,
     COUNT(watched.rating) AS rated_count
 FROM
     watched
@@ -1111,9 +1123,9 @@ WHERE
     AND watched.rating IS NOT NULL
     AND watched.watched_date >= date('now', 'start of month', '-11 months')
 GROUP BY
-    month
+    MONTH
 ORDER BY
-    month
+    MONTH
 `
 
 type GetMonthlyAverageRatingLastYearRow struct {
@@ -1207,7 +1219,8 @@ GROUP BY
     watched_date
 ORDER BY
     count DESC
-LIMIT 1
+LIMIT
+    1
 `
 
 type GetMostWatchedDayRow struct {
@@ -1406,16 +1419,17 @@ WITH rated_movies AS (
         AND watched.rating IS NOT NULL
     GROUP BY
         watched.movie_id
-), person_roles AS (
-    SELECT DISTINCT
-        "cast".movie_id,
+),
+person_roles AS (
+    SELECT
+        DISTINCT "cast".movie_id,
         "cast".person_id,
         'actor' AS role_key
     FROM
         "cast"
     UNION
-    SELECT DISTINCT
-        crew.movie_id,
+    SELECT
+        DISTINCT crew.movie_id,
         crew.person_id,
         CASE
             WHEN crew.job = 'Director' THEN 'director'
@@ -1437,7 +1451,9 @@ WITH rated_movies AS (
 SELECT
     person_roles.role_key,
     person_roles.person_id AS id,
-    CAST(COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL) AS average_rating,
+    CAST(
+        COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL
+    ) AS average_rating,
     COUNT(*) AS rated_movie_count
 FROM
     rated_movies
@@ -1494,7 +1510,9 @@ const getRatingByReleaseDecade = `-- name: GetRatingByReleaseDecade :many
 WITH rated_movies AS (
     SELECT
         watched.movie_id,
-        CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating
+        CAST(
+            COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL
+        ) AS average_rating
     FROM
         watched
     WHERE
@@ -1504,8 +1522,12 @@ WITH rated_movies AS (
         watched.movie_id
 )
 SELECT
-    (CAST(strftime('%Y', movie.release_date) AS INTEGER) / 10) * 10 AS decade,
-    CAST(COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL) AS average_rating,
+    (
+        CAST(strftime('%Y', movie.release_date) AS INTEGER) / 10
+    ) * 10 AS decade,
+    CAST(
+        COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL
+    ) AS average_rating,
     COUNT(*) AS rated_movie_count
 FROM
     rated_movies
@@ -1549,7 +1571,9 @@ func (q *Queries) GetRatingByReleaseDecade(ctx context.Context, userID *int64) (
 
 const getRatingDistribution = `-- name: GetRatingDistribution :many
 SELECT
-    CAST(ROUND(CAST(watched.rating AS REAL) * 2.0, 0) / 2.0 AS REAL) AS rating_bucket,
+    CAST(
+        ROUND(CAST(watched.rating AS REAL) * 2.0, 0) / 2.0 AS REAL
+    ) AS rating_bucket,
     COUNT(*) AS count
 FROM
     watched
@@ -1592,7 +1616,9 @@ func (q *Queries) GetRatingDistribution(ctx context.Context, userID *int64) ([]G
 
 const getRatingSummary = `-- name: GetRatingSummary :one
 SELECT
-    CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating,
+    CAST(
+        COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL
+    ) AS average_rating,
     COUNT(watched.rating) AS rated_count
 FROM
     watched
@@ -1618,7 +1644,9 @@ const getRatingVsTMDB = `-- name: GetRatingVsTMDB :one
 WITH rated_movies AS (
     SELECT
         watched.movie_id,
-        CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating
+        CAST(
+            COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL
+        ) AS average_rating
     FROM
         watched
     WHERE
@@ -1628,9 +1656,20 @@ WITH rated_movies AS (
         watched.movie_id
 )
 SELECT
-    CAST(COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL) AS average_user_rating,
-    CAST(COALESCE(AVG(CAST(movie.vote_average AS REAL) / 2.0), 0.0) AS REAL) AS average_tmdb_rating,
-    CAST(COALESCE(AVG(rated_movies.average_rating - (CAST(movie.vote_average AS REAL) / 2.0)), 0.0) AS REAL) AS average_difference,
+    CAST(
+        COALESCE(AVG(rated_movies.average_rating), 0.0) AS REAL
+    ) AS average_user_rating,
+    CAST(
+        COALESCE(AVG(CAST(movie.vote_average AS REAL) / 2.0), 0.0) AS REAL
+    ) AS average_tmdb_rating,
+    CAST(
+        COALESCE(
+            AVG(
+                rated_movies.average_rating - (CAST(movie.vote_average AS REAL) / 2.0)
+            ),
+            0.0
+        ) AS REAL
+    ) AS average_difference,
     COUNT(*) AS compared_movie_count
 FROM
     rated_movies
@@ -1840,16 +1879,22 @@ SELECT
     rated_movies.poster_path,
     rated_movies.first_rating,
     rated_movies.last_rating,
-    CAST(rated_movies.last_rating - rated_movies.first_rating AS REAL) AS rating_change,
+    CAST(
+        rated_movies.last_rating - rated_movies.first_rating AS REAL
+    ) AS rating_change,
     rated_movies.rated_watch_count,
     rated_movies.first_watched_date,
     rated_movies.last_watched_date
 FROM
     rated_movies
 WHERE
-    ABS(rated_movies.last_rating - rated_movies.first_rating) > 0
+    ABS(
+        rated_movies.last_rating - rated_movies.first_rating
+    ) > 0
 ORDER BY
-    ABS(rated_movies.last_rating - rated_movies.first_rating) DESC,
+    ABS(
+        rated_movies.last_rating - rated_movies.first_rating
+    ) DESC,
     rated_movies.rated_watch_count DESC,
     rated_movies.title ASC
 LIMIT
@@ -1965,7 +2010,7 @@ SELECT
     user_id,
     expires_at
 FROM
-    session
+    SESSION
 WHERE
     id = ?
     AND expires_at > datetime('now')
@@ -2029,7 +2074,9 @@ func (q *Queries) GetShortestWatchedMovie(ctx context.Context, userID *int64) (G
 const getTheaterVsHomeAverageRating = `-- name: GetTheaterVsHomeAverageRating :many
 SELECT
     watched.watched_in_theater,
-    CAST(COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL) AS average_rating,
+    CAST(
+        COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL
+    ) AS average_rating,
     COUNT(watched.rating) AS rated_count
 FROM
     watched
@@ -2163,8 +2210,8 @@ func (q *Queries) GetTopLanguages(ctx context.Context, arg GetTopLanguagesParams
 
 const getTopReturnOnInvestmentMovies = `-- name: GetTopReturnOnInvestmentMovies :many
 WITH watched_movies AS (
-    SELECT DISTINCT
-        watched.movie_id
+    SELECT
+        DISTINCT watched.movie_id
     FROM
         watched
     WHERE
@@ -2310,8 +2357,8 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 
 const getWatchedActors = `-- name: GetWatchedActors :many
 WITH watched_actors AS (
-    SELECT DISTINCT
-        watched.id AS watched_id,
+    SELECT
+        DISTINCT watched.id AS watched_id,
         person.id,
         person.name,
         person.profile_path,
@@ -2444,8 +2491,8 @@ func (q *Queries) GetWatchedCount(ctx context.Context, userID *int64) (int64, er
 
 const getWatchedCrewMembers = `-- name: GetWatchedCrewMembers :many
 WITH normalized_crew AS (
-    SELECT DISTINCT
-        watched.id AS watched_id,
+    SELECT
+        DISTINCT watched.id AS watched_id,
         person.id,
         person.name,
         person.profile_path,
@@ -2739,7 +2786,10 @@ WITH person_roles AS (
     SELECT
         crew.movie_id,
         'crew' AS role_kind,
-        COALESCE(NULLIF(TRIM(crew.job), ''), COALESCE(NULLIF(TRIM(crew.department), ''), 'Crew')) AS role_label
+        COALESCE(
+            NULLIF(TRIM(crew.job), ''),
+            COALESCE(NULLIF(TRIM(crew.department), ''), 'Crew')
+        ) AS role_label
     FROM
         crew
     WHERE
@@ -2867,7 +2917,7 @@ func (q *Queries) GetWatchedPerYear(ctx context.Context, userID *int64) ([]GetWa
 
 const getWatchedStatsPerMonthLastYear = `-- name: GetWatchedStatsPerMonthLastYear :many
 SELECT
-    CAST(strftime('%Y-%m', watched_date) AS TEXT) AS month,
+    CAST(strftime('%Y-%m', watched_date) AS TEXT) AS MONTH,
     COUNT(*) AS count,
     SUM(movie.runtime) AS total_runtime
 FROM
@@ -2877,9 +2927,9 @@ WHERE
     watched_date >= date('now', 'start of month', '-12 months')
     AND watched.user_id = ?
 GROUP BY
-    month
+    MONTH
 ORDER BY
-    month
+    MONTH
 `
 
 type GetWatchedStatsPerMonthLastYearRow struct {
@@ -2978,7 +3028,7 @@ INSERT INTO
         creation_date,
         description,
         user_id,
-		is_watchlist,
+        is_watchlist,
         display_sort
     )
 VALUES
@@ -3013,7 +3063,13 @@ func (q *Queries) InsertList(ctx context.Context, arg InsertListParams) (int64, 
 
 const insertWatched = `-- name: InsertWatched :one
 INSERT INTO
-    watched (movie_id, watched_date, watched_in_theater, user_id, rating)
+    watched (
+        movie_id,
+        watched_date,
+        watched_in_theater,
+        user_id,
+        rating
+    )
 VALUES
     (?, ?, ?, ?, ?)
 RETURNING
@@ -3064,7 +3120,8 @@ func (q *Queries) SetAdmin(ctx context.Context, id int64) error {
 }
 
 const updateListDetails = `-- name: UpdateListDetails :exec
-UPDATE list
+UPDATE
+    list
 SET
     name = ?,
     description = ?
@@ -3091,7 +3148,8 @@ func (q *Queries) UpdateListDetails(ctx context.Context, arg UpdateListDetailsPa
 }
 
 const updateListDisplaySort = `-- name: UpdateListDisplaySort :exec
-UPDATE list
+UPDATE
+    list
 SET
     display_sort = ?
 WHERE
@@ -3111,7 +3169,8 @@ func (q *Queries) UpdateListDisplaySort(ctx context.Context, arg UpdateListDispl
 }
 
 const updateListMoviePosition = `-- name: UpdateListMoviePosition :exec
-UPDATE list_movie
+UPDATE
+    list_movie
 SET
     position = ?
 WHERE
@@ -3473,8 +3532,7 @@ FROM
     list
 WHERE
     list.id = ?
-    AND list.user_id = ?
-ON CONFLICT(movie_id, list_id) DO
+    AND list.user_id = ? ON CONFLICT(movie_id, list_id) DO
 UPDATE
 SET
     date_added = excluded.date_added,

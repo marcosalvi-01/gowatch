@@ -40,6 +40,7 @@ const (
 	sidebarStateExpandedValue     = "false"
 	sidebarPageHome               = "home"
 	sidebarPageWatchlist          = "watchlist"
+	seerrStateUnavailable         = "unavailable"
 )
 
 type watchedFormData struct {
@@ -53,14 +54,16 @@ type Handlers struct {
 	listService    *services.ListService
 	homeService    *services.HomeService
 	authService    *services.AuthService
+	seerrService   *services.SeerrService
 }
 
-func NewHandlers(watchedService *services.WatchedService, listService *services.ListService, homeService *services.HomeService, authService *services.AuthService) *Handlers {
+func NewHandlers(watchedService *services.WatchedService, listService *services.ListService, homeService *services.HomeService, authService *services.AuthService, seerrService *services.SeerrService) *Handlers {
 	return &Handlers{
 		watchedService: watchedService,
 		listService:    listService,
 		homeService:    homeService,
 		authService:    authService,
+		seerrService:   seerrService,
 	}
 }
 
@@ -80,6 +83,8 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 
 	r.Post("/watchlist/add", h.AddToWatchlist)
 	r.Get("/watchlist/{id}", h.RenderAddToWatchlistButton)
+	r.Get("/movies/{id}/seerr-state", h.RenderSeerrMovieAction)
+	r.Post("/movies/{id}/seerr-request", h.RequestSeerrMovie)
 
 	r.Get("/sidebar", h.GetSidebar)
 	r.Get("/lists/add-movie-dialog", h.RenderAddToListDialogContent)
@@ -538,6 +543,110 @@ func (h *Handlers) AddToWatchlist(w http.ResponseWriter, r *http.Request) {
 	log.Info("successfully added movie to watchlist", "movieID", movieID)
 	w.Header().Add("HX-Trigger", "refreshSidebar, refreshWatchlist")
 	RenderSuccessToast(w, r, "Added to Watchlist", "Movie added to your watchlist.", 2000)
+}
+
+func (h *Handlers) RequestSeerrMovie(w http.ResponseWriter, r *http.Request) {
+	movieID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil || movieID <= 0 {
+		RenderErrorToast(w, r, "Invalid request", "Invalid movie ID.", 0)
+		return
+	}
+
+	result, err := h.seerrService.RequestMovie(r.Context(), movieID)
+	if err != nil {
+		w.Header().Set("HX-Trigger", "refreshSeerrMovieState")
+		log.Warn("Seerr movie request failed", "movieID", movieID, "error", err)
+		switch {
+		case errors.Is(err, services.ErrSeerrNotAllowed):
+			RenderErrorToast(w, r, "Sign in required", "Sign in to request movies through Seerr.", 0)
+		case errors.Is(err, services.ErrSeerrNotConfigured):
+			RenderErrorToast(w, r, "Seerr unavailable", "The Seerr integration is not configured.", 0)
+		case errors.Is(err, services.ErrSeerrUnauthorized):
+			RenderErrorToast(w, r, "Seerr authentication failed", "Ask an admin to check the Seerr API key.", 0)
+		case errors.Is(err, services.ErrSeerrForbidden):
+			RenderErrorToast(w, r, "Seerr permission denied", "The configured Seerr identity cannot request movies.", 0)
+		case errors.Is(err, services.ErrSeerrRejected):
+			RenderErrorToast(w, r, "Request rejected", "Seerr rejected this movie request.", 0)
+		case errors.Is(err, services.ErrSeerrUnavailable):
+			RenderErrorToast(w, r, "Seerr status not confirmed", "The movie action is refreshing. Check its status before retrying.", 0)
+		default:
+			RenderErrorToast(w, r, "Request failed", "Could not submit this movie request.", 0)
+		}
+		return
+	}
+
+	w.Header().Set("HX-Trigger", "refreshSeerrMovieState")
+	if !result.Submitted {
+		description := "Seerr already has an active request for this movie."
+		if result.State == services.SeerrMovieAvailable {
+			description = "This movie is already available in Seerr."
+		}
+		RenderInfoToast(w, r, "No new request sent", description, 0)
+		return
+	}
+
+	title := "Movie request sent to Seerr"
+	description := "Seerr accepted the movie request."
+	if result.Retried {
+		title = "Movie request retried in Seerr"
+		description = "Seerr accepted the failed request retry."
+	}
+	if result.Status != nil {
+		submission := "Movie request submitted"
+		if result.Retried {
+			submission = "Retry submitted"
+		}
+		switch *result.Status {
+		case 1:
+			description = submission + "; pending Seerr approval."
+		case 2:
+			description = submission + " and approved by Seerr."
+		case 3:
+			description = "Seerr reported the movie request as declined."
+		case 4:
+			description = "Seerr reported the movie request as failed."
+			if result.Retried {
+				description = "Seerr retry submitted; status may take a moment to update."
+			}
+		}
+	}
+	RenderSuccessToast(w, r, title, description, 0)
+}
+
+func (h *Handlers) RenderSeerrMovieAction(w http.ResponseWriter, r *http.Request) {
+	movieID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil || movieID <= 0 {
+		http.Error(w, "Invalid movie ID", http.StatusBadRequest)
+		return
+	}
+
+	state, err := h.seerrService.MovieState(r.Context(), movieID)
+	actionState := string(state)
+	if errors.Is(err, services.ErrSeerrNotAllowed) {
+		actionState = "disabled"
+	} else if err != nil {
+		log.Warn("failed to retrieve Seerr movie state", "movieID", movieID, "error", err)
+		actionState = seerrStateUnavailable
+	}
+
+	seerrURL := ""
+	if actionState != string(services.SeerrMovieRequestable) && actionState != "disabled" {
+		configuration := h.seerrService.Configuration()
+		if configuration.BaseURL == "" {
+			actionState = seerrStateUnavailable
+		} else {
+			seerrURL, err = url.JoinPath(configuration.BaseURL, "movie", strconv.FormatInt(movieID, 10))
+			if err != nil {
+				log.Warn("failed to build Seerr movie URL", "movieID", movieID, "error", err)
+				actionState = seerrStateUnavailable
+			}
+		}
+	}
+
+	if err := pages.SeerrMovieAction(movieID, actionState, seerrURL).Render(r.Context(), w); err != nil {
+		log.Error("failed to render Seerr movie action", "movieID", movieID, "error", err)
+		http.Error(w, "Failed to render Seerr movie action", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) DeleteMovieFromList(w http.ResponseWriter, r *http.Request) {

@@ -15,6 +15,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/common"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/internal/services"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/addtowatched"
 	uipages "github.com/marcosalvi-01/gowatch/internal/ui/pages"
 )
 
@@ -90,10 +91,11 @@ func TestHandlers_SearchPage_QueryTooLongReturnsBadRequest(t *testing.T) {
 
 func TestMovieListAction(t *testing.T) {
 	testCases := []struct {
-		name       string
-		hasLists   bool
-		expected   []string
-		unexpected string
+		name            string
+		hasLists        bool
+		canRequestSeerr bool
+		expected        []string
+		unexpected      []string
 	}{
 		{
 			name:     "no lists opens create list dialog",
@@ -107,7 +109,20 @@ func TestMovieListAction(t *testing.T) {
 			name:       "lists opens add movie dialog",
 			hasLists:   true,
 			expected:   []string{`id="add-movie-to-list-dialog"`},
-			unexpected: `data-tui-dialog-target="add-to-list-dialog"`,
+			unexpected: []string{`data-tui-dialog-target="add-to-list-dialog"`},
+		},
+		{
+			name:     "watchlist action loads asynchronously with placeholder",
+			expected: []string{`/htmx/watchlist/1`, `hx-trigger="load, refreshWatchlist from:body"`, `Checking Watchlist...`, `animate-spin`},
+		},
+		{
+			name:            "configured Seerr adds request action",
+			canRequestSeerr: true,
+			expected:        []string{`/htmx/movies/1/seerr-state`, `Checking Seerr...`},
+		},
+		{
+			name:       "unconfigured Seerr has no request action",
+			unexpected: []string{`/htmx/movies/1/seerr-state`, `Request in Seerr`},
 		},
 	}
 
@@ -119,6 +134,7 @@ func TestMovieListAction(t *testing.T) {
 				models.WatchedMovieRecords{},
 				false,
 				testCase.hasLists,
+				testCase.canRequestSeerr,
 			).Render(context.Background(), &body)
 			if err != nil {
 				t.Fatal(err)
@@ -130,10 +146,27 @@ func TestMovieListAction(t *testing.T) {
 					t.Fatalf("expected rendered movie page to contain %q", expected)
 				}
 			}
-			if testCase.unexpected != "" && strings.Contains(html, testCase.unexpected) {
-				t.Fatalf("did not expect rendered movie page to contain %q", testCase.unexpected)
+			for _, unexpected := range testCase.unexpected {
+				if strings.Contains(html, unexpected) {
+					t.Fatalf("did not expect rendered movie page to contain %q", unexpected)
+				}
 			}
 		})
+	}
+}
+
+func TestAddToWatchedLinksToWatchlist(t *testing.T) {
+	var body bytes.Buffer
+	if err := addtowatched.AddToWatched(1, true).Render(context.Background(), &body); err != nil {
+		t.Fatalf("render watchlist button: %v", err)
+	}
+
+	html := body.String()
+	if !strings.Contains(html, `href="/watchlist"`) {
+		t.Fatalf("already-in-watchlist action does not link to watchlist: %s", html)
+	}
+	if !strings.Contains(html, "Already in Watchlist") {
+		t.Fatalf("already-in-watchlist action text missing: %s", html)
 	}
 }
 

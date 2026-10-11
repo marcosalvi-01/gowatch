@@ -2,7 +2,7 @@
 
 [![Build](https://img.shields.io/github/actions/workflow/status/marcosalvi-01/gowatch/docker-build.yaml)](https://github.com/marcosalvi-01/gowatch/actions)
 [![Docker Image](https://img.shields.io/badge/docker-ghcr.io%2Fmarcosalvi--01%2Fgowatch-blue)](https://ghcr.io/marcosalvi-01/gowatch)
-[![Go Version](https://img.shields.io/badge/Go-1.26-00ADD8?style=flat&logo=go)](https://golang.org/)
+[![Go Version](https://img.shields.io/badge/Go-1.27-00ADD8?style=flat&logo=go)](https://golang.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 A self-hosted web application for tracking movies you've watched, creating custom watchlists, and viewing detailed statistics. Built with Go and integrated with The Movie Database (TMDB) API.
@@ -70,7 +70,7 @@ The application will be available at `http://localhost:8080`.
 
 ### Local Development
 
-1. Ensure you have Go 1.26 and curl installed.
+1. Ensure you have Go 1.27 and curl installed.
 
 2. Clone the repository and install dependencies:
 
@@ -98,6 +98,7 @@ The application will be available at `http://localhost:8080`.
 For CLI usage or direct binary installation:
 
 1. Install the binary:
+
    ```bash
    go install github.com/marcosalvi-01/gowatch@latest
    ```
@@ -128,6 +129,7 @@ The CLI supports YAML config files, environment variables, and command-line flag
 ## Configuration
 
 The application supports multiple configuration sources (in order of precedence):
+
 1. Command-line flags (for CLI usage)
 2. Environment variables
 3. YAML config file (default: `./config.yaml`)
@@ -154,6 +156,11 @@ admin_default_password: "Welcome123!"
 - `DB_NAME`: Database filename (default: db.db)
 - `CACHE_TTL`: TMDB data cache duration (default: 168h)
 - `SESSION_EXPIRY`: User session timeout (default: 24h)
+- `SEERR_BASE_URL`: Optional Seerr instance URL; set together with `SEERR_API_KEY`
+- `SEERR_API_KEY`: Optional Seerr API key; leave both Seerr variables unset to disable integration
+
+Seerr credentials are read at startup. Restart GoWatch after changing either value.
+When configured, all authenticated users can submit requests using the shared Seerr identity.
 
 ## Development
 

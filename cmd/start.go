@@ -18,6 +18,8 @@ var startCmd = &cobra.Command{
 			DBPath:               viper.GetString("db_path"),
 			DBName:               viper.GetString("db_name"),
 			TMDBAPIKey:           viper.GetString("tmdb_api_key"),
+			SeerrBaseURL:         viper.GetString("seerr_base_url"),
+			SeerrAPIKey:          viper.GetString("seerr_api_key"),
 			TMDBPosterPrefix:     viper.GetString("tmdb_poster_prefix"),
 			CacheTTL:             viper.GetDuration("cache_ttl"),
 			ImageCacheTTL:        viper.GetDuration("image_cache_ttl"),
