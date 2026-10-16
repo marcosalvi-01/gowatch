@@ -3,14 +3,33 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
+	"sync/atomic"
 	"testing"
 	"time"
 
-	tmdb "github.com/cyruzin/golang-tmdb"
 	"github.com/marcosalvi-01/gowatch/db"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 )
+
+func newMovieServiceWithTestDB(t *testing.T, seerr *SeerrService, cacheTTL time.Duration) *MovieService {
+	t.Helper()
+
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := testDB.Close(); err != nil {
+			t.Errorf("failed to close test database: %v", err)
+		}
+	})
+
+	return NewMovieService(testDB, seerr, cacheTTL)
+}
 
 func TestMovieService_GetMovieDetails_CacheHit(t *testing.T) {
 	testDB, err := db.NewTestDB()
@@ -19,7 +38,7 @@ func TestMovieService_GetMovieDetails_CacheHit(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 
 	ctx := context.Background()
 
@@ -46,7 +65,227 @@ func TestMovieService_GetMovieDetails_CacheHit(t *testing.T) {
 	}
 }
 
-func TestMapTMDBSearchMultiMovieToSearchResult(t *testing.T) {
+func TestMovieService_GetMovieDetailsUsesSeerrMetadataAndPreservesRelatedData(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+
+	var requestCount atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/movie/603" {
+			t.Errorf("request path = %q, want /api/v1/movie/603", r.URL.Path)
+		}
+		if got := r.Header.Get(seerrAPIKeyHeader); got != "test-key" {
+			t.Errorf("API key header = %q, want %q", got, "test-key")
+		}
+		requestCount.Add(1)
+		_, _ = w.Write([]byte(`{"id":603,"backdropPath":"/backdrop.jpg","budget":63000000,"genres":[{"id":18,"name":"Drama"}],"homepage":"https://example.com","imdbId":"tt0133093","originalLanguage":"en","originalTitle":"The Matrix","overview":"A hacker learns the truth.","popularity":42.5,"posterPath":"/poster.jpg","releaseDate":"1999-03-31","revenue":463000000,"runtime":136,"status":"Released","tagline":"Welcome to the Real World.","title":"The Matrix","voteAverage":8.2,"voteCount":10000,"credits":{"cast":[{"id":6384,"castId":1,"character":"Neo","creditId":"cast-credit","gender":2,"name":"Keanu Reeves","order":0,"profilePath":"/keanu.jpg"}],"crew":[{"id":9339,"creditId":"crew-credit","gender":2,"name":"Lana Wachowski","job":"Director","department":"Directing","profilePath":"/lana.jpg"}]}}`))
+	}))
+	defer server.Close()
+
+	seerrService, err := NewSeerrService(models.SeerrIntegration{BaseURL: server.URL, APIKey: "test-key"}, server.Client())
+	if err != nil {
+		t.Fatalf("NewSeerrService() error = %v", err)
+	}
+	movieService := NewMovieService(testDB, seerrService, time.Hour)
+
+	ctx := context.Background()
+	movie, err := movieService.GetMovieDetails(ctx, 603)
+	if err != nil {
+		t.Fatalf("GetMovieDetails() error = %v", err)
+	}
+	if movie.Movie.ID != 603 || movie.Movie.Title != "The Matrix" || movie.Movie.ReleaseDate == nil || movie.Movie.ReleaseDate.Format("2006-01-02") != "1999-03-31" || movie.Movie.Popularity != 42.5 || movie.Budget != 63000000 || movie.Revenue != 463000000 || movie.Runtime != 136 || movie.IMDbID != "tt0133093" {
+		t.Fatalf("mapped movie details = %+v", movie)
+	}
+	if len(movie.Genres) != 1 || movie.Genres[0] != (models.Genre{ID: 18, Name: "Drama"}) {
+		t.Fatalf("mapped genres = %+v", movie.Genres)
+	}
+	if len(movie.Credits.Cast) != 1 || movie.Credits.Cast[0].Person.Name != "Keanu Reeves" || movie.Credits.Cast[0].Person.ProfilePath != "/keanu.jpg" || movie.Credits.Cast[0].Character != "Neo" || movie.Credits.Cast[0].CastOrder != 0 {
+		t.Fatalf("mapped cast = %+v", movie.Credits.Cast)
+	}
+	if len(movie.Credits.Crew) != 1 || movie.Credits.Crew[0].Person.Name != "Lana Wachowski" || movie.Credits.Crew[0].Job != "Director" || movie.Credits.Crew[0].Department != "Directing" {
+		t.Fatalf("mapped crew = %+v", movie.Credits.Crew)
+	}
+
+	if _, err := movieService.GetMovieDetails(ctx, 603); err != nil {
+		t.Fatalf("GetMovieDetails() cache hit error = %v", err)
+	}
+	if got := requestCount.Load(); got != 1 {
+		t.Fatalf("Seerr requests after cache hit = %d, want 1", got)
+	}
+
+	user, err := testDB.CreateUser(ctx, "movie-metadata@example.com", "Movie User", "hash")
+	if err != nil {
+		t.Fatalf("CreateUser() error = %v", err)
+	}
+	rating := 4.5
+	if err := testDB.InsertWatched(ctx, db.InsertWatched{UserID: user.ID, MovieID: 603, Date: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC), Rating: &rating}); err != nil {
+		t.Fatalf("InsertWatched() error = %v", err)
+	}
+	listID, err := testDB.InsertList(ctx, db.InsertList{UserID: user.ID, Name: "Watch later", DisplaySort: models.ListMovieSortCustom})
+	if err != nil {
+		t.Fatalf("InsertList() error = %v", err)
+	}
+	if err := testDB.AddMovieToList(ctx, user.ID, db.InsertMovieList{MovieID: 603, ListID: listID, DateAdded: time.Now()}); err != nil {
+		t.Fatalf("AddMovieToList() error = %v", err)
+	}
+
+	expiredMovieService := NewMovieService(testDB, seerrService, -time.Second)
+	if _, err := expiredMovieService.GetMovieDetails(ctx, 603); err != nil {
+		t.Fatalf("GetMovieDetails() expired-cache refresh error = %v", err)
+	}
+	if got := requestCount.Load(); got != 2 {
+		t.Fatalf("Seerr requests after expired-cache refresh = %d, want 2", got)
+	}
+
+	cachedMovie, err := testDB.GetMovieDetailsByID(ctx, 603)
+	if err != nil {
+		t.Fatalf("GetMovieDetailsByID() error = %v", err)
+	}
+	if len(cachedMovie.Credits.Cast) != 1 || len(cachedMovie.Credits.Crew) != 1 {
+		t.Fatalf("refreshed movie lost cast/crew relationships: %+v", cachedMovie.Credits)
+	}
+	watchedMovies, err := testDB.GetWatchedJoinMovie(ctx, user.ID)
+	if err != nil {
+		t.Fatalf("GetWatchedJoinMovie() error = %v", err)
+	}
+	if len(watchedMovies) != 1 || watchedMovies[0].MovieDetails.Movie.ID != 603 {
+		t.Fatalf("watch history after movie refresh = %+v", watchedMovies)
+	}
+	list, err := testDB.GetList(ctx, user.ID, listID)
+	if err != nil {
+		t.Fatalf("GetList() error = %v", err)
+	}
+	if len(list.Movies) != 1 || list.Movies[0].MovieDetails.Movie.ID != 603 {
+		t.Fatalf("list contents after movie refresh = %+v", list.Movies)
+	}
+}
+
+func TestMovieService_GetPersonDetailsUsesSeerrCombinedCredits(t *testing.T) {
+	seen := make(map[string]bool)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get(seerrAPIKeyHeader); got != "test-key" {
+			t.Errorf("API key header = %q, want %q", got, "test-key")
+		}
+		seen[r.URL.Path] = true
+		switch r.URL.Path {
+		case "/api/v1/person/66633":
+			_, _ = w.Write([]byte(`{"id":66633,"name":"Vince Gilligan","birthday":"1967-02-10","knownForDepartment":"Writing","popularity":2.8919,"biography":" A writer ","placeOfBirth":"Richmond, Virginia, USA","profilePath":"/vince.jpg","imdbId":"nm0319213"}`))
+		case "/api/v1/person/66633/combined_credits":
+			_, _ = w.Write([]byte(`{"id":66633,"cast":[{"id":18347,"mediaType":"tv","name":"Community","character":"Devon","firstAirDate":"2009-09-17","episodeCount":1,"voteAverage":8,"voteCount":2204}],"crew":[{"id":5715,"mediaType":"tv","name":"The Lone Gunmen","originalName":"The Lone Gunmen","creditId":"crew-credit","firstAirDate":"2001-03-04","episodeCount":6,"voteAverage":6.8,"voteCount":104,"department":"Writing","job":"Writer"}]}`))
+		default:
+			t.Errorf("unexpected request path %q", r.URL.Path)
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	seerrService, err := NewSeerrService(models.SeerrIntegration{BaseURL: server.URL, APIKey: "test-key"}, server.Client())
+	if err != nil {
+		t.Fatalf("NewSeerrService() error = %v", err)
+	}
+	movieService := newMovieServiceWithTestDB(t, seerrService, time.Hour)
+
+	person, err := movieService.GetPersonDetails(t.Context(), 66633)
+	if err != nil {
+		t.Fatalf("GetPersonDetails() error = %v", err)
+	}
+	if person.Name != "Vince Gilligan" || person.Birthday == nil || person.Birthday.Format("2006-01-02") != "1967-02-10" {
+		t.Fatalf("person details = %+v", person)
+	}
+	if len(person.ActingCredits) != 1 || person.ActingCredits[0].Title != "Community" || person.ActingCredits[0].EpisodeCount != 1 {
+		t.Fatalf("acting credits = %+v", person.ActingCredits)
+	}
+	if len(person.CrewCredits) != 1 || person.CrewCredits[0].Title != "The Lone Gunmen" || person.CrewCredits[0].EpisodeCount != 6 || person.CrewCredits[0].ReleaseDate == nil || person.CrewCredits[0].ReleaseDate.Format("2006-01-02") != "2001-03-04" {
+		t.Fatalf("crew credits = %+v", person.CrewCredits)
+	}
+	if !seen["/api/v1/person/66633"] || !seen["/api/v1/person/66633/combined_credits"] || len(seen) != 2 {
+		t.Fatalf("Seerr request paths = %+v, want person and combined credits only", seen)
+	}
+}
+
+func TestMovieService_SearchMultiUsesSeerrResults(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/search" {
+			t.Errorf("request path = %q, want /api/v1/search", r.URL.Path)
+		}
+		if got := r.URL.Query().Get("query"); got != "The Matrix & Co" {
+			t.Errorf("query = %q, want %q", got, "The Matrix & Co")
+		}
+		if got := r.Header.Get(seerrAPIKeyHeader); got != "test-key" {
+			t.Errorf("API key header = %q, want %q", got, "test-key")
+		}
+		_, _ = w.Write([]byte(`{"totalResults":6,"results":[{"id":603,"mediaType":"movie","title":"The Matrix","originalTitle":"The Matrix","posterPath":"/matrix.jpg","releaseDate":"1999-03-31","voteAverage":8.26},{"id":123,"mediaType":"tv","name":"Ignored TV result"},{"id":66633,"mediaType":"person","name":"Vince Gilligan","popularity":2.8919,"profilePath":"/vince.jpg"},{"id":42,"mediaType":"movie"},{"id":43,"mediaType":"person","originalName":"Fallback Person"},{"id":99,"mediaType":"collection","title":"Ignored collection"}]}`))
+	}))
+	defer server.Close()
+
+	seerrService, err := NewSeerrService(models.SeerrIntegration{BaseURL: server.URL, APIKey: "test-key"}, server.Client())
+	if err != nil {
+		t.Fatalf("NewSeerrService() error = %v", err)
+	}
+	movieService := newMovieServiceWithTestDB(t, seerrService, time.Hour)
+
+	results, err := movieService.SearchMulti(t.Context(), "The Matrix & Co")
+	if err != nil {
+		t.Fatalf("SearchMulti() error = %v", err)
+	}
+	if len(results) != 4 {
+		t.Fatalf("SearchMulti() returned %d results, want 4: %+v", len(results), results)
+	}
+	if results[0].ID != 603 || results[0].Title != "The Matrix" || results[0].SecondaryText != "1999" || results[0].VoteAverage != 8.26 || results[0].ImagePath != "/matrix.jpg" {
+		t.Fatalf("first result = %+v, want mapped Matrix result", results[0])
+	}
+	if results[1].ID != 66633 || results[1].Title != "Vince Gilligan" || results[1].SecondaryText != "" || results[1].ImagePath != "/vince.jpg" {
+		t.Fatalf("second result = %+v, want mapped person result", results[1])
+	}
+	if results[2].Title != untitledMovieTitle || results[2].SecondaryText != unknownYearSecondaryText {
+		t.Fatalf("movie with missing optional fields = %+v", results[2])
+	}
+	if results[3].Title != unknownPersonName || results[3].SecondaryText != "" {
+		t.Fatalf("person with missing optional fields = %+v", results[3])
+	}
+}
+
+func TestMovieService_SearchMultiReturnsSeerrErrorsWithoutFallback(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	seerrService, err := NewSeerrService(models.SeerrIntegration{BaseURL: server.URL, APIKey: "test-key"}, server.Client())
+	if err != nil {
+		t.Fatalf("NewSeerrService() error = %v", err)
+	}
+	movieService := newMovieServiceWithTestDB(t, seerrService, time.Hour)
+
+	results, err := movieService.SearchMulti(t.Context(), "The Matrix")
+	if !errors.Is(err, ErrSeerrUnavailable) {
+		t.Fatalf("SearchMulti() error = %v, want ErrSeerrUnavailable", err)
+	}
+	if results != nil {
+		t.Fatalf("SearchMulti() results = %+v, want nil on error", results)
+	}
+}
+
+func TestNewMovieServicePanicsWithoutSeerr(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("NewMovieService() did not panic without Seerr service")
+		}
+	}()
+
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+
+	NewMovieService(testDB, nil, time.Hour)
+}
+
+func TestMapSearchMovieToSearchResult(t *testing.T) {
 	tests := []struct {
 		name          string
 		id            int64
@@ -112,7 +351,7 @@ func TestMapTMDBSearchMultiMovieToSearchResult(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := mapTMDBSearchMultiMovieToSearchResult(
+			got := mapSearchMovieToSearchResult(
 				tt.id,
 				tt.title,
 				tt.originalTitle,
@@ -128,71 +367,46 @@ func TestMapTMDBSearchMultiMovieToSearchResult(t *testing.T) {
 	}
 }
 
-func TestMapTMDBSearchMultiPersonToSearchResult(t *testing.T) {
+func TestMapSearchPersonToSearchResult(t *testing.T) {
 	tests := []struct {
-		name         string
-		id           int64
-		personName   string
-		originalName string
-		profilePath  string
-		popularity   float32
-		expected     models.SearchResult
+		name        string
+		id          int64
+		personName  string
+		profilePath string
+		expected    models.SearchResult
 	}{
 		{
-			name:         "uses name and popularity",
-			id:           10,
-			personName:   "Christopher Nolan",
-			originalName: "Christopher Nolan",
-			profilePath:  "/nolan.jpg",
-			popularity:   34.7,
+			name:        "uses person name",
+			id:          10,
+			personName:  "Christopher Nolan",
+			profilePath: "/nolan.jpg",
 			expected: models.SearchResult{
-				ID:            10,
-				Title:         "Christopher Nolan",
-				ImagePath:     "/nolan.jpg",
-				SecondaryText: "Popularity 34.7",
-				Type:          models.SearchResultTypePerson,
+				ID:        10,
+				Title:     "Christopher Nolan",
+				ImagePath: "/nolan.jpg",
+				Type:      models.SearchResultTypePerson,
 			},
 		},
 		{
-			name:         "falls back to original name and unknown popularity",
-			id:           11,
-			personName:   "",
-			originalName: "Original Person",
-			profilePath:  "",
-			popularity:   0,
+			name:        "uses unknown name when person name missing",
+			id:          11,
+			personName:  "",
+			profilePath: "",
 			expected: models.SearchResult{
-				ID:            11,
-				Title:         "Original Person",
-				ImagePath:     "",
-				SecondaryText: unknownPopularityText,
-				Type:          models.SearchResultTypePerson,
-			},
-		},
-		{
-			name:         "uses fallback person name when names are empty",
-			id:           12,
-			personName:   "",
-			originalName: "",
-			profilePath:  "/unknown.jpg",
-			popularity:   -1,
-			expected: models.SearchResult{
-				ID:            12,
-				Title:         unknownPersonName,
-				ImagePath:     "/unknown.jpg",
-				SecondaryText: unknownPopularityText,
-				Type:          models.SearchResultTypePerson,
+				ID:        11,
+				Title:     unknownPersonName,
+				ImagePath: "",
+				Type:      models.SearchResultTypePerson,
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := mapTMDBSearchMultiPersonToSearchResult(
+			got := mapSearchPersonToSearchResult(
 				tt.id,
 				tt.personName,
-				tt.originalName,
 				tt.profilePath,
-				tt.popularity,
 			)
 
 			if !reflect.DeepEqual(got, tt.expected) {
@@ -202,48 +416,14 @@ func TestMapTMDBSearchMultiPersonToSearchResult(t *testing.T) {
 	}
 }
 
-func TestFormatPersonPopularity(t *testing.T) {
-	tests := []struct {
-		name       string
-		popularity float32
-		expected   string
-	}{
-		{
-			name:       "valid popularity",
-			popularity: 57.23,
-			expected:   "Popularity 57.2",
-		},
-		{
-			name:       "zero popularity",
-			popularity: 0,
-			expected:   unknownPopularityText,
-		},
-		{
-			name:       "negative popularity",
-			popularity: -3,
-			expected:   unknownPopularityText,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := formatPersonPopularity(tt.popularity)
-			if got != tt.expected {
-				t.Fatalf("expected %q, got %q", tt.expected, got)
-			}
-		})
-	}
-}
-
-func TestMapTMDBPersonDetailsToPersonDetailsPage_InvalidDatesDoNotFail(t *testing.T) {
-	person := mapTMDBPersonDetailsToPersonDetailsPage(tmdb.PersonDetails{
-		ID:                 55,
-		Name:               "",
-		Biography:          "  Biographical text  ",
-		KnownForDepartment: "Acting",
-		Birthday:           "not-a-date",
-		Deathday:           "2025-31-31",
-	}, nil, nil)
+func TestMapSeerrPersonDetailsToPersonDetailsPage_InvalidDatesDoNotFail(t *testing.T) {
+	person := mapSeerrPersonDetailsToPersonDetailsPage(seerrPersonMetadata{
+		ID:        55,
+		Name:      "",
+		Biography: "  Biographical text  ",
+		Birthday:  "not-a-date",
+		Deathday:  "2025-31-31",
+	}, nil)
 
 	if person == nil {
 		t.Fatal("expected mapped person details, got nil")
@@ -276,8 +456,8 @@ func TestMapTMDBPersonDetailsToPersonDetailsPage_InvalidDatesDoNotFail(t *testin
 	}
 }
 
-func TestMapTMDBPersonCastCreditToPersonCredit_FallbacksAndDateSelection(t *testing.T) {
-	credit := mapTMDBPersonCastCreditToPersonCredit(
+func TestMapPersonCastCreditToPersonCredit_FallbacksAndDateSelection(t *testing.T) {
+	credit := mapPersonCastCreditToPersonCredit(
 		101,
 		"credit-cast-1",
 		" tv ",
@@ -329,8 +509,8 @@ func TestMapTMDBPersonCastCreditToPersonCredit_FallbacksAndDateSelection(t *test
 	}
 }
 
-func TestMapTMDBPersonCrewCreditToPersonCredit_Fallbacks(t *testing.T) {
-	credit := mapTMDBPersonCrewCreditToPersonCredit(
+func TestMapPersonCrewCreditToPersonCredit_Fallbacks(t *testing.T) {
+	credit := mapPersonCrewCreditToPersonCredit(
 		303,
 		"credit-crew-1",
 		"movie",
@@ -379,8 +559,8 @@ func TestMapTMDBPersonCrewCreditToPersonCredit_Fallbacks(t *testing.T) {
 	}
 }
 
-func TestMapTMDBPersonCrewCreditToPersonCredit_UsesTVFallbackTitleAndDate(t *testing.T) {
-	credit := mapTMDBPersonCrewCreditToPersonCredit(
+func TestMapPersonCrewCreditToPersonCredit_UsesTVFallbackTitleAndDate(t *testing.T) {
+	credit := mapPersonCrewCreditToPersonCredit(
 		404,
 		"credit-crew-tv-1",
 		"tv",
@@ -413,25 +593,25 @@ func TestMapTMDBPersonCrewCreditToPersonCredit_UsesTVFallbackTitleAndDate(t *tes
 	}
 }
 
-func TestMapTMDBPersonDetailsToPersonDetailsPage_SortsCreditsByVotesAndInvolvement(t *testing.T) {
+func TestMapSeerrPersonDetailsToPersonDetailsPage_SortsCreditsByVotesAndInvolvement(t *testing.T) {
 	credits := mustPersonCombinedCreditsFromJSON(t, `
 		{
 			"cast": [
-				{"id": 300, "media_type": "movie", "title": "Third Item", "character": "Role 3", "release_date": "2011-01-01", "vote_average": 6.1, "vote_count": 1000},
-				{"id": 100, "media_type": "movie", "title": "First Item", "character": "Role 1", "release_date": "2024-01-01", "vote_average": 8.7, "vote_count": 12},
-				{"id": 200, "media_type": "tv", "name": "Second Show", "character": "Role 2", "first_air_date": "2022-01-01", "episode_count": 12, "vote_average": 7.4, "vote_count": 320}
+				{"id": 300, "mediaType": "movie", "title": "Third Item", "character": "Role 3", "releaseDate": "2011-01-01", "voteAverage": 6.1, "voteCount": 1000},
+				{"id": 100, "mediaType": "movie", "title": "First Item", "character": "Role 1", "releaseDate": "2024-01-01", "voteAverage": 8.7, "voteCount": 12},
+				{"id": 200, "mediaType": "tv", "name": "Second Show", "character": "Role 2", "firstAirDate": "2022-01-01", "episodeCount": 12, "voteAverage": 7.4, "voteCount": 320}
 			],
 			"crew": [
-				{"id": 90, "media_type": "movie", "title": "Crew Ninety", "job": "Producer", "department": "Production", "release_date": "2023-01-01", "vote_average": 6.7, "vote_count": 150},
-				{"id": 70, "media_type": "movie", "title": "Crew Seventy", "job": "Director", "department": "Directing", "release_date": "2025-01-01", "vote_average": 8.9, "vote_count": 40}
+				{"id": 90, "mediaType": "movie", "title": "Crew Ninety", "job": "Producer", "department": "Production", "releaseDate": "2023-01-01", "voteAverage": 6.7, "voteCount": 150},
+				{"id": 70, "mediaType": "movie", "title": "Crew Seventy", "job": "Director", "department": "Directing", "releaseDate": "2025-01-01", "voteAverage": 8.9, "voteCount": 40}
 			]
 		}
 	`)
 
-	person := mapTMDBPersonDetailsToPersonDetailsPage(tmdb.PersonDetails{
+	person := mapSeerrPersonDetailsToPersonDetailsPage(seerrPersonMetadata{
 		ID:   1,
 		Name: "Person",
-	}, credits, nil)
+	}, credits)
 
 	if person == nil {
 		t.Fatal("expected mapped person details, got nil")
@@ -451,22 +631,22 @@ func TestMapTMDBPersonDetailsToPersonDetailsPage_SortsCreditsByVotesAndInvolveme
 	}
 }
 
-func TestMapTMDBPersonDetailsToPersonDetailsPage_PrioritizesRecurringTVOverGuestAppearances(t *testing.T) {
+func TestMapSeerrPersonDetailsToPersonDetailsPage_PrioritizesRecurringTVOverGuestAppearances(t *testing.T) {
 	credits := mustPersonCombinedCreditsFromJSON(t, `
 		{
 			"cast": [
-				{"id": 10, "media_type": "tv", "name": "Guest Hit Show", "character": "Guest", "episode_count": 1, "vote_average": 9.2, "vote_count": 1200},
-				{"id": 20, "media_type": "tv", "name": "Recurring Show", "character": "Lead", "episode_count": 8, "vote_average": 8.1, "vote_count": 900},
-				{"id": 30, "media_type": "movie", "title": "Popular Movie", "character": "Lead", "vote_average": 7.9, "vote_count": 1400}
+				{"id": 10, "mediaType": "tv", "name": "Guest Hit Show", "character": "Guest", "episodeCount": 1, "voteAverage": 9.2, "voteCount": 1200},
+				{"id": 20, "mediaType": "tv", "name": "Recurring Show", "character": "Lead", "episodeCount": 8, "voteAverage": 8.1, "voteCount": 900},
+				{"id": 30, "mediaType": "movie", "title": "Popular Movie", "character": "Lead", "voteAverage": 7.9, "voteCount": 1400}
 			],
 			"crew": []
 		}
 	`)
 
-	person := mapTMDBPersonDetailsToPersonDetailsPage(tmdb.PersonDetails{
+	person := mapSeerrPersonDetailsToPersonDetailsPage(seerrPersonMetadata{
 		ID:   5,
 		Name: "Person",
-	}, credits, nil)
+	}, credits)
 
 	if person == nil {
 		t.Fatal("expected mapped person details, got nil")
@@ -478,32 +658,22 @@ func TestMapTMDBPersonDetailsToPersonDetailsPage_PrioritizesRecurringTVOverGuest
 	}
 }
 
-func TestMapTMDBPersonDetailsToPersonDetailsPage_PrioritizesRecurringTVCrewOverGuestCrew(t *testing.T) {
+func TestMapSeerrPersonDetailsToPersonDetailsPage_PrioritizesRecurringTVCrewOverGuestCrew(t *testing.T) {
 	credits := mustPersonCombinedCreditsFromJSON(t, `
 		{
 			"cast": [],
 			"crew": [
-				{"id": 10, "media_type": "tv", "title": "Guest Hit Show", "job": "Director", "department": "Directing", "credit_id": "tv-guest", "vote_average": 9.1, "vote_count": 1200},
-				{"id": 20, "media_type": "tv", "title": "Recurring Show", "job": "Director", "department": "Directing", "credit_id": "tv-recurring", "vote_average": 8.3, "vote_count": 900},
-				{"id": 30, "media_type": "movie", "title": "Popular Movie", "job": "Director", "department": "Directing", "credit_id": "movie-main", "vote_average": 8.0, "vote_count": 1400}
+				{"id": 10, "mediaType": "tv", "title": "Guest Hit Show", "name": "Guest Hit Show", "job": "Director", "department": "Directing", "creditId": "tv-guest", "episodeCount": 1, "voteAverage": 9.1, "voteCount": 1200},
+				{"id": 20, "mediaType": "tv", "title": "Recurring Show", "name": "Recurring Show", "job": "Director", "department": "Directing", "creditId": "tv-recurring", "episodeCount": 12, "voteAverage": 8.3, "voteCount": 900},
+				{"id": 30, "mediaType": "movie", "title": "Popular Movie", "job": "Director", "department": "Directing", "creditId": "movie-main", "voteAverage": 8.0, "voteCount": 1400}
 			]
 		}
 	`)
 
-	tvCredits := mustPersonTVCreditsFromJSON(t, `
-		{
-			"cast": [],
-			"crew": [
-				{"id": 10, "credit_id": "tv-guest", "episode_count": 1},
-				{"id": 20, "credit_id": "tv-recurring", "episode_count": 12}
-			]
-		}
-	`)
-
-	person := mapTMDBPersonDetailsToPersonDetailsPage(tmdb.PersonDetails{
+	person := mapSeerrPersonDetailsToPersonDetailsPage(seerrPersonMetadata{
 		ID:   6,
 		Name: "Person",
-	}, credits, tvCredits)
+	}, credits)
 
 	if person == nil {
 		t.Fatal("expected mapped person details, got nil")
@@ -515,29 +685,20 @@ func TestMapTMDBPersonDetailsToPersonDetailsPage_PrioritizesRecurringTVCrewOverG
 	}
 }
 
-func TestMapTMDBPersonDetailsToPersonDetailsPage_UsesTVCrewFallbackMetadata(t *testing.T) {
+func TestMapSeerrPersonDetailsToPersonDetailsPage_UsesTVCrewMetadata(t *testing.T) {
 	credits := mustPersonCombinedCreditsFromJSON(t, `
 		{
 			"cast": [],
 			"crew": [
-				{"id": 20, "media_type": "tv", "job": "Director", "department": "Directing", "credit_id": "tv-recurring", "vote_average": 8.3, "vote_count": 900}
+				{"id": 20, "mediaType": "tv", "name": "Recurring Show", "originalName": "Recurring Show Original", "firstAirDate": "2021-02-03", "episodeCount": 12, "job": "Director", "department": "Directing", "creditId": "tv-recurring", "voteAverage": 8.3, "voteCount": 900}
 			]
 		}
 	`)
 
-	tvCredits := mustPersonTVCreditsFromJSON(t, `
-		{
-			"cast": [],
-			"crew": [
-				{"id": 20, "credit_id": "tv-recurring", "name": "Recurring Show", "original_name": "Recurring Show Original", "first_air_date": "2021-02-03", "episode_count": 12}
-			]
-		}
-	`)
-
-	person := mapTMDBPersonDetailsToPersonDetailsPage(tmdb.PersonDetails{
+	person := mapSeerrPersonDetailsToPersonDetailsPage(seerrPersonMetadata{
 		ID:   7,
 		Name: "Person",
-	}, credits, tvCredits)
+	}, credits)
 
 	if person == nil {
 		t.Fatal("expected mapped person details, got nil")
@@ -567,21 +728,21 @@ func TestMapTMDBPersonDetailsToPersonDetailsPage_UsesTVCrewFallbackMetadata(t *t
 	}
 }
 
-func TestMapTMDBPersonDetailsToPersonDetailsPage_KnownForFallsBackToSortedCrewCredits(t *testing.T) {
+func TestMapSeerrPersonDetailsToPersonDetailsPage_KnownForFallsBackToSortedCrewCredits(t *testing.T) {
 	credits := mustPersonCombinedCreditsFromJSON(t, `
 		{
 			"cast": [],
 			"crew": [
-				{"id": 11, "media_type": "movie", "title": "Crew First", "job": "Producer", "department": "Production", "vote_average": 4.5, "vote_count": 300},
-				{"id": 22, "media_type": "movie", "title": "Crew Second", "job": "Director", "department": "Directing", "vote_average": 8.8, "vote_count": 500}
+				{"id": 11, "mediaType": "movie", "title": "Crew First", "job": "Producer", "department": "Production", "voteAverage": 4.5, "voteCount": 300},
+				{"id": 22, "mediaType": "movie", "title": "Crew Second", "job": "Director", "department": "Directing", "voteAverage": 8.8, "voteCount": 500}
 			]
 		}
 	`)
 
-	person := mapTMDBPersonDetailsToPersonDetailsPage(tmdb.PersonDetails{
+	person := mapSeerrPersonDetailsToPersonDetailsPage(seerrPersonMetadata{
 		ID:   2,
 		Name: "Person",
-	}, credits, nil)
+	}, credits)
 
 	if person == nil {
 		t.Fatal("expected mapped person details, got nil")
@@ -593,21 +754,21 @@ func TestMapTMDBPersonDetailsToPersonDetailsPage_KnownForFallsBackToSortedCrewCr
 	}
 }
 
-func TestMapTMDBPersonDetailsToPersonDetailsPage_PreservesTMDBOrderWhenVoteAverageTies(t *testing.T) {
+func TestMapSeerrPersonDetailsToPersonDetailsPage_PreservesResponseOrderWhenVoteAverageTies(t *testing.T) {
 	credits := mustPersonCombinedCreditsFromJSON(t, `
 		{
 			"cast": [
-				{"id": 31, "media_type": "movie", "title": "Tie First", "character": "Role A", "vote_average": 7.0, "vote_count": 180},
-				{"id": 42, "media_type": "movie", "title": "Tie Second", "character": "Role B", "vote_average": 7.0, "vote_count": 180}
+				{"id": 31, "mediaType": "movie", "title": "Tie First", "character": "Role A", "voteAverage": 7.0, "voteCount": 180},
+				{"id": 42, "mediaType": "movie", "title": "Tie Second", "character": "Role B", "voteAverage": 7.0, "voteCount": 180}
 			],
 			"crew": []
 		}
 	`)
 
-	person := mapTMDBPersonDetailsToPersonDetailsPage(tmdb.PersonDetails{
+	person := mapSeerrPersonDetailsToPersonDetailsPage(seerrPersonMetadata{
 		ID:   3,
 		Name: "Person",
-	}, credits, nil)
+	}, credits)
 
 	if person == nil {
 		t.Fatal("expected mapped person details, got nil")
@@ -619,21 +780,21 @@ func TestMapTMDBPersonDetailsToPersonDetailsPage_PreservesTMDBOrderWhenVoteAvera
 	}
 }
 
-func TestMapTMDBPersonDetailsToPersonDetailsPage_LowVoteOutliersDoNotLeadSorting(t *testing.T) {
+func TestMapSeerrPersonDetailsToPersonDetailsPage_LowVoteOutliersDoNotLeadSorting(t *testing.T) {
 	credits := mustPersonCombinedCreditsFromJSON(t, `
 		{
 			"cast": [
-				{"id": 1, "media_type": "movie", "title": "Reliable", "character": "Lead", "vote_average": 7.4, "vote_count": 500},
-				{"id": 2, "media_type": "movie", "title": "One Vote", "character": "Lead", "vote_average": 9.8, "vote_count": 1}
+				{"id": 1, "mediaType": "movie", "title": "Reliable", "character": "Lead", "voteAverage": 7.4, "voteCount": 500},
+				{"id": 2, "mediaType": "movie", "title": "One Vote", "character": "Lead", "voteAverage": 9.8, "voteCount": 1}
 			],
 			"crew": []
 		}
 	`)
 
-	person := mapTMDBPersonDetailsToPersonDetailsPage(tmdb.PersonDetails{
+	person := mapSeerrPersonDetailsToPersonDetailsPage(seerrPersonMetadata{
 		ID:   4,
 		Name: "Person",
-	}, credits, nil)
+	}, credits)
 
 	if person == nil {
 		t.Fatal("expected mapped person details, got nil")
@@ -655,23 +816,12 @@ func TestPersonCreditDisplayTitle_UsesFallbacks(t *testing.T) {
 	}
 }
 
-func mustPersonCombinedCreditsFromJSON(t *testing.T, payload string) *tmdb.PersonCombinedCredits {
+func mustPersonCombinedCreditsFromJSON(t *testing.T, payload string) *seerrPersonCombinedCredits {
 	t.Helper()
 
-	var credits tmdb.PersonCombinedCredits
+	var credits seerrPersonCombinedCredits
 	if err := json.Unmarshal([]byte(payload), &credits); err != nil {
 		t.Fatalf("failed to unmarshal person combined credits fixture: %v", err)
-	}
-
-	return &credits
-}
-
-func mustPersonTVCreditsFromJSON(t *testing.T, payload string) *tmdb.PersonTVCredits {
-	t.Helper()
-
-	var credits tmdb.PersonTVCredits
-	if err := json.Unmarshal([]byte(payload), &credits); err != nil {
-		t.Fatalf("failed to unmarshal person tv credits fixture: %v", err)
 	}
 
 	return &credits

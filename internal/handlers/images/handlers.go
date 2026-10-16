@@ -26,6 +26,10 @@ type Handlers struct {
 }
 
 func NewHandlers(imageService imageService) *Handlers {
+	if imageService == nil {
+		panic("image service is required")
+	}
+
 	return &Handlers{imageService: imageService}
 }
 
@@ -36,12 +40,6 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 }
 
 func (h *Handlers) TMDBImage(w http.ResponseWriter, r *http.Request) {
-	if h.imageService == nil {
-		log.Error("tmdb image service not configured")
-		http.Error(w, "TMDB image service not configured", http.StatusInternalServerError)
-		return
-	}
-
 	size := chi.URLParam(r, "size")
 	imagePath := chi.URLParam(r, "imagePath")
 

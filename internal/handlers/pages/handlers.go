@@ -31,7 +31,7 @@ const (
 var log = logging.Get("pages")
 
 type Handlers struct {
-	tmdbService    *services.MovieService
+	movieService   *services.MovieService
 	watchedService *services.WatchedService
 	listService    *services.ListService
 	homeService    *services.HomeService
@@ -40,15 +40,34 @@ type Handlers struct {
 }
 
 func NewHandlers(
-	tmdbService *services.MovieService,
+	movieService *services.MovieService,
 	watchedService *services.WatchedService,
 	listService *services.ListService,
 	homeService *services.HomeService,
 	authService *services.AuthService,
 	seerrService *services.SeerrService,
 ) *Handlers {
+	if movieService == nil {
+		panic("movie service is required")
+	}
+	if watchedService == nil {
+		panic("watched service is required")
+	}
+	if listService == nil {
+		panic("list service is required")
+	}
+	if homeService == nil {
+		panic("home service is required")
+	}
+	if authService == nil {
+		panic("auth service is required")
+	}
+	if seerrService == nil {
+		panic("Seerr service is required")
+	}
+
 	return &Handlers{
-		tmdbService:    tmdbService,
+		movieService:   movieService,
 		watchedService: watchedService,
 		listService:    listService,
 		homeService:    homeService,
@@ -180,7 +199,7 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("serving movie page", "movieID", id)
 
-	movie, err := h.tmdbService.GetMovieDetails(ctx, id)
+	movie, err := h.movieService.GetMovieDetails(ctx, id)
 	if err != nil {
 		log.Error("failed to get movie details", "movieID", id, "error", err)
 		render500Error(w, r)
@@ -222,15 +241,9 @@ func (h *Handlers) PersonPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.tmdbService == nil {
-		log.Error("tmdb service not configured for person page", "personID", id)
-		render500Error(w, r)
-		return
-	}
-
 	log.Debug("serving person page", "personID", id)
 
-	personDetails, err := h.tmdbService.GetPersonDetails(ctx, id)
+	personDetails, err := h.movieService.GetPersonDetails(ctx, id)
 	if err != nil {
 		log.Error("failed to get person details", "personID", id, "error", err)
 		render500Error(w, r)
@@ -290,7 +303,7 @@ func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := h.tmdbService.SearchMulti(query)
+	results, err := h.movieService.SearchMulti(r.Context(), query)
 	if err != nil {
 		log.Error("failed to search for movies and people", "query", query, "error", err)
 		render500Error(w, r)

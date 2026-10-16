@@ -65,23 +65,19 @@ templ Search(query string, results []models.SearchResult) {
 										<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight">{ result.Title }</h3>
 										<div class="flex items-center justify-between">
 											<div class="flex items-center">
-										@icon.Calendar(icon.Props{Class: "size-3"})
+												@icon.Calendar(icon.Props{Class: "size-3"})
 												<p class="ml-2 text-xs opacity-90">{ result.SecondaryText }</p>
 											</div>
 											if result.VoteAverage > 0 {
 												<div class="flex items-center">
-											@icon.Star(icon.Props{Class: "size-3 fill-[orange] stroke-[orange]"})
+													@icon.Star(icon.Props{Class: "size-3 fill-[orange] stroke-[orange]"})
 													<span class="ml-1 text-xs">{ fmt.Sprintf("%.1f", result.VoteAverage) }</span>
 												</div>
 											}
 										</div>
 									} else {
-									<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight">{ result.Title }</h3>
-									<div class="flex items-center">
-									@icon.User(icon.Props{Class: "size-3"})
-										<p class="ml-2 text-xs opacity-90">{ result.SecondaryText }</p>
-									</div>
-								}
+										<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight">{ result.Title }</h3>
+									}
 								}
 							}
 						</div>
@@ -103,7 +99,7 @@ templ Search(query string, results []models.SearchResult) {
 							}
 						</p>
 						<div class="text-gray-500 flex flex-col items-center">
-						@icon.Search(icon.Props{Class: "mb-2 size-10 text-[gray] opacity-50"})
+							@icon.Search(icon.Props{Class: "mb-2 size-10 text-[gray] opacity-50"})
 							<p class="text-xs">No movies or people to display</p>
 						</div>
 					</div>

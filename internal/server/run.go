@@ -3,10 +3,12 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -15,8 +17,6 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/routes"
 	"github.com/marcosalvi-01/gowatch/internal/services"
 	"github.com/marcosalvi-01/gowatch/logging"
-
-	tmdb "github.com/cyruzin/golang-tmdb"
 )
 
 // Config holds the application configuration.
@@ -25,12 +25,10 @@ type Config struct {
 	Timeout              time.Duration `mapstructure:"request_timeout" yaml:"request_timeout"`
 	DBPath               string        `mapstructure:"db_path" yaml:"db_path"`
 	DBName               string        `mapstructure:"db_name" yaml:"db_name"`
-	TMDBAPIKey           string        `mapstructure:"tmdb_api_key" yaml:"tmdb_api_key"`
 	SeerrBaseURL         string        `mapstructure:"seerr_base_url" yaml:"seerr_base_url"`
 	SeerrAPIKey          string        `mapstructure:"seerr_api_key" yaml:"seerr_api_key"`
-	TMDBPosterPrefix     string        `mapstructure:"tmdb_poster_prefix" yaml:"tmdb_poster_prefix"`
 	CacheTTL             time.Duration `mapstructure:"cache_ttl" yaml:"cache_ttl"`
-	ImageCacheTTL        time.Duration `mapstructure:"image_cache_ttl" yaml:"tmdb_image_cache_ttl"`
+	ImageCacheTTL        time.Duration `mapstructure:"image_cache_ttl" yaml:"image_cache_ttl"`
 	ImageCleanupInterval time.Duration `mapstructure:"image_cleanup_interval" yaml:"image_cleanup_interval"`
 	SessionExpiry        time.Duration `mapstructure:"session_expiry" yaml:"session_expiry"`
 	ShutdownTimeout      time.Duration `mapstructure:"shutdown_timeout" yaml:"shutdown_timeout"`
@@ -57,32 +55,6 @@ func RunServer(cfg Config) {
 		"imageCleanupInterval", cfg.ImageCleanupInterval,
 	)
 
-	db, err := db.NewSqliteDB(cfg.DBPath, cfg.DBName)
-	if err != nil {
-		log.Error("failed to initialize database", "error", err)
-		panic(err)
-	}
-	defer func() {
-		_ = db.Close()
-	}()
-
-	tmdbClient, err := tmdb.Init(cfg.TMDBAPIKey)
-	if err != nil {
-		log.Error("failed to initialize TMDB client", "error", err)
-		panic(err)
-	}
-
-	log.Debug("initializing services")
-	movieService := services.NewMovieService(db, tmdbClient, cfg.CacheTTL)
-	imageCacheDir := filepath.Join(cfg.DBPath, "tmdb-images")
-	if err := os.MkdirAll(imageCacheDir, 0o750); err != nil {
-		log.Error("failed to create image cache directory", "path", imageCacheDir, "error", err)
-		panic(err)
-	}
-	tmdbImageService := services.NewTMDBImageService(imageCacheDir, cfg.ImageCacheTTL, &http.Client{Timeout: cfg.Timeout})
-	listService := services.NewListService(db, movieService)
-	watchedService := services.NewWatchedService(db, listService, movieService)
-	authService := services.NewAuthService(db, listService, cfg.SessionExpiry, cfg.HTTPS, cfg.AdminDefaultPassword)
 	seerrService, err := services.NewSeerrService(models.SeerrIntegration{
 		BaseURL: cfg.SeerrBaseURL,
 		APIKey:  cfg.SeerrAPIKey,
@@ -92,6 +64,26 @@ func RunServer(cfg Config) {
 		panic(err)
 	}
 
+	db, err := db.NewSqliteDB(cfg.DBPath, cfg.DBName)
+	if err != nil {
+		log.Error("failed to initialize database", "error", err)
+		panic(err)
+	}
+	defer func() {
+		_ = db.Close()
+	}()
+
+	log.Debug("initializing services")
+	movieService := services.NewMovieService(db, seerrService, cfg.CacheTTL)
+	imageCacheDir := filepath.Join(cfg.DBPath, "tmdb-images")
+	if err := os.MkdirAll(imageCacheDir, 0o750); err != nil {
+		log.Error("failed to create image cache directory", "path", imageCacheDir, "error", err)
+		panic(err)
+	}
+	tmdbImageService := services.NewTMDBImageService(imageCacheDir, cfg.ImageCacheTTL, &http.Client{Timeout: cfg.Timeout})
+	listService := services.NewListService(db, movieService)
+	watchedService := services.NewWatchedService(db, listService, movieService)
+	authService := services.NewAuthService(db, listService, cfg.SessionExpiry, cfg.HTTPS, cfg.AdminDefaultPassword)
 	router := routes.NewRouter(db, movieService, tmdbImageService, watchedService, listService, authService, seerrService)
 
 	server := &http.Server{
@@ -163,4 +155,14 @@ func RunServer(cfg Config) {
 	}
 
 	log.Info("server shutdown complete")
+}
+
+func (cfg Config) Validate() error {
+	if strings.TrimSpace(cfg.SeerrBaseURL) == "" {
+		return errors.New("SEERR_BASE_URL is required")
+	}
+	if strings.TrimSpace(cfg.SeerrAPIKey) == "" {
+		return errors.New("SEERR_API_KEY is required")
+	}
+	return nil
 }

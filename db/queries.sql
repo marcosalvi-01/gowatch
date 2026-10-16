@@ -145,25 +145,17 @@ INSERT INTO
     person (
         id,
         name,
-        original_name,
         profile_path,
-        known_for_department,
-        popularity,
         gender,
-        adult,
         updated_at
     )
 VALUES
-    (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(id) DO
+    (?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(id) DO
 UPDATE
 SET
     name = excluded.name,
-    original_name = excluded.original_name,
     profile_path = excluded.profile_path,
-    known_for_department = excluded.known_for_department,
-    popularity = excluded.popularity,
     gender = excluded.gender,
-    adult = excluded.adult,
     updated_at = CURRENT_TIMESTAMP;
 
 -- name: UpsertCast :exec

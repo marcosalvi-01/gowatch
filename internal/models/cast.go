@@ -20,14 +20,10 @@ type Crew struct {
 }
 
 type Person struct {
-	ID                 int64
-	Name               string
-	OriginalName       string
-	ProfilePath        string
-	KnownForDepartment string
-	Popularity         float64
-	Gender             int64
-	Adult              bool
+	ID          int64
+	Name        string
+	ProfilePath string
+	Gender      int64
 }
 
 type MovieCredits struct {

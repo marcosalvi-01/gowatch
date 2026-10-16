@@ -14,12 +14,10 @@ import (
 	"github.com/marcosalvi-01/gowatch/db"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/logging"
-
-	tmdb "github.com/cyruzin/golang-tmdb"
 )
 
 type MovieService struct {
-	client   *tmdb.Client
+	seerr    *SeerrService
 	db       db.DB
 	log      *slog.Logger
 	cacheTTL time.Duration
@@ -27,36 +25,41 @@ type MovieService struct {
 
 const (
 	unknownYearSecondaryText = "Unknown year"
-	unknownPopularityText    = "Popularity unknown"
-	popularityPrefix         = "Popularity "
 	untitledMovieTitle       = "Untitled movie"
 	unknownPersonName        = "Unknown person"
 	untitledPersonCredit     = "Untitled credit"
 	unknownPersonRole        = "Role unavailable"
-	tmdbDateLayout           = "2006-01-02"
+	metadataDateLayout       = "2006-01-02"
 	personCreditMinimumVotes = 100
 	personCreditMediaTypeTV  = "tv"
 	personCreditMediumRoleEP = 2
 	personCreditHighRoleEP   = 5
 )
 
-func NewMovieService(db db.DB, client *tmdb.Client, cacheTTL time.Duration) *MovieService {
+func NewMovieService(db db.DB, seerr *SeerrService, cacheTTL time.Duration) *MovieService {
+	if db == nil {
+		panic("database is required")
+	}
+	if seerr == nil {
+		panic("seerr service is required")
+	}
+
 	log := logging.Get("movie service")
 	return &MovieService{
-		client:   client,
+		seerr:    seerr,
 		db:       db,
 		log:      log,
 		cacheTTL: cacheTTL,
 	}
 }
 
-func (s *MovieService) SearchMulti(query string) ([]models.SearchResult, error) {
+func (s *MovieService) SearchMulti(ctx context.Context, query string) ([]models.SearchResult, error) {
 	s.log.Debug("searching movies and people", "query", query)
 
-	search, err := s.client.GetSearchMulti(query, nil)
+	search, err := s.seerr.searchMetadata(ctx, query)
 	if err != nil {
-		s.log.Error("TMDB multi search failed", "query", query, "error", err)
-		return nil, fmt.Errorf("error searching TMDB multi for query '%s': %w", query, err)
+		s.log.Error("Seerr multi search failed", "query", query, "error", err)
+		return nil, fmt.Errorf("error searching Seerr for query %q: %w", query, err)
 	}
 
 	results := make([]models.SearchResult, 0, len(search.Results))
@@ -66,7 +69,7 @@ func (s *MovieService) SearchMulti(query string) ([]models.SearchResult, error) 
 	for _, result := range search.Results {
 		switch result.MediaType {
 		case string(models.SearchResultTypeMovie):
-			results = append(results, mapTMDBSearchMultiMovieToSearchResult(
+			results = append(results, mapSearchMovieToSearchResult(
 				result.ID,
 				result.Title,
 				result.OriginalTitle,
@@ -76,12 +79,10 @@ func (s *MovieService) SearchMulti(query string) ([]models.SearchResult, error) 
 			))
 			movieCount++
 		case string(models.SearchResultTypePerson):
-			results = append(results, mapTMDBSearchMultiPersonToSearchResult(
+			results = append(results, mapSearchPersonToSearchResult(
 				result.ID,
 				result.Name,
-				result.OriginalName,
 				result.ProfilePath,
-				result.Popularity,
 			))
 			personCount++
 		}
@@ -90,7 +91,7 @@ func (s *MovieService) SearchMulti(query string) ([]models.SearchResult, error) 
 	s.log.Info(
 		"multi search completed",
 		"query", query,
-		"tmdbResultCount", search.TotalResults,
+		"seerrResultCount", search.TotalResults,
 		"movieCount", movieCount,
 		"personCount", personCount,
 		"resultCount", len(results),
@@ -99,7 +100,7 @@ func (s *MovieService) SearchMulti(query string) ([]models.SearchResult, error) 
 	return results, nil
 }
 
-func mapTMDBSearchMultiMovieToSearchResult(
+func mapSearchMovieToSearchResult(
 	id int64,
 	title string,
 	originalTitle string,
@@ -130,38 +131,22 @@ func mapTMDBSearchMultiMovieToSearchResult(
 	}
 }
 
-func mapTMDBSearchMultiPersonToSearchResult(
+func mapSearchPersonToSearchResult(
 	id int64,
 	name string,
-	originalName string,
 	profilePath string,
-	popularity float32,
 ) models.SearchResult {
 	searchName := name
-	if searchName == "" {
-		searchName = originalName
-	}
 	if searchName == "" {
 		searchName = unknownPersonName
 	}
 
-	secondaryText := formatPersonPopularity(popularity)
-
 	return models.SearchResult{
-		ID:            id,
-		Title:         searchName,
-		ImagePath:     profilePath,
-		SecondaryText: secondaryText,
-		Type:          models.SearchResultTypePerson,
+		ID:        id,
+		Title:     searchName,
+		ImagePath: profilePath,
+		Type:      models.SearchResultTypePerson,
 	}
-}
-
-func formatPersonPopularity(popularity float32) string {
-	if popularity <= 0 {
-		return unknownPopularityText
-	}
-
-	return fmt.Sprintf("%s%.1f", popularityPrefix, popularity)
 }
 
 func (s *MovieService) GetMovieDetails(ctx context.Context, id int64) (*models.MovieDetails, error) {
@@ -174,40 +159,24 @@ func (s *MovieService) GetMovieDetails(ctx context.Context, id int64) (*models.M
 	}
 
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		s.log.Error("failed to get movie details from database. Fetching from TMDB", "movieID", id, "error", err)
+		s.log.Error("failed to get movie details from database. Fetching from Seerr", "movieID", id, "error", err)
 	}
 
-	if s.client == nil {
-		err := fmt.Errorf("tmdb client not configured")
-		s.log.Error("tmdb client not configured", "movieID", id)
-		return nil, err
-	}
+	s.log.Info("movie details cache miss, fetching from Seerr", "movieID", id)
 
-	s.log.Info("movie details cache miss, fetching from TMDB", "movieID", id)
-
-	// cache miss
-	details, err := s.client.GetMovieDetails(int(id), nil)
+	details, err := s.seerr.movieMetadata(ctx, id)
 	if err != nil {
-		s.log.Error("failed to get movie details from TMDB", "movieID", id, "error", err)
-		return nil, fmt.Errorf("error getting TMDB movie details for id '%d': %w", id, err)
+		s.log.Error("failed to get movie details from Seerr", "movieID", id, "error", err)
+		return nil, fmt.Errorf("get Seerr movie details for id %d: %w", id, err)
 	}
 
-	s.log.Debug("successfully fetched movie details from TMDB", "movieID", id, "title", details.Title)
-
-	movie, err = models.MovieDetailsFromTMDBMovieDetails(*details)
+	movie, err = mapSeerrMovieMetadataToMovieDetails(*details)
 	if err != nil {
-		s.log.Error("failed to convert TMDB movie details to internal model", "movieID", id, "error", err)
-		return nil, fmt.Errorf("failed to convert from TMDB results to internal model: %w", err)
+		s.log.Error("failed to convert Seerr movie details to internal model", "movieID", id, "error", err)
+		return nil, fmt.Errorf("convert Seerr movie details: %w", err)
 	}
 
-	// remember the credits
-	credits, err := s.getMovieCredits(id)
-	if err != nil {
-		s.log.Error("failed to get movie credits", "movieID", id, "error", err)
-		return nil, fmt.Errorf("failed to get movie credits: %w", err)
-	}
-
-	movie.Credits = credits
+	s.log.Debug("successfully mapped Seerr movie details", "movieID", id, "title", movie.Movie.Title)
 
 	err = s.db.UpsertMovie(ctx, movie)
 	if err != nil {
@@ -219,6 +188,82 @@ func (s *MovieService) GetMovieDetails(ctx context.Context, id int64) (*models.M
 	return movie, nil
 }
 
+func mapSeerrMovieMetadataToMovieDetails(details seerrMovieMetadata) (*models.MovieDetails, error) {
+	var releaseDate *time.Time
+	if details.ReleaseDate != "" {
+		parsedDate, err := time.Parse(metadataDateLayout, details.ReleaseDate)
+		if err != nil {
+			return nil, fmt.Errorf("parse release date %q: %w", details.ReleaseDate, err)
+		}
+		releaseDate = &parsedDate
+	}
+
+	movie := &models.MovieDetails{
+		Movie: models.Movie{
+			ID:               details.ID,
+			Title:            details.Title,
+			OriginalTitle:    details.OriginalTitle,
+			OriginalLanguage: details.OriginalLanguage,
+			Overview:         details.Overview,
+			ReleaseDate:      releaseDate,
+			PosterPath:       details.PosterPath,
+			BackdropPath:     details.BackdropPath,
+			Popularity:       details.Popularity,
+			VoteCount:        details.VoteCount,
+			VoteAverage:      details.VoteAverage,
+		},
+		Homepage: details.Homepage,
+		IMDbID:   details.IMDbID,
+		Budget:   details.Budget,
+		Revenue:  details.Revenue,
+		Runtime:  details.Runtime,
+		Status:   details.Status,
+		Tagline:  details.Tagline,
+		Genres:   make([]models.Genre, len(details.Genres)),
+		Credits: models.MovieCredits{
+			Cast: make([]models.Cast, len(details.Credits.Cast)),
+			Crew: make([]models.Crew, len(details.Credits.Crew)),
+		},
+	}
+
+	for i, genre := range details.Genres {
+		movie.Genres[i] = models.Genre{ID: genre.ID, Name: genre.Name}
+	}
+	for i, cast := range details.Credits.Cast {
+		movie.Credits.Cast[i] = models.Cast{
+			MovieID:   details.ID,
+			PersonID:  cast.ID,
+			CastID:    cast.CastID,
+			CreditID:  cast.CreditID,
+			Character: cast.Character,
+			CastOrder: cast.Order,
+			Person: models.Person{
+				ID:          cast.ID,
+				Name:        cast.Name,
+				ProfilePath: cast.ProfilePath,
+				Gender:      cast.Gender,
+			},
+		}
+	}
+	for i, crew := range details.Credits.Crew {
+		movie.Credits.Crew[i] = models.Crew{
+			MovieID:    details.ID,
+			PersonID:   crew.ID,
+			CreditID:   crew.CreditID,
+			Job:        crew.Job,
+			Department: crew.Department,
+			Person: models.Person{
+				ID:          crew.ID,
+				Name:        crew.Name,
+				ProfilePath: crew.ProfilePath,
+				Gender:      crew.Gender,
+			},
+		}
+	}
+
+	return movie, nil
+}
+
 func (s *MovieService) GetPersonDetails(ctx context.Context, id int64) (*models.PersonDetailsPage, error) {
 	if err := ctx.Err(); err != nil {
 		s.log.Error("request context canceled before person details fetch", "personID", id, "error", err)
@@ -227,37 +272,19 @@ func (s *MovieService) GetPersonDetails(ctx context.Context, id int64) (*models.
 
 	s.log.Debug("getting person details", "personID", id)
 
-	if s.client == nil {
-		err := fmt.Errorf("tmdb client not configured")
-		s.log.Error("tmdb client not configured", "personID", id)
-		return nil, err
-	}
-
-	details, err := s.client.GetPersonDetails(int(id), nil)
+	details, err := s.seerr.personMetadata(ctx, id)
 	if err != nil {
-		s.log.Error("failed to get person details from TMDB", "personID", id, "error", err)
-		return nil, fmt.Errorf("error getting TMDB person details for id '%d': %w", id, err)
+		s.log.Error("failed to get person details from Seerr", "personID", id, "error", err)
+		return nil, fmt.Errorf("get Seerr person details for id %d: %w", id, err)
 	}
 
-	if details == nil {
-		err := fmt.Errorf("tmdb person details response was nil for id '%d'", id)
-		s.log.Error("received nil person details from TMDB", "personID", id)
-		return nil, err
-	}
-
-	credits, err := s.client.GetPersonCombinedCredits(int(id), nil)
+	credits, err := s.seerr.personCombinedCredits(ctx, id)
 	if err != nil {
-		s.log.Error("failed to get person combined credits from TMDB", "personID", id, "error", err)
-		return nil, fmt.Errorf("error getting TMDB person combined credits for id '%d': %w", id, err)
+		s.log.Error("failed to get person combined credits from Seerr", "personID", id, "error", err)
+		return nil, fmt.Errorf("get Seerr person combined credits for id %d: %w", id, err)
 	}
 
-	var tvCredits *tmdb.PersonTVCredits
-	tvCredits, err = s.client.GetPersonTVCredits(int(id), nil)
-	if err != nil {
-		s.log.Warn("failed to get person tv credits from TMDB; continuing without tv episode counts", "personID", id, "error", err)
-	}
-
-	person := mapTMDBPersonDetailsToPersonDetailsPage(*details, credits, tvCredits)
+	person := mapSeerrPersonDetailsToPersonDetailsPage(*details, credits)
 
 	s.log.Info(
 		"person details fetched successfully",
@@ -270,37 +297,32 @@ func (s *MovieService) GetPersonDetails(ctx context.Context, id int64) (*models.
 	return person, nil
 }
 
-func mapTMDBPersonDetailsToPersonDetailsPage(
-	details tmdb.PersonDetails,
-	credits *tmdb.PersonCombinedCredits,
-	tvCredits *tmdb.PersonTVCredits,
+func mapSeerrPersonDetailsToPersonDetailsPage(
+	details seerrPersonMetadata,
+	credits *seerrPersonCombinedCredits,
 ) *models.PersonDetailsPage {
 	person := &models.PersonDetailsPage{
-		ID:                 details.ID,
-		Name:               personDisplayName(details.Name),
-		Biography:          strings.TrimSpace(details.Biography),
-		ProfilePath:        details.ProfilePath,
-		KnownForDepartment: strings.TrimSpace(details.KnownForDepartment),
-		Popularity:         details.Popularity,
-		Birthday:           parseTMDBDate(details.Birthday),
-		Deathday:           parseTMDBDate(details.Deathday),
-		PlaceOfBirth:       strings.TrimSpace(details.PlaceOfBirth),
-		IMDbID:             strings.TrimSpace(details.IMDbID),
-		Homepage:           strings.TrimSpace(details.Homepage),
-		KnownFor:           []models.PersonCredit{},
-		ActingCredits:      []models.PersonCredit{},
-		CrewCredits:        []models.PersonCredit{},
+		ID:            details.ID,
+		Name:          personDisplayName(details.Name),
+		Biography:     strings.TrimSpace(details.Biography),
+		ProfilePath:   details.ProfilePath,
+		Birthday:      parseMetadataDate(details.Birthday),
+		Deathday:      parseMetadataDate(details.Deathday),
+		PlaceOfBirth:  strings.TrimSpace(details.PlaceOfBirth),
+		IMDbID:        strings.TrimSpace(details.IMDbID),
+		Homepage:      strings.TrimSpace(details.Homepage),
+		KnownFor:      []models.PersonCredit{},
+		ActingCredits: []models.PersonCredit{},
+		CrewCredits:   []models.PersonCredit{},
 	}
 
 	if credits == nil {
 		return person
 	}
 
-	tvCrewMetadataByCreditID, tvCrewMetadataByID := personTVCrewMetadataLookup(tvCredits)
-
 	person.ActingCredits = make([]models.PersonCredit, 0, len(credits.Cast))
 	for _, credit := range credits.Cast {
-		person.ActingCredits = append(person.ActingCredits, mapTMDBPersonCastCreditToPersonCredit(
+		person.ActingCredits = append(person.ActingCredits, mapPersonCastCreditToPersonCredit(
 			credit.ID,
 			credit.CreditID,
 			credit.MediaType,
@@ -322,36 +344,25 @@ func mapTMDBPersonDetailsToPersonDetailsPage(
 
 	person.CrewCredits = make([]models.PersonCredit, 0, len(credits.Crew))
 	for _, credit := range credits.Crew {
-		tvCrewMetadata := personTVCrewMetadata{}
-		if strings.EqualFold(credit.MediaType, personCreditMediaTypeTV) {
-			tvCrewMetadata = lookupPersonTVCrewMetadata(
-				credit.CreditID,
-				credit.ID,
-				tvCrewMetadataByCreditID,
-				tvCrewMetadataByID,
-			)
-		}
-
-		person.CrewCredits = append(person.CrewCredits, mapTMDBPersonCrewCreditToPersonCredit(
+		person.CrewCredits = append(person.CrewCredits, mapPersonCrewCreditToPersonCredit(
 			credit.ID,
 			credit.CreditID,
 			credit.MediaType,
 			credit.Title,
-			tvCrewMetadata.Name,
+			credit.Name,
 			credit.OriginalTitle,
-			tvCrewMetadata.OriginalName,
+			credit.OriginalName,
 			credit.Job,
 			credit.Department,
 			credit.ReleaseDate,
-			tvCrewMetadata.FirstAirDate,
-			tvCrewMetadata.EpisodeCount,
+			credit.FirstAirDate,
+			credit.EpisodeCount,
 			credit.BackdropPath,
 			credit.PosterPath,
 			credit.VoteAverage,
 			credit.VoteCount,
 			credit.Popularity,
 		))
-
 	}
 
 	sortPersonCreditsByVoteAverageDesc(person.ActingCredits)
@@ -365,7 +376,7 @@ func mapTMDBPersonDetailsToPersonDetailsPage(
 	return person
 }
 
-func mapTMDBPersonCastCreditToPersonCredit(
+func mapPersonCastCreditToPersonCredit(
 	id int64,
 	creditID string,
 	mediaType string,
@@ -399,7 +410,7 @@ func mapTMDBPersonCastCreditToPersonCredit(
 	}
 }
 
-func mapTMDBPersonCrewCreditToPersonCredit(
+func mapPersonCrewCreditToPersonCredit(
 	id int64,
 	creditID string,
 	mediaType string,
@@ -435,13 +446,13 @@ func mapTMDBPersonCrewCreditToPersonCredit(
 	}
 }
 
-func parseTMDBDate(value string) *time.Time {
+func parseMetadataDate(value string) *time.Time {
 	trimmedValue := strings.TrimSpace(value)
 	if trimmedValue == "" {
 		return nil
 	}
 
-	parsedDate, err := time.Parse(tmdbDateLayout, trimmedValue)
+	parsedDate, err := time.Parse(metadataDateLayout, trimmedValue)
 	if err != nil {
 		return nil
 	}
@@ -450,11 +461,11 @@ func parseTMDBDate(value string) *time.Time {
 }
 
 func firstKnownDate(primaryDate, fallbackDate string) *time.Time {
-	if parsedPrimaryDate := parseTMDBDate(primaryDate); parsedPrimaryDate != nil {
+	if parsedPrimaryDate := parseMetadataDate(primaryDate); parsedPrimaryDate != nil {
 		return parsedPrimaryDate
 	}
 
-	return parseTMDBDate(fallbackDate)
+	return parseMetadataDate(fallbackDate)
 }
 
 func personDisplayName(name string) string {
@@ -532,66 +543,6 @@ func personCreditHasEnoughVotes(credit models.PersonCredit) bool {
 	return credit.VoteCount >= personCreditMinimumVotes
 }
 
-type personTVCrewMetadata struct {
-	EpisodeCount int
-	Name         string
-	OriginalName string
-	FirstAirDate string
-}
-
-func personTVCrewMetadataLookup(tvCredits *tmdb.PersonTVCredits) (map[string]personTVCrewMetadata, map[int64]personTVCrewMetadata) {
-	if tvCredits == nil || len(tvCredits.Crew) == 0 {
-		return nil, nil
-	}
-
-	metadataByCreditID := make(map[string]personTVCrewMetadata, len(tvCredits.Crew))
-	metadataByID := make(map[int64]personTVCrewMetadata, len(tvCredits.Crew))
-
-	for _, credit := range tvCredits.Crew {
-		metadata := personTVCrewMetadata{
-			EpisodeCount: credit.EpisodeCount,
-			Name:         credit.Name,
-			OriginalName: credit.OriginalName,
-			FirstAirDate: credit.FirstAirDate,
-		}
-
-		if existingMetadata, exists := metadataByID[credit.ID]; !exists || credit.EpisodeCount > existingMetadata.EpisodeCount {
-			metadataByID[credit.ID] = metadata
-		}
-
-		creditID := strings.TrimSpace(credit.CreditID)
-		if creditID == "" {
-			continue
-		}
-
-		if existingMetadata, exists := metadataByCreditID[creditID]; !exists || credit.EpisodeCount > existingMetadata.EpisodeCount {
-			metadataByCreditID[creditID] = metadata
-		}
-	}
-
-	return metadataByCreditID, metadataByID
-}
-
-func lookupPersonTVCrewMetadata(
-	creditID string,
-	id int64,
-	metadataByCreditID map[string]personTVCrewMetadata,
-	metadataByID map[int64]personTVCrewMetadata,
-) personTVCrewMetadata {
-	trimmedCreditID := strings.TrimSpace(creditID)
-	if trimmedCreditID != "" {
-		if metadata, exists := metadataByCreditID[trimmedCreditID]; exists {
-			return metadata
-		}
-	}
-
-	if metadata, exists := metadataByID[id]; exists {
-		return metadata
-	}
-
-	return personTVCrewMetadata{}
-}
-
 func personCreditInvolvementTier(credit models.PersonCredit) int {
 	if !strings.EqualFold(credit.MediaType, personCreditMediaTypeTV) {
 		return 2
@@ -605,66 +556,4 @@ func personCreditInvolvementTier(credit models.PersonCredit) int {
 	default:
 		return 0
 	}
-}
-
-func (s *MovieService) getMovieCredits(id int64) (models.MovieCredits, error) {
-	s.log.Debug("getting movie credits from TMDB", "movieID", id)
-
-	credits, err := s.client.GetMovieCredits(int(id), nil)
-	if err != nil {
-		s.log.Error("TMDB get movie credits failed", "movieID", id, "error", err)
-		return models.MovieCredits{}, fmt.Errorf("error getting TMDB movie credits for id '%d': %w", id, err)
-	}
-
-	s.log.Debug("fetched movie credits from TMDB", "movieID", id, "castCount", len(credits.Cast), "crewCount", len(credits.Crew))
-
-	cast := make([]models.Cast, len(credits.Cast))
-	for i, c := range credits.Cast {
-		cast[i] = models.Cast{
-			MovieID:   id,
-			PersonID:  c.ID,
-			CastID:    c.CastID,
-			CreditID:  c.CreditID,
-			Character: c.Character,
-			CastOrder: int64(c.Order),
-			Person: models.Person{
-				ID:                 c.ID,
-				Name:               c.Name,
-				OriginalName:       c.OriginalName,
-				ProfilePath:        c.ProfilePath,
-				KnownForDepartment: c.KnownForDepartment,
-				Popularity:         float64(c.Popularity),
-				Gender:             int64(c.Gender),
-				Adult:              c.Adult,
-			},
-		}
-	}
-
-	crew := make([]models.Crew, len(credits.Crew))
-	for i, c := range credits.Crew {
-		crew[i] = models.Crew{
-			MovieID:    id,
-			PersonID:   c.ID,
-			CreditID:   c.CreditID,
-			Job:        c.Job,
-			Department: c.Department,
-			Person: models.Person{
-				ID:                 c.ID,
-				Name:               c.Name,
-				OriginalName:       c.OriginalName,
-				ProfilePath:        c.ProfilePath,
-				KnownForDepartment: c.KnownForDepartment,
-				Popularity:         float64(c.Popularity),
-				Gender:             int64(c.Gender),
-				Adult:              c.Adult,
-			},
-		}
-	}
-
-	s.log.Debug("converted TMDB credits to internal models", "movieID", id, "castCount", len(cast), "crewCount", len(crew))
-
-	return models.MovieCredits{
-		Crew: crew,
-		Cast: cast,
-	}, nil
 }

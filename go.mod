@@ -5,7 +5,6 @@ go 1.27
 require (
 	github.com/Oudwins/tailwind-merge-go v0.2.1
 	github.com/a-h/templ v0.3.1020
-	github.com/cyruzin/golang-tmdb v1.9.0
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/pressly/goose/v3 v3.25.0
 	github.com/spf13/cobra v1.10.2
@@ -20,7 +19,6 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
-	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

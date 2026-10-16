@@ -28,7 +28,7 @@ func TestListService_CRUD(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 
 	ctx := setupTestUser(t, testDB)
@@ -99,7 +99,7 @@ func TestListService_CreateList_EmptyName(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 
 	ctx := setupTestUser(t, testDB)
@@ -119,7 +119,7 @@ func TestListService_DisplaySortPersists(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	listService := NewListService(testDB, NewMovieService(testDB, nil, time.Hour))
+	listService := NewListService(testDB, NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour))
 	ctx := setupTestUser(t, testDB)
 
 	list, err := listService.CreateList(ctx, "Sorted", nil, false)
@@ -178,7 +178,7 @@ func TestListService_AddMovieToList_InvalidIDs(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 
 	ctx := setupTestUser(t, testDB)
@@ -212,7 +212,7 @@ func TestListService_ImportLists_MergesByNameAndPreservesMetadata(t *testing.T) 
 	}
 	defer func() { _ = testDB.Close() }()
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	ctx := setupTestUser(t, testDB)
 
@@ -320,7 +320,7 @@ func TestListService_ImportLists_PreservesWatchlistCustomSort(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	listService := NewListService(testDB, NewMovieService(testDB, nil, time.Hour))
+	listService := NewListService(testDB, NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour))
 	ctx := setupTestUser(t, testDB)
 	position := int64(1)
 	importData := models.ImportListsLog{
@@ -360,7 +360,7 @@ func TestListService_ExportLists_IsStable(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	ctx := setupTestUser(t, testDB)
 
@@ -420,7 +420,7 @@ func TestListService_ImportLists_SkipsMovieFailuresAndContinues(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	ctx := setupTestUser(t, testDB)
 
@@ -475,7 +475,7 @@ func TestListService_ImportLists_SkipsInvalidListAndContinues(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	ctx := setupTestUser(t, testDB)
 
@@ -527,7 +527,7 @@ func TestListService_AddMovieToList_AssignsCustomPosition(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	ctx := setupTestUser(t, testDB)
 
@@ -577,7 +577,7 @@ func TestListService_GetListViewData_SortsMoviesForDisplay(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	ctx := setupTestUser(t, testDB)
 
@@ -667,7 +667,7 @@ func TestListService_ReorderListMovie_PersistsCustomOrder(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	ctx := setupTestUser(t, testDB)
 	userID := getTestUserID(t, ctx)
@@ -728,7 +728,7 @@ func TestListService_ReorderListMovie_MovesToFirstAndLast(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	ctx := setupTestUser(t, testDB)
 	userID := getTestUserID(t, ctx)
@@ -792,7 +792,7 @@ func TestListService_ReorderListMovie_RequiresCustomSort(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	listService := NewListService(testDB, NewMovieService(testDB, nil, time.Hour))
+	listService := NewListService(testDB, NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour))
 	ctx := setupTestUser(t, testDB)
 
 	for _, isWatchlist := range []bool{false, true} {

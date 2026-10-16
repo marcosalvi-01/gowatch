@@ -58,6 +58,22 @@ type Handlers struct {
 }
 
 func NewHandlers(watchedService *services.WatchedService, listService *services.ListService, homeService *services.HomeService, authService *services.AuthService, seerrService *services.SeerrService) *Handlers {
+	if watchedService == nil {
+		panic("watched service is required")
+	}
+	if listService == nil {
+		panic("list service is required")
+	}
+	if homeService == nil {
+		panic("home service is required")
+	}
+	if authService == nil {
+		panic("auth service is required")
+	}
+	if seerrService == nil {
+		panic("Seerr service is required")
+	}
+
 	return &Handlers{
 		watchedService: watchedService,
 		listService:    listService,

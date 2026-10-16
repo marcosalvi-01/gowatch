@@ -16,6 +16,25 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/services"
 )
 
+func newTestSeerrService(t *testing.T) *services.SeerrService {
+	t.Helper()
+	service, err := services.NewSeerrService(models.SeerrIntegration{}, nil)
+	if err != nil {
+		t.Fatalf("NewSeerrService() error = %v", err)
+	}
+	return service
+}
+
+func TestNewHandlersRequiresDependencies(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("NewHandlers() did not panic without required dependencies")
+		}
+	}()
+
+	NewHandlers(nil, nil, nil, nil, nil)
+}
+
 func TestHandlers_UpdateListDisplaySort(t *testing.T) {
 	testDB, err := db.NewTestDB()
 	if err != nil {
@@ -29,7 +48,7 @@ func TestHandlers_UpdateListDisplaySort(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	listService := services.NewListService(testDB, services.NewMovieService(testDB, nil, time.Hour))
+	listService := services.NewListService(testDB, services.NewMovieService(testDB, newTestSeerrService(t), time.Hour))
 	userCtx := context.WithValue(ctx, common.UserKey, user)
 	list, err := listService.CreateList(userCtx, "Sorted", nil, false)
 	if err != nil {
@@ -69,7 +88,7 @@ func TestHandlers_UpdateListDetails(t *testing.T) {
 		t.Fatal(err)
 	}
 	userCtx := context.WithValue(ctx, common.UserKey, user)
-	listService := services.NewListService(testDB, services.NewMovieService(testDB, nil, time.Hour))
+	listService := services.NewListService(testDB, services.NewMovieService(testDB, newTestSeerrService(t), time.Hour))
 	list, err := listService.CreateList(userCtx, "Original", nil, false)
 	if err != nil {
 		t.Fatal(err)

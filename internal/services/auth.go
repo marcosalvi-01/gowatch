@@ -27,6 +27,13 @@ type AuthService struct {
 }
 
 func NewAuthService(db db.DB, listService *ListService, sessionExpiry time.Duration, https bool, defaultAdminPassword string) *AuthService {
+	if db == nil {
+		panic("database is required")
+	}
+	if listService == nil {
+		panic("list service is required")
+	}
+
 	log := logging.Get("auth service")
 	log.Debug("creating new AuthService instance")
 	return &AuthService{
