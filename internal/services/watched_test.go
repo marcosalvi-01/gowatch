@@ -21,7 +21,7 @@ func TestWatchedService_AddWatched(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour) // No TMDB for test
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -60,7 +60,7 @@ func TestWatchedService_UpdateWatchedEntry(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -128,7 +128,7 @@ func TestWatchedService_UpdateWatchedEntry_ZeroRatingClearsRating(t *testing.T) 
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -178,7 +178,7 @@ func TestWatchedService_UpdateWatchedEntry_DuplicateDateConflict(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -234,7 +234,7 @@ func TestWatchedService_UpdateWatchedEntry_NotFound(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -252,7 +252,7 @@ func TestWatchedService_DeleteWatchedEntry(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -312,7 +312,7 @@ func TestWatchedService_DeleteWatchedEntry_NotFound(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -335,7 +335,7 @@ func TestWatchedService_DeleteWatchedEntry_NonOwned(t *testing.T) {
 	}
 	otherCtx := context.WithValue(context.Background(), common.UserKey, otherUser)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -376,7 +376,7 @@ func TestWatchedService_ImportExportWatched(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -444,7 +444,7 @@ func TestWatchedService_GetWatchedStats(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -490,7 +490,7 @@ func TestWatchedService_GetWatchedStats_NewFields(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -516,10 +516,8 @@ func TestWatchedService_GetWatchedStats_NewFields(t *testing.T) {
 					Job:        "Director",
 					Department: "Directing",
 					Person: models.Person{
-						ID:                 1,
-						Name:               "Director Person",
-						OriginalName:       "Director Person",
-						KnownForDepartment: "Directing",
+						ID:   1,
+						Name: "Director Person",
 					},
 				},
 				{
@@ -529,10 +527,8 @@ func TestWatchedService_GetWatchedStats_NewFields(t *testing.T) {
 					Job:        "Writer",
 					Department: "Writing",
 					Person: models.Person{
-						ID:                 2,
-						Name:               "Writer Person",
-						OriginalName:       "Writer Person",
-						KnownForDepartment: "Writing",
+						ID:   2,
+						Name: "Writer Person",
 					},
 				},
 				{
@@ -542,10 +538,8 @@ func TestWatchedService_GetWatchedStats_NewFields(t *testing.T) {
 					Job:        "Composer",
 					Department: "Sound",
 					Person: models.Person{
-						ID:                 3,
-						Name:               "Composer Person",
-						OriginalName:       "Composer Person",
-						KnownForDepartment: "Sound",
+						ID:   3,
+						Name: "Composer Person",
 					},
 				},
 				{
@@ -555,10 +549,8 @@ func TestWatchedService_GetWatchedStats_NewFields(t *testing.T) {
 					Job:        "Director of Photography",
 					Department: "Camera",
 					Person: models.Person{
-						ID:                 4,
-						Name:               "Camera Person",
-						OriginalName:       "Camera Person",
-						KnownForDepartment: "Camera",
+						ID:   4,
+						Name: "Camera Person",
 					},
 				},
 			},
@@ -640,7 +632,7 @@ func TestWatchedService_GetWatchedStats_RatingFields(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -664,10 +656,8 @@ func TestWatchedService_GetWatchedStats_RatingFields(t *testing.T) {
 					Job:        "Director",
 					Department: "Directing",
 					Person: models.Person{
-						ID:                 directorID,
-						Name:               directorName,
-						OriginalName:       directorName,
-						KnownForDepartment: "Directing",
+						ID:   directorID,
+						Name: directorName,
 					},
 				}},
 				Cast: []models.Cast{{
@@ -678,11 +668,9 @@ func TestWatchedService_GetWatchedStats_RatingFields(t *testing.T) {
 					Character: "Lead",
 					CastOrder: 0,
 					Person: models.Person{
-						ID:                 actorID,
-						Name:               actorName,
-						OriginalName:       actorName,
-						KnownForDepartment: "Acting",
-						Gender:             2,
+						ID:     actorID,
+						Name:   actorName,
+						Gender: 2,
 					},
 				}},
 			},
@@ -816,7 +804,7 @@ func TestWatchedService_GetPersonWatchActivity(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -835,7 +823,7 @@ func TestWatchedService_GetPersonWatchActivity(t *testing.T) {
 				CreditID:  "alpha-cast",
 				Character: "Lead",
 				CastOrder: 0,
-				Person:    testPerson(targetPersonID, "Target Person", "Acting", 2),
+				Person:    testPerson(targetPersonID, "Target Person", 2),
 			}},
 			[]models.Crew{{
 				MovieID:    1,
@@ -843,14 +831,14 @@ func TestWatchedService_GetPersonWatchActivity(t *testing.T) {
 				CreditID:   "alpha-director",
 				Job:        "Director",
 				Department: "Directing",
-				Person:     testPerson(targetPersonID, "Target Person", "Directing", 2),
+				Person:     testPerson(targetPersonID, "Target Person", 2),
 			}, {
 				MovieID:    1,
 				PersonID:   targetPersonID,
 				CreditID:   "alpha-producer",
 				Job:        "Producer",
 				Department: "Production",
-				Person:     testPerson(targetPersonID, "Target Person", "Production", 2),
+				Person:     testPerson(targetPersonID, "Target Person", 2),
 			}},
 		),
 		testMovieDetailsWithCredits(
@@ -863,7 +851,7 @@ func TestWatchedService_GetPersonWatchActivity(t *testing.T) {
 				CreditID:   "beta-writer",
 				Job:        "Writer",
 				Department: "Writing",
-				Person:     testPerson(targetPersonID, "Target Person", "Writing", 2),
+				Person:     testPerson(targetPersonID, "Target Person", 2),
 			}},
 		),
 		testMovieDetailsWithCredits(
@@ -876,7 +864,7 @@ func TestWatchedService_GetPersonWatchActivity(t *testing.T) {
 				CreditID:  "gamma-cast",
 				Character: "Lead",
 				CastOrder: 0,
-				Person:    testPerson(competingMalePersonID, "Other Male Actor", "Acting", 2),
+				Person:    testPerson(competingMalePersonID, "Other Male Actor", 2),
 			}},
 			nil,
 		),
@@ -890,7 +878,7 @@ func TestWatchedService_GetPersonWatchActivity(t *testing.T) {
 				CreditID:  "delta-cast",
 				Character: "Lead",
 				CastOrder: 0,
-				Person:    testPerson(competingFemalePersonID, "Other Female Actor", "Acting", 1),
+				Person:    testPerson(competingFemalePersonID, "Other Female Actor", 1),
 			}},
 			nil,
 		),
@@ -1002,7 +990,7 @@ func TestWatchedService_GetPersonWatchActivity_CrewOnlyActorRankNil(t *testing.T
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -1018,7 +1006,7 @@ func TestWatchedService_GetPersonWatchActivity_CrewOnlyActorRankNil(t *testing.T
 			CreditID:   "crew-director",
 			Job:        "Director",
 			Department: "Directing",
-			Person:     testPerson(targetPersonID, "Crew Person", "Directing", 2),
+			Person:     testPerson(targetPersonID, "Crew Person", 2),
 		}},
 	)
 
@@ -1059,7 +1047,7 @@ func TestWatchedService_GetPersonWatchActivity_NoMatches(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -1073,7 +1061,7 @@ func TestWatchedService_GetPersonWatchActivity_NoMatches(t *testing.T) {
 			CreditID:  "alpha-cast",
 			Character: "Lead",
 			CastOrder: 0,
-			Person:    testPerson(88, "Other Person", "Acting", 2),
+			Person:    testPerson(88, "Other Person", 2),
 		}},
 		nil,
 	)
@@ -1115,7 +1103,7 @@ func TestWatchedService_AddWatched_InvalidMovie(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -1135,7 +1123,7 @@ func TestWatchedService_ImportExport_Empty(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -1164,7 +1152,7 @@ func TestWatchedService_ImportWatched_ContinuesOnPerMovieErrors(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -1229,7 +1217,7 @@ func TestWatchedService_ImportAll_ContinuesWithListsWhenWatchedHasErrors(t *test
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -1299,7 +1287,7 @@ func TestWatchedService_ImportAll(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	ctx := setupTestUser(t, testDB)
 
-	movieService := NewMovieService(testDB, nil, time.Hour)
+	movieService := NewMovieService(testDB, newUnconfiguredTestSeerrService(), time.Hour)
 	listService := NewListService(testDB, movieService)
 	watchedService := NewWatchedService(testDB, listService, movieService)
 
@@ -1396,12 +1384,10 @@ func testMovieDetailsWithCredits(movieID int64, title string, cast []models.Cast
 	}
 }
 
-func testPerson(personID int64, name, department string, gender int64) models.Person {
+func testPerson(personID int64, name string, gender int64) models.Person {
 	return models.Person{
-		ID:                 personID,
-		Name:               name,
-		OriginalName:       name,
-		KnownForDepartment: department,
-		Gender:             gender,
+		ID:     personID,
+		Name:   name,
+		Gender: gender,
 	}
 }

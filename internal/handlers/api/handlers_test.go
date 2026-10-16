@@ -15,6 +15,25 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/services"
 )
 
+func newTestSeerrService(t *testing.T) *services.SeerrService {
+	t.Helper()
+	service, err := services.NewSeerrService(models.SeerrIntegration{}, nil)
+	if err != nil {
+		t.Fatalf("NewSeerrService() error = %v", err)
+	}
+	return service
+}
+
+func TestNewHandlersRequiresDependencies(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("NewHandlers() did not panic without required dependencies")
+		}
+	}()
+
+	NewHandlers(nil, nil, nil)
+}
+
 func getTestCtx() context.Context {
 	return context.WithValue(context.Background(), common.UserKey, &models.User{ID: 1})
 }
@@ -25,6 +44,14 @@ func setupTestUser(t *testing.T, testDB db.DB) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func newTestListAndWatchedServices(t *testing.T, testDB db.DB) (*services.WatchedService, *services.ListService) {
+	t.Helper()
+
+	movieService := services.NewMovieService(testDB, newTestSeerrService(t), time.Hour)
+	listService := services.NewListService(testDB, movieService)
+	return services.NewWatchedService(testDB, listService, movieService), listService
 }
 
 func waitForCondition(t *testing.T, timeout time.Duration, cond func() bool) {
@@ -48,8 +75,7 @@ func TestHandlers_HealthCheck(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	listService := services.NewListService(testDB, nil)
-	watchedService := services.NewWatchedService(testDB, listService, nil)
+	watchedService, listService := newTestListAndWatchedServices(t, testDB)
 	handlers := NewHandlers(testDB, watchedService, listService)
 
 	req := httptest.NewRequest("GET", "/health", nil)
@@ -77,8 +103,7 @@ func TestHandlers_Import_InvalidJSON(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	listService := services.NewListService(testDB, nil)
-	watchedService := services.NewWatchedService(testDB, listService, nil)
+	watchedService, listService := newTestListAndWatchedServices(t, testDB)
 	handlers := NewHandlers(testDB, watchedService, listService)
 
 	req := httptest.NewRequest("POST", "/import", bytes.NewReader([]byte("invalid json")))
@@ -100,7 +125,7 @@ func TestHandlers_Export(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	setupTestUser(t, testDB)
 
-	movieService := services.NewMovieService(testDB, nil, time.Hour)
+	movieService := services.NewMovieService(testDB, newTestSeerrService(t), time.Hour)
 	listService := services.NewListService(testDB, movieService)
 	watchedService := services.NewWatchedService(testDB, listService, movieService)
 	handlers := NewHandlers(testDB, watchedService, listService)
@@ -157,8 +182,7 @@ func TestHandlers_Import_LegacyPayloadRejected(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	listService := services.NewListService(testDB, nil)
-	watchedService := services.NewWatchedService(testDB, listService, nil)
+	watchedService, listService := newTestListAndWatchedServices(t, testDB)
 	handlers := NewHandlers(testDB, watchedService, listService)
 
 	payload := models.ImportWatchedMoviesLog{
@@ -194,7 +218,7 @@ func TestHandlers_Import_CombinedPayloadAccepted(t *testing.T) {
 	defer func() { _ = testDB.Close() }()
 	setupTestUser(t, testDB)
 
-	movieService := services.NewMovieService(testDB, nil, time.Hour)
+	movieService := services.NewMovieService(testDB, newTestSeerrService(t), time.Hour)
 	listService := services.NewListService(testDB, movieService)
 	watchedService := services.NewWatchedService(testDB, listService, movieService)
 	handlers := NewHandlers(testDB, watchedService, listService)
@@ -257,7 +281,7 @@ func TestHandlers_Import_RejectsPayloadWithoutMovies(t *testing.T) {
 	}
 	defer func() { _ = testDB.Close() }()
 
-	movieService := services.NewMovieService(testDB, nil, time.Hour)
+	movieService := services.NewMovieService(testDB, newTestSeerrService(t), time.Hour)
 	listService := services.NewListService(testDB, movieService)
 	watchedService := services.NewWatchedService(testDB, listService, movieService)
 	handlers := NewHandlers(testDB, watchedService, listService)

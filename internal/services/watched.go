@@ -35,20 +35,30 @@ var (
 
 // WatchedService handles user's watched movie tracking
 type WatchedService struct {
-	db          db.DB
-	listService *ListService
-	tmdb        *MovieService
-	log         *slog.Logger
+	db           db.DB
+	listService  *ListService
+	movieService *MovieService
+	log          *slog.Logger
 }
 
-func NewWatchedService(db db.DB, listService *ListService, tmdb *MovieService) *WatchedService {
+func NewWatchedService(db db.DB, listService *ListService, movieService *MovieService) *WatchedService {
+	if db == nil {
+		panic("database is required")
+	}
+	if listService == nil {
+		panic("list service is required")
+	}
+	if movieService == nil {
+		panic("movie service is required")
+	}
+
 	log := logging.Get("watched service")
 	log.Debug("creating new WatchedService instance")
 	return &WatchedService{
-		db:          db,
-		listService: listService,
-		tmdb:        tmdb,
-		log:         log,
+		db:           db,
+		listService:  listService,
+		movieService: movieService,
+		log:          log,
 	}
 }
 
@@ -206,7 +216,7 @@ func (s *WatchedService) ImportWatched(ctx context.Context, movies models.Import
 
 	for _, importMovie := range movies {
 		for _, movieRef := range importMovie.Movies {
-			_, err := s.tmdb.GetMovieDetails(ctx, movieRef.MovieID)
+			_, err := s.movieService.GetMovieDetails(ctx, movieRef.MovieID)
 			if err != nil {
 				s.log.Error("ImportWatched: failed to fetch movie details", "movieID", movieRef.MovieID, "date", importMovie.Date, "error", err)
 				continue

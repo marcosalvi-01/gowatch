@@ -19,6 +19,25 @@ import (
 	uipages "github.com/marcosalvi-01/gowatch/internal/ui/pages"
 )
 
+func newTestSeerrService(t *testing.T) *services.SeerrService {
+	t.Helper()
+	service, err := services.NewSeerrService(models.SeerrIntegration{}, nil)
+	if err != nil {
+		t.Fatalf("NewSeerrService() error = %v", err)
+	}
+	return service
+}
+
+func TestNewHandlersRequiresDependencies(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("NewHandlers() did not panic without required dependencies")
+		}
+	}()
+
+	NewHandlers(nil, nil, nil, nil, nil, nil)
+}
+
 func TestHandlers_PersonPage_InvalidIDReturnsBadRequest(t *testing.T) {
 	h := &Handlers{}
 
@@ -34,8 +53,14 @@ func TestHandlers_PersonPage_InvalidIDReturnsBadRequest(t *testing.T) {
 }
 
 func TestHandlers_PersonPage_ServiceFailureReturnsInternalServerError(t *testing.T) {
+	testDB, err := db.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = testDB.Close() }()
+
 	h := &Handlers{
-		tmdbService: services.NewMovieService(nil, nil, time.Hour),
+		movieService: services.NewMovieService(testDB, newTestSeerrService(t), time.Hour),
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/person/42", nil)
@@ -188,7 +213,7 @@ func TestHandlers_ListPage_CustomEditModeToggle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	listService := services.NewListService(testDB, services.NewMovieService(testDB, nil, time.Hour))
+	listService := services.NewListService(testDB, services.NewMovieService(testDB, newTestSeerrService(t), time.Hour))
 	userCtx := context.WithValue(ctx, common.UserKey, user)
 	list, err := listService.CreateList(userCtx, "Sci-Fi", nil, false)
 	if err != nil {

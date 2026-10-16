@@ -17,10 +17,8 @@ var startCmd = &cobra.Command{
 			Timeout:              viper.GetDuration("request_timeout"),
 			DBPath:               viper.GetString("db_path"),
 			DBName:               viper.GetString("db_name"),
-			TMDBAPIKey:           viper.GetString("tmdb_api_key"),
 			SeerrBaseURL:         viper.GetString("seerr_base_url"),
 			SeerrAPIKey:          viper.GetString("seerr_api_key"),
-			TMDBPosterPrefix:     viper.GetString("tmdb_poster_prefix"),
 			CacheTTL:             viper.GetDuration("cache_ttl"),
 			ImageCacheTTL:        viper.GetDuration("image_cache_ttl"),
 			ImageCleanupInterval: viper.GetDuration("image_cleanup_interval"),
@@ -28,6 +26,9 @@ var startCmd = &cobra.Command{
 			ShutdownTimeout:      viper.GetDuration("shutdown_timeout"),
 			HTTPS:                viper.GetBool("https"),
 			AdminDefaultPassword: viper.GetString("admin_default_password"),
+		}
+		if err := cfg.Validate(); err != nil {
+			panic(err)
 		}
 		server.RunServer(cfg)
 	},
@@ -57,7 +58,6 @@ func init() {
 	viper.SetDefault("request_timeout", "30s")
 	viper.SetDefault("db_path", "/var/lib/gowatch")
 	viper.SetDefault("db_name", "db.db")
-	viper.SetDefault("tmdb_poster_prefix", "https://image.tmdb.org/t/p/w500")
 	viper.SetDefault("cache_ttl", "168h")
 	viper.SetDefault("image_cache_ttl", "720h")
 	viper.SetDefault("image_cleanup_interval", "48h")

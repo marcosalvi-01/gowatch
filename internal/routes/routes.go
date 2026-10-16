@@ -22,7 +22,7 @@ var log = logging.Get("routes")
 
 func NewRouter(
 	db db.DB,
-	tmdbService *services.MovieService,
+	movieService *services.MovieService,
 	tmdbImageService *services.TMDBImageService,
 	watchedService *services.WatchedService,
 	listService *services.ListService,
@@ -48,7 +48,7 @@ func NewRouter(
 	})
 
 	log.Debug("registering pages routes")
-	pagesHandlers := pages.NewHandlers(tmdbService, watchedService, listService, homeService, authService, seerrService)
+	pagesHandlers := pages.NewHandlers(movieService, watchedService, listService, homeService, authService, seerrService)
 	r.Route("/", func(r chi.Router) {
 		r.Use(middleware.HTMLMiddleware)
 		pagesHandlers.RegisterRoutes(r)

@@ -21,6 +21,16 @@ type stubImageService struct {
 	cacheTTL  time.Duration
 }
 
+func TestNewHandlersRequiresImageService(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("NewHandlers() did not panic without image service")
+		}
+	}()
+
+	NewHandlers(nil)
+}
+
 func (s stubImageService) GetCachedImage(_ context.Context, _, _ string) (string, error) {
 	return s.cachePath, s.err
 }

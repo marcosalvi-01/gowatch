@@ -1383,7 +1383,7 @@ func (q *Queries) GetMovieGenre(ctx context.Context, movieID int64) ([]GetMovieG
 
 const getPerson = `-- name: GetPerson :one
 SELECT
-    id, name, original_name, profile_path, known_for_department, popularity, gender, adult, updated_at
+    id, name, profile_path, gender, updated_at
 FROM
     person
 WHERE
@@ -1396,12 +1396,8 @@ func (q *Queries) GetPerson(ctx context.Context, id int64) (Person, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.OriginalName,
 		&i.ProfilePath,
-		&i.KnownForDepartment,
-		&i.Popularity,
 		&i.Gender,
-		&i.Adult,
 		&i.UpdatedAt,
 	)
 	return i, err
@@ -3568,37 +3564,25 @@ INSERT INTO
     person (
         id,
         name,
-        original_name,
         profile_path,
-        known_for_department,
-        popularity,
         gender,
-        adult,
         updated_at
     )
 VALUES
-    (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(id) DO
+    (?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(id) DO
 UPDATE
 SET
     name = excluded.name,
-    original_name = excluded.original_name,
     profile_path = excluded.profile_path,
-    known_for_department = excluded.known_for_department,
-    popularity = excluded.popularity,
     gender = excluded.gender,
-    adult = excluded.adult,
     updated_at = CURRENT_TIMESTAMP
 `
 
 type UpsertPersonParams struct {
-	ID                 int64
-	Name               string
-	OriginalName       string
-	ProfilePath        string
-	KnownForDepartment string
-	Popularity         float64
-	Gender             int64
-	Adult              bool
+	ID          int64
+	Name        string
+	ProfilePath string
+	Gender      int64
 }
 
 // People and credits metadata.
@@ -3606,12 +3590,8 @@ func (q *Queries) UpsertPerson(ctx context.Context, arg UpsertPersonParams) erro
 	_, err := q.db.ExecContext(ctx, upsertPerson,
 		arg.ID,
 		arg.Name,
-		arg.OriginalName,
 		arg.ProfilePath,
-		arg.KnownForDepartment,
-		arg.Popularity,
 		arg.Gender,
-		arg.Adult,
 	)
 	return err
 }

@@ -3,12 +3,10 @@ package models
 import "time"
 
 type PersonDetailsPage struct {
-	ID                 int64
-	Name               string
-	Biography          string
-	ProfilePath        string
-	KnownForDepartment string
-	Popularity         float32
+	ID          int64
+	Name        string
+	Biography   string
+	ProfilePath string
 
 	Birthday     *time.Time
 	Deathday     *time.Time

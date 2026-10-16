@@ -23,6 +23,13 @@ type HomeService struct {
 }
 
 func NewHomeService(watched *WatchedService, list *ListService) *HomeService {
+	if watched == nil {
+		panic("watched service is required")
+	}
+	if list == nil {
+		panic("list service is required")
+	}
+
 	log := logging.Get("home service")
 	log.Debug("creating new HomeService instance")
 	return &HomeService{

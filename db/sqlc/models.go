@@ -82,15 +82,11 @@ type Movie struct {
 }
 
 type Person struct {
-	ID                 int64
-	Name               string
-	OriginalName       string
-	ProfilePath        string
-	KnownForDepartment string
-	Popularity         float64
-	Gender             int64
-	Adult              bool
-	UpdatedAt          *time.Time
+	ID          int64
+	Name        string
+	ProfilePath string
+	Gender      int64
+	UpdatedAt   *time.Time
 }
 
 type Session struct {

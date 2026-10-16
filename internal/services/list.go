@@ -16,18 +16,25 @@ import (
 
 // ListService handles user's custom movie lists
 type ListService struct {
-	db   db.DB
-	tmdb *MovieService
-	log  *slog.Logger
+	db           db.DB
+	movieService *MovieService
+	log          *slog.Logger
 }
 
-func NewListService(db db.DB, tmdb *MovieService) *ListService {
+func NewListService(db db.DB, movieService *MovieService) *ListService {
+	if db == nil {
+		panic("database is required")
+	}
+	if movieService == nil {
+		panic("movie service is required")
+	}
+
 	log := logging.Get("list service")
 	log.Debug("creating new ListService instance")
 	return &ListService{
-		db:   db,
-		tmdb: tmdb,
-		log:  log,
+		db:           db,
+		movieService: movieService,
+		log:          log,
 	}
 }
 
@@ -525,7 +532,7 @@ func (s *ListService) ImportLists(ctx context.Context, lists models.ImportListsL
 		// Upsert movies in the target list
 		for _, movieRef := range importList.Movies {
 			// Ensure movie exists in DB
-			_, err := s.tmdb.GetMovieDetails(ctx, movieRef.MovieID)
+			_, err := s.movieService.GetMovieDetails(ctx, movieRef.MovieID)
 			if err != nil {
 				s.log.Error("ImportLists: failed to fetch movie details", "movieID", movieRef.MovieID, "listName", importList.Name, "error", err)
 				continue

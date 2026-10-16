@@ -26,6 +26,16 @@ type Handlers struct {
 }
 
 func NewHandlers(db db.DB, watchedService *services.WatchedService, listService *services.ListService) *Handlers {
+	if db == nil {
+		panic("database is required")
+	}
+	if watchedService == nil {
+		panic("watched service is required")
+	}
+	if listService == nil {
+		panic("list service is required")
+	}
+
 	return &Handlers{
 		db:             db,
 		watchedService: watchedService,
