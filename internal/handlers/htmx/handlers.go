@@ -21,6 +21,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/addtowatched"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/listgrid"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/liststats"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/moviecard"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/oobwrapper"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/sidebar"
 	"github.com/marcosalvi-01/gowatch/internal/ui/pages"
@@ -106,6 +107,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Get("/watchlist/{id}", h.RenderAddToWatchlistButton)
 	r.Get("/movies/{id}/recommendations", h.RenderMovieRecommendations)
 	r.Get("/movies/{id}/similar", h.RenderSimilarMovies)
+	r.Get("/movies/{id}/seerr-availability", h.RenderSeerrAvailability)
 	r.Get("/movies/{id}/seerr-state", h.RenderSeerrMovieAction)
 	r.Post("/movies/{id}/seerr-request", h.RequestSeerrMovie)
 
@@ -114,6 +116,28 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Get("/lists/home-lists", h.HomeLists)
 	r.Get("/lists/{id}/movie-grid", h.ListMovieGrid)
 	r.Get("/lists/{id}/stats", h.ListStats)
+}
+
+func (h *Handlers) RenderSeerrAvailability(w http.ResponseWriter, r *http.Request) {
+	movieID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil || movieID <= 0 {
+		http.Error(w, "Invalid movie ID", http.StatusBadRequest)
+		return
+	}
+
+	state, err := h.seerrService.MovieState(r.Context(), movieID)
+	if err != nil {
+		log.Warn("failed to check Seerr movie availability", "movieID", movieID, "error", err)
+		return
+	}
+	if state != services.SeerrMovieAvailable {
+		return
+	}
+
+	if err := moviecard.SeerrAvailabilityMarker().Render(r.Context(), w); err != nil {
+		log.Error("failed to render Seerr availability marker", "movieID", movieID, "error", err)
+		http.Error(w, "Failed to render Seerr availability marker", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) RenderMovieRecommendations(w http.ResponseWriter, r *http.Request) {

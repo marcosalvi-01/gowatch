@@ -180,10 +180,11 @@ func Watched(days []models.WatchedMoviesInDay) templ.Component {
 						}
 						for _, movie := range day.Movies {
 							moviecardProps := moviecard.Props{
-								Title:      movie.MovieDetails.Movie.Title,
-								Href:       "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
-								PosterPath: movie.MovieDetails.Movie.PosterPath,
-								Hoverable:  true,
+								Title:        movie.MovieDetails.Movie.Title,
+								Href:         "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+								PosterPath:   movie.MovieDetails.Movie.PosterPath,
+								Hoverable:    true,
+								SeerrMovieID: movie.MovieDetails.Movie.ID,
 							}
 							if movie.InTheaters {
 								moviecardProps.TopHoverComponent = movieCardTopHover(movie.InTheaters)
@@ -207,7 +208,7 @@ func Watched(days []models.WatchedMoviesInDay) templ.Component {
 								var templ_7745c5c3_Var10 string
 								templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(movie.MovieDetails.Movie.Title)
 								if templ_7745c5c3_Err != nil {
-									return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/watched.templ`, Line: 70, Col: 116}
+									return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/watched.templ`, Line: 71, Col: 116}
 								}
 								_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 								if templ_7745c5c3_Err != nil {
@@ -228,7 +229,7 @@ func Watched(days []models.WatchedMoviesInDay) templ.Component {
 								var templ_7745c5c3_Var11 string
 								templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(utils.FormatYear(movie.MovieDetails.Movie.ReleaseDate))
 								if templ_7745c5c3_Err != nil {
-									return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/watched.templ`, Line: 74, Col: 108}
+									return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/watched.templ`, Line: 75, Col: 108}
 								}
 								_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 								if templ_7745c5c3_Err != nil {
@@ -254,7 +255,7 @@ func Watched(days []models.WatchedMoviesInDay) templ.Component {
 									var templ_7745c5c3_Var12 string
 									templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", *movie.Rating))
 									if templ_7745c5c3_Err != nil {
-										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/watched.templ`, Line: 79, Col: 77}
+										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/watched.templ`, Line: 80, Col: 77}
 									}
 									_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 									if templ_7745c5c3_Err != nil {

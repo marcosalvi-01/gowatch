@@ -6,6 +6,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
 	apputils "github.com/marcosalvi-01/gowatch/internal/utils"
+	"strconv"
 )
 
 const defaultIndicatorID = "#movie-loading"
@@ -17,8 +18,13 @@ type Props struct {
 	IndicatorID        string
 	Class              string
 	Hoverable          bool
+	SeerrMovieID       int64
 	TopStaticComponent templ.Component
 	TopHoverComponent  templ.Component
+}
+
+templ SeerrAvailabilityMarker() {
+	<span class="seerr-available sr-only">Available on Seerr</span>
 }
 
 func movieCardIndicatorID(indicatorID string) string {
@@ -87,6 +93,18 @@ templ cardContent(props Props) {
 						</div>
 					</div>
 				}
+				if props.SeerrMovieID > 0 {
+					<div
+						class="absolute left-0 top-0 size-6 pointer-events-none"
+						aria-live="polite"
+						hx-get={ "/htmx/movies/" + strconv.FormatInt(props.SeerrMovieID, 10) + "/seerr-availability" }
+						hx-trigger="intersect once root:#main-scroll-container threshold:0.1"
+						hx-target="this"
+						hx-indicator="this"
+						hx-push-url="false"
+						hx-swap="outerHTML"
+					></div>
+				}
 				if props.Hoverable {
 					if props.TopHoverComponent != nil {
 						<div
@@ -99,7 +117,7 @@ templ cardContent(props Props) {
 							@props.TopHoverComponent
 						</div>
 					}
-					<div class="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 bg-black/80 p-1.5 sm:p-2 md:p-3 text-white transition-transform duration-300 ease-out" data-movie-card-panel="bottom">
+					<div class="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 bg-black/80 group-has-[.seerr-available]:bg-emerald-950/90 p-1.5 sm:p-2 md:p-3 text-white transition-transform duration-300 ease-out" data-movie-card-panel="bottom">
 						{ children... }
 					</div>
 				}
@@ -113,117 +131,124 @@ var scriptOnce = templ.NewOnceHandle()
 templ Script() {
 	@scriptOnce.Once() {
 		<script>
-		(() => {
-		  const cardSelector = '[data-movie-card][data-movie-card-hoverable="true"]';
-		  const expandedSelector = `${ cardSelector }[data-mobile-expanded="true"]`;
-		  const stopNavSelector = [
-			"[data-movie-card-stop-nav='true']",
-			"button",
-			"a",
-			"input",
-			"select",
-			"textarea",
-			"label",
-			"summary",
-			"[role='button']",
-			"[data-tui-dialog-trigger]",
-			"[data-tui-dialog-close]",
-			"[data-tui-popover-trigger]",
-			"[data-tui-popover-content]",
-			"[data-tui-dropdown-trigger]",
-		  ].join(", ");
+			(() => {
+				const cardSelector =
+					'[data-movie-card][data-movie-card-hoverable="true"]';
+				const expandedSelector = `${cardSelector}[data-mobile-expanded="true"]`;
+				const stopNavSelector = [
+					"[data-movie-card-stop-nav='true']",
+					"button",
+					"a",
+					"input",
+					"select",
+					"textarea",
+					"label",
+					"summary",
+					"[role='button']",
+					"[data-tui-dialog-trigger]",
+					"[data-tui-dialog-close]",
+					"[data-tui-popover-trigger]",
+					"[data-tui-popover-content]",
+					"[data-tui-dropdown-trigger]",
+				].join(", ");
 
-		  function shouldUseTapToExpand() {
-			return window.matchMedia("(hover: none), (pointer: coarse)").matches;
-		  }
+				function shouldUseTapToExpand() {
+					return window.matchMedia("(hover: none), (pointer: coarse)").matches;
+				}
 
-		  function setExpanded(card, expanded) {
-			if (!card) {
-			  return;
-			}
+				function setExpanded(card, expanded) {
+					if (!card) {
+						return;
+					}
 
-			card.setAttribute("data-mobile-expanded", expanded ? "true" : "false");
-			card.setAttribute("aria-expanded", expanded ? "true" : "false");
+					card.setAttribute(
+						"data-mobile-expanded",
+						expanded ? "true" : "false",
+					);
+					card.setAttribute("aria-expanded", expanded ? "true" : "false");
 
-			const topPanel = card.querySelector('[data-movie-card-panel="top"]');
-			const bottomPanel = card.querySelector('[data-movie-card-panel="bottom"]');
+					const topPanel = card.querySelector('[data-movie-card-panel="top"]');
+					const bottomPanel = card.querySelector(
+						'[data-movie-card-panel="bottom"]',
+					);
 
-			if (topPanel instanceof HTMLElement) {
-			  topPanel.style.translate = expanded ? "0 0" : "";
-			}
+					if (topPanel instanceof HTMLElement) {
+						topPanel.style.translate = expanded ? "0 0" : "";
+					}
 
-			if (bottomPanel instanceof HTMLElement) {
-			  bottomPanel.style.translate = expanded ? "0 0" : "";
-			}
-		  }
+					if (bottomPanel instanceof HTMLElement) {
+						bottomPanel.style.translate = expanded ? "0 0" : "";
+					}
+				}
 
-		  function collapseOtherCards(activeCard = null) {
-			document.querySelectorAll(expandedSelector).forEach((card) => {
-			  if (card !== activeCard) {
-				setExpanded(card, false);
-			  }
-			});
-		  }
+				function collapseOtherCards(activeCard = null) {
+					document.querySelectorAll(expandedSelector).forEach((card) => {
+						if (card !== activeCard) {
+							setExpanded(card, false);
+						}
+					});
+				}
 
-		  // Touch devices do not have hover, so first tap reveals the hidden
-		  // overlays and second tap keeps the normal card navigation behavior.
-		  document.addEventListener(
-			"click",
-			(e) => {
-			  if (!shouldUseTapToExpand()) {
-				return;
-			  }
+				// Touch devices do not have hover, so first tap reveals the hidden
+				// overlays and second tap keeps the normal card navigation behavior.
+				document.addEventListener(
+					"click",
+					(e) => {
+						if (!shouldUseTapToExpand()) {
+							return;
+						}
 
-			  const target = e.target;
-			  if (!(target instanceof Element)) {
-				return;
-			  }
+						const target = e.target;
+						if (!(target instanceof Element)) {
+							return;
+						}
 
-			  const card = target.closest(cardSelector);
-			  if (!card) {
-				collapseOtherCards();
-				return;
-			  }
+						const card = target.closest(cardSelector);
+						if (!card) {
+							collapseOtherCards();
+							return;
+						}
 
-			  // Buttons, dialog triggers, and the top overlay content should keep
-			  // their own click behavior instead of opening or navigating the card.
-			  if (target.closest(stopNavSelector)) {
-				collapseOtherCards(card);
-				return;
-			  }
+						// Buttons, dialog triggers, and the top overlay content should keep
+						// their own click behavior instead of opening or navigating the card.
+						if (target.closest(stopNavSelector)) {
+							collapseOtherCards(card);
+							return;
+						}
 
-			  const isExpanded = card.getAttribute("data-mobile-expanded") === "true";
-			  if (!isExpanded) {
-				collapseOtherCards(card);
-				setExpanded(card, true);
-				e.preventDefault();
-				e.stopPropagation();
-				return;
-			  }
+						const isExpanded =
+							card.getAttribute("data-mobile-expanded") === "true";
+						if (!isExpanded) {
+							collapseOtherCards(card);
+							setExpanded(card, true);
+							e.preventDefault();
+							e.stopPropagation();
+							return;
+						}
 
-			  // Non-navigating cards use tap as a simple toggle so their extra
-			  // information can still be closed without relying on hover.
-			  if (!card.hasAttribute("hx-get")) {
-				setExpanded(card, false);
-				e.preventDefault();
-				e.stopPropagation();
-			  }
-			},
-			true,
-		  );
+						// Non-navigating cards use tap as a simple toggle so their extra
+						// information can still be closed without relying on hover.
+						if (!card.hasAttribute("hx-get")) {
+							setExpanded(card, false);
+							e.preventDefault();
+							e.stopPropagation();
+						}
+					},
+					true,
+				);
 
-		  // Escape and HTMX page swaps both clear any expanded mobile state so
-		  // cards never stay visually open after navigation or content refreshes.
-		  document.addEventListener("keydown", (e) => {
-			if (e.key === "Escape") {
-			  collapseOtherCards();
-			}
-		  });
+				// Escape and HTMX page swaps both clear any expanded mobile state so
+				// cards never stay visually open after navigation or content refreshes.
+				document.addEventListener("keydown", (e) => {
+					if (e.key === "Escape") {
+						collapseOtherCards();
+					}
+				});
 
-		  document.body.addEventListener("htmx:beforeSwap", () => {
-			collapseOtherCards();
-		  });
-		})();
+				document.body.addEventListener("htmx:beforeSwap", () => {
+					collapseOtherCards();
+				});
+			})();
 		</script>
 	}
 }

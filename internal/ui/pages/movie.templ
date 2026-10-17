@@ -493,6 +493,7 @@ templ MovieRelatedSection(sectionID, title, errorMessage string, movies []models
 						Href:        "/movie/" + strconv.FormatInt(movie.ID, 10),
 						IndicatorID: "#movie-loading",
 						Hoverable:   true,
+						SeerrMovieID: movie.ID,
 						Class:       "w-[110px] shrink-0 snap-start border-0 group sm:w-[140px] md:w-[160px]",
 					}) {
 						<h3 class="mb-1 line-clamp-2 text-xs font-bold leading-tight md:text-sm">{ movie.Title }</h3>

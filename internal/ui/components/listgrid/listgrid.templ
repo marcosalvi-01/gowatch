@@ -93,6 +93,7 @@ templ releaseStatusMovieItem(listID int64, movie models.MovieItem, releaseDateLa
 				Href:              "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
 				PosterPath:        movie.MovieDetails.Movie.PosterPath,
 				Hoverable:         true,
+				SeerrMovieID:      movie.MovieDetails.Movie.ID,
 				TopHoverComponent: listMovieCardTopHoverInfo(movie),
 			}
 		}}
@@ -129,6 +130,7 @@ templ listMovieItem(listID int64, movie models.MovieItem, sortMode models.ListMo
 					Href:              "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
 					PosterPath:        movie.MovieDetails.Movie.PosterPath,
 					Hoverable:         true,
+					SeerrMovieID:      movie.MovieDetails.Movie.ID,
 					TopHoverComponent: listMovieCardTopHoverInfo(movie),
 				}
 			}}

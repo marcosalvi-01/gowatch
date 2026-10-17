@@ -180,6 +180,25 @@ func TestMovieListAction(t *testing.T) {
 	}
 }
 
+func TestSearchAvailabilityRequestOnlyForMovies(t *testing.T) {
+	results := []models.SearchResult{
+		{ID: 603, Title: "The Matrix", Type: models.SearchResultTypeMovie},
+		{ID: 66633, Title: "Vince Gilligan", Type: models.SearchResultTypePerson},
+	}
+	var body bytes.Buffer
+	if err := uipages.Search("query", results).Render(context.Background(), &body); err != nil {
+		t.Fatal(err)
+	}
+
+	html := body.String()
+	if got := strings.Count(html, "/seerr-availability"); got != 1 {
+		t.Fatalf("availability requests = %d, want 1: %s", got, html)
+	}
+	if !strings.Contains(html, `/htmx/movies/603/seerr-availability`) || strings.Contains(html, `/htmx/movies/66633/seerr-availability`) {
+		t.Fatalf("availability request attached to wrong search card: %s", html)
+	}
+}
+
 func TestMovieRelatedSectionsLoadAfterCrew(t *testing.T) {
 	movie := models.MovieDetails{
 		Movie: models.Movie{ID: 1, Title: "Alien"},
@@ -226,8 +245,8 @@ func TestMovieRelatedSectionLimitsPosterRow(t *testing.T) {
 	}
 
 	html := body.String()
-	if got := strings.Count(html, `data-page="movie"`); got != 8 {
-		t.Fatalf("rendered movie card count = %d, want 8", got)
+	if got := strings.Count(html, `data-page="movie"`); got != 10 {
+		t.Fatalf("rendered movie card count = %d, want 10", got)
 	}
 	if !strings.Contains(html, `snap-x snap-mandatory`) || !strings.Contains(html, `snap-start`) {
 		t.Fatalf("rendered poster row lacks horizontal snap classes: %s", html)

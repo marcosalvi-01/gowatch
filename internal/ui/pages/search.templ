@@ -27,6 +27,13 @@ func searchResultIndicator(result models.SearchResult) string {
 	return "#movie-loading"
 }
 
+func searchResultMovieID(result models.SearchResult) int64 {
+	if result.Type != models.SearchResultTypeMovie {
+		return 0
+	}
+	return result.ID
+}
+
 templ searchResultTypeChip(resultType models.SearchResultType) {
 	if resultType == models.SearchResultTypeMovie {
 		@badge.Badge(badge.Props{
@@ -56,6 +63,7 @@ templ Search(query string, results []models.SearchResult) {
 								@moviecard.MovieCard(moviecard.Props{
 									Title:              result.Title,
 									PosterPath:         result.ImagePath,
+									SeerrMovieID:       searchResultMovieID(result),
 									Hoverable:          true,
 									Href:               searchResultHref(result),
 									IndicatorID:        searchResultIndicator(result),

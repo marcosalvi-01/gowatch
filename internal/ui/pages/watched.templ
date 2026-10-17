@@ -58,9 +58,10 @@ templ Watched(days []models.WatchedMoviesInDay) {
 										{{
 											moviecardProps := moviecard.Props{
 												Title:      movie.MovieDetails.Movie.Title,
-												Href:       "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
-												PosterPath: movie.MovieDetails.Movie.PosterPath,
-												Hoverable:  true,
+										Href:       "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+										PosterPath: movie.MovieDetails.Movie.PosterPath,
+										Hoverable:  true,
+										SeerrMovieID: movie.MovieDetails.Movie.ID,
 											}
 											if movie.InTheaters {
 												moviecardProps.TopHoverComponent = movieCardTopHover(movie.InTheaters)

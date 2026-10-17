@@ -574,9 +574,16 @@ templ personFilmographyTimeline(groups []personFilmographyYearGroup) {
 }
 
 templ personFilmographyCard(credit personFilmographyCredit) {
+	{{
+		seerrMovieID := int64(0)
+		if credit.Credit.MediaType == personMovieMediaType {
+			seerrMovieID = credit.Credit.ID
+		}
+	}}
 	@moviecard.MovieCard(moviecard.Props{
 		Title:              credit.Credit.Title,
 		PosterPath:         credit.Credit.PosterPath,
+		SeerrMovieID:       seerrMovieID,
 		Hoverable:          true,
 		Href:               personCreditHref(credit.Credit),
 		IndicatorID:        "#movie-loading",

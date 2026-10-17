@@ -107,6 +107,7 @@ templ homeRecentActivityCard(movies []models.WatchedMovieInDay) {
 										Href:       "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
 										PosterPath: movie.MovieDetails.Movie.PosterPath,
 										Hoverable:  true,
+										SeerrMovieID: movie.MovieDetails.Movie.ID,
 									}
 									if movie.InTheaters {
 										moviecardProps.TopHoverComponent = movieCardTopHover(movie.InTheaters)
@@ -179,6 +180,7 @@ templ homeWatchNextSection(movies []models.MovieItem, watchlistMovieCount int) {
 									Href:       "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
 									PosterPath: movie.MovieDetails.Movie.PosterPath,
 									Hoverable:  true,
+									SeerrMovieID: movie.MovieDetails.Movie.ID,
 								}) {
 									<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight">{ movie.MovieDetails.Movie.Title }</h3>
 									<div class="flex items-center justify-between">

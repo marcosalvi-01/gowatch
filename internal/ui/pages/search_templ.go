@@ -35,6 +35,13 @@ func searchResultIndicator(result models.SearchResult) string {
 	return "#movie-loading"
 }
 
+func searchResultMovieID(result models.SearchResult) int64 {
+	if result.Type != models.SearchResultTypeMovie {
+		return 0
+	}
+	return result.ID
+}
+
 func searchResultTypeChip(resultType models.SearchResultType) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -188,7 +195,7 @@ func Search(query string, results []models.SearchResult) templ.Component {
 								var templ_7745c5c3_Var8 string
 								templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(result.Title)
 								if templ_7745c5c3_Err != nil {
-									return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/search.templ`, Line: 65, Col: 84}
+									return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/search.templ`, Line: 73, Col: 84}
 								}
 								_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 								if templ_7745c5c3_Err != nil {
@@ -209,7 +216,7 @@ func Search(query string, results []models.SearchResult) templ.Component {
 								var templ_7745c5c3_Var9 string
 								templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(result.SecondaryText)
 								if templ_7745c5c3_Err != nil {
-									return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/search.templ`, Line: 69, Col: 69}
+									return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/search.templ`, Line: 77, Col: 69}
 								}
 								_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 								if templ_7745c5c3_Err != nil {
@@ -235,7 +242,7 @@ func Search(query string, results []models.SearchResult) templ.Component {
 									var templ_7745c5c3_Var10 string
 									templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", result.VoteAverage))
 									if templ_7745c5c3_Err != nil {
-										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/search.templ`, Line: 74, Col: 81}
+										return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/search.templ`, Line: 82, Col: 81}
 									}
 									_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 									if templ_7745c5c3_Err != nil {
@@ -258,7 +265,7 @@ func Search(query string, results []models.SearchResult) templ.Component {
 								var templ_7745c5c3_Var11 string
 								templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(result.Title)
 								if templ_7745c5c3_Err != nil {
-									return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/search.templ`, Line: 79, Col: 84}
+									return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/search.templ`, Line: 87, Col: 84}
 								}
 								_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 								if templ_7745c5c3_Err != nil {
@@ -274,6 +281,7 @@ func Search(query string, results []models.SearchResult) templ.Component {
 						templ_7745c5c3_Err = moviecard.MovieCard(moviecard.Props{
 							Title:              result.Title,
 							PosterPath:         result.ImagePath,
+							SeerrMovieID:       searchResultMovieID(result),
 							Hoverable:          true,
 							Href:               searchResultHref(result),
 							IndicatorID:        searchResultIndicator(result),
@@ -300,7 +308,7 @@ func Search(query string, results []models.SearchResult) templ.Component {
 						var templ_7745c5c3_Var12 string
 						templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(query)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/search.templ`, Line: 89, Col: 37}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/search.templ`, Line: 97, Col: 37}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 						if templ_7745c5c3_Err != nil {
