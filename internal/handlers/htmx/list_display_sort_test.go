@@ -32,7 +32,7 @@ func TestNewHandlersRequiresDependencies(t *testing.T) {
 		}
 	}()
 
-	NewHandlers(nil, nil, nil, nil, nil)
+	NewHandlers(nil, nil, nil, nil, nil, nil)
 }
 
 func TestHandlers_UpdateListDisplaySort(t *testing.T) {

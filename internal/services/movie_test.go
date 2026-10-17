@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"slices"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -15,7 +16,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
-func newMovieServiceWithTestDB(t *testing.T, seerr *SeerrService, cacheTTL time.Duration) *MovieService {
+func newMovieServiceWithTestDB(t *testing.T, seerr *SeerrService) *MovieService {
 	t.Helper()
 
 	testDB, err := db.NewTestDB()
@@ -28,7 +29,7 @@ func newMovieServiceWithTestDB(t *testing.T, seerr *SeerrService, cacheTTL time.
 		}
 	})
 
-	return NewMovieService(testDB, seerr, cacheTTL)
+	return NewMovieService(testDB, seerr, time.Hour)
 }
 
 func TestMovieService_GetMovieDetails_CacheHit(t *testing.T) {
@@ -163,6 +164,53 @@ func TestMovieService_GetMovieDetailsUsesSeerrMetadataAndPreservesRelatedData(t 
 	}
 }
 
+func TestMovieService_GetRelatedMoviesUsesSeerrMetadata(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get(seerrAPIKeyHeader); got != "test-key" {
+			t.Errorf("API key header = %q, want %q", got, "test-key")
+		}
+		switch r.URL.Path {
+		case "/api/v1/movie/603/recommendations":
+			_, _ = w.Write([]byte(`{"page":1,"totalPages":2,"totalResults":2,"results":[{"id":604,"title":"The Matrix Reloaded","originalTitle":"The Matrix Reloaded","posterPath":"/reloaded.jpg","releaseDate":"2003-05-15","voteAverage":7.2},{"id":605,"title":"","originalTitle":"Original Title"}]}`))
+		case "/api/v1/movie/603/similar":
+			_, _ = w.Write([]byte(`{"page":1,"results":[{"id":606,"title":"Dark City","posterPath":"/dark-city.jpg","releaseDate":"1998-02-27","voteAverage":7.6}]}`))
+		default:
+			t.Errorf("unexpected request path %q", r.URL.Path)
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	seerr, err := NewSeerrService(models.SeerrIntegration{BaseURL: server.URL, APIKey: "test-key"}, server.Client())
+	if err != nil {
+		t.Fatalf("NewSeerrService() error = %v", err)
+	}
+	movieService := newMovieServiceWithTestDB(t, seerr)
+
+	recommended, err := movieService.GetMovieRecommendations(t.Context(), 603)
+	if err != nil {
+		t.Fatalf("GetMovieRecommendations() error = %v", err)
+	}
+	wantRecommended := []models.SearchResult{
+		{ID: 604, Title: "The Matrix Reloaded", ImagePath: "/reloaded.jpg", SecondaryText: "2003", VoteAverage: 7.2, Type: models.SearchResultTypeMovie},
+		{ID: 605, Title: "Original Title", SecondaryText: unknownYearSecondaryText, Type: models.SearchResultTypeMovie},
+	}
+	if !slices.Equal(recommended, wantRecommended) {
+		t.Fatalf("GetMovieRecommendations() = %+v, want %+v", recommended, wantRecommended)
+	}
+
+	similar, err := movieService.GetSimilarMovies(t.Context(), 603)
+	if err != nil {
+		t.Fatalf("GetSimilarMovies() error = %v", err)
+	}
+	wantSimilar := []models.SearchResult{
+		{ID: 606, Title: "Dark City", ImagePath: "/dark-city.jpg", SecondaryText: "1998", VoteAverage: 7.6, Type: models.SearchResultTypeMovie},
+	}
+	if !slices.Equal(similar, wantSimilar) {
+		t.Fatalf("GetSimilarMovies() = %+v, want %+v", similar, wantSimilar)
+	}
+}
+
 func TestMovieService_GetPersonDetailsUsesSeerrCombinedCredits(t *testing.T) {
 	seen := make(map[string]bool)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -186,7 +234,7 @@ func TestMovieService_GetPersonDetailsUsesSeerrCombinedCredits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSeerrService() error = %v", err)
 	}
-	movieService := newMovieServiceWithTestDB(t, seerrService, time.Hour)
+	movieService := newMovieServiceWithTestDB(t, seerrService)
 
 	person, err := movieService.GetPersonDetails(t.Context(), 66633)
 	if err != nil {
@@ -225,7 +273,7 @@ func TestMovieService_SearchMultiUsesSeerrResults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSeerrService() error = %v", err)
 	}
-	movieService := newMovieServiceWithTestDB(t, seerrService, time.Hour)
+	movieService := newMovieServiceWithTestDB(t, seerrService)
 
 	results, err := movieService.SearchMulti(t.Context(), "The Matrix & Co")
 	if err != nil {
@@ -258,7 +306,7 @@ func TestMovieService_SearchMultiReturnsSeerrErrorsWithoutFallback(t *testing.T)
 	if err != nil {
 		t.Fatalf("NewSeerrService() error = %v", err)
 	}
-	movieService := newMovieServiceWithTestDB(t, seerrService, time.Hour)
+	movieService := newMovieServiceWithTestDB(t, seerrService)
 
 	results, err := movieService.SearchMulti(t.Context(), "The Matrix")
 	if !errors.Is(err, ErrSeerrUnavailable) {

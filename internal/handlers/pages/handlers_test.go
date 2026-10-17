@@ -180,6 +180,60 @@ func TestMovieListAction(t *testing.T) {
 	}
 }
 
+func TestMovieRelatedSectionsLoadAfterCrew(t *testing.T) {
+	movie := models.MovieDetails{
+		Movie: models.Movie{ID: 1, Title: "Alien"},
+		Credits: models.MovieCredits{
+			Crew: []models.Crew{{Job: "Director", Person: models.Person{Name: "Ridley Scott"}}},
+		},
+	}
+	var body bytes.Buffer
+	if err := uipages.Movie(movie, models.WatchedMovieRecords{}, false, false, false).Render(context.Background(), &body); err != nil {
+		t.Fatal(err)
+	}
+
+	html := body.String()
+	for _, expected := range []string{
+		`id="movie-recommendations"`,
+		`hx-get="/htmx/movies/1/recommendations"`,
+		`id="movie-similar"`,
+		`hx-get="/htmx/movies/1/similar"`,
+		`hx-trigger="load"`,
+		`snap-x snap-mandatory`,
+		`snap-start`,
+	} {
+		if !strings.Contains(html, expected) {
+			t.Fatalf("rendered movie page does not contain %q", expected)
+		}
+	}
+
+	crewIndex := strings.Index(html, "Key Crew")
+	recommendationsIndex := strings.Index(html, "Recommended Movies")
+	similarIndex := strings.Index(html, "Similar Movies")
+	if crewIndex < 0 || recommendationsIndex <= crewIndex || similarIndex <= recommendationsIndex {
+		t.Fatalf("related movie sections did not render after crew in order: %s", html)
+	}
+}
+
+func TestMovieRelatedSectionLimitsPosterRow(t *testing.T) {
+	movies := make([]models.SearchResult, 10)
+	for i := range movies {
+		movies[i] = models.SearchResult{ID: int64(i + 1), Title: "Movie"}
+	}
+	var body bytes.Buffer
+	if err := uipages.MovieRelatedSection("movie-recommendations", "Recommended Movies", "Failed to load recommendations.", movies, false).Render(context.Background(), &body); err != nil {
+		t.Fatal(err)
+	}
+
+	html := body.String()
+	if got := strings.Count(html, `data-page="movie"`); got != 8 {
+		t.Fatalf("rendered movie card count = %d, want 8", got)
+	}
+	if !strings.Contains(html, `snap-x snap-mandatory`) || !strings.Contains(html, `snap-start`) {
+		t.Fatalf("rendered poster row lacks horizontal snap classes: %s", html)
+	}
+}
+
 func TestAddToWatchedLinksToWatchlist(t *testing.T) {
 	var body bytes.Buffer
 	if err := addtowatched.AddToWatched(1, true).Render(context.Background(), &body); err != nil {

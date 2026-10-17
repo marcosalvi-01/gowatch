@@ -17,6 +17,10 @@ type seerrSearchResponse struct {
 	Results      []seerrSearchResult `json:"results"`
 }
 
+type seerrMovieResultsResponse struct {
+	Results []seerrSearchResult `json:"results"`
+}
+
 type seerrSearchResult struct {
 	ID            int64   `json:"id"`
 	MediaType     string  `json:"mediaType"`
@@ -146,6 +150,27 @@ func (s *SeerrService) movieMetadata(ctx context.Context, movieID int64) (*seerr
 	}
 	var result seerrMovieMetadata
 	if err := s.getMetadata(ctx, fmt.Sprintf("movie/%d", movieID), nil, "get movie metadata", &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (s *SeerrService) movieRecommendations(ctx context.Context, movieID int64) (*seerrMovieResultsResponse, error) {
+	return s.movieResults(ctx, movieID, "recommendations")
+}
+
+func (s *SeerrService) similarMovies(ctx context.Context, movieID int64) (*seerrMovieResultsResponse, error) {
+	return s.movieResults(ctx, movieID, "similar")
+}
+
+func (s *SeerrService) movieResults(ctx context.Context, movieID int64, relationship string) (*seerrMovieResultsResponse, error) {
+	if movieID <= 0 {
+		return nil, fmt.Errorf("invalid TMDB movie ID %d", movieID)
+	}
+
+	var result seerrMovieResultsResponse
+	endpoint := fmt.Sprintf("movie/%d/%s", movieID, relationship)
+	if err := s.getMetadata(ctx, endpoint, nil, "get movie "+relationship, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil

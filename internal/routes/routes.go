@@ -69,7 +69,7 @@ func NewRouter(
 	})
 
 	log.Debug("registering HTMX routes")
-	htmxHandlers := htmx.NewHandlers(watchedService, listService, homeService, authService, seerrService)
+	htmxHandlers := htmx.NewHandlers(movieService, watchedService, listService, homeService, authService, seerrService)
 	r.Route("/htmx", func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware(*authService))
 		r.Use(middleware.HTMLMiddleware)

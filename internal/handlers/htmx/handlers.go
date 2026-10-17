@@ -50,6 +50,7 @@ type watchedFormData struct {
 }
 
 type Handlers struct {
+	movieService   *services.MovieService
 	watchedService *services.WatchedService
 	listService    *services.ListService
 	homeService    *services.HomeService
@@ -57,7 +58,10 @@ type Handlers struct {
 	seerrService   *services.SeerrService
 }
 
-func NewHandlers(watchedService *services.WatchedService, listService *services.ListService, homeService *services.HomeService, authService *services.AuthService, seerrService *services.SeerrService) *Handlers {
+func NewHandlers(movieService *services.MovieService, watchedService *services.WatchedService, listService *services.ListService, homeService *services.HomeService, authService *services.AuthService, seerrService *services.SeerrService) *Handlers {
+	if movieService == nil {
+		panic("movie service is required")
+	}
 	if watchedService == nil {
 		panic("watched service is required")
 	}
@@ -75,6 +79,7 @@ func NewHandlers(watchedService *services.WatchedService, listService *services.
 	}
 
 	return &Handlers{
+		movieService:   movieService,
 		watchedService: watchedService,
 		listService:    listService,
 		homeService:    homeService,
@@ -99,6 +104,8 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 
 	r.Post("/watchlist/add", h.AddToWatchlist)
 	r.Get("/watchlist/{id}", h.RenderAddToWatchlistButton)
+	r.Get("/movies/{id}/recommendations", h.RenderMovieRecommendations)
+	r.Get("/movies/{id}/similar", h.RenderSimilarMovies)
 	r.Get("/movies/{id}/seerr-state", h.RenderSeerrMovieAction)
 	r.Post("/movies/{id}/seerr-request", h.RequestSeerrMovie)
 
@@ -107,6 +114,40 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Get("/lists/home-lists", h.HomeLists)
 	r.Get("/lists/{id}/movie-grid", h.ListMovieGrid)
 	r.Get("/lists/{id}/stats", h.ListStats)
+}
+
+func (h *Handlers) RenderMovieRecommendations(w http.ResponseWriter, r *http.Request) {
+	h.renderRelatedMovies(w, r, "movie-recommendations", "Recommended Movies", "Failed to load recommendations.", h.movieService.GetMovieRecommendations)
+}
+
+func (h *Handlers) RenderSimilarMovies(w http.ResponseWriter, r *http.Request) {
+	h.renderRelatedMovies(w, r, "movie-similar", "Similar Movies", "Failed to load similar movies.", h.movieService.GetSimilarMovies)
+}
+
+func (h *Handlers) renderRelatedMovies(
+	w http.ResponseWriter,
+	r *http.Request,
+	sectionID string,
+	title string,
+	errorMessage string,
+	fetch func(context.Context, int64) ([]models.SearchResult, error),
+) {
+	movieID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil || movieID <= 0 {
+		http.Error(w, "Invalid movie ID", http.StatusBadRequest)
+		return
+	}
+
+	movies, err := fetch(r.Context(), movieID)
+	failed := err != nil
+	if failed {
+		log.Warn("failed to load related movies", "movieID", movieID, "title", title, "error", err)
+	}
+
+	if err := pages.MovieRelatedSection(sectionID, title, errorMessage, movies, failed).Render(r.Context(), w); err != nil {
+		log.Error("failed to render related movies", "movieID", movieID, "title", title, "error", err)
+		http.Error(w, "Failed to render related movies", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) RenderAddToListDialogContent(w http.ResponseWriter, r *http.Request) {

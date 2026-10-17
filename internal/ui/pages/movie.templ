@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"github.com/marcosalvi-01/gowatch/internal/models"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/moviecard"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/avatar"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
@@ -28,6 +29,7 @@ import (
 )
 
 const movieVisibleCastLimit = 9
+const movieRelatedVisibleLimit = 10
 
 templ Movie(movie models.MovieDetails, watchRecords models.WatchedMovieRecords, isInWatchlist, hasLists, canRequestSeerr bool) {
 	@Layout() {
@@ -446,7 +448,68 @@ templ movieContent(movie models.MovieDetails, watchRecords models.WatchedMovieRe
 		@movieMetadata(movie)
 		@castSection(movie.Credits.Cast)
 		@crewSection(movie.Credits.Crew)
+		@MovieRelatedLoading("movie-recommendations", "Recommended Movies", "recommendations", movie.Movie.ID)
+		@MovieRelatedLoading("movie-similar", "Similar Movies", "similar", movie.Movie.ID)
 	</div>
+}
+
+templ MovieRelatedLoading(sectionID, title, relationship string, movieID int64) {
+	<section
+		id={ sectionID }
+		class="space-y-4"
+		hx-get={ fmt.Sprintf("/htmx/movies/%d/%s", movieID, relationship) }
+		hx-trigger="load"
+		hx-target="this"
+		hx-swap="outerHTML"
+	>
+		@movieSectionHeader(title, icon.Film)
+		<div class="flex w-full gap-4 overflow-x-auto snap-x snap-mandatory pb-2">
+			for range 5 {
+				<div class="w-[110px] shrink-0 snap-start sm:w-[140px] md:w-[160px]">
+					@skeleton.Skeleton(skeleton.Props{Class: "aspect-[2/3] w-full rounded-lg"})
+				</div>
+			}
+		</div>
+	</section>
+}
+
+templ MovieRelatedSection(sectionID, title, errorMessage string, movies []models.SearchResult, failed bool) {
+	if failed {
+		<section id={ sectionID } class="space-y-4" aria-live="polite">
+			@movieSectionHeader(title, icon.Film)
+			<p class="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">{ errorMessage }</p>
+		</section>
+	} else if len(movies) > 0 {
+		<section id={ sectionID } class="space-y-4">
+			@movieSectionHeader(title, icon.Film)
+			<div class="flex w-full gap-4 overflow-x-auto snap-x snap-mandatory pb-3">
+				for i, movie := range movies {
+					if i >= movieRelatedVisibleLimit {
+						{{ break }}
+					}
+					@moviecard.MovieCard(moviecard.Props{
+						Title:       movie.Title,
+						PosterPath:  movie.ImagePath,
+						Href:        "/movie/" + strconv.FormatInt(movie.ID, 10),
+						IndicatorID: "#movie-loading",
+						Hoverable:   true,
+						Class:       "w-[110px] shrink-0 snap-start border-0 group sm:w-[140px] md:w-[160px]",
+					}) {
+						<h3 class="mb-1 line-clamp-2 text-xs font-bold leading-tight md:text-sm">{ movie.Title }</h3>
+						<div class="flex items-center justify-between gap-2">
+							<p class="text-xs opacity-90">{ movie.SecondaryText }</p>
+							if movie.VoteAverage > 0 {
+								<div class="flex items-center">
+									@icon.Star(icon.Props{Class: "size-3 fill-[orange] stroke-[orange]"})
+									<span class="ml-1 text-xs">{ fmt.Sprintf("%.1f", movie.VoteAverage) }</span>
+								</div>
+							}
+						</div>
+					}
+				}
+			</div>
+		</section>
+	}
 }
 
 templ movieSectionHeader(title string, iconFn func(...icon.Props) templ.Component) {

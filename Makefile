@@ -22,10 +22,6 @@ TAILWIND_VERSION ?= v4.1.12
 TAILWIND_BIN_DIR := ./tmp/bin
 TAILWIND_BIN := $(TAILWIND_BIN_DIR)/tailwindcss
 
-# File definitions
-SQL_FILES := $(DB_DIR)/queries.sql $(DB_DIR)/migrations/*.sql
-SQLC_TIMESTAMP := $(DB_DIR)/sqlc/.sqlc-generated
-
 # Version for ldflags
 VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo dev)
 
@@ -34,15 +30,9 @@ build: gen
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-X gowatch/cmd.Version=$(VERSION)" -o $(BUILD_DIR)/gowatch .
 
 # Generate all code (sqlc and templ)
-gen: 
-	$(MAKE) $(SQLC_TIMESTAMP)
-	templ generate
-
-# Generate sqlc files when SQL files or config change
-$(SQLC_TIMESTAMP): $(SQL_FILES) sqlc.yaml
-	@echo 'regenerating sqlc files'
+gen:
 	sqlc generate
-	@touch $@
+	templ generate
 
 clean:
 	rm -rf $(DB_DIR)/sqlc

@@ -188,6 +188,37 @@ func (s *MovieService) GetMovieDetails(ctx context.Context, id int64) (*models.M
 	return movie, nil
 }
 
+func (s *MovieService) GetMovieRecommendations(ctx context.Context, id int64) ([]models.SearchResult, error) {
+	results, err := s.seerr.movieRecommendations(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("get Seerr movie recommendations for id %d: %w", id, err)
+	}
+	return mapSeerrMovieResults(results.Results), nil
+}
+
+func (s *MovieService) GetSimilarMovies(ctx context.Context, id int64) ([]models.SearchResult, error) {
+	results, err := s.seerr.similarMovies(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("get Seerr similar movies for id %d: %w", id, err)
+	}
+	return mapSeerrMovieResults(results.Results), nil
+}
+
+func mapSeerrMovieResults(results []seerrSearchResult) []models.SearchResult {
+	movies := make([]models.SearchResult, len(results))
+	for i, result := range results {
+		movies[i] = mapSearchMovieToSearchResult(
+			result.ID,
+			result.Title,
+			result.OriginalTitle,
+			result.PosterPath,
+			result.ReleaseDate,
+			result.VoteAverage,
+		)
+	}
+	return movies
+}
+
 func mapSeerrMovieMetadataToMovieDetails(details seerrMovieMetadata) (*models.MovieDetails, error) {
 	var releaseDate *time.Time
 	if details.ReleaseDate != "" {
