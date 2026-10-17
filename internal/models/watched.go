@@ -79,6 +79,7 @@ type PersonWatchRank struct {
 	Role                    string
 	Label                   string
 	MostWatchedRank         *int64
+	MostWatchedLabel        string
 	FavoriteRank            *int64
 	FavoriteAverageRating   float64
 	FavoriteRatedMovieCount int64

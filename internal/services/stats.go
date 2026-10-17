@@ -70,7 +70,7 @@ func limitTopActorsByGender(actors []models.TopActor, gender int64, limit int) [
 	return filtered
 }
 
-func watchedActorRankByGender(actors []models.TopActor, personID int64) *int64 {
+func watchedActorRankByGender(actors []models.TopActor, personID int64) (*int64, int64) {
 	var currentGender int64
 	var currentRank int64
 	var previousWatchCount int64
@@ -89,11 +89,11 @@ func watchedActorRankByGender(actors []models.TopActor, personID int64) *int64 {
 
 		if actor.ID == personID {
 			rank := currentRank
-			return &rank
+			return &rank, actor.Gender
 		}
 	}
 
-	return nil
+	return nil, 0
 }
 
 func watchedCrewMemberRanks(crewMembers []models.TopCrewMemberStat) map[models.TopCrewRole]map[int64]*int64 {

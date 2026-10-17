@@ -173,19 +173,28 @@ func TestWatchedActorRankByGender(t *testing.T) {
 		{ID: 5, Name: "Male Two", Gender: tmdbGenderMale, WatchCount: 2},
 	}
 
-	femaleRank := watchedActorRankByGender(actors, 3)
+	femaleRank, femaleGender := watchedActorRankByGender(actors, 3)
 	if femaleRank == nil || *femaleRank != 2 {
 		t.Fatalf("expected female actor rank 2, got %v", femaleRank)
 	}
+	if femaleGender != tmdbGenderFemale {
+		t.Fatalf("expected female gender %d, got %d", tmdbGenderFemale, femaleGender)
+	}
 
-	maleRank := watchedActorRankByGender(actors, 5)
+	maleRank, maleGender := watchedActorRankByGender(actors, 5)
 	if maleRank == nil || *maleRank != 2 {
 		t.Fatalf("expected male actor rank 2, got %v", maleRank)
 	}
+	if maleGender != tmdbGenderMale {
+		t.Fatalf("expected male gender %d, got %d", tmdbGenderMale, maleGender)
+	}
 
-	missingRank := watchedActorRankByGender(actors, 99)
+	missingRank, missingGender := watchedActorRankByGender(actors, 99)
 	if missingRank != nil {
 		t.Fatalf("expected nil rank for missing actor, got %v", *missingRank)
+	}
+	if missingGender != 0 {
+		t.Fatalf("expected no gender for missing actor, got %d", missingGender)
 	}
 }
 

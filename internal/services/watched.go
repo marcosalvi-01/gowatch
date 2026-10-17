@@ -395,6 +395,7 @@ func (s *WatchedService) GetPersonWatchActivity(ctx context.Context, personID in
 		}
 	}
 
+	actorGender := int64(0)
 	if activity.ActingMovieCount > 0 {
 		actors, err := s.db.GetWatchedActors(ctx, user.ID)
 		if err != nil {
@@ -402,7 +403,7 @@ func (s *WatchedService) GetPersonWatchActivity(ctx context.Context, personID in
 			return models.PersonWatchActivity{}, fmt.Errorf("GetPersonWatchActivity: get watched actors: %w", err)
 		}
 
-		activity.ActorRank = watchedActorRankByGender(actors, personID)
+		activity.ActorRank, actorGender = watchedActorRankByGender(actors, personID)
 	}
 
 	if activity.CrewMovieCount > 0 {
@@ -417,10 +418,17 @@ func (s *WatchedService) GetPersonWatchActivity(ctx context.Context, personID in
 			if role.WatchRole == "" {
 				continue
 			}
-			appendPersonWatchRank(&activity, role.Key, role.Label, crewRanks[role.WatchRole][personID])
+			appendPersonWatchRank(&activity, role.Key, role.Label, crewRanks[role.WatchRole][personID], "")
 		}
 	}
-	appendPersonWatchRank(&activity, personRoleActor, "Actor", activity.ActorRank)
+	mostWatchedLabel := ""
+	switch actorGender {
+	case tmdbGenderFemale:
+		mostWatchedLabel = "Most watched female actors"
+	case tmdbGenderMale:
+		mostWatchedLabel = "Most watched male actors"
+	}
+	appendPersonWatchRank(&activity, personRoleActor, "Actor", activity.ActorRank, mostWatchedLabel)
 
 	if len(activity.Ranks) > 0 {
 		ratedRanks, err := s.db.GetRatedPersonRanks(ctx, user.ID)
@@ -434,15 +442,16 @@ func (s *WatchedService) GetPersonWatchActivity(ctx context.Context, personID in
 	return activity, nil
 }
 
-func appendPersonWatchRank(activity *models.PersonWatchActivity, role, label string, rank *int64) {
+func appendPersonWatchRank(activity *models.PersonWatchActivity, role, label string, rank *int64, mostWatchedLabel string) {
 	if rank == nil {
 		return
 	}
 
 	activity.Ranks = append(activity.Ranks, models.PersonWatchRank{
-		Role:            role,
-		Label:           label,
-		MostWatchedRank: rank,
+		Role:             role,
+		Label:            label,
+		MostWatchedRank:  rank,
+		MostWatchedLabel: mostWatchedLabel,
 	})
 }
 
