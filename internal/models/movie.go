@@ -40,9 +40,46 @@ type MovieDetails struct {
 	Genres  []Genre
 	Credits MovieCredits
 
-	// OriginCountry []string
-	// BelongsToCollection BelongsToCollection
-	// ProductionCompanies []ProductionCompany
-	// ProductionCountries []ProductionCountry
-	// SpokenLanguages     []SpokenLanguage
+	RelatedVideos       []RelatedVideo
+	ProductionCompanies []ProductionCompany
+	ProductionCountries []ProductionCountry
+}
+
+type ProductionCompany struct {
+	ID            int64
+	LogoPath      string
+	OriginCountry string
+	Name          string
+}
+
+type ProductionCountry struct {
+	ISOCode string
+	Name    string
+}
+
+type RelatedVideo struct {
+	URL  string
+	Key  string
+	Name string
+	Size int
+	Type string
+	Site string
+}
+
+type MovieRatings struct {
+	IMDb           *IMDbRating
+	RottenTomatoes *RottenTomatoesRating
+}
+
+type IMDbRating struct {
+	Score *float64
+	URL   string
+}
+
+type RottenTomatoesRating struct {
+	CriticsScore   *float64
+	CriticsRating  string
+	AudienceScore  *float64
+	AudienceRating string
+	URL            string
 }

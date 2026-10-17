@@ -36,6 +36,31 @@ func TestRemoveUnusedPersonColumns(t *testing.T) {
 	}
 }
 
+func TestMovieRelationshipMigrationInvalidatesCachedMovies(t *testing.T) {
+	db, provider := testMigrationProvider(t)
+	if _, err := provider.UpTo(t.Context(), 10); err != nil {
+		t.Fatalf("apply migrations through version 10: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO movie (
+		id, title, original_title, original_language, overview, poster_path, backdrop_path,
+		popularity, vote_count, vote_average, budget, homepage, imdb_id, revenue, runtime,
+		status, tagline, updated_at
+	) VALUES (603, 'The Matrix', 'The Matrix', 'en', '', '', '', 0, 0, 0, 0, '', '', 0, 0, 'Released', '', CURRENT_TIMESTAMP)`); err != nil {
+		t.Fatalf("insert cached movie: %v", err)
+	}
+	if _, err := provider.Up(t.Context()); err != nil {
+		t.Fatalf("apply movie relationship migration: %v", err)
+	}
+
+	var updatedYear string
+	if err := db.QueryRow("SELECT strftime('%Y', updated_at) FROM movie WHERE id = 603").Scan(&updatedYear); err != nil {
+		t.Fatalf("read invalidated movie timestamp: %v", err)
+	}
+	if updatedYear != "1970" {
+		t.Fatalf("movie cache timestamp year = %q, want 1970", updatedYear)
+	}
+}
+
 func testMigrationProvider(t *testing.T) (*sql.DB, *goose.Provider) {
 	t.Helper()
 

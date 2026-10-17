@@ -243,14 +243,17 @@ func mapSeerrMovieMetadataToMovieDetails(details seerrMovieMetadata) (*models.Mo
 			VoteCount:        details.VoteCount,
 			VoteAverage:      details.VoteAverage,
 		},
-		Homepage: details.Homepage,
-		IMDbID:   details.IMDbID,
-		Budget:   details.Budget,
-		Revenue:  details.Revenue,
-		Runtime:  details.Runtime,
-		Status:   details.Status,
-		Tagline:  details.Tagline,
-		Genres:   make([]models.Genre, len(details.Genres)),
+		Homepage:            details.Homepage,
+		IMDbID:              details.IMDbID,
+		Budget:              details.Budget,
+		Revenue:             details.Revenue,
+		Runtime:             details.Runtime,
+		Status:              details.Status,
+		Tagline:             details.Tagline,
+		Genres:              make([]models.Genre, len(details.Genres)),
+		RelatedVideos:       make([]models.RelatedVideo, len(details.RelatedVideos)),
+		ProductionCompanies: make([]models.ProductionCompany, len(details.ProductionCompanies)),
+		ProductionCountries: make([]models.ProductionCountry, len(details.ProductionCountries)),
 		Credits: models.MovieCredits{
 			Cast: make([]models.Cast, len(details.Credits.Cast)),
 			Crew: make([]models.Crew, len(details.Credits.Crew)),
@@ -259,6 +262,30 @@ func mapSeerrMovieMetadataToMovieDetails(details seerrMovieMetadata) (*models.Mo
 
 	for i, genre := range details.Genres {
 		movie.Genres[i] = models.Genre{ID: genre.ID, Name: genre.Name}
+	}
+	for i, video := range details.RelatedVideos {
+		movie.RelatedVideos[i] = models.RelatedVideo{
+			URL:  video.URL,
+			Key:  video.Key,
+			Name: video.Name,
+			Size: video.Size,
+			Type: video.Type,
+			Site: video.Site,
+		}
+	}
+	for i, company := range details.ProductionCompanies {
+		movie.ProductionCompanies[i] = models.ProductionCompany{
+			ID:            company.ID,
+			LogoPath:      company.LogoPath,
+			OriginCountry: company.OriginCountry,
+			Name:          company.Name,
+		}
+	}
+	for i, country := range details.ProductionCountries {
+		movie.ProductionCountries[i] = models.ProductionCountry{
+			ISOCode: country.ISOCode,
+			Name:    country.Name,
+		}
 	}
 	for i, cast := range details.Credits.Cast {
 		movie.Credits.Cast[i] = models.Cast{

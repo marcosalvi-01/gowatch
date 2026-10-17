@@ -27,7 +27,9 @@ func TestSeerrMetadataRequests(t *testing.T) {
 			}
 			_, _ = w.Write([]byte(`{"results":[{"id":603,"mediaType":"movie","title":"The Matrix","releaseDate":"1999-03-31","voteAverage":8.26,"posterPath":"/matrix.jpg"},{"id":66633,"mediaType":"person","name":"Vince Gilligan","popularity":2.8919,"profilePath":"/vince.jpg"}]}`))
 		case "/api/v1/movie/603":
-			_, _ = w.Write([]byte(`{"id":603,"title":"The Matrix","releaseDate":"1999-03-31","genres":[{"id":28,"name":"Action"}],"credits":{"cast":[{"id":6384,"castId":34,"creditId":"cast-credit","character":"Neo","gender":2,"name":"Keanu Reeves","order":0,"profilePath":"/keanu.jpg"}],"crew":[{"id":1619,"creditId":"crew-credit","gender":2,"name":"Lana Wachowski","job":"Director","department":"Directing","profilePath":"/lana.jpg"}]}}`))
+			_, _ = w.Write([]byte(`{"id":603,"title":"The Matrix","releaseDate":"1999-03-31","genres":[{"id":28,"name":"Action"}],"relatedVideos":[{"url":"https://www.youtube.com/watch?v=abc123","key":"abc123","name":"Trailer","size":1080,"type":"Trailer","site":"YouTube"}],"productionCompanies":[{"id":1,"logoPath":"/studio.svg","originCountry":"US","name":"Warner Bros."}],"productionCountries":[{"iso_3166_1":"US","name":"United States"}],"credits":{"cast":[{"id":6384,"castId":34,"creditId":"cast-credit","character":"Neo","gender":2,"name":"Keanu Reeves","order":0,"profilePath":"/keanu.jpg"}],"crew":[{"id":1619,"creditId":"crew-credit","gender":2,"name":"Lana Wachowski","job":"Director","department":"Directing","profilePath":"/lana.jpg"}]}}`))
+		case "/api/v1/movie/603/ratingscombined":
+			_, _ = w.Write([]byte(`{"rt":{"url":"https://www.rottentomatoes.com/m/the_matrix","criticsScore":88,"criticsRating":"Certified Fresh","audienceScore":85,"audienceRating":"Upright"},"imdb":{"url":"https://www.imdb.com/title/tt0133093","criticsScore":8.7}}`))
 		case "/api/v1/person/66633":
 			_, _ = w.Write([]byte(`{"id":66633,"name":"Vince Gilligan","birthday":"1967-02-10","knownForDepartment":"Writing","popularity":2.8919,"placeOfBirth":"Richmond, Virginia, USA","profilePath":"/vince.jpg","imdbId":"nm0319213"}`))
 		case "/api/v1/person/66633/combined_credits":
@@ -64,6 +66,17 @@ func TestSeerrMetadataRequests(t *testing.T) {
 	}
 	if len(movie.Credits.Cast) != 1 || movie.Credits.Cast[0].Character != "Neo" || len(movie.Credits.Crew) != 1 || movie.Credits.Crew[0].Job != "Director" {
 		t.Fatalf("movieMetadata() credits = %+v", movie.Credits)
+	}
+	if len(movie.RelatedVideos) != 1 || movie.RelatedVideos[0].Key != "abc123" || len(movie.ProductionCompanies) != 1 || movie.ProductionCompanies[0].Name != "Warner Bros." || len(movie.ProductionCountries) != 1 || movie.ProductionCountries[0].ISOCode != "US" {
+		t.Fatalf("movieMetadata() extra fields = videos:%+v companies:%+v countries:%+v", movie.RelatedVideos, movie.ProductionCompanies, movie.ProductionCountries)
+	}
+
+	ratings, err := service.MovieRatings(t.Context(), 603)
+	if err != nil {
+		t.Fatalf("MovieRatings() error = %v", err)
+	}
+	if ratings.IMDb == nil || ratings.IMDb.Score == nil || *ratings.IMDb.Score != 8.7 || ratings.RottenTomatoes == nil || ratings.RottenTomatoes.CriticsScore == nil || *ratings.RottenTomatoes.CriticsScore != 88 || ratings.RottenTomatoes.AudienceRating != "Upright" {
+		t.Fatalf("MovieRatings() = %+v", ratings)
 	}
 
 	person, err := service.personMetadata(t.Context(), 66633)

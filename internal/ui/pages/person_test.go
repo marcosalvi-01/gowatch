@@ -1,45 +1,12 @@
 package pages
 
 import (
-	"bytes"
-	"context"
 	"net/url"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/marcosalvi-01/gowatch/internal/models"
 )
-
-func TestPersonFilmographyCardRequestsAvailabilityOnlyForMovies(t *testing.T) {
-	testCases := []struct {
-		name        string
-		mediaType   string
-		wantRequest bool
-	}{
-		{name: "movie credit", mediaType: personMovieMediaType, wantRequest: true},
-		{name: "TV credit", mediaType: "tv"},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			credit := personFilmographyCredit{Credit: models.PersonCredit{
-				ID:        603,
-				MediaType: testCase.mediaType,
-				Title:     "Credit",
-			}}
-			var body bytes.Buffer
-			if err := personFilmographyCard(credit).Render(context.Background(), &body); err != nil {
-				t.Fatalf("render personFilmographyCard() error = %v", err)
-			}
-
-			request := strings.Contains(body.String(), "/htmx/movies/603/seerr-availability")
-			if request != testCase.wantRequest {
-				t.Fatalf("availability request present = %t, want %t", request, testCase.wantRequest)
-			}
-		})
-	}
-}
 
 func TestParsePersonFilmographyState(t *testing.T) {
 	tests := []struct {

@@ -51,6 +51,69 @@ func (d *SqliteDB) UpsertMovie(ctx context.Context, movie *models.MovieDetails) 
 		return fmt.Errorf("failed to insert movie with ID %d: %w", movie.Movie.ID, err)
 	}
 
+	if err := qtx.DeleteMovieProductionCompanies(ctx, movie.Movie.ID); err != nil {
+		return fmt.Errorf("delete production companies for movie %d: %w", movie.Movie.ID, err)
+	}
+	if err := qtx.DeleteMovieProductionCountries(ctx, movie.Movie.ID); err != nil {
+		return fmt.Errorf("delete production countries for movie %d: %w", movie.Movie.ID, err)
+	}
+	if err := qtx.DeleteMovieRelatedVideos(ctx, movie.Movie.ID); err != nil {
+		return fmt.Errorf("delete related videos for movie %d: %w", movie.Movie.ID, err)
+	}
+
+	for _, company := range movie.ProductionCompanies {
+		if company.ID <= 0 {
+			continue
+		}
+		if err := qtx.UpsertProductionCompany(ctx, sqlc.UpsertProductionCompanyParams{
+			ID:            company.ID,
+			LogoPath:      company.LogoPath,
+			OriginCountry: company.OriginCountry,
+			Name:          company.Name,
+		}); err != nil {
+			return fmt.Errorf("upsert production company %d: %w", company.ID, err)
+		}
+		if err := qtx.UpsertMovieProductionCompany(ctx, sqlc.UpsertMovieProductionCompanyParams{
+			MovieID:             movie.Movie.ID,
+			ProductionCompanyID: company.ID,
+		}); err != nil {
+			return fmt.Errorf("link production company %d to movie %d: %w", company.ID, movie.Movie.ID, err)
+		}
+	}
+
+	for _, country := range movie.ProductionCountries {
+		if country.ISOCode == "" {
+			continue
+		}
+		if err := qtx.UpsertProductionCountry(ctx, sqlc.UpsertProductionCountryParams{
+			IsoCode: country.ISOCode,
+			Name:    country.Name,
+		}); err != nil {
+			return fmt.Errorf("upsert production country %q: %w", country.ISOCode, err)
+		}
+		if err := qtx.UpsertMovieProductionCountry(ctx, sqlc.UpsertMovieProductionCountryParams{
+			MovieID:        movie.Movie.ID,
+			CountryIsoCode: country.ISOCode,
+		}); err != nil {
+			return fmt.Errorf("link production country %q to movie %d: %w", country.ISOCode, movie.Movie.ID, err)
+		}
+	}
+
+	for position, video := range movie.RelatedVideos {
+		if err := qtx.InsertMovieRelatedVideo(ctx, sqlc.InsertMovieRelatedVideoParams{
+			MovieID:  movie.Movie.ID,
+			Position: int64(position),
+			Url:      video.URL,
+			VideoKey: video.Key,
+			Name:     video.Name,
+			Size:     int64(video.Size),
+			Type:     video.Type,
+			Site:     video.Site,
+		}); err != nil {
+			return fmt.Errorf("insert related video %d for movie %d: %w", position, movie.Movie.ID, err)
+		}
+	}
+
 	log.Debug("inserted movie record, processing genres", "movieID", movie.Movie.ID, "genreCount", len(movie.Genres))
 
 	for _, genre := range movie.Genres {
@@ -213,6 +276,50 @@ func (d *SqliteDB) GetMovieDetailsByID(ctx context.Context, id int64) (*models.M
 
 	log.Debug("found movie record, retrieving related data", "movieID", id, "title", sqlcMovie.Title)
 	movie := toModelsMovieDetails(sqlcMovie)
+
+	companies, err := qtx.GetMovieProductionCompanies(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("get production companies for movie %d: %w", id, err)
+	}
+	movie.ProductionCompanies = make([]models.ProductionCompany, len(companies))
+	for i, row := range companies {
+		company := row.ProductionCompany
+		movie.ProductionCompanies[i] = models.ProductionCompany{
+			ID:            company.ID,
+			LogoPath:      company.LogoPath,
+			OriginCountry: company.OriginCountry,
+			Name:          company.Name,
+		}
+	}
+
+	countries, err := qtx.GetMovieProductionCountries(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("get production countries for movie %d: %w", id, err)
+	}
+	movie.ProductionCountries = make([]models.ProductionCountry, len(countries))
+	for i, row := range countries {
+		country := row.ProductionCountry
+		movie.ProductionCountries[i] = models.ProductionCountry{
+			ISOCode: country.IsoCode,
+			Name:    country.Name,
+		}
+	}
+
+	videos, err := qtx.GetMovieRelatedVideos(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("get related videos for movie %d: %w", id, err)
+	}
+	movie.RelatedVideos = make([]models.RelatedVideo, len(videos))
+	for i, video := range videos {
+		movie.RelatedVideos[i] = models.RelatedVideo{
+			URL:  video.Url,
+			Key:  video.VideoKey,
+			Name: video.Name,
+			Size: int(video.Size),
+			Type: video.Type,
+			Site: video.Site,
+		}
+	}
 
 	dbGenres, err := qtx.GetMovieGenre(ctx, id)
 	if err != nil {
@@ -495,7 +602,6 @@ func (d *SqliteDB) GetList(ctx context.Context, userID, id int64) (*models.List,
 			log.Error("failed to parse movie date_added in list", "listID", id, "movieID", result.Movie.ID, "error", err)
 			return nil, fmt.Errorf("failed to parse date_added for movie %d: %w", result.Movie.ID, err)
 		}
-
 		movies[i] = models.MovieItem{
 			MovieDetails: toModelsMovieDetails(result.Movie),
 			DateAdded:    dateAdded,
@@ -1867,7 +1973,6 @@ func (d *SqliteDB) ExportLists(ctx context.Context, userID int64) ([]models.List
 				log.Error("failed to parse movie date_added in list", "listID", listID, "movieID", result.Movie.ID, "error", err)
 				return nil, fmt.Errorf("failed to parse date_added for movie %d: %w", result.Movie.ID, err)
 			}
-
 			movieItem := models.MovieItem{
 				MovieDetails: toModelsMovieDetails(result.Movie),
 				DateAdded:    dateAdded,

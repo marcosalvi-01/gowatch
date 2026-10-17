@@ -19,9 +19,9 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/rating"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/separator"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/table"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/textarea"
 	"github.com/marcosalvi-01/gowatch/internal/utils"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -30,12 +30,13 @@ import (
 
 const movieVisibleCastLimit = 9
 const movieRelatedVisibleLimit = 10
+const rottenTomatoesPositiveScoreThreshold = 60.0
 
 templ Movie(movie models.MovieDetails, watchRecords models.WatchedMovieRecords, isInWatchlist, hasLists, canRequestSeerr bool) {
 	@Layout() {
 		@templ.Fragment("content") {
 			@movieHero(movie, isInWatchlist, hasLists, canRequestSeerr)
-			@movieContent(movie, watchRecords)
+			@movieContent(movie, watchRecords, canRequestSeerr)
 		}
 	}
 }
@@ -66,7 +67,7 @@ templ backdropHero(movie models.MovieDetails, isInWatchlist, hasLists, canReques
 		<!-- Content Container - Now uses flex items-center for better centering -->
 		<div class="relative flex items-start sm:absolute sm:inset-0 sm:items-center">
 			<div class="w-full p-4 sm:p-6 md:p-8 lg:p-10">
-				<div class="max-w-6xl mx-auto w-full">
+				<div class="w-full">
 					@heroContent(movie, true, isInWatchlist, hasLists, canRequestSeerr)
 				</div>
 			</div>
@@ -76,7 +77,7 @@ templ backdropHero(movie models.MovieDetails, isInWatchlist, hasLists, canReques
 
 templ fallbackHero(movie models.MovieDetails, isInWatchlist, hasLists, canRequestSeerr bool) {
 	<div class="p-4 sm:p-6 md:p-8 lg:p-10 bg-muted/20">
-		<div class="max-w-6xl mx-auto">
+		<div class="w-full">
 			@heroContent(movie, false, isInWatchlist, hasLists, canRequestSeerr)
 		</div>
 	</div>
@@ -442,14 +443,164 @@ templ SeerrMovieAction(movieID int64, state, seerrURL string) {
 	}
 }
 
-templ movieContent(movie models.MovieDetails, watchRecords models.WatchedMovieRecords) {
-	<div class="space-y-7 pb-5 sm:space-y-8">
-		@MovieActivity(watchRecords.Records)
-		@movieMetadata(movie)
-		@castSection(movie.Credits.Cast)
-		@crewSection(movie.Credits.Crew)
+	templ movieContent(movie models.MovieDetails, watchRecords models.WatchedMovieRecords, canRequestSeerr bool) {
+	<div class="w-full space-y-7 pb-5 sm:space-y-8">
+		<div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)] xl:gap-y-7">
+			<div class="min-w-0 space-y-7 xl:col-start-1 xl:row-start-1">
+				@movieOverview(movie)
+				if len(watchRecords.Records) > 0 {
+					@MovieActivity(watchRecords.Records)
+				}
+			</div>
+			<aside class="space-y-6 xl:col-start-2 xl:row-span-2 xl:row-start-1">
+				if movie.Movie.VoteAverage > 0 || canRequestSeerr {
+					@MovieRatings(movie.Movie, canRequestSeerr)
+				}
+				@movieMetadata(movie)
+				@movieTrailerSection(movie.RelatedVideos)
+			</aside>
+			<div class="min-w-0 space-y-7 xl:col-start-1 xl:row-start-2">
+				@castSection(movie.Credits.Cast)
+				@crewSection(movie.Credits.Crew)
+			</div>
+		</div>
 		@MovieRelatedLoading("movie-recommendations", "Recommended Movies", "recommendations", movie.Movie.ID)
 		@MovieRelatedLoading("movie-similar", "Similar Movies", "similar", movie.Movie.ID)
+	</div>
+}
+
+templ movieOverview(movie models.MovieDetails) {
+	if movie.Movie.Overview != "" || len(movie.Genres) > 0 {
+		<section class="space-y-4">
+			@movieSectionHeader("Overview", icon.FileText)
+			@card.Card(card.Props{Class: "bg-card/40"}) {
+				@card.Content(card.ContentProps{Class: "space-y-4 p-5 sm:p-6"}) {
+					if movie.Movie.Overview != "" {
+						<p class="text-sm leading-relaxed text-muted-foreground sm:text-base">{ movie.Movie.Overview }</p>
+					}
+					if len(movie.Genres) > 0 {
+						<div class="flex flex-wrap gap-2">
+							for _, genre := range movie.Genres {
+								@badge.Badge(badge.Props{Variant: "primary"}) {
+									{ genre.Name }
+								}
+							}
+						</div>
+					}
+				}
+			}
+		</section>
+	}
+}
+
+templ movieTrailerSection(videos []models.RelatedVideo) {
+	{{ trailers := movieTrailerLinks(videos) }}
+	if len(trailers) > 0 {
+		<section class="space-y-4">
+			@movieSectionHeader("Trailers", icon.Film)
+			<div class="grid grid-cols-1 gap-3">
+				for _, trailer := range trailers {
+					<a
+						href={ templ.URL(trailer.URL) }
+						target="_blank"
+						rel="noopener noreferrer"
+						class="flex min-h-20 items-center gap-4 rounded-lg border bg-card/40 p-4 transition-colors hover:bg-muted/50"
+					>
+						@icon.CirclePlay(icon.Props{Class: "size-8 shrink-0 text-primary"})
+						<span class="min-w-0">
+							<span class="block truncate font-medium">{ trailer.Name }</span>
+							<span class="block text-sm text-muted-foreground">{ trailer.Type } · YouTube</span>
+						</span>
+						@icon.ExternalLink(icon.Props{Class: "ml-auto size-4 shrink-0 text-muted-foreground"})
+					</a>
+				}
+			</div>
+		</section>
+	}
+}
+
+templ MovieRatings(movie models.Movie, canLoadExternal bool) {
+	<section id="movie-ratings" class="space-y-4">
+		@movieSectionHeader("Ratings", icon.Star)
+		@card.Card(card.Props{Class: "bg-card/40"}) {
+			@card.Content(card.ContentProps{Class: "space-y-4 p-5"}) {
+				if movie.VoteAverage > 0 {
+					@ratingEntry("TMDB", float64(movie.VoteAverage), "TMDB", fmt.Sprintf("%.1f/10", movie.VoteAverage), fmt.Sprintf("%s votes", formatNumber(movie.VoteCount)), "")
+				}
+				if canLoadExternal {
+					<div
+						class="space-y-4"
+						hx-get={ fmt.Sprintf("/htmx/movies/%d/ratings", movie.ID) }
+						hx-trigger="load"
+						hx-target="this"
+						hx-swap="innerHTML"
+						aria-live="polite"
+					>
+						@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-full rounded"})
+						@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-full rounded"})
+						@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-full rounded"})
+					</div>
+				} else if movie.VoteAverage <= 0 {
+					<p class="text-sm text-muted-foreground">No ratings available.</p>
+				}
+			}
+		}
+	</section>
+}
+
+templ MovieExternalRatings(ratings *models.MovieRatings, failed bool) {
+	{{ hasRating := false }}
+	<div class="space-y-4">
+		if ratings != nil && ratings.IMDb != nil && ratings.IMDb.Score != nil {
+			{{ hasRating = true }}
+			@ratingEntry("IMDb", *ratings.IMDb.Score, "IMDb", fmt.Sprintf("%.1f/10", *ratings.IMDb.Score), "", ratings.IMDb.URL)
+		}
+		if ratings != nil && ratings.RottenTomatoes != nil {
+			if ratings.RottenTomatoes.CriticsScore != nil {
+				{{ hasRating = true }}
+				@ratingEntry("RT Critics", *ratings.RottenTomatoes.CriticsScore, "Tomatometer", fmt.Sprintf("%.0f%%", *ratings.RottenTomatoes.CriticsScore), ratings.RottenTomatoes.CriticsRating, ratings.RottenTomatoes.URL)
+			}
+			if ratings.RottenTomatoes.AudienceScore != nil {
+				{{ hasRating = true }}
+				@ratingEntry("RT Audience", *ratings.RottenTomatoes.AudienceScore, "Popcornmeter", fmt.Sprintf("%.0f%%", *ratings.RottenTomatoes.AudienceScore), ratings.RottenTomatoes.AudienceRating, ratings.RottenTomatoes.URL)
+			}
+		}
+		if !hasRating {
+			if failed {
+				<p class="text-sm text-muted-foreground">External ratings unavailable.</p>
+			} else {
+				<p class="text-sm text-muted-foreground">No external ratings listed.</p>
+			}
+		}
+	</div>
+}
+
+templ ratingEntry(source string, value float64, label, score, detail, href string) {
+	{{ externalURL := safeRatingURL(href) }}
+	<div class="flex items-center justify-between gap-3">
+		<div class="flex min-w-0 items-center gap-3">
+			@ratingSourceLogo(source, value)
+			<div class="min-w-0">
+				<div class="truncate text-sm font-medium leading-5">{ label }</div>
+				<div class="h-4 truncate text-xs leading-4 text-muted-foreground">{ detail }</div>
+			</div>
+		</div>
+		<div class="shrink-0 text-lg font-semibold">
+			if externalURL != "" {
+				<a href={ externalURL } target="_blank" rel="noopener noreferrer" class="hover:underline">{ score }</a>
+			} else {
+				{ score }
+			}
+		</div>
+	</div>
+}
+
+templ ratingSourceLogo(source string, value float64) {
+	{{ src, alt, heightClass := ratingSourceAsset(source, value) }}
+	<div class="flex h-8 w-12 shrink-0 items-center justify-center">
+		if src != "" {
+			<img src={ src } alt={ alt } class={ "w-auto max-w-full object-contain " + heightClass }/>
+		}
 	</div>
 }
 
@@ -488,13 +639,13 @@ templ MovieRelatedSection(sectionID, title, errorMessage string, movies []models
 						{{ break }}
 					}
 					@moviecard.MovieCard(moviecard.Props{
-						Title:       movie.Title,
-						PosterPath:  movie.ImagePath,
-						Href:        "/movie/" + strconv.FormatInt(movie.ID, 10),
-						IndicatorID: "#movie-loading",
-						Hoverable:   true,
+						Title:        movie.Title,
+						PosterPath:   movie.ImagePath,
+						Href:         "/movie/" + strconv.FormatInt(movie.ID, 10),
+						IndicatorID:  "#movie-loading",
+						Hoverable:    true,
 						SeerrMovieID: movie.ID,
-						Class:       "w-[110px] shrink-0 snap-start border-0 group sm:w-[140px] md:w-[160px]",
+						Class:        "w-[110px] shrink-0 snap-start border-0 group sm:w-[140px] md:w-[160px]",
 					}) {
 						<h3 class="mb-1 line-clamp-2 text-xs font-bold leading-tight md:text-sm">{ movie.Title }</h3>
 						<div class="flex items-center justify-between gap-2">
@@ -521,138 +672,86 @@ templ movieSectionHeader(title string, iconFn func(...icon.Props) templ.Componen
 }
 
 templ MovieActivity(records []models.WatchedMovieRecord) {
-	<div id="movie-activity-section">
-		<div class="space-y-4">
-			@movieSectionHeader("Your Activity", icon.Activity)
-			@card.Card(card.Props{Class: "bg-card/40"}) {
-				if len(records) > 0 {
-					@card.Content(card.ContentProps{Class: "space-y-6 p-5 sm:p-6"}) {
-						@activityStats(records)
-						@separator.Separator()
-						@watchHistory(records)
-					}
-				} else {
-					@card.Content(card.ContentProps{Class: "flex items-center gap-3 p-5 sm:p-6"}) {
-						@icon.Film(icon.Props{Class: "size-5 text-muted-foreground"})
-						<div>
-							<p class="font-medium">No activity yet</p>
-							<p class="text-sm text-muted-foreground">Mark this movie as watched to start tracking your history.</p>
-						</div>
-					}
-				}
+	<section id="movie-activity-section" class="space-y-4">
+		@movieSectionHeader("Your Activity", icon.Activity)
+		@card.Card(card.Props{Class: "bg-card/40"}) {
+			@card.Content(card.ContentProps{Class: "space-y-4 p-4"}) {
+				@activityStats(records)
+				<details class="group border-t pt-3">
+					<summary class="cursor-pointer text-sm font-medium hover:text-primary">
+						Watch history ({ len(records) })
+					</summary>
+					<div class="mt-3 max-h-64 space-y-2 overflow-auto">
+						for _, record := range sortWatchRecordsDesc(records) {
+							@watchHistoryItem(record)
+						}
+					</div>
+				</details>
 			}
-		</div>
-	</div>
+		}
+	</section>
 }
 
 templ movieMetadata(movie models.MovieDetails) {
-	<div class="space-y-4">
-		@movieSectionHeader("Movie Details", icon.FileText)
-		@card.Card(card.Props{Class: "bg-card/40"}) {
-			@card.Content(card.ContentProps{Class: "space-y-6 p-5 sm:p-6"}) {
-				if movie.Movie.Overview != "" {
-					<div class="space-y-3">
-						<h3 class="text-base font-semibold">Overview</h3>
-						<p class="max-w-4xl text-sm leading-relaxed text-muted-foreground sm:text-base">{ movie.Movie.Overview }</p>
-					</div>
-				}
-				if len(movie.Genres) > 0 {
-					<div class="space-y-3">
-						<h3 class="text-base font-semibold">Genres</h3>
-						<div class="flex flex-wrap gap-2">
-							for _, genre := range movie.Genres {
-								@badge.Badge(badge.Props{Variant: "primary"}) {
-									{ genre.Name }
-								}
+	{{ homepageURL := safeRatingURL(movie.Homepage) }}
+	{{ imdbURL := movieIMDbURL(movie.IMDbID) }}
+	if hasMovieFacts(movie) || homepageURL != "" || imdbURL != "" {
+		<section class="space-y-4">
+			@movieSectionHeader("At a Glance", icon.FileText)
+			@card.Card(card.Props{Class: "bg-card/40"}) {
+				@card.Content(card.ContentProps{Class: "p-5"}) {
+					<dl class="divide-y divide-border text-sm">
+						if movie.Movie.ReleaseDate != nil {
+							@movieFact("Release", utils.FormatLongDate(movie.Movie.ReleaseDate))
+						}
+						if movie.Runtime > 0 {
+							@movieFact("Runtime", fmt.Sprintf("%s (%d min)", formatRuntimeMinutes(int64(movie.Runtime)), movie.Runtime))
+						}
+						if movie.Movie.OriginalLanguage != "" {
+							@movieFact("Language", strings.ToUpper(movie.Movie.OriginalLanguage))
+						}
+						if movie.Status != "" {
+							@movieFact("Status", movie.Status)
+						}
+						if len(movie.ProductionCompanies) > 0 {
+							@movieFact("Studios", productionCompanyNames(movie.ProductionCompanies))
+						}
+						if len(movie.ProductionCountries) > 0 {
+							@movieFact("Countries", productionCountryNames(movie.ProductionCountries))
+						}
+						if movie.Budget > 0 {
+							@movieFact("Budget", formatMoney(movie.Budget))
+						}
+						if movie.Revenue > 0 {
+							@movieFact("Revenue", formatMoney(movie.Revenue))
+						}
+					</dl>
+					if homepageURL != "" || imdbURL != "" {
+						<div class="flex flex-wrap gap-x-4 gap-y-2 pt-4 text-sm">
+							if homepageURL != "" {
+								<a href={ homepageURL } target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-primary hover:underline">
+									Official site
+									@icon.ExternalLink(icon.Props{Class: "size-3.5"})
+								</a>
+							}
+							if imdbURL != "" {
+								<a href={ imdbURL } target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-primary hover:underline">
+									IMDb
+									@icon.ExternalLink(icon.Props{Class: "size-3.5"})
+								</a>
 							}
 						</div>
-					</div>
-				}
-				if movie.Movie.Overview != "" || len(movie.Genres) > 0 {
-					@separator.Separator()
-				}
-				<div class="space-y-3">
-					<h3 class="text-base font-semibold">Release Information</h3>
-					@table.Table() {
-						@table.Body() {
-							@table.Row() {
-								@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
-									Release Date
-								}
-								@table.Cell() {
-									{ utils.FormatLongDate(movie.Movie.ReleaseDate) }
-								}
-							}
-							@table.Row() {
-								@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
-									Runtime
-								}
-								@table.Cell() {
-									{ fmt.Sprintf("%d minutes", movie.Runtime) }
-								}
-							}
-							@table.Row() {
-								@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
-									Rating
-								}
-								@table.Cell() {
-									{ fmt.Sprintf("%.1f/10 (%s votes)", movie.Movie.VoteAverage, formatNumber(movie.Movie.VoteCount)) }
-								}
-							}
-							@table.Row() {
-								@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
-									Original Language
-								}
-								@table.Cell() {
-									{ movie.Movie.OriginalLanguage }
-								}
-							}
-							if movie.Budget > 0 {
-								@table.Row() {
-									@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
-										Budget
-									}
-									@table.Cell() {
-										{ formatMoney(movie.Budget) }
-									}
-								}
-							}
-							if movie.Revenue > 0 {
-								@table.Row() {
-									@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
-										Revenue
-									}
-									@table.Cell() {
-										{ formatMoney(movie.Revenue) }
-									}
-								}
-							}
-							@table.Row() {
-								@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
-									Status
-								}
-								@table.Cell() {
-									{ movie.Status }
-								}
-							}
-							if movie.IMDbID != "" {
-								@table.Row() {
-									@table.Cell(table.CellProps{Class: "font-medium text-muted-foreground w-1/3"}) {
-										IMDB
-									}
-									@table.Cell() {
-										<a href={ templ.URL("https://www.imdb.com/title/" + movie.IMDbID) } target="_blank" class="text-primary hover:underline flex items-center gap-1">
-											View on IMDB
-											@icon.ExternalLink(icon.Props{Class: "size-[14px]"})
-										</a>
-									}
-								}
-							}
-						}
 					}
-				</div>
+				}
 			}
-		}
+		</section>
+	}
+}
+
+templ movieFact(label, value string) {
+	<div class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 py-2.5">
+		<dt class="text-muted-foreground">{ label }</dt>
+		<dd class="min-w-0 break-words font-medium">{ value }</dd>
 	</div>
 }
 
@@ -839,32 +938,18 @@ templ crewMemberInfo(crew models.Crew) {
 }
 
 templ activityStats(records []models.WatchedMovieRecord) {
-	<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
+	<div class="grid grid-cols-4 gap-2">
 		@activityStat("Times Watched", fmt.Sprintf("%d", len(records)))
 		@activityStat("In Theater", fmt.Sprintf("%d", countTheaterWatches(records)))
 		@activityStat("At Home", fmt.Sprintf("%d", len(records)-countTheaterWatches(records)))
 		@activityStat("Your Avg Rating", calculateAverageRating(records))
-		if len(records) > 0 {
-			@activityStat("Last Watched", getLastWatchDate(records).Format("Jan 2006"))
-		}
 	</div>
 }
 
 templ activityStat(label, value string) {
-	<div class="rounded-lg bg-muted/50 p-3 text-center">
-		<div class="text-2xl font-bold text-primary">{ value }</div>
-		<div class="text-xs text-muted-foreground">{ label }</div>
-	</div>
-}
-
-templ watchHistory(records []models.WatchedMovieRecord) {
-	<div>
-		<h3 class="text-sm font-medium mb-3">Watch History</h3>
-		<div class="space-y-2 max-h-48 overflow-auto">
-			for _, record := range sortWatchRecordsDesc(records) {
-				@watchHistoryItem(record)
-			}
-		</div>
+	<div class="rounded-lg bg-muted/50 p-2 text-center sm:p-3">
+		<div class="text-lg font-bold text-primary sm:text-2xl">{ value }</div>
+		<div class="text-[10px] leading-tight text-muted-foreground sm:text-xs">{ label }</div>
 	</div>
 }
 
@@ -1100,6 +1185,121 @@ templ watchLocationIcon(inTheaters bool) {
 }
 
 // Helper functions
+type movieTrailerLink struct {
+	Name string
+	Type string
+	URL  string
+}
+
+func movieTrailerLinks(videos []models.RelatedVideo) []movieTrailerLink {
+	trailers := make([]movieTrailerLink, 0, 3)
+	for _, video := range videos {
+		if !strings.EqualFold(video.Site, "YouTube") || !strings.EqualFold(video.Type, "Trailer") {
+			continue
+		}
+
+		validKey := video.Key != ""
+		for _, char := range video.Key {
+			if !(char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z' || char >= '0' && char <= '9' || char == '-' || char == '_') {
+				validKey = false
+				break
+			}
+		}
+		if !validKey {
+			continue
+		}
+
+		name := strings.TrimSpace(video.Name)
+		if name == "" {
+			name = "Official Trailer"
+		}
+		trailers = append(trailers, movieTrailerLink{
+			Name: name,
+			Type: video.Type,
+			URL:  "https://www.youtube.com/watch?v=" + video.Key,
+		})
+		if len(trailers) == 3 {
+			break
+		}
+	}
+	return trailers
+}
+
+func safeRatingURL(raw string) templ.SafeURL {
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Hostname() == "" || parsed.User != nil {
+		return templ.SafeURL("")
+	}
+	if strings.EqualFold(parsed.Scheme, "http") && parsed.Port() == "" {
+		host := strings.ToLower(parsed.Hostname())
+		if host == "rottentomatoes.com" || host == "www.rottentomatoes.com" {
+			parsed.Scheme = "https"
+		}
+	}
+	if !strings.EqualFold(parsed.Scheme, "https") {
+		return templ.SafeURL("")
+	}
+	return templ.URL(parsed.String())
+}
+
+func movieIMDbURL(imdbID string) templ.SafeURL {
+	if imdbID == "" {
+		return ""
+	}
+	return safeRatingURL("https://www.imdb.com/title/" + imdbID)
+}
+
+func hasMovieFacts(movie models.MovieDetails) bool {
+	return movie.Movie.ReleaseDate != nil || movie.Runtime > 0 || movie.Movie.OriginalLanguage != "" ||
+		movie.Status != "" || len(movie.ProductionCompanies) > 0 ||
+		len(movie.ProductionCountries) > 0 || movie.Budget > 0 || movie.Revenue > 0
+}
+
+func productionCompanyNames(companies []models.ProductionCompany) string {
+	names := make([]string, 0, len(companies))
+	for _, company := range companies {
+		if name := strings.TrimSpace(company.Name); name != "" {
+			names = append(names, name)
+		}
+	}
+	return strings.Join(names, ", ")
+}
+
+func productionCountryNames(countries []models.ProductionCountry) string {
+	names := make([]string, 0, len(countries))
+	for _, country := range countries {
+		name := strings.TrimSpace(country.Name)
+		if name == "" {
+			name = country.ISOCode
+		}
+		if name != "" {
+			names = append(names, name)
+		}
+	}
+	return strings.Join(names, ", ")
+}
+
+func ratingSourceAsset(source string, value float64) (string, string, string) {
+	switch source {
+	case "TMDB":
+		return "/static/images/ratings/tmdb.svg", "TMDB", "h-[22px]"
+	case "IMDb":
+		return "/static/images/ratings/imdb.svg", "IMDb", "h-6"
+	case "RT Critics":
+		if value >= rottenTomatoesPositiveScoreThreshold {
+			return "/static/images/ratings/tomatometer-fresh.svg", "Fresh tomato", "h-[26px]"
+		}
+		return "/static/images/ratings/tomatometer-rotten.svg", "Rotten splat", "h-[26px]"
+	case "RT Audience":
+		if value >= rottenTomatoesPositiveScoreThreshold {
+			return "/static/images/ratings/popcornmeter-hot.svg", "Hot popcorn", "h-[26px]"
+		}
+		return "/static/images/ratings/popcornmeter-stale.svg", "Stale popcorn", "h-[30px]"
+	default:
+		return "", "", ""
+	}
+}
+
 func formatMoney(amount int64) string {
 	if amount == 0 {
 		return "N/A"
@@ -1265,7 +1465,7 @@ templ MovieLoading() {
 			// Hero section mirrors rendered dimensions to avoid a layout jump.
 			<div class="relative -m-4 mb-6 min-h-[280px] bg-muted/50 sm:h-[45vh] sm:max-h-[500px] md:h-[50vh] lg:h-[55vh]">
 				<div class="flex h-full items-center p-4 sm:p-6 md:p-8 lg:p-10">
-					<div class="max-w-6xl mx-auto">
+					<div class="w-full">
 						<div class="flex flex-row gap-4 sm:gap-6 lg:gap-8 items-start">
 							// Poster section
 							<div class="flex-shrink-0">

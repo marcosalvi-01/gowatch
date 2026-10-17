@@ -84,6 +84,103 @@ UPDATE
 SET
     updated_at = CURRENT_TIMESTAMP;
 
+-- name: UpsertProductionCompany :exec
+INSERT INTO
+    production_company (id, logo_path, origin_country, name)
+VALUES
+    (?, ?, ?, ?) ON CONFLICT(id) DO
+UPDATE
+SET
+    logo_path = excluded.logo_path,
+    origin_country = excluded.origin_country,
+    name = excluded.name;
+
+-- name: DeleteMovieProductionCompanies :exec
+DELETE FROM
+    movie_production_company
+WHERE
+    movie_id = ?;
+
+-- name: UpsertMovieProductionCompany :exec
+INSERT INTO
+    movie_production_company (movie_id, production_company_id)
+VALUES
+    (?, ?) ON CONFLICT(movie_id, production_company_id) DO NOTHING;
+
+-- name: GetMovieProductionCompanies :many
+SELECT
+    sqlc.embed(production_company)
+FROM
+    movie_production_company
+    JOIN production_company ON production_company.id = movie_production_company.production_company_id
+WHERE
+    movie_production_company.movie_id = ?
+ORDER BY
+    production_company.name COLLATE NOCASE;
+
+-- name: UpsertProductionCountry :exec
+INSERT INTO
+    production_country (iso_code, name)
+VALUES
+    (?, ?) ON CONFLICT(iso_code) DO
+UPDATE
+SET
+    name = excluded.name;
+
+-- name: DeleteMovieProductionCountries :exec
+DELETE FROM
+    movie_production_country
+WHERE
+    movie_id = ?;
+
+-- name: UpsertMovieProductionCountry :exec
+INSERT INTO
+    movie_production_country (movie_id, country_iso_code)
+VALUES
+    (?, ?) ON CONFLICT(movie_id, country_iso_code) DO NOTHING;
+
+-- name: GetMovieProductionCountries :many
+SELECT
+    sqlc.embed(production_country)
+FROM
+    movie_production_country
+    JOIN production_country ON production_country.iso_code = movie_production_country.country_iso_code
+WHERE
+    movie_production_country.movie_id = ?
+ORDER BY
+    production_country.name COLLATE NOCASE;
+
+-- name: DeleteMovieRelatedVideos :exec
+DELETE FROM
+    movie_related_video
+WHERE
+    movie_id = ?;
+
+-- name: InsertMovieRelatedVideo :exec
+INSERT INTO
+    movie_related_video (
+        movie_id,
+        position,
+        url,
+        video_key,
+        name,
+        size,
+        TYPE,
+        site
+    )
+VALUES
+    (?, ?, ?, ?, ?, ?, ?, ?);
+
+-- name: GetMovieRelatedVideos :many
+SELECT
+    *
+FROM
+    movie_related_video
+WHERE
+    movie_id = ?
+ORDER BY
+    position;
+
 -- Watched history and activity.
 -- name: InsertWatched :one
 INSERT INTO

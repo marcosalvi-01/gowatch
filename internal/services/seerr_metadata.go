@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
 const seerrMetadataResponseLimit = 8 << 20
@@ -34,26 +36,68 @@ type seerrSearchResult struct {
 }
 
 type seerrMovieMetadata struct {
-	ID               int64             `json:"id"`
-	BackdropPath     string            `json:"backdropPath"`
-	Budget           int64             `json:"budget"`
-	Genres           []seerrGenre      `json:"genres"`
-	Homepage         string            `json:"homepage"`
-	IMDbID           string            `json:"imdbId"`
-	OriginalLanguage string            `json:"originalLanguage"`
-	OriginalTitle    string            `json:"originalTitle"`
-	Overview         string            `json:"overview"`
-	Popularity       float32           `json:"popularity"`
-	PosterPath       string            `json:"posterPath"`
-	ReleaseDate      string            `json:"releaseDate"`
-	Revenue          int64             `json:"revenue"`
-	Runtime          int               `json:"runtime"`
-	Status           string            `json:"status"`
-	Tagline          string            `json:"tagline"`
-	Title            string            `json:"title"`
-	VoteAverage      float32           `json:"voteAverage"`
-	VoteCount        int64             `json:"voteCount"`
-	Credits          seerrMovieCredits `json:"credits"`
+	ID                  int64                    `json:"id"`
+	BackdropPath        string                   `json:"backdropPath"`
+	Budget              int64                    `json:"budget"`
+	Genres              []seerrGenre             `json:"genres"`
+	Homepage            string                   `json:"homepage"`
+	IMDbID              string                   `json:"imdbId"`
+	OriginalLanguage    string                   `json:"originalLanguage"`
+	OriginalTitle       string                   `json:"originalTitle"`
+	Overview            string                   `json:"overview"`
+	Popularity          float32                  `json:"popularity"`
+	PosterPath          string                   `json:"posterPath"`
+	ReleaseDate         string                   `json:"releaseDate"`
+	Revenue             int64                    `json:"revenue"`
+	Runtime             int                      `json:"runtime"`
+	Status              string                   `json:"status"`
+	Tagline             string                   `json:"tagline"`
+	Title               string                   `json:"title"`
+	VoteAverage         float32                  `json:"voteAverage"`
+	VoteCount           int64                    `json:"voteCount"`
+	Credits             seerrMovieCredits        `json:"credits"`
+	RelatedVideos       []seerrRelatedVideo      `json:"relatedVideos"`
+	ProductionCompanies []seerrProductionCompany `json:"productionCompanies"`
+	ProductionCountries []seerrProductionCountry `json:"productionCountries"`
+}
+
+type seerrProductionCompany struct {
+	ID            int64  `json:"id"`
+	LogoPath      string `json:"logoPath"`
+	OriginCountry string `json:"originCountry"`
+	Name          string `json:"name"`
+}
+
+type seerrProductionCountry struct {
+	ISOCode string `json:"iso_3166_1"`
+	Name    string `json:"name"`
+}
+
+type seerrRelatedVideo struct {
+	URL  string `json:"url"`
+	Key  string `json:"key"`
+	Name string `json:"name"`
+	Size int    `json:"size"`
+	Type string `json:"type"`
+	Site string `json:"site"`
+}
+
+type seerrMovieRatings struct {
+	IMDb           *seerrIMDbRating           `json:"imdb"`
+	RottenTomatoes *seerrRottenTomatoesRating `json:"rt"`
+}
+
+type seerrIMDbRating struct {
+	CriticsScore *float64 `json:"criticsScore"`
+	URL          string   `json:"url"`
+}
+
+type seerrRottenTomatoesRating struct {
+	CriticsScore   *float64 `json:"criticsScore"`
+	CriticsRating  string   `json:"criticsRating"`
+	AudienceScore  *float64 `json:"audienceScore"`
+	AudienceRating string   `json:"audienceRating"`
+	URL            string   `json:"url"`
 }
 
 type seerrGenre struct {
@@ -153,6 +197,32 @@ func (s *SeerrService) movieMetadata(ctx context.Context, movieID int64) (*seerr
 		return nil, err
 	}
 	return &result, nil
+}
+
+func (s *SeerrService) MovieRatings(ctx context.Context, movieID int64) (*models.MovieRatings, error) {
+	if movieID <= 0 {
+		return nil, fmt.Errorf("invalid TMDB movie ID %d", movieID)
+	}
+
+	var result seerrMovieRatings
+	if err := s.getMetadata(ctx, fmt.Sprintf("movie/%d/ratingscombined", movieID), nil, "get movie ratings", &result); err != nil {
+		return nil, err
+	}
+
+	ratings := &models.MovieRatings{}
+	if result.IMDb != nil {
+		ratings.IMDb = &models.IMDbRating{Score: result.IMDb.CriticsScore, URL: result.IMDb.URL}
+	}
+	if result.RottenTomatoes != nil {
+		ratings.RottenTomatoes = &models.RottenTomatoesRating{
+			CriticsScore:   result.RottenTomatoes.CriticsScore,
+			CriticsRating:  result.RottenTomatoes.CriticsRating,
+			AudienceScore:  result.RottenTomatoes.AudienceScore,
+			AudienceRating: result.RottenTomatoes.AudienceRating,
+			URL:            result.RottenTomatoes.URL,
+		}
+	}
+	return ratings, nil
 }
 
 func (s *SeerrService) movieRecommendations(ctx context.Context, movieID int64) (*seerrMovieResultsResponse, error) {

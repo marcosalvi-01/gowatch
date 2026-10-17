@@ -107,6 +107,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Get("/watchlist/{id}", h.RenderAddToWatchlistButton)
 	r.Get("/movies/{id}/recommendations", h.RenderMovieRecommendations)
 	r.Get("/movies/{id}/similar", h.RenderSimilarMovies)
+	r.Get("/movies/{id}/ratings", h.RenderMovieRatings)
 	r.Get("/movies/{id}/seerr-availability", h.RenderSeerrAvailability)
 	r.Get("/movies/{id}/seerr-state", h.RenderSeerrMovieAction)
 	r.Post("/movies/{id}/seerr-request", h.RequestSeerrMovie)
@@ -116,6 +117,24 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Get("/lists/home-lists", h.HomeLists)
 	r.Get("/lists/{id}/movie-grid", h.ListMovieGrid)
 	r.Get("/lists/{id}/stats", h.ListStats)
+}
+
+func (h *Handlers) RenderMovieRatings(w http.ResponseWriter, r *http.Request) {
+	movieID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil || movieID <= 0 {
+		http.Error(w, "Invalid movie ID", http.StatusBadRequest)
+		return
+	}
+
+	ratings, err := h.seerrService.MovieRatings(r.Context(), movieID)
+	failed := err != nil
+	if failed {
+		log.Warn("failed to load external movie ratings", "movieID", movieID, "error", err)
+	}
+	if err := pages.MovieExternalRatings(ratings, failed).Render(r.Context(), w); err != nil {
+		log.Error("failed to render external movie ratings", "movieID", movieID, "error", err)
+		http.Error(w, "Failed to render movie ratings", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) RenderSeerrAvailability(w http.ResponseWriter, r *http.Request) {

@@ -81,12 +81,45 @@ type Movie struct {
 	UpdatedAt        *time.Time
 }
 
+type MovieProductionCompany struct {
+	MovieID             int64
+	ProductionCompanyID int64
+}
+
+type MovieProductionCountry struct {
+	MovieID        int64
+	CountryIsoCode string
+}
+
+type MovieRelatedVideo struct {
+	MovieID  int64
+	Position int64
+	Url      string
+	VideoKey string
+	Name     string
+	Size     int64
+	Type     string
+	Site     string
+}
+
 type Person struct {
 	ID          int64
 	Name        string
 	ProfilePath string
 	Gender      int64
 	UpdatedAt   *time.Time
+}
+
+type ProductionCompany struct {
+	ID            int64
+	LogoPath      string
+	OriginCountry string
+	Name          string
+}
+
+type ProductionCountry struct {
+	IsoCode string
+	Name    string
 }
 
 type Session struct {

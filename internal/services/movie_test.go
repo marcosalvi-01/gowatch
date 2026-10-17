@@ -82,7 +82,7 @@ func TestMovieService_GetMovieDetailsUsesSeerrMetadataAndPreservesRelatedData(t 
 			t.Errorf("API key header = %q, want %q", got, "test-key")
 		}
 		requestCount.Add(1)
-		_, _ = w.Write([]byte(`{"id":603,"backdropPath":"/backdrop.jpg","budget":63000000,"genres":[{"id":18,"name":"Drama"}],"homepage":"https://example.com","imdbId":"tt0133093","originalLanguage":"en","originalTitle":"The Matrix","overview":"A hacker learns the truth.","popularity":42.5,"posterPath":"/poster.jpg","releaseDate":"1999-03-31","revenue":463000000,"runtime":136,"status":"Released","tagline":"Welcome to the Real World.","title":"The Matrix","voteAverage":8.2,"voteCount":10000,"credits":{"cast":[{"id":6384,"castId":1,"character":"Neo","creditId":"cast-credit","gender":2,"name":"Keanu Reeves","order":0,"profilePath":"/keanu.jpg"}],"crew":[{"id":9339,"creditId":"crew-credit","gender":2,"name":"Lana Wachowski","job":"Director","department":"Directing","profilePath":"/lana.jpg"}]}}`))
+		_, _ = w.Write([]byte(`{"id":603,"backdropPath":"/backdrop.jpg","budget":63000000,"genres":[{"id":18,"name":"Drama"}],"homepage":"https://example.com","imdbId":"tt0133093","originalLanguage":"en","originalTitle":"The Matrix","overview":"A hacker learns the truth.","popularity":42.5,"posterPath":"/poster.jpg","releaseDate":"1999-03-31","revenue":463000000,"runtime":136,"status":"Released","tagline":"Welcome to the Real World.","title":"The Matrix","voteAverage":8.2,"voteCount":10000,"relatedVideos":[{"url":"https://www.youtube.com/watch?v=abc123","key":"abc123","name":"Official Trailer","size":1080,"type":"Trailer","site":"YouTube"}],"productionCompanies":[{"id":1,"logoPath":"/studio.svg","originCountry":"US","name":"Warner Bros."}],"productionCountries":[{"iso_3166_1":"US","name":"United States of America"}],"credits":{"cast":[{"id":6384,"castId":1,"character":"Neo","creditId":"cast-credit","gender":2,"name":"Keanu Reeves","order":0,"profilePath":"/keanu.jpg"}],"crew":[{"id":9339,"creditId":"crew-credit","gender":2,"name":"Lana Wachowski","job":"Director","department":"Directing","profilePath":"/lana.jpg"}]}}`))
 	}))
 	defer server.Close()
 
@@ -102,6 +102,9 @@ func TestMovieService_GetMovieDetailsUsesSeerrMetadataAndPreservesRelatedData(t 
 	}
 	if len(movie.Genres) != 1 || movie.Genres[0] != (models.Genre{ID: 18, Name: "Drama"}) {
 		t.Fatalf("mapped genres = %+v", movie.Genres)
+	}
+	if len(movie.RelatedVideos) != 1 || movie.RelatedVideos[0].Key != "abc123" || len(movie.ProductionCompanies) != 1 || movie.ProductionCompanies[0].Name != "Warner Bros." || len(movie.ProductionCountries) != 1 || movie.ProductionCountries[0].ISOCode != "US" {
+		t.Fatalf("mapped Seerr extra metadata = videos:%+v companies:%+v countries:%+v", movie.RelatedVideos, movie.ProductionCompanies, movie.ProductionCountries)
 	}
 	if len(movie.Credits.Cast) != 1 || movie.Credits.Cast[0].Person.Name != "Keanu Reeves" || movie.Credits.Cast[0].Person.ProfilePath != "/keanu.jpg" || movie.Credits.Cast[0].Character != "Neo" || movie.Credits.Cast[0].CastOrder != 0 {
 		t.Fatalf("mapped cast = %+v", movie.Credits.Cast)
@@ -147,6 +150,9 @@ func TestMovieService_GetMovieDetailsUsesSeerrMetadataAndPreservesRelatedData(t 
 	}
 	if len(cachedMovie.Credits.Cast) != 1 || len(cachedMovie.Credits.Crew) != 1 {
 		t.Fatalf("refreshed movie lost cast/crew relationships: %+v", cachedMovie.Credits)
+	}
+	if len(cachedMovie.RelatedVideos) != 1 || len(cachedMovie.ProductionCompanies) != 1 || len(cachedMovie.ProductionCountries) != 1 {
+		t.Fatalf("movie metadata cache lost Seerr extras: videos:%+v companies:%+v countries:%+v", cachedMovie.RelatedVideos, cachedMovie.ProductionCompanies, cachedMovie.ProductionCountries)
 	}
 	watchedMovies, err := testDB.GetWatchedJoinMovie(ctx, user.ID)
 	if err != nil {

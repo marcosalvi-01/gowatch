@@ -208,6 +208,42 @@ func (q *Queries) DeleteMovieFromList(ctx context.Context, arg DeleteMovieFromLi
 	return err
 }
 
+const deleteMovieProductionCompanies = `-- name: DeleteMovieProductionCompanies :exec
+DELETE FROM
+    movie_production_company
+WHERE
+    movie_id = ?
+`
+
+func (q *Queries) DeleteMovieProductionCompanies(ctx context.Context, movieID int64) error {
+	_, err := q.db.ExecContext(ctx, deleteMovieProductionCompanies, movieID)
+	return err
+}
+
+const deleteMovieProductionCountries = `-- name: DeleteMovieProductionCountries :exec
+DELETE FROM
+    movie_production_country
+WHERE
+    movie_id = ?
+`
+
+func (q *Queries) DeleteMovieProductionCountries(ctx context.Context, movieID int64) error {
+	_, err := q.db.ExecContext(ctx, deleteMovieProductionCountries, movieID)
+	return err
+}
+
+const deleteMovieRelatedVideos = `-- name: DeleteMovieRelatedVideos :exec
+DELETE FROM
+    movie_related_video
+WHERE
+    movie_id = ?
+`
+
+func (q *Queries) DeleteMovieRelatedVideos(ctx context.Context, movieID int64) error {
+	_, err := q.db.ExecContext(ctx, deleteMovieRelatedVideos, movieID)
+	return err
+}
+
 const deleteSession = `-- name: DeleteSession :exec
 DELETE FROM
     SESSION
@@ -1367,6 +1403,132 @@ func (q *Queries) GetMovieGenre(ctx context.Context, movieID int64) ([]GetMovieG
 			&i.MovieID,
 			&i.GenreID,
 			&i.UpdatedAt_2,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getMovieProductionCompanies = `-- name: GetMovieProductionCompanies :many
+SELECT
+    production_company.id, production_company.logo_path, production_company.origin_country, production_company.name
+FROM
+    movie_production_company
+    JOIN production_company ON production_company.id = movie_production_company.production_company_id
+WHERE
+    movie_production_company.movie_id = ?
+ORDER BY
+    production_company.name COLLATE NOCASE
+`
+
+type GetMovieProductionCompaniesRow struct {
+	ProductionCompany ProductionCompany
+}
+
+func (q *Queries) GetMovieProductionCompanies(ctx context.Context, movieID int64) ([]GetMovieProductionCompaniesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMovieProductionCompanies, movieID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMovieProductionCompaniesRow
+	for rows.Next() {
+		var i GetMovieProductionCompaniesRow
+		if err := rows.Scan(
+			&i.ProductionCompany.ID,
+			&i.ProductionCompany.LogoPath,
+			&i.ProductionCompany.OriginCountry,
+			&i.ProductionCompany.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getMovieProductionCountries = `-- name: GetMovieProductionCountries :many
+SELECT
+    production_country.iso_code, production_country.name
+FROM
+    movie_production_country
+    JOIN production_country ON production_country.iso_code = movie_production_country.country_iso_code
+WHERE
+    movie_production_country.movie_id = ?
+ORDER BY
+    production_country.name COLLATE NOCASE
+`
+
+type GetMovieProductionCountriesRow struct {
+	ProductionCountry ProductionCountry
+}
+
+func (q *Queries) GetMovieProductionCountries(ctx context.Context, movieID int64) ([]GetMovieProductionCountriesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMovieProductionCountries, movieID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMovieProductionCountriesRow
+	for rows.Next() {
+		var i GetMovieProductionCountriesRow
+		if err := rows.Scan(&i.ProductionCountry.IsoCode, &i.ProductionCountry.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getMovieRelatedVideos = `-- name: GetMovieRelatedVideos :many
+SELECT
+    movie_id, position, url, video_key, name, size, type, site
+FROM
+    movie_related_video
+WHERE
+    movie_id = ?
+ORDER BY
+    position
+`
+
+func (q *Queries) GetMovieRelatedVideos(ctx context.Context, movieID int64) ([]MovieRelatedVideo, error) {
+	rows, err := q.db.QueryContext(ctx, getMovieRelatedVideos, movieID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MovieRelatedVideo
+	for rows.Next() {
+		var i MovieRelatedVideo
+		if err := rows.Scan(
+			&i.MovieID,
+			&i.Position,
+			&i.Url,
+			&i.VideoKey,
+			&i.Name,
+			&i.Size,
+			&i.Type,
+			&i.Site,
 		); err != nil {
 			return nil, err
 		}
@@ -3057,6 +3219,47 @@ func (q *Queries) InsertList(ctx context.Context, arg InsertListParams) (int64, 
 	return id, err
 }
 
+const insertMovieRelatedVideo = `-- name: InsertMovieRelatedVideo :exec
+INSERT INTO
+    movie_related_video (
+        movie_id,
+        position,
+        url,
+        video_key,
+        name,
+        size,
+        TYPE,
+        site
+    )
+VALUES
+    (?, ?, ?, ?, ?, ?, ?, ?)
+`
+
+type InsertMovieRelatedVideoParams struct {
+	MovieID  int64
+	Position int64
+	Url      string
+	VideoKey string
+	Name     string
+	Size     int64
+	Type     string
+	Site     string
+}
+
+func (q *Queries) InsertMovieRelatedVideo(ctx context.Context, arg InsertMovieRelatedVideoParams) error {
+	_, err := q.db.ExecContext(ctx, insertMovieRelatedVideo,
+		arg.MovieID,
+		arg.Position,
+		arg.Url,
+		arg.VideoKey,
+		arg.Name,
+		arg.Size,
+		arg.Type,
+		arg.Site,
+	)
+	return err
+}
+
 const insertWatched = `-- name: InsertWatched :one
 INSERT INTO
     watched (
@@ -3559,6 +3762,40 @@ func (q *Queries) UpsertMovieInList(ctx context.Context, arg UpsertMovieInListPa
 	return err
 }
 
+const upsertMovieProductionCompany = `-- name: UpsertMovieProductionCompany :exec
+INSERT INTO
+    movie_production_company (movie_id, production_company_id)
+VALUES
+    (?, ?) ON CONFLICT(movie_id, production_company_id) DO NOTHING
+`
+
+type UpsertMovieProductionCompanyParams struct {
+	MovieID             int64
+	ProductionCompanyID int64
+}
+
+func (q *Queries) UpsertMovieProductionCompany(ctx context.Context, arg UpsertMovieProductionCompanyParams) error {
+	_, err := q.db.ExecContext(ctx, upsertMovieProductionCompany, arg.MovieID, arg.ProductionCompanyID)
+	return err
+}
+
+const upsertMovieProductionCountry = `-- name: UpsertMovieProductionCountry :exec
+INSERT INTO
+    movie_production_country (movie_id, country_iso_code)
+VALUES
+    (?, ?) ON CONFLICT(movie_id, country_iso_code) DO NOTHING
+`
+
+type UpsertMovieProductionCountryParams struct {
+	MovieID        int64
+	CountryIsoCode string
+}
+
+func (q *Queries) UpsertMovieProductionCountry(ctx context.Context, arg UpsertMovieProductionCountryParams) error {
+	_, err := q.db.ExecContext(ctx, upsertMovieProductionCountry, arg.MovieID, arg.CountryIsoCode)
+	return err
+}
+
 const upsertPerson = `-- name: UpsertPerson :exec
 INSERT INTO
     person (
@@ -3593,5 +3830,54 @@ func (q *Queries) UpsertPerson(ctx context.Context, arg UpsertPersonParams) erro
 		arg.ProfilePath,
 		arg.Gender,
 	)
+	return err
+}
+
+const upsertProductionCompany = `-- name: UpsertProductionCompany :exec
+INSERT INTO
+    production_company (id, logo_path, origin_country, name)
+VALUES
+    (?, ?, ?, ?) ON CONFLICT(id) DO
+UPDATE
+SET
+    logo_path = excluded.logo_path,
+    origin_country = excluded.origin_country,
+    name = excluded.name
+`
+
+type UpsertProductionCompanyParams struct {
+	ID            int64
+	LogoPath      string
+	OriginCountry string
+	Name          string
+}
+
+func (q *Queries) UpsertProductionCompany(ctx context.Context, arg UpsertProductionCompanyParams) error {
+	_, err := q.db.ExecContext(ctx, upsertProductionCompany,
+		arg.ID,
+		arg.LogoPath,
+		arg.OriginCountry,
+		arg.Name,
+	)
+	return err
+}
+
+const upsertProductionCountry = `-- name: UpsertProductionCountry :exec
+INSERT INTO
+    production_country (iso_code, name)
+VALUES
+    (?, ?) ON CONFLICT(iso_code) DO
+UPDATE
+SET
+    name = excluded.name
+`
+
+type UpsertProductionCountryParams struct {
+	IsoCode string
+	Name    string
+}
+
+func (q *Queries) UpsertProductionCountry(ctx context.Context, arg UpsertProductionCountryParams) error {
+	_, err := q.db.ExecContext(ctx, upsertProductionCountry, arg.IsoCode, arg.Name)
 	return err
 }
