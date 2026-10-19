@@ -698,7 +698,7 @@ func actionButtons(movieID int64, hasLists, canRequestSeerr bool) templ.Componen
 			templ_7745c5c3_Var34 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "<div class=\"grid w-full grid-cols-1 gap-2 pt-2 sm:grid-cols-2 lg:grid-cols-4 sm:gap-3 sm:pt-4\"><form class=\"w-full\" hx-post=\"/htmx/movies/watched\" hx-target=\"#toast\" hx-on::after-request=\"this.reset()\"><input type=\"hidden\" name=\"movie_id\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "<div class=\"grid w-full grid-cols-[repeat(auto-fit,minmax(min(100%,14rem),1fr))] gap-2 pt-2 sm:gap-3 sm:pt-4 [&_button]:h-auto [&_button]:min-h-9 [&_button]:whitespace-normal [&_a]:h-auto [&_a]:min-h-9 [&_a]:whitespace-normal\"><form class=\"w-full\" hx-post=\"/htmx/movies/watched\" hx-target=\"#toast\" hx-on::after-request=\"this.reset()\"><input type=\"hidden\" name=\"movie_id\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -5369,7 +5369,7 @@ func MovieLoading() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 278, "</div><div class=\"grid w-full grid-cols-1 gap-2 pt-2 sm:grid-cols-3 sm:gap-3 sm:pt-4\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 278, "</div><div class=\"grid w-full grid-cols-[repeat(auto-fit,minmax(min(100%,14rem),1fr))] gap-2 pt-2 sm:gap-3 sm:pt-4\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
