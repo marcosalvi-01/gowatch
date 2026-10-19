@@ -135,32 +135,13 @@ func sortUpcomingMovies(movies []models.MovieItem) {
 			}
 		}
 
-		if !left.DateAdded.Equal(right.DateAdded) {
-			return left.DateAdded.Before(right.DateAdded)
-		}
-
-		if left.MovieDetails.Movie.Title != right.MovieDetails.Movie.Title {
-			return left.MovieDetails.Movie.Title < right.MovieDetails.Movie.Title
-		}
-
-		return left.MovieDetails.Movie.ID < right.MovieDetails.Movie.ID
+		return compareListMovieFallback(left, right) < 0
 	})
 }
 
 func sortReleasedMovies(movies []models.MovieItem) {
 	sort.Slice(movies, func(i, j int) bool {
-		left := movies[i]
-		right := movies[j]
-
-		if !left.DateAdded.Equal(right.DateAdded) {
-			return left.DateAdded.Before(right.DateAdded)
-		}
-
-		if left.MovieDetails.Movie.Title != right.MovieDetails.Movie.Title {
-			return left.MovieDetails.Movie.Title < right.MovieDetails.Movie.Title
-		}
-
-		return left.MovieDetails.Movie.ID < right.MovieDetails.Movie.ID
+		return compareListMovieFallback(movies[i], movies[j]) < 0
 	})
 }
 

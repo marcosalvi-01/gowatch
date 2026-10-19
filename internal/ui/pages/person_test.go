@@ -2,6 +2,7 @@ package pages
 
 import (
 	"net/url"
+	"slices"
 	"testing"
 	"time"
 
@@ -57,7 +58,7 @@ func TestPersonFilmographyCrewRoleKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.job, func(t *testing.T) {
-			if got := personFilmographyCrewRoleKey(tt.job); got != tt.want {
+			if got := models.PersonFilmographyCrewRoleKey(tt.job); got != tt.want {
 				t.Fatalf("role key = %q, want %q", got, tt.want)
 			}
 		})
@@ -114,7 +115,7 @@ func TestBuildPersonFilmographyMergesRoles(t *testing.T) {
 	if !credits[0].IsActing || !credits[0].IsCrew {
 		t.Fatalf("expected acting and crew flags: %+v", credits[0])
 	}
-	if !containsString(credits[0].RoleKeys, "actor") || !containsString(credits[0].RoleKeys, "director") {
+	if !slices.Contains(credits[0].RoleKeys, "actor") || !slices.Contains(credits[0].RoleKeys, "director") {
 		t.Fatalf("expected actor and director roles: %+v", credits[0].RoleKeys)
 	}
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
 	"github.com/marcosalvi-01/gowatch/internal/utils"
 	"math/rand/v2"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -640,7 +641,7 @@ func buildPersonFilmography(actingCredits, crewCredits []models.PersonCredit) []
 			entry.RoleNames = appendUniqueString(entry.RoleNames, roleName)
 		}
 		if isCrew {
-			entry.RoleKeys = appendUniqueString(entry.RoleKeys, personFilmographyCrewRoleKey(credit.Role))
+			entry.RoleKeys = appendUniqueString(entry.RoleKeys, models.PersonFilmographyCrewRoleKey(credit.Role))
 			entry.RoleNames = appendUniqueString(entry.RoleNames, personCrewRoleText(credit))
 		}
 	}
@@ -666,7 +667,7 @@ func filterPersonFilmography(credits []personFilmographyCredit, state PersonFilm
 		if state.Quality == personFilmographyQualityPopular && credit.Credit.VoteCount < personFilmographyMinimumVotes {
 			continue
 		}
-		if state.Role != personFilmographyRoleAll && !containsString(credit.RoleKeys, state.Role) {
+		if state.Role != personFilmographyRoleAll && !slices.Contains(credit.RoleKeys, state.Role) {
 			continue
 		}
 		filtered = append(filtered, credit)
@@ -718,13 +719,6 @@ func sortPersonFilmography(credits []personFilmographyCredit, sortMode string) [
 		return strings.ToLower(left.Title) < strings.ToLower(right.Title)
 	})
 	return sorted
-}
-
-func capPersonFilmography(credits []personFilmographyCredit) []personFilmographyCredit {
-	if len(credits) <= personFilmographyMaxCredits {
-		return credits
-	}
-	return credits[:personFilmographyMaxCredits]
 }
 
 func personFilmographyPage(credits []personFilmographyCredit, sortMode string, page int) ([]personFilmographyCredit, bool, int) {
@@ -816,24 +810,11 @@ func personFilmographyRoleSelection(selected string, options []personFilmography
 	return personFilmographyRoleAll
 }
 
-func personFilmographyCrewRoleKey(role string) string {
-	return models.PersonFilmographyCrewRoleKey(role)
-}
-
 func appendUniqueString(values []string, value string) []string {
-	if containsString(values, value) {
+	if slices.Contains(values, value) {
 		return values
 	}
 	return append(values, value)
-}
-
-func containsString(values []string, value string) bool {
-	for _, existing := range values {
-		if existing == value {
-			return true
-		}
-	}
-	return false
 }
 
 templ personCreditPoster(posterPath, title string) {

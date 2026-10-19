@@ -123,6 +123,14 @@ func shouldRenderContentFragment(r *http.Request) bool {
 	return r.Header.Get(htmxHistoryRestoreHeader) != htmxRequestHeaderValue
 }
 
+func renderContentPage(w http.ResponseWriter, r *http.Request, component templ.Component) {
+	if shouldRenderContentFragment(r) {
+		templ.Handler(component, templ.WithFragments("content")).ServeHTTP(w, r)
+		return
+	}
+	templ.Handler(component).ServeHTTP(w, r)
+}
+
 func (h *Handlers) setSessionCookie(w http.ResponseWriter, value string, maxAge int) {
 	// #nosec G124 -- secure flag is environment-driven; HTTP local dev needs Secure=false.
 	http.SetCookie(w, &http.Cookie{
@@ -154,11 +162,7 @@ func (h *Handlers) HomePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if shouldRenderContentFragment(r) {
-		templ.Handler(pages.Home(user.Name, *homeData), templ.WithFragments("content")).ServeHTTP(w, r)
-	} else {
-		templ.Handler(pages.Home(user.Name, *homeData)).ServeHTTP(w, r)
-	}
+	renderContentPage(w, r, pages.Home(user.Name, *homeData))
 
 	log.Info("home page served successfully")
 }
@@ -175,11 +179,7 @@ func (h *Handlers) WatchedPage(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("retrieved watched movies", "dayCount", len(movies))
 
-	if shouldRenderContentFragment(r) {
-		templ.Handler(pages.Watched(movies), templ.WithFragments("content")).ServeHTTP(w, r)
-	} else {
-		templ.Handler(pages.Watched(movies)).ServeHTTP(w, r)
-	}
+	renderContentPage(w, r, pages.Watched(movies))
 
 	log.Info("watched movies page served successfully", "dayCount", len(movies))
 }
@@ -221,11 +221,7 @@ func (h *Handlers) MoviePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if shouldRenderContentFragment(r) {
-		templ.Handler(pages.Movie(*movie, rec, isInWatchlist, len(lists) > 0, canRequestSeerr), templ.WithFragments("content")).ServeHTTP(w, r)
-	} else {
-		templ.Handler(pages.Movie(*movie, rec, isInWatchlist, len(lists) > 0, canRequestSeerr)).ServeHTTP(w, r)
-	}
+	renderContentPage(w, r, pages.Movie(*movie, rec, isInWatchlist, len(lists) > 0, canRequestSeerr))
 
 	log.Info("movie page served successfully", "movieID", id, "title", movie.Movie.Title)
 }
@@ -268,11 +264,7 @@ func (h *Handlers) PersonPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if shouldRenderContentFragment(r) {
-		templ.Handler(pages.Person(*personDetails, activity, filmographyState), templ.WithFragments("content")).ServeHTTP(w, r)
-	} else {
-		templ.Handler(pages.Person(*personDetails, activity, filmographyState)).ServeHTTP(w, r)
-	}
+	renderContentPage(w, r, pages.Person(*personDetails, activity, filmographyState))
 
 	log.Info("person page served successfully", "personID", id, "name", personDetails.Name)
 }
@@ -294,10 +286,8 @@ func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
 	if query == "" {
 		if shouldRenderContentFragment(r) {
 			w.Header().Add("HX-Trigger", "refreshSidebar")
-			templ.Handler(pages.Search("", nil), templ.WithFragments("content")).ServeHTTP(w, r)
-		} else {
-			templ.Handler(pages.Search("", nil)).ServeHTTP(w, r)
 		}
+		renderContentPage(w, r, pages.Search("", nil))
 
 		log.Info("search page served successfully", "query", query, "resultCount", 0)
 		return
@@ -314,10 +304,8 @@ func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
 
 	if shouldRenderContentFragment(r) {
 		w.Header().Add("HX-Trigger", "refreshSidebar")
-		templ.Handler(pages.Search(query, results), templ.WithFragments("content")).ServeHTTP(w, r)
-	} else {
-		templ.Handler(pages.Search(query, results)).ServeHTTP(w, r)
 	}
+	renderContentPage(w, r, pages.Search(query, results))
 
 	log.Info("search page served successfully", "query", query, "resultCount", len(results))
 }
@@ -352,11 +340,7 @@ func (h *Handlers) ListPage(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Debug("fetched list details", "listID", id, "movieCount", len(viewData.List.Movies))
 
-	if shouldRenderContentFragment(r) {
-		templ.Handler(pages.List(viewData), templ.WithFragments("content")).ServeHTTP(w, r)
-	} else {
-		templ.Handler(pages.List(viewData)).ServeHTTP(w, r)
-	}
+	renderContentPage(w, r, pages.List(viewData))
 
 	log.Info("list page served successfully", "listID", id, "name", viewData.List.Name, "movieCount", len(viewData.List.Movies))
 }
@@ -384,11 +368,7 @@ func (h *Handlers) StatsPage(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("retrieved watched stats", "totalWatched", stats.TotalWatched)
 
-	if shouldRenderContentFragment(r) {
-		templ.Handler(pages.Stats(stats, limit), templ.WithFragments("content")).ServeHTTP(w, r)
-	} else {
-		templ.Handler(pages.Stats(stats, limit)).ServeHTTP(w, r)
-	}
+	renderContentPage(w, r, pages.Stats(stats, limit))
 
 	log.Info("stats page served successfully")
 }
@@ -597,11 +577,7 @@ func (h *Handlers) AdminUsersPage(w http.ResponseWriter, r *http.Request) {
 		render500Error(w, r)
 		return
 	}
-	if shouldRenderContentFragment(r) {
-		templ.Handler(pages.AdminUsers(users), templ.WithFragments("content")).ServeHTTP(w, r)
-	} else {
-		templ.Handler(pages.AdminUsers(users)).ServeHTTP(w, r)
-	}
+	renderContentPage(w, r, pages.AdminUsers(users))
 }
 
 func (h *Handlers) AdminDeleteUser(w http.ResponseWriter, r *http.Request) {
@@ -759,11 +735,7 @@ func (h *Handlers) Watchlist(w http.ResponseWriter, r *http.Request) {
 	log.Debug("fetched watchlist details", "userID", userID, "movieCount", len(list.Movies))
 	viewData := h.listService.BuildListViewData(list, services.IsListEditing(r.URL.Query().Get("edit")), time.Now())
 
-	if shouldRenderContentFragment(r) {
-		templ.Handler(pages.List(viewData), templ.WithFragments("content")).ServeHTTP(w, r)
-	} else {
-		templ.Handler(pages.List(viewData)).ServeHTTP(w, r)
-	}
+	renderContentPage(w, r, pages.List(viewData))
 
 	log.Info("watchlist page served successfully", "userID", userID, "movieCount", len(list.Movies))
 }

@@ -322,10 +322,6 @@ func (s *WatchedService) GetWatchedMovieRecordsByID(ctx context.Context, movieID
 		})
 	}
 
-	sort.Slice(rec.Records, func(i, j int) bool {
-		return rec.Records[i].Date.After(rec.Records[j].Date)
-	})
-
 	return rec, nil
 }
 

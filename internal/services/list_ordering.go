@@ -1,6 +1,7 @@
 package services
 
 import (
+	"cmp"
 	"fmt"
 	"sort"
 	"strings"
@@ -84,12 +85,7 @@ func compareByCustomPosition(left, right models.MovieItem) int {
 
 	switch {
 	case leftHasPosition && rightHasPosition:
-		if *left.Position != *right.Position {
-			if *left.Position < *right.Position {
-				return -1
-			}
-			return 1
-		}
+		return cmp.Compare(*left.Position, *right.Position)
 	case leftHasPosition:
 		return -1
 	case rightHasPosition:
@@ -100,28 +96,11 @@ func compareByCustomPosition(left, right models.MovieItem) int {
 }
 
 func compareListMovieFallback(left, right models.MovieItem) int {
-	if !left.DateAdded.Equal(right.DateAdded) {
-		if left.DateAdded.Before(right.DateAdded) {
-			return -1
-		}
-		return 1
-	}
-
-	if left.MovieDetails.Movie.Title != right.MovieDetails.Movie.Title {
-		if left.MovieDetails.Movie.Title < right.MovieDetails.Movie.Title {
-			return -1
-		}
-		return 1
-	}
-
-	if left.MovieDetails.Movie.ID < right.MovieDetails.Movie.ID {
-		return -1
-	}
-	if left.MovieDetails.Movie.ID > right.MovieDetails.Movie.ID {
-		return 1
-	}
-
-	return 0
+	return cmp.Or(
+		left.DateAdded.Compare(right.DateAdded),
+		cmp.Compare(left.MovieDetails.Movie.Title, right.MovieDetails.Movie.Title),
+		cmp.Compare(left.MovieDetails.Movie.ID, right.MovieDetails.Movie.ID),
+	)
 }
 
 func nextCustomListPosition(movies []models.MovieItem) int64 {

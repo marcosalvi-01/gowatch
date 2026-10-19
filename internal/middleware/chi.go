@@ -13,18 +13,11 @@ var log = logging.Get("http")
 type responseWriter struct {
 	http.ResponseWriter
 	status int
-	size   int
 }
 
 func (rw *responseWriter) WriteHeader(code int) {
 	rw.status = code
 	rw.ResponseWriter.WriteHeader(code)
-}
-
-func (rw *responseWriter) Write(b []byte) (int, error) {
-	size, err := rw.ResponseWriter.Write(b)
-	rw.size += size
-	return size, err
 }
 
 func Logger(next http.Handler) http.Handler {

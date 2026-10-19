@@ -688,7 +688,7 @@ templ MovieActivity(records []models.WatchedMovieRecord) {
 							Watch history ({ len(records) })
 						</summary>
 						<div class="mt-3 max-h-64 space-y-2 overflow-auto">
-							for _, record := range sortWatchRecordsDesc(records) {
+							for _, record := range records {
 								@watchHistoryItem(record)
 							}
 						</div>
@@ -858,7 +858,7 @@ templ profileImage(profilePath, name string, class ...string) {
 			})
 		} else {
 			@avatar.Fallback(avatar.FallbackProps{Class: "text-xs font-medium"}) {
-				{ moviePersonInitials(name) }
+				{ personInitials(name) }
 			}
 		}
 	}
@@ -1340,20 +1340,6 @@ func formatNumber(num int64) string {
 	return result.String()
 }
 
-func moviePersonInitials(name string) string {
-	nameParts := strings.Fields(name)
-	if len(nameParts) == 0 {
-		return "?"
-	}
-
-	initials := strings.ToUpper(string([]rune(nameParts[0])[0]))
-	if len(nameParts) > 1 {
-		initials += strings.ToUpper(string([]rune(nameParts[1])[0]))
-	}
-
-	return initials
-}
-
 func countTheaterWatches(records []models.WatchedMovieRecord) int {
 	count := 0
 	for _, record := range records {
@@ -1362,20 +1348,6 @@ func countTheaterWatches(records []models.WatchedMovieRecord) int {
 		}
 	}
 	return count
-}
-
-func getLastWatchDate(records []models.WatchedMovieRecord) time.Time {
-	if len(records) == 0 {
-		return time.Time{}
-	}
-
-	latest := records[0].Date
-	for _, record := range records[1:] {
-		if record.Date.After(latest) {
-			latest = record.Date
-		}
-	}
-	return latest
 }
 
 func calculateAverageRating(records []models.WatchedMovieRecord) string {
@@ -1398,13 +1370,6 @@ func sortCast(cast []models.Cast) []models.Cast {
 		return cmp.Compare(a.CastOrder, b.CastOrder)
 	})
 	return cast
-}
-
-func sortWatchRecordsDesc(records []models.WatchedMovieRecord) []models.WatchedMovieRecord {
-	slices.SortFunc(records, func(a, b models.WatchedMovieRecord) int {
-		return b.Date.Compare(a.Date)
-	})
-	return records
 }
 
 func formatTimeAgo(t time.Time) string {

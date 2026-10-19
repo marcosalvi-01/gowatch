@@ -84,6 +84,19 @@ func TestHandlers_SearchPage_EmptyQueryReturnsOK(t *testing.T) {
 	}
 }
 
+func TestHandlers_SearchPage_EmptyQueryFragment(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/search?q=", nil)
+	req.Header.Set(htmxRequestHeader, htmxRequestHeaderValue)
+	res := httptest.NewRecorder()
+
+	(&Handlers{}).SearchPage(res, req)
+
+	if res.Code != http.StatusOK || res.Header().Get("HX-Trigger") != "refreshSidebar" ||
+		!strings.Contains(res.Body.String(), "No search results") || strings.Contains(res.Body.String(), "<!DOCTYPE html>") {
+		t.Fatalf("fragment status = %d, trigger = %q, body = %q", res.Code, res.Header().Get("HX-Trigger"), res.Body.String())
+	}
+}
+
 func TestHandlers_SearchPage_WhitespaceQueryReturnsOK(t *testing.T) {
 	h := &Handlers{}
 

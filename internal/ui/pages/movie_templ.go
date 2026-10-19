@@ -2889,7 +2889,7 @@ func MovieActivity(records []models.WatchedMovieRecord) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					for _, record := range sortWatchRecordsDesc(records) {
+					for _, record := range records {
 						templ_7745c5c3_Err = watchHistoryItem(record).Render(ctx, templ_7745c5c3_Buffer)
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
@@ -3542,9 +3542,9 @@ func profileImage(profilePath, name string, class ...string) templ.Component {
 					}
 					ctx = templ.InitializeContext(ctx)
 					var templ_7745c5c3_Var147 string
-					templ_7745c5c3_Var147, templ_7745c5c3_Err = templ.JoinStringErrs(moviePersonInitials(name))
+					templ_7745c5c3_Var147, templ_7745c5c3_Err = templ.JoinStringErrs(personInitials(name))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/movie.templ`, Line: 861, Col: 31}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/pages/movie.templ`, Line: 861, Col: 26}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var147))
 					if templ_7745c5c3_Err != nil {
@@ -5194,20 +5194,6 @@ func formatNumber(num int64) string {
 	return result.String()
 }
 
-func moviePersonInitials(name string) string {
-	nameParts := strings.Fields(name)
-	if len(nameParts) == 0 {
-		return "?"
-	}
-
-	initials := strings.ToUpper(string([]rune(nameParts[0])[0]))
-	if len(nameParts) > 1 {
-		initials += strings.ToUpper(string([]rune(nameParts[1])[0]))
-	}
-
-	return initials
-}
-
 func countTheaterWatches(records []models.WatchedMovieRecord) int {
 	count := 0
 	for _, record := range records {
@@ -5216,20 +5202,6 @@ func countTheaterWatches(records []models.WatchedMovieRecord) int {
 		}
 	}
 	return count
-}
-
-func getLastWatchDate(records []models.WatchedMovieRecord) time.Time {
-	if len(records) == 0 {
-		return time.Time{}
-	}
-
-	latest := records[0].Date
-	for _, record := range records[1:] {
-		if record.Date.After(latest) {
-			latest = record.Date
-		}
-	}
-	return latest
 }
 
 func calculateAverageRating(records []models.WatchedMovieRecord) string {
@@ -5252,13 +5224,6 @@ func sortCast(cast []models.Cast) []models.Cast {
 		return cmp.Compare(a.CastOrder, b.CastOrder)
 	})
 	return cast
-}
-
-func sortWatchRecordsDesc(records []models.WatchedMovieRecord) []models.WatchedMovieRecord {
-	slices.SortFunc(records, func(a, b models.WatchedMovieRecord) int {
-		return b.Date.Compare(a.Date)
-	})
-	return records
 }
 
 func formatTimeAgo(t time.Time) string {

@@ -136,7 +136,7 @@ func CalendarHeatmapCard(data []models.DailyWatchCount) templ.Component {
 						}
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"h-full min-w-0 flex flex-col justify-center gap-2\"><div class=\"w-full min-w-0 max-w-full overflow-x-auto overflow-y-hidden pb-4\"><div class=\"w-max\"><div class=\"space-y-1\"><div class=\"flex items-center gap-1\"><div class=\"sticky left-0 h-3.5 w-3.5 shrink-0 bg-card\"></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"w-max max-w-full mx-auto\"><div class=\"overflow-x-auto pb-4\"><div class=\"space-y-1\"><div class=\"grid grid-cols-[repeat(54,0.875rem)] gap-1\"><div class=\"sticky left-0 h-3.5 w-3.5 shrink-0 bg-card\"></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -153,7 +153,7 @@ func CalendarHeatmapCard(data []models.DailyWatchCount) templ.Component {
 						var templ_7745c5c3_Var6 string
 						templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(monthLabels[week])
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/calendarheatmap/calendarheatmap.templ`, Line: 54, Col: 123}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/calendarheatmap/calendarheatmap.templ`, Line: 53, Col: 122}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 						if templ_7745c5c3_Err != nil {
@@ -174,14 +174,14 @@ func CalendarHeatmapCard(data []models.DailyWatchCount) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				for dayIndex := 0; dayIndex < len(dayLabels); dayIndex++ {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div class=\"flex items-center gap-1\"><div class=\"sticky left-0 h-3.5 w-3.5 shrink-0 bg-card text-[10px] text-muted-foreground font-bold flex items-center justify-end leading-none pr-1\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div class=\"grid grid-cols-[repeat(54,0.875rem)] gap-1\"><div class=\"sticky left-0 h-3.5 w-3.5 shrink-0 bg-card text-[10px] text-muted-foreground font-bold flex items-center justify-end leading-none pr-1\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var7 string
 					templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(dayLabels[dayIndex])
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/calendarheatmap/calendarheatmap.templ`, Line: 62, Col: 31}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/calendarheatmap/calendarheatmap.templ`, Line: 61, Col: 30}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 					if templ_7745c5c3_Err != nil {
@@ -269,7 +269,7 @@ func CalendarHeatmapCard(data []models.DailyWatchCount) templ.Component {
 								var templ_7745c5c3_Var13 string
 								templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(tooltipLabel)
 								if templ_7745c5c3_Err != nil {
-									return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/calendarheatmap/calendarheatmap.templ`, Line: 76, Col: 26}
+									return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/components/calendarheatmap/calendarheatmap.templ`, Line: 75, Col: 25}
 								}
 								_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 								if templ_7745c5c3_Err != nil {
@@ -293,7 +293,7 @@ func CalendarHeatmapCard(data []models.DailyWatchCount) templ.Component {
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</div></div></div><div class=\"flex items-center justify-end gap-2 text-xs text-muted-foreground\"><span>Less</span>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</div></div><div class=\"flex items-center justify-end gap-2 pt-3 text-xs text-muted-foreground\"><span>Less</span>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

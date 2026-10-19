@@ -21,19 +21,19 @@ import (
 
 // Config holds the application configuration.
 type Config struct {
-	Port                 string        `mapstructure:"port" yaml:"port"`
-	Timeout              time.Duration `mapstructure:"request_timeout" yaml:"request_timeout"`
-	DBPath               string        `mapstructure:"db_path" yaml:"db_path"`
-	DBName               string        `mapstructure:"db_name" yaml:"db_name"`
-	SeerrBaseURL         string        `mapstructure:"seerr_base_url" yaml:"seerr_base_url"`
-	SeerrAPIKey          string        `mapstructure:"seerr_api_key" yaml:"seerr_api_key"`
-	CacheTTL             time.Duration `mapstructure:"cache_ttl" yaml:"cache_ttl"`
-	ImageCacheTTL        time.Duration `mapstructure:"image_cache_ttl" yaml:"image_cache_ttl"`
-	ImageCleanupInterval time.Duration `mapstructure:"image_cleanup_interval" yaml:"image_cleanup_interval"`
-	SessionExpiry        time.Duration `mapstructure:"session_expiry" yaml:"session_expiry"`
-	ShutdownTimeout      time.Duration `mapstructure:"shutdown_timeout" yaml:"shutdown_timeout"`
-	HTTPS                bool          `mapstructure:"https" yaml:"https"`
-	AdminDefaultPassword string        `mapstructure:"admin_default_password" yaml:"admin_default_password"`
+	Port                 string
+	Timeout              time.Duration
+	DBPath               string
+	DBName               string
+	SeerrBaseURL         string
+	SeerrAPIKey          string
+	CacheTTL             time.Duration
+	ImageCacheTTL        time.Duration
+	ImageCleanupInterval time.Duration
+	SessionExpiry        time.Duration
+	ShutdownTimeout      time.Duration
+	HTTPS                bool
+	AdminDefaultPassword string
 }
 
 // RunServer starts the HTTP server with the given configuration.

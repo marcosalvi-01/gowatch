@@ -58,19 +58,15 @@ func (s *ListService) GetAllLists(ctx context.Context) ([]models.ListEntry, erro
 	s.log.Debug("fetched lists from database", "totalCount", len(results))
 
 	// Filter out the watchlist from the results
-	var filteredResults []db.InsertList
+	lists := make([]models.ListEntry, 0, len(results))
 	for _, result := range results {
-		if !result.IsWatchlist {
-			filteredResults = append(filteredResults, result)
+		if result.IsWatchlist {
+			continue
 		}
-	}
-
-	lists := make([]models.ListEntry, len(filteredResults))
-	for i, result := range filteredResults {
-		lists[i] = models.ListEntry{
+		lists = append(lists, models.ListEntry{
 			ID:   result.ID,
 			Name: result.Name,
-		}
+		})
 	}
 
 	s.log.Info("successfully retrieved all lists", "count", len(lists))

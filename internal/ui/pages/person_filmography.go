@@ -65,7 +65,8 @@ func preparePersonFilmography(actingCredits, crewCredits []models.PersonCredit, 
 	roles := personFilmographyRoleOptions(credits)
 	state.Role = personFilmographyRoleSelection(state.Role, roles)
 	filtered := filterPersonFilmography(credits, state)
-	sorted := capPersonFilmography(sortPersonFilmography(filtered, state.Sort))
+	sorted := sortPersonFilmography(filtered, state.Sort)
+	sorted = sorted[:min(len(sorted), personFilmographyMaxCredits)]
 	visible, hasMore, loadedCount := personFilmographyPage(sorted, state.Sort, state.Page)
 
 	prepared := personPreparedFilmography{

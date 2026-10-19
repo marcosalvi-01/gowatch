@@ -213,7 +213,7 @@ func (s *WatchedService) getTopReturnOnInvestmentMovies(ctx context.Context, lim
 		return nil, fmt.Errorf("failed to get top return on investment movies: %w", err)
 	}
 
-	return s.sortMoviesByROIDesc(data), nil
+	return data, nil
 }
 
 func (s *WatchedService) getBiggestBudgetMovies(ctx context.Context, limit int) ([]models.MovieFinancial, error) {
@@ -231,7 +231,7 @@ func (s *WatchedService) getBiggestBudgetMovies(ctx context.Context, limit int) 
 		return nil, fmt.Errorf("failed to get biggest budget movies: %w", err)
 	}
 
-	return s.sortMoviesByBudgetDesc(data), nil
+	return data, nil
 }
 
 func (s *WatchedService) getDateRange(ctx context.Context) (*models.DateRange, error) {
@@ -343,17 +343,8 @@ func (s *WatchedService) calculateHoursAverages(totalHours float64, dateRange *m
 	avgPerDay = totalHours / days
 
 	// Use a minimum divisor to avoid extreme projections for small datasets
-	weekDivisor := days / 7
-	if weekDivisor < 1 {
-		weekDivisor = 1
-	}
-	avgPerWeek = totalHours / weekDivisor
-
-	monthDivisor := days / 30
-	if monthDivisor < 1 {
-		monthDivisor = 1
-	}
-	avgPerMonth = totalHours / monthDivisor
+	avgPerWeek = totalHours / max(days/7, 1)
+	avgPerMonth = totalHours / max(days/30, 1)
 
 	s.log.Debug("calculated hours averages", "avgPerDay", avgPerDay, "avgPerWeek", avgPerWeek, "avgPerMonth", avgPerMonth)
 	return avgPerDay, avgPerWeek, avgPerMonth
@@ -457,12 +448,9 @@ func (s *WatchedService) aggregateTopGenresForChart(data []models.MonthlyGenreBr
 		otherCount := 0
 
 		for genre, count := range month.Genres {
-			isTopGenre := false
 			if slices.Contains(topGenres, genre) {
 				genres[genre] = count
-				isTopGenre = true
-			}
-			if !isTopGenre {
+			} else {
 				otherCount += count
 			}
 		}
@@ -565,17 +553,8 @@ func (s *WatchedService) calculateAverages(total int64, dateRange *models.DateRa
 	avgPerDay = float64(total) / days
 
 	// Use a minimum divisor to avoid extreme projections for small datasets
-	weekDivisor := days / 7
-	if weekDivisor < 1 {
-		weekDivisor = 1
-	}
-	avgPerWeek = float64(total) / weekDivisor
-
-	monthDivisor := days / 30
-	if monthDivisor < 1 {
-		monthDivisor = 1
-	}
-	avgPerMonth = float64(total) / monthDivisor
+	avgPerWeek = float64(total) / max(days/7, 1)
+	avgPerMonth = float64(total) / max(days/30, 1)
 
 	s.log.Debug("calculated averages", "avgPerDay", avgPerDay, "avgPerWeek", avgPerWeek, "avgPerMonth", avgPerMonth)
 	return avgPerDay, avgPerWeek, avgPerMonth
@@ -591,16 +570,8 @@ func (s *WatchedService) calculateStreakStats(watchedDates []time.Time, now time
 		normalizedDates[i] = normalizeDate(watchedDate)
 	}
 
-	sort.Slice(normalizedDates, func(i, j int) bool {
-		return normalizedDates[i].Before(normalizedDates[j])
-	})
-
-	uniqueDates := make([]time.Time, 0, len(normalizedDates))
-	for _, watchedDate := range normalizedDates {
-		if len(uniqueDates) == 0 || !uniqueDates[len(uniqueDates)-1].Equal(watchedDate) {
-			uniqueDates = append(uniqueDates, watchedDate)
-		}
-	}
+	slices.SortFunc(normalizedDates, time.Time.Compare)
+	uniqueDates := slices.CompactFunc(normalizedDates, time.Time.Equal)
 
 	longestDays := int64(1)
 	longestStartIdx := 0
@@ -666,12 +637,7 @@ func (s *WatchedService) calculateStreakStats(watchedDates []time.Time, now time
 }
 
 func (s *WatchedService) normalizeBudgetTierDistribution(data []models.BudgetTierCount) []models.BudgetTierCount {
-	budgetTierCounts := map[models.BudgetTier]int64{
-		models.BudgetTierIndie:       0,
-		models.BudgetTierMid:         0,
-		models.BudgetTierBlockbuster: 0,
-		models.BudgetTierUnknown:     0,
-	}
+	budgetTierCounts := make(map[models.BudgetTier]int64)
 
 	for _, row := range data {
 		switch row.Tier {
@@ -696,48 +662,6 @@ func (s *WatchedService) normalizeBudgetTierDistribution(data []models.BudgetTie
 			Count: budgetTierCounts[tier],
 		})
 	}
-
-	return result
-}
-
-func (s *WatchedService) sortMoviesByROIDesc(movies []models.MovieFinancial) []models.MovieFinancial {
-	result := make([]models.MovieFinancial, 0, len(movies))
-	for _, movie := range movies {
-		if movie.Budget > 0 {
-			result = append(result, movie)
-		}
-	}
-
-	sort.Slice(result, func(i, j int) bool {
-		if result[i].ROI != result[j].ROI {
-			return result[i].ROI > result[j].ROI
-		}
-		if result[i].Revenue != result[j].Revenue {
-			return result[i].Revenue > result[j].Revenue
-		}
-		return result[i].Title < result[j].Title
-	})
-
-	return result
-}
-
-func (s *WatchedService) sortMoviesByBudgetDesc(movies []models.MovieFinancial) []models.MovieFinancial {
-	result := make([]models.MovieFinancial, 0, len(movies))
-	for _, movie := range movies {
-		if movie.Budget > 0 {
-			result = append(result, movie)
-		}
-	}
-
-	sort.Slice(result, func(i, j int) bool {
-		if result[i].Budget != result[j].Budget {
-			return result[i].Budget > result[j].Budget
-		}
-		if result[i].Revenue != result[j].Revenue {
-			return result[i].Revenue > result[j].Revenue
-		}
-		return result[i].Title < result[j].Title
-	})
 
 	return result
 }

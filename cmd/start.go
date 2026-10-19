@@ -54,10 +54,7 @@ func init() {
 	}
 
 	// Set defaults
-	viper.SetDefault("port", "8080")
 	viper.SetDefault("request_timeout", "30s")
-	viper.SetDefault("db_path", "/var/lib/gowatch")
-	viper.SetDefault("db_name", "db.db")
 	viper.SetDefault("cache_ttl", "168h")
 	viper.SetDefault("image_cache_ttl", "720h")
 	viper.SetDefault("image_cleanup_interval", "48h")

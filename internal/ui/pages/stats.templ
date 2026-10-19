@@ -819,38 +819,6 @@ templ statsHeader(limit int) {
 	</div>
 }
 
-templ statsMetrics(stats *models.WatchedStats) {
-	@card.Card() {
-		@card.Content() {
-			<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-				@statsMetricCard("Total Watched", fmt.Sprintf("%d", stats.TotalWatched), icon.Film)
-				@statsMetricCard("Avg per Day", fmt.Sprintf("%.1f", stats.AvgPerDay), icon.Calendar)
-				@statsMetricCard("Avg per Week", fmt.Sprintf("%.1f", stats.AvgPerWeek), icon.ChartBar)
-				@statsMetricCard("Avg per Month", fmt.Sprintf("%.1f", stats.AvgPerMonth), icon.TrendingUp)
-				if stats.MostWatchedDay != nil {
-					@statsMetricCard("Most Watched Day", stats.MostWatchedDay.Date.Format("2 of January 2006"), icon.Calendar)
-				} else {
-					@statsMetricCard("Most Watched Day", "No data", icon.Calendar)
-				}
-			</div>
-		}
-	}
-	@statsTimeMetrics(stats)
-}
-
-templ statsTimeMetrics(stats *models.WatchedStats) {
-	@card.Card() {
-		@card.Content() {
-			<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-				@statsMetricCard("Total Hours", fmt.Sprintf("%.1f hours", stats.TotalHoursWatched), icon.Clock)
-				@statsMetricCard("Avg Hours/Day", fmt.Sprintf("%.1f", stats.AvgHoursPerDay), icon.Clock)
-				@statsMetricCard("Avg Hours/Week", fmt.Sprintf("%.1f", stats.AvgHoursPerWeek), icon.Clock)
-				@statsMetricCard("Avg Hours/Month", fmt.Sprintf("%.1f", stats.AvgHoursPerMonth), icon.Clock)
-			</div>
-		}
-	}
-}
-
 templ statsMetricCard(label, value string, iconFunc func(...icon.Props) templ.Component) {
 	<div class="rounded-lg border border-border/60 bg-muted/20 p-3 sm:p-4 h-full">
 		<div class="flex items-start justify-between gap-2">
@@ -1010,36 +978,6 @@ templ statsCharts(stats *models.WatchedStats) {
 }
 
 // Helper functions to prepare chart data
-func prepareMonthlyData(data []models.PeriodCount) chart.Data {
-	// Create a map of period to count
-	dataMap := make(map[string]int64)
-	for _, pc := range data {
-		dataMap[pc.Period] = pc.Count
-	}
-
-	// Generate last 12 complete months
-	now := time.Now()
-	labels := make([]string, 12)
-	values := make([]float64, 12)
-	for i := 12; i >= 1; i-- {
-		month := now.AddDate(0, -i, 0)
-		period := month.Format("2006-01")
-		labels[12-i] = period
-		values[12-i] = float64(dataMap[period])
-	}
-
-	return chart.Data{
-		Labels: labels,
-		Datasets: []chart.Dataset{{
-			Label:           "Watches",
-			Data:            values,
-			BackgroundColor: []any{"rgba(59, 130, 246, 0.5)"},
-			BorderColor:     []any{"rgba(59, 130, 246, 1)"},
-			BorderWidth:     1,
-		}},
-	}
-}
-
 func prepareGenresByMonthData(data []models.MonthlyGenreBreakdown) chart.Data {
 	if len(data) == 0 {
 		return chart.Data{}
@@ -1063,13 +1001,8 @@ func prepareGenresByMonthData(data []models.MonthlyGenreBreakdown) chart.Data {
 	colorPalette := getGenreColors()
 	borderPalette := getGenreBorderColors()
 
-	// Create month -> genre data mapping (data is already sorted by month from DB)
-	monthData := make(map[string]map[string]int)
-	var months []string
 	var labels []string
 	for _, month := range data {
-		monthData[month.Month] = month.Genres
-		months = append(months, month.Month)
 		// Parse YYYY-MM and format as abbreviated month name
 		if parsedTime, err := time.Parse("2006-01", month.Month); err == nil {
 			labels = append(labels, parsedTime.Format("Jan"))
@@ -1082,14 +1015,8 @@ func prepareGenresByMonthData(data []models.MonthlyGenreBreakdown) chart.Data {
 	var datasets []chart.Dataset
 	for i, genre := range genres {
 		var values []float64
-		for _, month := range months {
-			if genreCounts, exists := monthData[month]; exists {
-				if count, hasGenre := genreCounts[genre]; hasGenre {
-					values = append(values, float64(count))
-				} else {
-					values = append(values, 0)
-				}
-			}
+		for _, month := range data {
+			values = append(values, float64(month.Genres[genre]))
 		}
 
 		colorIndex := i % len(colorPalette)
