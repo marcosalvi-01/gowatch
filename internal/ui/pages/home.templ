@@ -37,7 +37,9 @@ templ Home(userName string, data models.HomeData) {
 						@homeActivitySection(data.DailyWatchCountsLastYear, data.RecentMovies)
 					}
 					@homeWatchNextSection(data.WatchNextMovies, data.WatchlistMovieCount)
-					<div hx-get="/htmx/lists/home-lists" hx-trigger="load, refreshLists from:body" hx-indicator="#lists-loading"></div>
+					<div hx-get="/htmx/lists/home-lists" hx-trigger="load, refreshLists from:body" hx-indicator="#lists-loading">
+						@ListsLoading()
+					</div>
 				}
 			</div>
 		}

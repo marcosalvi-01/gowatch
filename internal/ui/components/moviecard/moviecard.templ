@@ -245,7 +245,7 @@ templ Script() {
 					}
 				});
 
-				document.body.addEventListener("htmx:beforeSwap", () => {
+				document.addEventListener("htmx:beforeSwap", () => {
 					collapseOtherCards();
 				});
 			})();
