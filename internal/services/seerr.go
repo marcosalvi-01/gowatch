@@ -21,6 +21,7 @@ const (
 	seerrAPIKeyHeader   = "X-Api-Key" // #nosec G101 -- protocol header name, not an API key
 	seerrAPIPath        = "/api/v1"
 	seerrResponseLimit  = 1 << 20
+	seerrErrorBodyLimit = 4 << 10
 	seerrHTTPScheme     = "https"
 )
 
@@ -155,7 +156,7 @@ func (s *SeerrService) lookupMovieState(ctx context.Context, movieID int64) (See
 	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != http.StatusOK {
-		return "", 0, models.SeerrIntegration{}, seerrResponseError("get movie state", response.StatusCode)
+		return "", 0, models.SeerrIntegration{}, seerrResponseError("get movie state", response)
 	}
 
 	var details seerrMovieDetails
@@ -296,7 +297,7 @@ func (s *SeerrService) retryMovieRequest(ctx context.Context, requestID int64, i
 	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != http.StatusOK {
-		return nil, seerrResponseError("retry movie request", response.StatusCode)
+		return nil, seerrResponseError("retry movie request", response)
 	}
 
 	status := decodeSeerrRequestStatus(response.Body)
@@ -336,7 +337,7 @@ func (s *SeerrService) submitMovieRequest(ctx context.Context, movieID int64, in
 	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != http.StatusCreated {
-		return nil, seerrResponseError("submit movie request", response.StatusCode)
+		return nil, seerrResponseError("submit movie request", response)
 	}
 
 	status := decodeSeerrRequestStatus(response.Body)
@@ -387,15 +388,34 @@ func seerrEndpoint(baseURL, endpoint string) (string, error) {
 	return apiURL, nil
 }
 
-func seerrResponseError(action string, statusCode int) error {
-	switch statusCode {
+func seerrResponseError(action string, response *http.Response) error {
+	body, readErr := io.ReadAll(io.LimitReader(response.Body, seerrErrorBodyLimit+1))
+	bodyText := strings.TrimSpace(string(body))
+	if len(body) > seerrErrorBodyLimit {
+		bodyText = strings.TrimSpace(strings.ToValidUTF8(string(body[:seerrErrorBodyLimit]), "�")) + "… (truncated)"
+	}
+	if readErr != nil {
+		if bodyText != "" {
+			bodyText += "; "
+		}
+		bodyText += "failed to read response body: " + readErr.Error()
+	}
+
+	var responseErr error
+	switch response.StatusCode {
 	case http.StatusUnauthorized:
-		return fmt.Errorf("%s: %w", action, ErrSeerrUnauthorized)
+		responseErr = fmt.Errorf("%s: %w", action, ErrSeerrUnauthorized)
 	case http.StatusForbidden:
-		return fmt.Errorf("%s: %w", action, ErrSeerrForbidden)
+		responseErr = fmt.Errorf("%s: %w", action, ErrSeerrForbidden)
 	}
-	if statusCode >= http.StatusBadRequest && statusCode < http.StatusInternalServerError {
-		return fmt.Errorf("%s: %w (HTTP %d)", action, ErrSeerrRejected, statusCode)
+	if responseErr == nil && response.StatusCode >= http.StatusBadRequest && response.StatusCode < http.StatusInternalServerError {
+		responseErr = fmt.Errorf("%s: %w (HTTP %d)", action, ErrSeerrRejected, response.StatusCode)
 	}
-	return fmt.Errorf("%s: %w (HTTP %d)", action, ErrSeerrUnavailable, statusCode)
+	if responseErr == nil {
+		responseErr = fmt.Errorf("%s: %w (HTTP %d)", action, ErrSeerrUnavailable, response.StatusCode)
+	}
+	if bodyText != "" {
+		return fmt.Errorf("%w: response body: %s", responseErr, bodyText)
+	}
+	return responseErr
 }

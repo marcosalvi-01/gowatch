@@ -282,7 +282,7 @@ func (s *SeerrService) getMetadata(ctx context.Context, endpoint string, query u
 	if err != nil {
 		return fmt.Errorf("parse Seerr metadata URL: %w", err)
 	}
-	parsedURL.RawQuery = query.Encode()
+	parsedURL.RawQuery = strings.ReplaceAll(query.Encode(), "+", "%20")
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, parsedURL.String(), nil)
 	if err != nil {
 		return fmt.Errorf("create Seerr %s request: %w", action, err)
@@ -297,7 +297,7 @@ func (s *SeerrService) getMetadata(ctx context.Context, endpoint string, query u
 	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != http.StatusOK {
-		return seerrResponseError(action, response.StatusCode)
+		return seerrResponseError(action, response)
 	}
 
 	body, err := io.ReadAll(io.LimitReader(response.Body, seerrMetadataResponseLimit+1))
