@@ -204,11 +204,10 @@ templ statsRatingsSection(stats *models.WatchedStats) {
 templ statsWatchlistSection(stats models.WatchlistStats) {
 	<div class="space-y-4">
 		@statsSectionHeader("Watchlist", icon.Bookmark)
-		<p class="text-sm text-muted-foreground">Current watchlist only, not time to watch. Ages use calendar days in server timezone; future dates count as 0 days.</p>
 		<div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
 			@metricCard("Movies", strconv.Itoa(stats.MovieCount), "In your watchlist", icon.Bookmark)
 			@metricCard("Average Wait", formatWatchlistAge(stats.AverageAgeDays, stats.MovieCount), "Average age of current entries", icon.Clock)
-			@metricCard("Added This Month", strconv.Itoa(stats.AddedThisMonth), "Still on your list; includes future dates this month", icon.Calendar)
+			@metricCard("Added This Month", strconv.Itoa(stats.AddedThisMonth), "Still on your list", icon.Calendar)
 			@metricCard("Remaining Runtime", formatRuntimeMinutes(stats.TotalRuntimeMinutes), fmt.Sprintf("Known runtime for %d of %d movies", stats.KnownRuntimeCount, stats.MovieCount), icon.Film)
 		</div>
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
