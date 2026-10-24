@@ -2,19 +2,23 @@ package pages
 
 import (
 	"fmt"
+
 	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/calendarheatmap"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/emptystate"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/infohint"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/listcard"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/moviecard"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/sidebar"
+	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
 	"github.com/marcosalvi-01/gowatch/internal/utils"
-	"strconv"
 )
+
+const homeMoviePreviewLimit = 10
 
 templ Home(userName string, data models.HomeData) {
 	@Layout() {
@@ -24,10 +28,10 @@ templ Home(userName string, data models.HomeData) {
 					@sidebar.ImportDataDialog()
 					@emptystate.EmptyState(emptystate.Props{
 						Title:             fmt.Sprintf("Welcome to Gowatch, %s!", userName),
-						Description:       "You haven't tracked any movies yet. Let's start building your collection!",
-						Instruction:       "Use the search bar at the top to find and add movies, or import your existing history below.",
+						Description:       "Your movie collection starts here.",
+						Instruction:       "Search above to add movies, or import your watch history below.",
 						ImportTitle:       "Import History",
-						ImportDescription: "Already have a list? Import your movie history here.",
+						ImportDescription: "Bring your existing watch history.",
 						ShowImport:        true,
 					})
 				} else {
@@ -46,69 +50,82 @@ templ Home(userName string, data models.HomeData) {
 	}
 }
 
-
 templ homeSectionHeader(title string, iconFn func(...icon.Props) templ.Component) {
 	<h2 class="text-xl font-semibold flex items-center gap-2">
 		@iconFn(icon.Props{Class: "size-5 text-primary"})
 		{ title }
 	</h2>
-	}
+}
 
 templ homeHeader(name string) {
-	<div class="space-y-2">
-		<h1 class="text-2xl sm:text-3xl font-bold">Welcome back, { name }</h1>
-		<p class="text-muted-foreground text-sm sm:text-base max-w-2xl">Overview of your movie activity and what to watch next.</p>
+	<div class="flex flex-col gap-4 rounded-lg border bg-card/40 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
+		<div class="space-y-2">
+			<h1 class="text-3xl sm:text-4xl font-bold leading-tight">Welcome back, { name }</h1>
+			<p class="text-muted-foreground text-sm sm:text-base max-w-2xl">Your recent watches and what's next.</p>
+		</div>
+		@button.Button(button.Props{Href: "/stats", Variant: button.VariantOutline, Size: button.SizeSm, Attributes: navAttrs("stats", "/stats", "#stats-loading")}) {
+			@icon.ChartBar(icon.Props{Class: "size-4"})
+			View Stats
+		}
 	</div>
 }
 
 templ homeAtGlance(stats models.HomeStatsSummary) {
 	<div class="space-y-4">
 		@homeSectionHeader("At a Glance", icon.Sparkles)
-		@card.Card() {
+		@card.Card(card.Props{Class: "bg-card/40"}) {
 			@card.Content(card.ContentProps{Class: "p-4 sm:p-6"}) {
-				<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+				<div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
 					@statsMetricCard("Total Watched", fmt.Sprintf("%d", stats.TotalWatched), icon.Film)
 					@statsMetricCard("Avg per Week", fmt.Sprintf("%.1f", stats.AvgPerWeek), icon.TrendingUp)
-					if stats.TopGenre != nil {
-						@statsMetricCard("Top Genre", stats.TopGenre.Name, icon.Tag)
-					} else {
-						@statsMetricCard("Top Genre", "No data", icon.Tag)
-					}
+					<div class="col-span-2 sm:col-span-1">
+						if stats.TopGenre != nil {
+							@statsMetricCard("Top Genre", stats.TopGenre.Name, icon.Tag)
+						} else {
+							@statsMetricCard("Top Genre", "No data", icon.Tag)
+						}
+					</div>
+				</div>
+				<div class="mt-4 flex items-center gap-2 border-t pt-4 text-xs text-muted-foreground">
+					@infohint.Corner("Watches include rewatches. Weekly average covers your full history; top genre is ranked by watches.", "Overview help")
+					<span>Across your full watch history</span>
 				</div>
 			}
 		}
 	</div>
 }
 
-
 templ homeActivitySection(heatmapData []models.DailyWatchCount, movies []models.WatchedMovieInDay) {
 	<div class="space-y-4">
-		@homeSectionHeader("Activity & Consistency", icon.Activity)
+		@homeSectionHeader("Activity", icon.Activity)
 		@calendarheatmap.CalendarHeatmapCard(heatmapData)
 		@homeRecentActivityCard(movies)
 	</div>
 }
 
-
 templ homeRecentActivityCard(movies []models.WatchedMovieInDay) {
-	@card.Card(card.Props{Class: "h-full"}) {
-		@card.Header() {
-			@card.Title() {
-				Recent Activity
+	@card.Card(card.Props{Class: "h-full bg-card/40"}) {
+		@card.Header(card.HeaderProps{Class: "flex-row flex-wrap items-center justify-between gap-3 space-y-0 p-4 pb-0"}) {
+			@card.Title(card.TitleProps{Class: "text-sm font-semibold"}) {
+				Recently Watched
+			}
+			@button.Button(button.Props{Href: "/watched", Variant: button.VariantGhost, Size: button.SizeSm, Attributes: navAttrs("watched", "/watched", "#watched-loading")}) {
+				View All
+				@icon.ArrowRight(icon.Props{Class: "size-4"})
 			}
 		}
-		@card.Content(card.ContentProps{Class: "pt-4"}) {
+		@card.Content(card.ContentProps{Class: "p-4 pt-3"}) {
 			if len(movies) > 0 {
 				<div class="flex gap-4 overflow-x-auto pb-2 px-1 -mx-1 scrollbar-hide">
 					for i, movie := range movies {
-						if i < 5 {
-							<div class={ "flex-shrink-0", getHomeCardClass(i) }>
+						if i < homeMoviePreviewLimit {
+							<div class="shrink-0">
 								{{
 									moviecardProps := moviecard.Props{
-										Title:      movie.MovieDetails.Movie.Title,
-										Href:       "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
-										PosterPath: movie.MovieDetails.Movie.PosterPath,
-										Hoverable:  true,
+										Title:        movie.MovieDetails.Movie.Title,
+										Href:         movieHref(movie.MovieDetails.Movie.ID),
+										PosterPath:   movie.MovieDetails.Movie.PosterPath,
+										Hoverable:    true,
 										SeerrMovieID: movie.MovieDetails.Movie.ID,
 									}
 									if movie.InTheaters {
@@ -133,26 +150,9 @@ templ homeRecentActivityCard(movies []models.WatchedMovieInDay) {
 							</div>
 						}
 					}
-					<div class="flex-shrink-0">
-						@card.Card(card.Props{
-							Class: "w-[120px] md:w-[160px] border-dashed border-2 cursor-pointer hover:bg-muted transition-colors h-full flex items-center justify-center",
-							Attributes: templ.Attributes{
-								"hx-get":      "/watched",
-								"hx-target":   "#main-content",
-								"hx-push-url": "true",
-							},
-						}) {
-							<div class="flex flex-col items-center justify-center gap-2 p-4 text-center">
-								<div class="p-2 bg-primary/10 rounded-full">
-									@icon.ArrowRight(icon.Props{Class: "size-5 text-primary"})
-								</div>
-								<p class="font-medium text-sm">See More</p>
-							</div>
-						}
-					</div>
 				</div>
 			} else {
-				<div class="text-center text-muted-foreground py-8">No recent activity yet</div>
+				<div class="text-center text-muted-foreground py-8">No watches yet</div>
 			}
 		}
 	}
@@ -160,28 +160,33 @@ templ homeRecentActivityCard(movies []models.WatchedMovieInDay) {
 
 templ homeWatchNextSection(movies []models.MovieItem, watchlistMovieCount int) {
 	<div class="space-y-4">
-		@homeSectionHeader("Watchlist Queue", icon.List)
-		@card.Card(card.Props{Class: "h-full"}) {
-			@card.Header() {
-				<div class="flex items-center justify-between gap-2">
-					@card.Title() {
-						Watch Next
-					}
-					if watchlistMovieCount > 0 {
-						<p class="text-sm text-muted-foreground">{ fmt.Sprintf("%d in watchlist", watchlistMovieCount) }</p>
-					}
-				</div>
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			@homeSectionHeader("Watch Next", icon.Bookmark)
+			@button.Button(button.Props{Href: "/watchlist", Variant: button.VariantGhost, Size: button.SizeSm, Attributes: navAttrs("watchlist", "/watchlist", "#main-content-loading")}) {
+				View Watchlist
+				@icon.ArrowRight(icon.Props{Class: "size-4"})
 			}
-			@card.Content(card.ContentProps{Class: "pt-4"}) {
+		</div>
+		@card.Card(card.Props{Class: "h-full bg-card/40"}) {
+			@card.Header(card.HeaderProps{Class: "flex-row flex-wrap items-center justify-between gap-2 space-y-0 p-4 pb-0"}) {
+				<div class="flex items-center gap-2 text-sm text-muted-foreground">
+					<span>From your watchlist</span>
+					@infohint.Corner("Up next in your watchlist's custom order.", "Watch Next help")
+				</div>
+				if watchlistMovieCount > 0 {
+					<p class="text-sm text-muted-foreground">{ fmt.Sprintf("%d in watchlist", watchlistMovieCount) }</p>
+				}
+			}
+			@card.Content(card.ContentProps{Class: "p-4 pt-3"}) {
 				if len(movies) > 0 {
 					<div class="flex gap-4 overflow-x-auto pb-2 px-1 -mx-1 scrollbar-hide">
 						for i, movie := range movies {
-							<div class={ "flex-shrink-0", getHomeCardClass(i) }>
+							<div class="shrink-0">
 								@moviecard.MovieCard(moviecard.Props{
-									Title:      movie.MovieDetails.Movie.Title,
-									Href:       "/movie/" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
-									PosterPath: movie.MovieDetails.Movie.PosterPath,
-									Hoverable:  true,
+									Title:        movie.MovieDetails.Movie.Title,
+									Href:         movieHref(movie.MovieDetails.Movie.ID),
+									PosterPath:   movie.MovieDetails.Movie.PosterPath,
+									Hoverable:    true,
 									SeerrMovieID: movie.MovieDetails.Movie.ID,
 								}) {
 									<h3 class="mb-1 text-xs md:text-sm font-bold leading-tight">{ movie.MovieDetails.Movie.Title }</h3>
@@ -195,33 +200,11 @@ templ homeWatchNextSection(movies []models.MovieItem, watchlistMovieCount int) {
 								}
 							</div>
 						}
-						<div class="flex-shrink-0">
-							@card.Card(card.Props{
-								Class: "w-[120px] md:w-[160px] border-dashed border-2 cursor-pointer hover:bg-muted transition-colors h-full flex items-center justify-center",
-								Attributes: templ.Attributes{
-									"hx-get":      "/watchlist",
-									"hx-target":   "#main-content",
-									"hx-push-url": "true",
-								},
-							}) {
-								<div class="flex flex-col items-center justify-center gap-2 p-4 text-center">
-									<div class="p-2 bg-primary/10 rounded-full">
-										@icon.ArrowRight(icon.Props{Class: "size-5 text-primary"})
-									</div>
-									<p class="font-medium text-sm">Watchlist</p>
-								</div>
-							}
-						</div>
 					</div>
 				} else {
-					<div
-						hx-get="/watchlist"
-						hx-target="#main-content"
-						hx-push-url="true"
-						class="rounded-lg border border-dashed border-border/80 p-6 text-center cursor-pointer hover:bg-muted/20 transition-colors"
-					>
+					<div class="rounded-lg bg-muted/50 p-6 text-center">
 						<p class="font-medium">Your watchlist is empty</p>
-						<p class="text-sm text-muted-foreground mt-1">Add movies from search and plan what to watch next.</p>
+						<p class="text-sm text-muted-foreground mt-1">Search for movies to add to your watchlist.</p>
 					</div>
 				}
 			}
@@ -229,50 +212,36 @@ templ homeWatchNextSection(movies []models.MovieItem, watchlistMovieCount int) {
 	</div>
 }
 
-func getHomeCardClass(i int) string {
-	switch {
-	case i >= 4:
-		return "hidden xl:block"
-	case i == 3:
-		return "hidden lg:block"
-	case i == 2:
-		return "hidden md:block"
-	default:
-		return ""
-	}
-}
-
 templ HomeLists(lists []models.ListEntry) {
 	<div class="space-y-4">
-		@homeSectionHeader("Your Lists", icon.List)
-		@card.Card() {
-			@card.Content(card.ContentProps{Class: "pt-4"}) {
-				<div id="lists-section" class="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-					for _, list := range lists {
-						<div class="flex-shrink-0">
-							@listcard.ListCard(listcard.Props{
-								Name: list.Name,
-								Href: fmt.Sprintf("/list/%d", list.ID),
-							})
-						</div>
-					}
-					<div class="flex-shrink-0">
-						@dialog.Trigger(dialog.TriggerProps{
-							For: "add-to-list-dialog",
-						}) {
-							@card.Card(card.Props{
-								Class: "w-[120px] md:w-[160px] border-dashed border-2 cursor-pointer hover:bg-muted transition-colors h-full flex items-center justify-center",
-							}) {
-								<div class="flex flex-col items-center justify-center gap-2 p-4 text-center">
-									<div class="p-2 bg-primary/10 rounded-full">
-										@icon.Plus(icon.Props{Class: "size-5 text-primary"})
-									</div>
-									<p class="font-medium text-sm">New List</p>
-								</div>
-							}
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			@homeSectionHeader("Your Lists", icon.List)
+			@dialog.Trigger(dialog.TriggerProps{For: "add-to-list-dialog"}) {
+				@button.Button(button.Props{Variant: button.VariantOutline, Size: button.SizeSm}) {
+					@icon.Plus(icon.Props{Class: "size-4"})
+					New List
+				}
+			}
+		</div>
+		@card.Card(card.Props{Class: "bg-card/40"}) {
+			@card.Content(card.ContentProps{Class: "p-4"}) {
+				if len(lists) == 0 {
+					<div class="rounded-lg bg-muted/50 p-6 text-center">
+						<p class="font-medium">No lists yet</p>
+						<p class="mt-1 text-sm text-muted-foreground">Create a list to group your movies.</p>
+					</div>
+				} else {
+					<div id="lists-section" class="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+						for _, list := range lists {
+							<div class="flex-shrink-0">
+								@listcard.ListCard(listcard.Props{
+									Name: list.Name,
+									Href: fmt.Sprintf("/list/%d", list.ID),
+								})
+							</div>
 						}
 					</div>
-				</div>
+				}
 			}
 		}
 	</div>
@@ -282,39 +251,28 @@ templ HomeLoading() {
 	<div id="home-loading" class="htmx-indicator absolute inset-0 bg-background z-30 pointer-events-none overflow-hidden">
 		<div class="p-4 space-y-7 sm:space-y-8">
 			// Header
-			<div class="space-y-2">
-				@skeleton.Skeleton(skeleton.Props{Class: "h-10 w-64 rounded-lg"})
-				@skeleton.Skeleton(skeleton.Props{Class: "h-5 w-80 rounded-md"})
+			<div class="flex flex-col gap-4 rounded-lg border bg-card/40 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
+				<div class="space-y-2">
+					@skeleton.Skeleton(skeleton.Props{Class: "h-12 w-64 max-w-full rounded-lg"})
+					@skeleton.Skeleton(skeleton.Props{Class: "h-5 w-56 max-w-full rounded-md"})
+				</div>
+				@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-28 rounded-md"})
 			</div>
 			// At a glance section
 			<div class="space-y-4">
 				@skeleton.Skeleton(skeleton.Props{Class: "h-7 w-36 rounded-md"})
-				@skeleton.Skeleton(skeleton.Props{Class: "h-40 w-full rounded-lg"})
+				@skeleton.Skeleton(skeleton.Props{Class: "h-64 sm:h-48 w-full rounded-lg"})
 			</div>
 			// Activity section
 			<div class="space-y-4">
 				@skeleton.Skeleton(skeleton.Props{Class: "h-7 w-48 rounded-md"})
 				@skeleton.Skeleton(skeleton.Props{Class: "h-72 w-full rounded-lg"})
-				<div class="flex gap-4 overflow-x-auto pb-2">
-					for range 6 {
-						<div class="flex-shrink-0 w-[120px] md:w-[160px]">
-							@skeleton.Skeleton(skeleton.Props{Class: "aspect-[2/3] w-full rounded-lg shadow-sm"})
-							@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-3/4 mt-3 rounded"})
-						</div>
-					}
-				</div>
+				@homeMovieRowLoading()
 			</div>
-			// Watchlist queue section
+			// Watch next section
 			<div class="space-y-4">
 				@skeleton.Skeleton(skeleton.Props{Class: "h-7 w-40 rounded-md"})
-				<div class="flex gap-4 overflow-x-auto pb-4">
-					for range 6 {
-						<div class="flex-shrink-0 w-[120px] md:w-[160px]">
-							@skeleton.Skeleton(skeleton.Props{Class: "aspect-[2/3] w-full rounded-lg shadow-sm"})
-							@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-3/4 mt-3 rounded"})
-						</div>
-					}
-				</div>
+				@homeMovieRowLoading()
 			</div>
 			// Lists section
 			<div class="space-y-4">
@@ -333,7 +291,7 @@ templ HomeLoading() {
 
 templ ListsLoading() {
 	<div id="lists-loading" class="htmx-indicator">
-		<div class="space-y-4 pt-8">
+		<div class="space-y-4">
 			@skeleton.Skeleton(skeleton.Props{Class: "h-7 w-28 rounded-md"})
 			<div class="flex gap-4 overflow-x-auto pb-4">
 				for range 6 {
@@ -342,6 +300,19 @@ templ ListsLoading() {
 					</div>
 				}
 			</div>
+		</div>
+	</div>
+}
+
+templ homeMovieRowLoading() {
+	<div class="space-y-3 rounded-lg border bg-card/40 p-4">
+		@skeleton.Skeleton(skeleton.Props{Class: "h-8 w-36 rounded-md"})
+		<div class="flex gap-4 overflow-x-auto pb-2">
+			for range homeMoviePreviewLimit {
+				<div class="shrink-0 w-[90px] sm:w-[120px] md:w-[160px]">
+					@skeleton.Skeleton(skeleton.Props{Class: "aspect-[2/3] w-full rounded-lg"})
+				</div>
+			}
 		</div>
 	</div>
 }

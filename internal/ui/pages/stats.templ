@@ -1,7 +1,14 @@
 package pages
 
 import (
+	"cmp"
 	"fmt"
+	"net/url"
+	"slices"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/calendarheatmap"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/infohint"
@@ -13,51 +20,266 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/selectbox"
 	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
 	"github.com/marcosalvi-01/gowatch/internal/utils"
-	"strconv"
-	"strings"
-	"time"
 )
 
-// getGenreColors returns the shared genre color palette
-func getGenreColors() []any {
-	return []any{
-		"rgba(59, 130, 246, 0.8)", // Blue
-		"rgba(16, 185, 129, 0.8)", // Green
-		"rgba(245, 158, 11, 0.8)", // Yellow
-		"rgba(239, 68, 68, 0.8)",  // Red
-		"rgba(139, 92, 246, 0.8)", // Purple
-		"rgba(236, 72, 153, 0.8)", // Pink (Others)
-	}
-}
-
-// getGenreBorderColors returns the shared genre border color palette
-func getGenreBorderColors() []any {
-	return []any{
-		"rgba(59, 130, 246, 1)", // Blue
-		"rgba(16, 185, 129, 1)", // Green
-		"rgba(245, 158, 11, 1)", // Yellow
-		"rgba(239, 68, 68, 1)",  // Red
-		"rgba(139, 92, 246, 1)", // Purple
-		"rgba(236, 72, 153, 1)", // Pink (Others)
-	}
-}
-
-templ Stats(stats *models.WatchedStats, limit int) {
+templ Stats(stats *models.WatchedStats, limit int, state StatsRankingState) {
 	@Layout() {
 		@templ.Fragment("content") {
 			<div class="space-y-7 sm:space-y-8 pb-5">
-				@statsHeader(limit)
+				@statsHeader(limit, state)
 				@statsAtGlance(stats)
 				@statsActivitySection(stats)
-				@statsTasteSection(stats)
-				@statsRatingsSection(stats)
-				@statsPeopleSection(stats, limit)
+				@statsPeopleSection(stats, limit, state)
+				<div class="space-y-4">
+					@statsSectionHeader("Taste & Ratings", icon.Palette)
+					@statsTasteSection(stats)
+					@statsRatingsSection(stats)
+				</div>
+				@statsWatchlistSection(stats.Watchlist)
 				@statsRuntimeFinancialSection(stats)
 			</div>
 		}
 	}
 }
 
+templ statsHeader(limit int, state StatsRankingState) {
+	<div class="flex flex-col gap-4 rounded-lg border bg-card/40 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
+		<div class="space-y-2">
+			<h1 class="text-3xl sm:text-4xl font-bold leading-tight">Statistics</h1>
+			<p class="text-muted-foreground text-sm sm:text-base max-w-2xl">
+				Your movie habits and preferences.
+			</p>
+		</div>
+		<form
+			class="w-full sm:w-auto"
+			hx-get="/stats"
+			hx-target="#main-content"
+			hx-trigger="change"
+			hx-push-url="true"
+			hx-swap="innerHTML scroll:#main-scroll-container:top"
+			hx-indicator="#stats-loading"
+		>
+			@rankingStateInputs(state, "")
+			@selectbox.SelectBox(selectbox.Props{Class: "w-full sm:w-36"}) {
+				@selectbox.Trigger(selectbox.TriggerProps{Name: "limit", Class: "sm:w-36"}) {
+					@selectbox.Value(selectbox.ValueProps{Placeholder: "Show"})
+				}
+				@selectbox.Content(selectbox.ContentProps{NoSearch: true}) {
+					for _, n := range limitOptions {
+						@selectbox.Item(selectbox.ItemProps{Value: strconv.Itoa(n), Selected: limit == n}) {
+							Show { strconv.Itoa(n) }
+						}
+					}
+				}
+			}
+		</form>
+	</div>
+}
+
+templ statsAtGlance(stats *models.WatchedStats) {
+	<div class="space-y-4">
+		@statsSectionHeader("At a Glance", icon.Sparkles)
+		@card.Card(card.Props{Class: "bg-card/40"}) {
+			@card.Content(card.ContentProps{Class: "p-4 sm:p-6"}) {
+				<div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
+					@statsMetricCard("Total Watched", fmt.Sprintf("%d", stats.TotalWatched), icon.Film)
+					@statsMetricCard("Avg Rating", formatRatingValue(stats.Ratings.Summary.AverageRating, stats.Ratings.Summary.RatedCount), icon.Star)
+					@statsMetricCard("Rewatches", fmt.Sprintf("%d", stats.RewatchStats.RewatchCount), icon.RefreshCcw)
+					@statsMetricCard("Unique Movies", fmt.Sprintf("%d", stats.RewatchStats.UniqueMovieCount), icon.Clapperboard)
+					@statsMetricCard("Longest Streak", fmt.Sprintf("%d days", stats.LongestStreak.LongestDays), icon.Flame)
+					@statsMetricCard("Total Hours", fmt.Sprintf("%.1f", stats.TotalHoursWatched), icon.Clock)
+				</div>
+				<div class="mt-4 grid grid-cols-2 gap-3 border-t pt-4 md:grid-cols-3">
+					@glanceTile("Current Streak", "Days in a row with a watch, ending today or yesterday.", "") {
+						<div class="mt-2 text-lg font-semibold">{ fmt.Sprintf("%d days", stats.LongestStreak.CurrentDays) }</div>
+					}
+					@glanceTile("Most Watched Day", "The day with your most logged watches.", "") {
+						if stats.MostWatchedDay != nil {
+							<div class="mt-2 text-lg font-semibold">{ stats.MostWatchedDay.Date.Format("2 Jan 2006") } <span class="text-xs font-normal text-muted-foreground">· { fmt.Sprintf("%d watches", stats.MostWatchedDay.Count) }</span></div>
+						} else {
+							<div class="mt-2 text-lg font-semibold">No data</div>
+						}
+					}
+					@glanceTile("Average Watches", "Watches per day, week, and month over your full history.", "col-span-2 md:col-span-1") {
+						<div class="mt-2 grid grid-cols-3 gap-2 text-sm">
+							<div><span class="font-semibold">{ fmt.Sprintf("%.1f", stats.AvgPerDay) }</span><span class="text-xs text-muted-foreground">/day</span></div>
+							<div><span class="font-semibold">{ fmt.Sprintf("%.1f", stats.AvgPerWeek) }</span><span class="text-xs text-muted-foreground">/week</span></div>
+							<div><span class="font-semibold">{ fmt.Sprintf("%.1f", stats.AvgPerMonth) }</span><span class="text-xs text-muted-foreground">/month</span></div>
+						</div>
+					}
+				</div>
+			}
+		}
+	</div>
+}
+
+templ statsActivitySection(stats *models.WatchedStats) {
+	{{ theaterCount := totalTheaterWatches(stats.TheaterVsHome) }}
+	{{ busiestValue, busiestDetail := busiestMonthText(busiestTheaterMonth(stats.MonthlyTheaterLastYear, time.Now())) }}
+	<div class="space-y-4">
+		@statsSectionHeader("Activity", icon.Activity)
+		@calendarheatmap.CalendarHeatmapCard(stats.DailyWatchCountsLastYear)
+		<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+			@metricCard("Theater Watches", fmt.Sprintf("%d", theaterCount), "All-time watches, not visits", icon.Ticket)
+			@metricCard("Theater Share", formatPercentage(theaterShare(theaterCount, float64(stats.TotalWatched))), "Of all watches", icon.Film)
+			@metricCard("Busiest Theater Month", busiestValue, busiestDetail, icon.Calendar)
+		</div>
+		<div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+			@chartCard("Watches by Month", "Home and theater watches over the last 12 months, including this month. Counts movies, not theater visits.", "flex flex-col lg:col-span-2 lg:row-span-2", "min-h-0 flex-1") {
+				@chart.Chart(stackedBarProps(prepareMonthlyTheaterData(stats.MonthlyLastYear, stats.MonthlyTheaterLastYear), "h-64 sm:h-72 lg:h-full lg:min-h-80"))
+			}
+			@chartCard("Watches by Year", "Home and theater watches by year, over your full history. Counts movies, not theater visits.", "", "") {
+				@chart.Chart(stackedBarProps(prepareYearlyTheaterData(stats.YearlyAllTime), "h-36"))
+			}
+			@chartCard("Watches by Weekday", "Watches by day of the week, over your full history.", "", "") {
+				@chart.Chart(barProps(prepareWeekdayData(stats.WeekdayDistribution), "h-36"))
+			}
+		</div>
+	</div>
+}
+
+templ statsPeopleSection(stats *models.WatchedStats, limit int, state StatsRankingState) {
+	<div class="space-y-4">
+		@statsSectionHeader("Movies, People & Studios", icon.Users)
+		<div class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-4">
+			if state[statsRankMovies] == statsRankRated {
+				@highestRatedMoviesCard(stats.Ratings.HighestRatedMovies, statsRankingSwitch(statsRankMovies, limit, state))
+			} else {
+				@topMoviesCard(stats.MostWatchedMovies, statsRankingSwitch(statsRankMovies, limit, state))
+			}
+			for _, r := range peopleRankings(stats, limit, state) {
+				@peopleCard(r.Title, r.Help, r.People, statsRankingSwitch(r.Key, limit, state))
+			}
+			@studiosCard(stats, limit, state)
+		</div>
+	</div>
+}
+
+templ statsTasteSection(stats *models.WatchedStats) {
+	<div class="space-y-4">
+		<div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+			@chartCard("Genres by Month", "Genres watched over the last 12 months. Each watch counts toward every genre the movie has.", "lg:col-span-2", "") {
+				@chart.Chart(genreStackProps(prepareGenresByMonthData(stats.MonthlyGenreBreakdown)))
+			}
+			@topLanguagesCard(stats.TopLanguages)
+		</div>
+		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+			@chartCard("Genres", "Your most watched genres, all time. Movies can count toward multiple genres.", "", "") {
+				@chart.Chart(pieProps(prepareGenresData(stats.Genres), "h-44"))
+			}
+			@chartCard("Theater vs Home", "Watches marked as theater or home.", "", "") {
+				@chart.Chart(doughnutProps(prepareTheaterData(stats.TheaterVsHome), "h-44"))
+			}
+			@chartCard("Release Years", "Watched movies by release year, not watch date.", "md:col-span-2 xl:col-span-1", "") {
+				@chart.Chart(barProps(prepareReleaseYearDistributionData(stats.ReleaseYearDistribution), "h-44"))
+			}
+		</div>
+	</div>
+}
+
+templ statsRatingsSection(stats *models.WatchedStats) {
+	{{ ratings := stats.Ratings }}
+	<div class="space-y-4">
+		<div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
+			@metricCard("Avg Rating", formatRatingValue(ratings.Summary.AverageRating, ratings.Summary.RatedCount), fmt.Sprintf("%d rated watches", ratings.Summary.RatedCount), icon.Star)
+			@metricCard("Rated Watches", formatPercentage(ratings.Summary.Coverage), fmt.Sprintf("%d of %d watches rated", ratings.Summary.RatedCount, stats.TotalWatched), icon.BadgePercent)
+			@metricCard("You vs TMDB", formatRatingDifference(ratings.VsTMDB.AverageDifference, ratings.VsTMDB.ComparedMovieCount), fmt.Sprintf("%d rated movies compared", ratings.VsTMDB.ComparedMovieCount), icon.CirclePercent)
+			@theaterVsHomeMetricCard(ratings.TheaterVsHome)
+		</div>
+		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
+			@chartCard("Ratings", "How often you gave each score. Rated watches only.", "", "") {
+				@chart.Chart(barProps(prepareRatingDistributionData(ratings.Distribution), "h-44"))
+			}
+			@chartCard("Avg Rating by Month", "Your monthly average rating. Months without ratings are excluded.", "", "") {
+				@chart.Chart(ratingBarProps(prepareMonthlyAverageRatingData(ratings.MonthlyAverage), "h-44"))
+			}
+			@chartCard("Rating by Release Decade", "Your average rating by release decade. Rated movies only.", "", "") {
+				@chart.Chart(ratingBarProps(prepareReleaseDecadeRatingData(ratings.ReleaseDecades), "h-44"))
+			}
+			@rewatchRatingDriftCard(ratings.RewatchDrift)
+		</div>
+	</div>
+}
+
+templ statsWatchlistSection(stats models.WatchlistStats) {
+	<div class="space-y-4">
+		@statsSectionHeader("Watchlist", icon.Bookmark)
+		<p class="text-sm text-muted-foreground">Current watchlist only, not time to watch. Ages use calendar days in server timezone; future dates count as 0 days.</p>
+		<div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
+			@metricCard("Movies", strconv.Itoa(stats.MovieCount), "In your watchlist", icon.Bookmark)
+			@metricCard("Average Wait", formatWatchlistAge(stats.AverageAgeDays, stats.MovieCount), "Average age of current entries", icon.Clock)
+			@metricCard("Added This Month", strconv.Itoa(stats.AddedThisMonth), "Still on your list; includes future dates this month", icon.Calendar)
+			@metricCard("Remaining Runtime", formatRuntimeMinutes(stats.TotalRuntimeMinutes), fmt.Sprintf("Known runtime for %d of %d movies", stats.KnownRuntimeCount, stats.MovieCount), icon.Film)
+		</div>
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+			@chartCard("Time Waiting", "Current watchlist grouped by age: 0–29, 30–179, 180–364, and 365+ days. Future dates count as 0 days; watched or removed movies are excluded.", "", "") {
+				if stats.MovieCount == 0 {
+					<div class="py-8 text-center text-muted-foreground">Your watchlist is empty</div>
+				} else {
+					@chart.Chart(barProps(prepareWatchlistAgeData(stats.AgeBuckets), "h-48"))
+				}
+			}
+			@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{
+				Title:       "Longest Waiting",
+				HelpText:    "Current watchlist by date added, oldest first. Future dates count as 0 days old.",
+				Count:       len(stats.OldestMovies),
+				EmptyText:   "Your watchlist is empty",
+				ScrollClass: "max-h-56",
+			}) {
+				for _, entry := range stats.OldestMovies {
+					{{ movie := entry.Movie.MovieDetails.Movie }}
+					@movieRow(movie.ID, movie.PosterPath, movie.Title) {
+						@statLine(fmt.Sprintf("%d days waiting", entry.AgeDays))
+						@statLine("Added " + entry.Movie.DateAdded.In(time.Local).Format("2 Jan 2006"))
+					}
+				}
+			}
+		</div>
+	</div>
+}
+
+templ statsRuntimeFinancialSection(stats *models.WatchedStats) {
+	<div class="space-y-4">
+		@statsSectionHeader("Movie Facts", icon.BadgeDollarSign)
+		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
+			@runtimeExtremesCard(stats.LongestMovieWatched, stats.ShortestMovieWatched)
+			@chartCard("Budgets", "Watched movies by budget: indie, mid-budget, blockbuster, or unknown.", "", "") {
+				@chart.Chart(doughnutProps(prepareBudgetTierDistributionData(stats.BudgetTierDistribution), "h-44"))
+			}
+			@movieFinancialCard("Highest Returns", "Watched movies with the highest return on budget (ROI).", stats.TopReturnOnInvestmentMovies, true)
+			@movieFinancialCard("Biggest Budgets", "Watched movies with the highest reported production budgets.", stats.BiggestBudgetMovies, false)
+		</div>
+	</div>
+}
+
+templ StatsLoading() {
+	<div id="stats-loading" class="htmx-indicator absolute inset-0 bg-background z-30 pointer-events-none overflow-hidden">
+		<div class="p-4 space-y-8">
+			<div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+				<div class="space-y-2">
+					@skeleton.Skeleton(skeleton.Props{Class: "h-12 w-48 rounded-lg"})
+					@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-64 rounded-lg"})
+				</div>
+				@skeleton.Skeleton(skeleton.Props{Class: "h-9 w-36 rounded-lg"})
+			</div>
+			@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-36 rounded-lg"})
+			@skeleton.Skeleton(skeleton.Props{Class: "h-40 w-full rounded-lg"})
+			for range 6 {
+				@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-44 rounded-lg"})
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					@skeleton.Skeleton(skeleton.Props{Class: "h-64 w-full rounded-lg"})
+					@skeleton.Skeleton(skeleton.Props{Class: "h-64 w-full rounded-lg"})
+				</div>
+			}
+		</div>
+	</div>
+}
+
+const personRowClass = "flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2"
+
+// ---------------------------------------------------------------------------
+// Headers & card shells
+// ---------------------------------------------------------------------------
 templ statsSectionHeader(title string, iconFn func(...icon.Props) templ.Component) {
 	<h2 class="text-xl font-semibold flex items-center gap-2">
 		@iconFn(icon.Props{Class: "size-5 text-primary"})
@@ -66,608 +288,102 @@ templ statsSectionHeader(title string, iconFn func(...icon.Props) templ.Componen
 }
 
 templ statsCardHeader(title, helpText string) {
-	@card.Header(card.HeaderProps{Class: "flex-row items-start justify-between space-y-0 gap-3"}) {
-		@card.Title() {
+	@card.Header(card.HeaderProps{Class: "flex-row items-start justify-between space-y-0 gap-3 p-4 pb-0"}) {
+		@card.Title(card.TitleProps{Class: "text-sm font-semibold"}) {
 			{ title }
 		}
 		@infohint.Corner(helpText, title+" help")
 	}
 }
 
-templ statsAtGlance(stats *models.WatchedStats) {
-	<div class="space-y-4">
-		@statsSectionHeader("At a Glance", icon.Sparkles)
-		@card.Card() {
-			@card.Content(card.ContentProps{Class: "p-4 sm:p-6"}) {
-				<div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
-					@statsMetricCard("Total Watched", fmt.Sprintf("%d", stats.TotalWatched), icon.Film)
-					@statsMetricCard("Rated Watches", fmt.Sprintf("%d", stats.Ratings.Summary.RatedCount), icon.Star)
-					@statsMetricCard("Rewatches", fmt.Sprintf("%d", stats.RewatchStats.RewatchCount), icon.RefreshCcw)
-					@statsMetricCard("Unique Movies", fmt.Sprintf("%d", stats.RewatchStats.UniqueMovieCount), icon.Clapperboard)
-					@statsMetricCard("Longest Streak", fmt.Sprintf("%d days", stats.LongestStreak.LongestDays), icon.Flame)
-					@statsMetricCard("Total Hours", fmt.Sprintf("%.1f", stats.TotalHoursWatched), icon.Clock)
-				</div>
-			}
+// chartCard wraps any chart (passed as children) in a titled card with a help hint.
+templ chartCard(title, helpText, cardClass, contentClass string) {
+	@card.Card(card.Props{Class: "h-full bg-card/40 " + cardClass}) {
+		@statsCardHeader(title, helpText)
+		@card.Content(card.ContentProps{Class: "p-4 pt-3 " + contentClass}) {
+			{ children... }
 		}
-		<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-			@card.Card() {
-				@card.Content(card.ContentProps{Class: "p-4 sm:p-6"}) {
-					<div class="flex justify-end">
-						@infohint.Corner("Shows how many days in a row you have watched at least one movie up to your latest watch date.", "Current Streak help")
-					</div>
-					<div class="pt-2 text-center">
-						<div class="text-sm text-muted-foreground mb-1">Current Streak</div>
-						<div class="text-3xl font-bold text-primary">{ fmt.Sprintf("%d days", stats.LongestStreak.CurrentDays) }</div>
-					</div>
-				}
-			}
-			@card.Card() {
-				@card.Content(card.ContentProps{Class: "p-4 sm:p-6"}) {
-					<div class="flex justify-end">
-						@infohint.Corner("Shows the single day when you logged the most watched movies.", "Most Watched Day help")
-					</div>
-					<div class="pt-2 text-center">
-						<div class="text-sm text-muted-foreground mb-1">Most Watched Day</div>
-						if stats.MostWatchedDay != nil {
-							<div class="text-lg font-semibold">{ stats.MostWatchedDay.Date.Format("2 Jan 2006") }</div>
-							<div class="text-sm text-muted-foreground">{ fmt.Sprintf("%d watches", stats.MostWatchedDay.Count) }</div>
-						} else {
-							<div class="text-lg font-semibold">No data</div>
-						}
-					</div>
-				}
-			}
-			@card.Card(card.Props{Class: "h-full"}) {
-				@card.Content(card.ContentProps{Class: "relative p-4 sm:p-6 h-full flex items-center"}) {
-					<div class="absolute right-4 top-4 sm:right-6 sm:top-6">
-						@infohint.Corner("Shows your average number of watched movies per day, week, and month across your full watch history.", "Averages help")
-					</div>
-					<div class="grid grid-cols-3 w-full text-center">
-						<div>
-							<div class="text-xs text-muted-foreground pb-2">Avg/Day</div>
-							<div class="text-lg xl:text-2xl font-semibold">{ fmt.Sprintf("%.1f", stats.AvgPerDay) }</div>
-						</div>
-						<div>
-							<div class="text-xs text-muted-foreground pb-2">Avg/Week</div>
-							<div class="text-lg xl:text-2xl font-semibold">{ fmt.Sprintf("%.1f", stats.AvgPerWeek) }</div>
-						</div>
-						<div>
-							<div class="text-xs text-muted-foreground pb-2">Avg/Month</div>
-							<div class="text-lg xl:text-2xl font-semibold">{ fmt.Sprintf("%.1f", stats.AvgPerMonth) }</div>
-						</div>
-					</div>
-				}
-			}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Metric tiles
+// ---------------------------------------------------------------------------
+templ statsMetricCard(label, value string, iconFn func(...icon.Props) templ.Component) {
+	<div class="rounded-lg bg-muted/50 p-3 sm:p-4 h-full">
+		<div class="flex items-start justify-between gap-2">
+			<div class="text-xs text-muted-foreground uppercase tracking-wide">{ label }</div>
+			<div class="rounded-md bg-primary/10 p-1.5">
+				@iconFn(icon.Props{Class: "size-4 text-primary"})
+			</div>
 		</div>
+		<div class="mt-3 text-xl sm:text-2xl font-semibold leading-none">{ value }</div>
 	</div>
 }
 
-templ statsActivitySection(stats *models.WatchedStats) {
-	<div class="space-y-4">
-		@statsSectionHeader("Activity & Consistency", icon.Activity)
-		@calendarheatmap.CalendarHeatmapCard(stats.DailyWatchCountsLastYear)
-		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-			@card.Card(card.Props{Class: "h-full"}) {
-				@statsCardHeader("Watches by Year", "Shows how many movies you watched in each year across your full watch history.")
-				@card.Content(card.ContentProps{Class: "pt-4"}) {
-					@chart.Chart(chart.Props{
-						Variant:     chart.VariantBar,
-						Data:        prepareYearlyData(stats.YearlyAllTime),
-						Options:     chart.Options{Responsive: true},
-						ShowXAxis:   true,
-						ShowXLabels: true,
-						ShowYAxis:   true,
-						ShowYLabels: true,
-						Class:       "h-56 sm:h-60",
-					})
-				}
-			}
-			@card.Card(card.Props{Class: "h-full"}) {
-				@statsCardHeader("Movies per Month", "Shows the last 12 months of your watched movies. Each bar is the total number of watches in that month.")
-				@card.Content(card.ContentProps{Class: "pt-4"}) {
-					@chart.Chart(chart.Props{
-						Variant:     chart.VariantBar,
-						Data:        prepareMonthlyMoviesData(stats.MonthlyLastYear),
-						Options:     chart.Options{Responsive: true},
-						ShowXAxis:   true,
-						ShowXLabels: true,
-						ShowYAxis:   true,
-						ShowYLabels: true,
-						Class:       "h-56",
-					})
-				}
-			}
-			@card.Card(card.Props{Class: "h-full"}) {
-				@statsCardHeader("Weekday Distribution", "Shows which days of the week you watch movies most often, based on all your watched entries.")
-				@card.Content(card.ContentProps{Class: "pt-4"}) {
-					@chart.Chart(chart.Props{
-						Variant:     chart.VariantBar,
-						Data:        prepareWeekdayData(stats.WeekdayDistribution),
-						Options:     chart.Options{Responsive: true},
-						ShowXAxis:   true,
-						ShowXLabels: true,
-						ShowYAxis:   true,
-						ShowYLabels: true,
-						Class:       "h-56",
-					})
-				}
-			}
+templ glanceTile(label, help, class string) {
+	<div class={ "rounded-lg bg-muted/50 p-3 " + class }>
+		<div class="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+			{ label }
+			@infohint.Corner(help, label+" help")
 		</div>
+		{ children... }
 	</div>
 }
 
-templ statsTasteSection(stats *models.WatchedStats) {
-	<div class="space-y-4">
-		@statsSectionHeader("Taste & Discovery", icon.Palette)
-		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-			@card.Card(card.Props{Class: "h-full"}) {
-				@statsCardHeader("Genres", "Shows your most watched genres across all watched movies. A movie can count in more than one genre if it has multiple genre tags.")
-				@card.Content(card.ContentProps{Class: "pt-4"}) {
-					@chart.Chart(chart.Props{
-						Variant:    chart.VariantPie,
-						Data:       prepareGenresData(stats.Genres),
-						Options:    chart.Options{Responsive: true, Legend: true},
-						ShowLegend: true,
-						Class:      "h-56",
-					})
-				}
-			}
-			@card.Card(card.Props{Class: "h-full"}) {
-				@statsCardHeader("Theater vs Home", "Shows how many watched entries were marked as theater watches compared with home watches.")
-				@card.Content(card.ContentProps{Class: "pt-4"}) {
-					@chart.Chart(chart.Props{
-						Variant:    chart.VariantDoughnut,
-						Data:       prepareTheaterData(stats.TheaterVsHome),
-						Options:    chart.Options{Responsive: true, Legend: true},
-						ShowLegend: true,
-						Class:      "h-56",
-					})
-				}
-			}
-			@card.Card(card.Props{Class: "h-full"}) {
-				@statsCardHeader("Movie Release Years", "Shows how many watched movies were released in each year, based on the movie's release date rather than when you watched it.")
-				@card.Content(card.ContentProps{Class: "pt-4"}) {
-					@chart.Chart(chart.Props{
-						Variant:     chart.VariantBar,
-						Data:        prepareReleaseYearDistributionData(stats.ReleaseYearDistribution),
-						Options:     chart.Options{Responsive: true},
-						ShowXAxis:   true,
-						ShowXLabels: true,
-						ShowYAxis:   true,
-						ShowYLabels: true,
-						Class:       "h-56",
-					})
-				}
-			}
-		</div>
-		@card.Card() {
-			@statsCardHeader("Genres by Month", "Shows the last 12 months of your watched movies. Each colored bar segment counts a genre tag from the movies you watched, so one movie can add to more than one genre.")
-			@card.Content(card.ContentProps{Class: "pt-4"}) {
-				@chart.Chart(chart.Props{
-					Variant:     chart.VariantBar,
-					Stacked:     true,
-					ShowLegend:  true,
-					ShowYGrid:   true,
-					ShowXLabels: true,
-					Data:        prepareGenresByMonthData(stats.MonthlyGenreBreakdown),
-					Class:       "h-64 sm:h-72",
-				})
-			}
-		}
-	</div>
-}
-
-templ statsRatingsSection(stats *models.WatchedStats) {
-	<div class="space-y-4">
-		@statsSectionHeader("Ratings & Ranking", icon.Star)
-		<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-			@ratingMetricCard(
-				"Avg Rating",
-				formatRatingValue(stats.Ratings.Summary.AverageRating, stats.Ratings.Summary.RatedCount),
-				fmt.Sprintf("%d rated watches", stats.Ratings.Summary.RatedCount),
-				icon.Star,
-			)
-			@ratingMetricCard(
-				"Rated Watches %",
-				formatPercentage(stats.Ratings.Summary.Coverage),
-				fmt.Sprintf("%d of %d watched entries rated", stats.Ratings.Summary.RatedCount, stats.TotalWatched),
-				icon.BadgePercent,
-			)
-			@ratingMetricCard(
-				"You vs TMDB",
-				formatRatingDifference(stats.Ratings.VsTMDB.AverageDifference, stats.Ratings.VsTMDB.ComparedMovieCount),
-				fmt.Sprintf("%d rated movies compared", stats.Ratings.VsTMDB.ComparedMovieCount),
-				icon.CirclePercent,
-			)
-			@theaterVsHomeMetricCard(stats.Ratings.TheaterVsHome)
-		</div>
-		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-			@card.Card(card.Props{Class: "h-full"}) {
-				@statsCardHeader("Rating Distribution", "Shows how often you use each rating score, based only on watched entries that you rated.")
-				@card.Content(card.ContentProps{Class: "pt-4"}) {
-					@chart.Chart(chart.Props{
-						Variant:     chart.VariantBar,
-						Data:        prepareRatingDistributionData(stats.Ratings.Distribution),
-						Options:     chart.Options{Responsive: true},
-						ShowXAxis:   true,
-						ShowXLabels: true,
-						ShowYAxis:   true,
-						ShowYLabels: true,
-						Class:       "h-56",
-					})
-				}
-			}
-			@card.Card(card.Props{Class: "h-full"}) {
-				@statsCardHeader("Average Rating by Month", "Shows the average of your ratings for each month. Months without ratings are not included.")
-				@card.Content(card.ContentProps{Class: "pt-4"}) {
-					{{ yMin := 0.0 }}
-					{{ yMax := 5.0 }}
-					@chart.Chart(chart.Props{
-						Variant:     chart.VariantBar,
-						Data:        prepareMonthlyAverageRatingData(stats.Ratings.MonthlyAverage),
-						Options:     chart.Options{Responsive: true},
-						ShowXAxis:   true,
-						ShowXLabels: true,
-						ShowYAxis:   true,
-						ShowYLabels: true,
-						YMin:        &yMin,
-						YMax:        &yMax,
-						Class:       "h-56",
-					})
-				}
-			}
-			@card.Card(card.Props{Class: "h-full"}) {
-				@statsCardHeader("Rating by Release Decade", "Shows the average rating you gave to movies from each release decade, using only movies you rated.")
-				@card.Content(card.ContentProps{Class: "pt-4"}) {
-					{{ yMin := 0.0 }}
-					{{ yMax := 5.0 }}
-					@chart.Chart(chart.Props{
-						Variant:     chart.VariantBar,
-						Data:        prepareReleaseDecadeRatingData(stats.Ratings.ReleaseDecades),
-						Options:     chart.Options{Responsive: true},
-						ShowXAxis:   true,
-						ShowXLabels: true,
-						ShowYAxis:   true,
-						ShowYLabels: true,
-						YMin:        &yMin,
-						YMax:        &yMax,
-						Class:       "h-56",
-					})
-				}
-			}
-		</div>
-		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-			@highestRatedMoviesCard(stats.Ratings.HighestRatedMovies)
-			@ratedPeopleCard("Favorite Directors", "Shows the directors whose movies you rate highest on average, based on your rated movies.", stats.Ratings.FavoriteDirectors)
-			@ratedPeopleCard("Favorite Actors", "Shows the actors whose movies you rate highest on average, based on your rated movies.", stats.Ratings.FavoriteActors)
-		</div>
-		@rewatchRatingDriftCard(stats.Ratings.RewatchDrift)
-	</div>
-}
-
-templ statsPeopleSection(stats *models.WatchedStats, limit int) {
-	<div class="space-y-4">
-		@statsSectionHeader("People & Languages", icon.Users)
-		<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-			@topMoviesCard(stats.MostWatchedMovies)
-			@topActorsCard("Most Watched Male Actors", "Shows the male actors who appear most often in the movies you watched.", int64(2), stats.MostWatchedActors, limit)
-			@topActorsCard("Most Watched Female Actors", "Shows the female actors who appear most often in the movies you watched.", int64(1), stats.MostWatchedActors, limit)
-			@topCrewCard("Top Directors", "Shows the directors who appear most often in the movies you watched.", stats.TopDirectors)
-			@topCrewCard("Top Writers", "Shows the writers who appear most often in the movies you watched.", stats.TopWriters)
-			@topCrewCard("Top Composers", "Shows the composers who appear most often in the movies you watched.", stats.TopComposers)
-			@topCrewCard("Top Cinematographers", "Shows the cinematographers who appear most often in the movies you watched.", stats.TopCinematographers)
-			@topLanguagesCard(stats.TopLanguages)
-		</div>
-	</div>
-}
-
-templ statsRuntimeFinancialSection(stats *models.WatchedStats) {
-	<div class="space-y-4">
-		@statsSectionHeader("Runtime & Financials", icon.BadgeDollarSign)
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-			@runtimeExtremesCard(stats.LongestMovieWatched, stats.ShortestMovieWatched)
-			@card.Card(card.Props{Class: "h-full"}) {
-				@statsCardHeader("Budget Distribution", "Shows how your watched movies are split across budget ranges such as indie, mid-budget, and blockbuster.")
-				@card.Content(card.ContentProps{Class: "pt-4"}) {
-					@chart.Chart(chart.Props{
-						Variant:    chart.VariantDoughnut,
-						Data:       prepareBudgetTierDistributionData(stats.BudgetTierDistribution),
-						Options:    chart.Options{Responsive: true, Legend: true},
-						ShowLegend: true,
-						Class:      "h-56",
-					})
-				}
-			}
-		</div>
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-			@movieFinancialCard("Top ROI Movies", "Shows the watched movies with the biggest return compared with their budget.", stats.TopReturnOnInvestmentMovies, true)
-			@movieFinancialCard("Biggest Budget Movies", "Shows the watched movies with the highest reported production budgets.", stats.BiggestBudgetMovies, false)
-		</div>
-	</div>
-}
-
-templ ratingMetricCard(label, value, detail string, iconFunc func(...icon.Props) templ.Component) {
-	@card.Card(card.Props{Class: "h-full"}) {
-		@card.Content(card.ContentProps{Class: "p-4 sm:p-6 h-full"}) {
+templ metricShell(iconFn func(...icon.Props) templ.Component) {
+	@card.Card(card.Props{Class: "h-full bg-card/40"}) {
+		@card.Content(card.ContentProps{Class: "p-4 h-full"}) {
 			<div class="flex h-full items-start justify-between gap-4">
 				<div class="min-w-0 flex-1">
-					<div class="text-sm text-muted-foreground">{ label }</div>
-					<div class="mt-3 text-3xl font-bold leading-none">{ value }</div>
-					<div class="mt-2 text-sm text-muted-foreground">{ detail }</div>
+					{ children... }
 				</div>
-				<div class="rounded-md bg-primary/10 p-2 shrink-0">
-					@iconFunc(icon.Props{Class: "size-[18px] text-primary"})
+				<div class="hidden rounded-md bg-primary/10 p-2 shrink-0 sm:block">
+					@iconFn(icon.Props{Class: "size-[18px] text-primary"})
 				</div>
 			</div>
 		}
+	}
+}
+
+templ metricCard(label, value, detail string, iconFn func(...icon.Props) templ.Component) {
+	@metricShell(iconFn) {
+		<div class="text-sm text-muted-foreground">{ label }</div>
+		<div class="mt-2 text-2xl font-bold leading-none">{ value }</div>
+		<div class="mt-2 text-xs text-muted-foreground">{ detail }</div>
 	}
 }
 
 templ theaterVsHomeMetricCard(data []models.TheaterRating) {
 	{{ theater := findTheaterRating(data, true) }}
 	{{ home := findTheaterRating(data, false) }}
-	@card.Card(card.Props{Class: "h-full"}) {
-		@card.Content(card.ContentProps{Class: "p-4 sm:p-6 h-full"}) {
-			if theater.RatedCount == 0 && home.RatedCount == 0 {
-				<div class="flex h-full items-start justify-between gap-4">
-					<div class="min-w-0 flex-1">
-						<div class="text-sm text-muted-foreground">Theater vs Home</div>
-						<div class="mt-3 text-3xl font-bold leading-none">N/A</div>
-						<div class="mt-2 text-sm text-muted-foreground">No ratings yet</div>
-					</div>
-					<div class="rounded-md bg-primary/10 p-2 shrink-0">
-						@icon.Film(icon.Props{Class: "size-[18px] text-primary"})
-					</div>
-				</div>
-			} else {
-				<div class="flex h-full items-start justify-between gap-4">
-					<div class="min-w-0 flex-1">
-						<div class="text-sm text-muted-foreground">Theater vs Home</div>
-						<div class="mt-4 grid grid-cols-2 gap-4">
-							<div>
-								<div class="text-xs text-muted-foreground mb-1">Theater</div>
-								<div class="text-lg font-semibold">{ formatRatingValue(theater.AverageRating, theater.RatedCount) }</div>
-								<div class="mt-1 text-xs text-muted-foreground">{ fmt.Sprintf("%d ratings", theater.RatedCount) }</div>
-							</div>
-							<div>
-								<div class="text-xs text-muted-foreground mb-1">Home</div>
-								<div class="text-lg font-semibold">{ formatRatingValue(home.AverageRating, home.RatedCount) }</div>
-								<div class="mt-1 text-xs text-muted-foreground">{ fmt.Sprintf("%d ratings", home.RatedCount) }</div>
-							</div>
-						</div>
-					</div>
-					<div class="rounded-md bg-primary/10 p-2 shrink-0">
-						@icon.Film(icon.Props{Class: "size-[18px] text-primary"})
-					</div>
-				</div>
-			}
-		}
-	}
-}
-
-templ highestRatedMoviesCard(movies []models.RatedMovie) {
-	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Highest Rated Movies", HelpText: "Shows the movies with the highest average rating from your own rated watches.", Count: len(movies)}) {
-		for _, movie := range movies {
-			<div
-				data-page="movie"
-				hx-get={ "/movie/" + strconv.FormatInt(movie.ID, 10) }
-				hx-target="#main-content"
-				hx-push-url="true"
-				hx-swap="scroll:#main-scroll-container:top"
-				hx-indicator="#movie-loading"
-				class="rounded-lg border border-border/60 bg-muted/15 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
-			>
-				<div class="flex items-center gap-3">
-					@moviePosterThumb(movie.PosterPath, movie.Title)
-					<div class="min-w-0 flex-1">
-						<div class="font-medium text-sm line-clamp-1">{ movie.Title }</div>
-						<div class="mt-1 text-xs text-muted-foreground">{ formatRatingValue(movie.AverageRating, movie.RatedWatchCount) }</div>
-						<div class="mt-1 text-xs text-muted-foreground">{ fmt.Sprintf("%d rated watches", movie.RatedWatchCount) }</div>
-					</div>
-				</div>
-			</div>
-		}
-	}
-}
-
-templ ratedPeopleCard(title, helpText string, people []models.RatedPerson) {
-	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: title, HelpText: helpText, Count: len(people)}) {
-		for _, person := range people {
-			{{ personHref := personPagePath(person.ID) }}
-			if personHref != "" {
-				<div
-					data-page="person"
-					hx-get={ personHref }
-					hx-target="#main-content"
-					hx-push-url="true"
-					hx-swap="scroll:#main-scroll-container:top"
-					hx-indicator="#person-loading"
-					class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2 cursor-pointer hover:bg-muted/30 transition-colors"
-				>
-					@actorRowAvatar(person.Name, person.ProfilePath)
-					<div class="flex-1 min-w-0">
-						<div class="font-medium text-sm line-clamp-1">{ person.Name }</div>
-						<div class="text-xs text-muted-foreground">{ formatRatingValue(person.AverageRating, person.RatedMovieCount) } | { fmt.Sprintf("%d rated movies", person.RatedMovieCount) }</div>
-					</div>
-				</div>
-			} else {
-				<div class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2">
-					@actorRowAvatar(person.Name, person.ProfilePath)
-					<div class="flex-1 min-w-0">
-						<div class="font-medium text-sm line-clamp-1">{ person.Name }</div>
-						<div class="text-xs text-muted-foreground">{ formatRatingValue(person.AverageRating, person.RatedMovieCount) } | { fmt.Sprintf("%d rated movies", person.RatedMovieCount) }</div>
-					</div>
-				</div>
-			}
-		}
-	}
-}
-
-templ rewatchRatingDriftCard(drifts []models.RewatchRatingDrift) {
-	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Rewatch Rating Drift", HelpText: "Shows movies you rated more than once and how much your rating changed between the first and latest rated watch.", Count: len(drifts)}) {
-		for _, drift := range drifts {
-			<div
-				data-page="movie"
-				hx-get={ "/movie/" + strconv.FormatInt(drift.MovieID, 10) }
-				hx-target="#main-content"
-				hx-push-url="true"
-				hx-swap="scroll:#main-scroll-container:top"
-				hx-indicator="#movie-loading"
-				class="rounded-lg border border-border/60 bg-muted/15 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
-			>
-				<div class="flex items-center gap-3">
-					@moviePosterThumb(drift.PosterPath, drift.Title)
-					<div class="min-w-0 flex-1">
-						<div class="font-medium text-sm line-clamp-1">{ drift.Title }</div>
-						<div class="mt-1 text-xs text-muted-foreground">
-							First { fmt.Sprintf("%.1f/5", drift.FirstRating) }
-							| Last { fmt.Sprintf("%.1f/5", drift.LastRating) }
-							| Change { formatSignedFloat(drift.RatingChange) }
-						</div>
-						<div class="mt-1 text-xs text-muted-foreground">
-							{ drift.FirstWatchedDate.Format("Jan 2006") }
-							| { drift.LastWatchedDate.Format("Jan 2006") }
-							| { fmt.Sprintf("%d rated watches", drift.RatedWatchCount) }
-						</div>
-					</div>
-				</div>
-			</div>
-		}
-	}
-}
-
-templ topMoviesCard(movies []models.TopMovie) {
-	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Most Watched Movies", HelpText: "Shows the movies you logged most often, including rewatches.", Count: len(movies)}) {
-		for _, movie := range movies {
-			<div
-				data-page="movie"
-				hx-get={ "/movie/" + strconv.FormatInt(movie.ID, 10) }
-				hx-target="#main-content"
-				hx-push-url="true"
-				hx-swap="scroll:#main-scroll-container:top"
-				hx-indicator="#movie-loading"
-				class="rounded-lg border border-border/60 bg-muted/15 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
-			>
-				<div class="flex items-center gap-3">
-					@moviePosterThumb(movie.PosterPath, movie.Title)
-					<div class="min-w-0 flex-1">
-						<div class="font-medium text-sm line-clamp-1">{ movie.Title }</div>
-						<div class="mt-1 text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", movie.WatchCount) }</div>
-					</div>
-				</div>
-			</div>
-		}
-	}
-}
-
-templ topActorsCard(title, helpText string, gender int64, actors []models.TopActor, limit int) {
-	{{ filteredActors := filterTopActorsByGender(actors, gender, limit) }}
-	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: title, HelpText: helpText, Count: len(filteredActors)}) {
-		for _, actor := range filteredActors {
-			{{ personHref := personPagePath(actor.ID) }}
-			if personHref != "" {
-				<div
-					data-page="person"
-					hx-get={ personHref }
-					hx-target="#main-content"
-					hx-push-url="true"
-					hx-swap="scroll:#main-scroll-container:top"
-					hx-indicator="#person-loading"
-					class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2 cursor-pointer hover:bg-muted/30 transition-colors"
-				>
-					@actorRowAvatar(actor.Name, actor.ProfilePath)
-					<div class="flex-1">
-						<div class="font-medium text-sm">{ actor.Name }</div>
-						<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", actor.WatchCount) }</div>
-					</div>
-				</div>
-			} else {
-				<div class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2">
-					@actorRowAvatar(actor.Name, actor.ProfilePath)
-					<div class="flex-1">
-						<div class="font-medium text-sm">{ actor.Name }</div>
-						<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", actor.WatchCount) }</div>
-					</div>
-				</div>
-			}
-		}
-	}
-}
-
-func filterTopActorsByGender(actors []models.TopActor, gender int64, limit int) []models.TopActor {
-	filtered := make([]models.TopActor, 0, len(actors))
-	for _, actor := range actors {
-		if actor.Gender != gender {
-			continue
-		}
-
-		filtered = append(filtered, actor)
-		if limit > 0 && len(filtered) >= limit {
-			break
-		}
-	}
-
-	return filtered
-}
-
-templ topCrewCard(title, helpText string, people []models.TopCrewMember) {
-	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: title, HelpText: helpText, Count: len(people)}) {
-		for _, person := range people {
-			{{ personHref := personPagePath(person.ID) }}
-			if personHref != "" {
-				<div
-					data-page="person"
-					hx-get={ personHref }
-					hx-target="#main-content"
-					hx-push-url="true"
-					hx-swap="scroll:#main-scroll-container:top"
-					hx-indicator="#person-loading"
-					class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2 cursor-pointer hover:bg-muted/30 transition-colors"
-				>
-					@actorRowAvatar(person.Name, person.ProfilePath)
-					<div class="flex-1">
-						<div class="font-medium text-sm">{ person.Name }</div>
-						<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", person.WatchCount) }</div>
-					</div>
-				</div>
-			} else {
-				<div class="flex items-center gap-3 rounded-md border border-border/50 bg-muted/15 px-3 py-2">
-					@actorRowAvatar(person.Name, person.ProfilePath)
-					<div class="flex-1">
-						<div class="font-medium text-sm">{ person.Name }</div>
-						<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", person.WatchCount) }</div>
-					</div>
-				</div>
-			}
-		}
-	}
-}
-
-templ actorRowAvatar(name, profilePath string) {
-	@avatar.Avatar(avatar.Props{Class: "h-9 w-9"}) {
-		if profilePath != "" {
-			@avatar.Image(avatar.ImageProps{
-				Src:   utils.TMDBImageURL("w185", profilePath),
-				Alt:   name,
-				Class: "object-cover",
-			})
+	@metricShell(icon.Film) {
+		<div class="text-sm text-muted-foreground">Theater vs Home Ratings</div>
+		if theater.RatedCount == 0 && home.RatedCount == 0 {
+			<div class="mt-2 text-2xl font-bold leading-none">N/A</div>
+			<div class="mt-2 text-xs text-muted-foreground">No ratings yet</div>
 		} else {
-			@avatar.Fallback(avatar.FallbackProps{Class: "text-xs"}) {
-				{ personInitials(name) }
-			}
+			<div class="mt-2 grid grid-cols-2 gap-3">
+				@ratingSplit("Theater", theater)
+				@ratingSplit("Home", home)
+			</div>
 		}
 	}
 }
 
-templ topLanguagesCard(languages []models.LanguageCount) {
-	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Top Languages", HelpText: "Shows the original languages of the movies you watched most often.", Count: len(languages)}) {
-		for _, language := range languages {
-			<div class="flex items-center justify-between rounded-md border border-border/50 bg-muted/15 px-3 py-2">
-				<div class="text-sm font-medium uppercase tracking-wide">{ strings.ToUpper(language.Language) }</div>
-				<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", language.WatchCount) }</div>
-			</div>
-		}
-	}
+templ ratingSplit(label string, r models.TheaterRating) {
+	<div>
+		<div class="text-xs text-muted-foreground mb-1">{ label }</div>
+		<div class="text-lg font-semibold">{ formatRatingValue(r.AverageRating, r.RatedCount) }</div>
+		<div class="mt-1 text-xs text-muted-foreground">{ fmt.Sprintf("%d ratings", r.RatedCount) }</div>
+	</div>
+}
+
+// ---------------------------------------------------------------------------
+// Movie rows
+// ---------------------------------------------------------------------------
+templ statLine(text string) {
+	<div class="mt-1 text-xs text-muted-foreground">{ text }</div>
 }
 
 templ moviePosterThumb(posterPath, title string) {
@@ -687,655 +403,549 @@ templ moviePosterThumb(posterPath, title string) {
 	</div>
 }
 
-templ runtimeExtremesCard(longest, shortest *models.RuntimeMovie) {
-	@card.Card(card.Props{Class: "h-full"}) {
-		@statsCardHeader("Longest / Shortest Watched", "Shows the longest and shortest runtime among movies you have watched.")
-		@card.Content(card.ContentProps{Class: "pt-4"}) {
-			<div class="space-y-4">
-				if longest != nil {
-					<div
-						data-page="movie"
-						hx-get={ "/movie/" + strconv.FormatInt(longest.ID, 10) }
-						hx-target="#main-content"
-						hx-push-url="true"
-						hx-swap="scroll:#main-scroll-container:top"
-						hx-indicator="#movie-loading"
-						class="rounded-lg border border-border/60 bg-muted/15 p-4 cursor-pointer hover:bg-muted/30 transition-colors"
-					>
-						@infohint.LabelMutedXs("Longest", "The watched movie with the longest runtime.")
-						<div class="flex items-center gap-3">
-							@moviePosterThumb(longest.PosterPath, longest.Title)
-							<div class="min-w-0">
-								<div class="font-semibold line-clamp-1">{ longest.Title }</div>
-								<div class="text-sm text-muted-foreground">{ formatRuntimeMinutes(longest.RuntimeMinutes) }</div>
-							</div>
-						</div>
-					</div>
-				} else {
-					<div class="rounded-lg border border-border/60 bg-muted/15 p-4">
-						@infohint.LabelMutedXs("Longest", "The watched movie with the longest runtime.")
-						<div class="text-sm text-muted-foreground">No data available</div>
-					</div>
-				}
-				if shortest != nil {
-					<div
-						data-page="movie"
-						hx-get={ "/movie/" + strconv.FormatInt(shortest.ID, 10) }
-						hx-target="#main-content"
-						hx-push-url="true"
-						hx-swap="scroll:#main-scroll-container:top"
-						hx-indicator="#movie-loading"
-						class="rounded-lg border border-border/60 bg-muted/15 p-4 cursor-pointer hover:bg-muted/30 transition-colors"
-					>
-						@infohint.LabelMutedXs("Shortest", "The watched movie with the shortest runtime.")
-						<div class="flex items-center gap-3">
-							@moviePosterThumb(shortest.PosterPath, shortest.Title)
-							<div class="min-w-0">
-								<div class="font-semibold line-clamp-1">{ shortest.Title }</div>
-								<div class="text-sm text-muted-foreground">{ formatRuntimeMinutes(shortest.RuntimeMinutes) }</div>
-							</div>
-						</div>
-					</div>
-				} else {
-					<div class="rounded-lg border border-border/60 bg-muted/15 p-4">
-						@infohint.LabelMutedXs("Shortest", "The watched movie with the shortest runtime.")
-						<div class="text-sm text-muted-foreground">No data available</div>
-					</div>
-				}
+// movieRow is a clickable poster + title row; details are passed as children.
+templ movieRow(id int64, posterPath, title string) {
+	<a
+		href={ templ.SafeURL(movieHref(id)) }
+		{ movieNav(id)... }
+		class="block cursor-pointer rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted/70"
+	>
+		<div class="flex items-center gap-3">
+			@moviePosterThumb(posterPath, title)
+			<div class="min-w-0 flex-1">
+				<div class="font-medium text-sm line-clamp-1">{ title }</div>
+				{ children... }
 			</div>
+		</div>
+	</a>
+}
+
+templ topMoviesCard(movies []models.TopMovie, controls templ.Component) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Movies", HelpText: "Your most watched movies, including rewatches.", Count: len(movies), Controls: controls}) {
+		for _, m := range movies {
+			@movieRow(m.ID, m.PosterPath, m.Title) {
+				@statLine(fmt.Sprintf("%d watches", m.WatchCount))
+				if m.RatedWatchCount > 0 {
+					@statLine(fmt.Sprintf("%s · %d rated watches", formatRatingValue(m.AverageRating, m.RatedWatchCount), m.RatedWatchCount))
+				}
+			}
+		}
+	}
+}
+
+templ highestRatedMoviesCard(movies []models.RatedMovie, controls templ.Component) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Movies", HelpText: "Movies with your highest average rating across rated watches.", Count: len(movies), Controls: controls}) {
+		for _, m := range movies {
+			@movieRow(m.ID, m.PosterPath, m.Title) {
+				@statLine(formatRatingValue(m.AverageRating, m.RatedWatchCount))
+				@statLine(fmt.Sprintf("%d rated watches", m.RatedWatchCount))
+				@statLine(fmt.Sprintf("%d watches", m.WatchCount))
+			}
 		}
 	}
 }
 
 templ movieFinancialCard(title, helpText string, movies []models.MovieFinancial, showROI bool) {
 	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: title, HelpText: helpText, Count: len(movies)}) {
-		for _, movie := range movies {
-			<div
-				data-page="movie"
-				hx-get={ "/movie/" + strconv.FormatInt(movie.ID, 10) }
-				hx-target="#main-content"
-				hx-push-url="true"
-				hx-swap="scroll:#main-scroll-container:top"
-				hx-indicator="#movie-loading"
-				class="rounded-lg border border-border/60 bg-muted/15 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
-			>
-				<div class="flex items-center gap-3">
-					@moviePosterThumb(movie.PosterPath, movie.Title)
-					<div class="min-w-0 flex-1">
-						<div class="font-medium text-sm line-clamp-1">{ movie.Title }</div>
-						<div class="mt-1 text-xs text-muted-foreground">
-							Budget: ${ formatLargeNumber(movie.Budget) }
-							if movie.Revenue > 0 {
-								| Revenue: ${ formatLargeNumber(movie.Revenue) }
-							}
-						</div>
-						if showROI {
-							<div class="text-xs text-primary mt-1">ROI: { formatROIPercent(movie.ROI) }</div>
-						}
-					</div>
+		for _, m := range movies {
+			@movieRow(m.ID, m.PosterPath, m.Title) {
+				@statLine(financialLine(m))
+				if showROI {
+					<div class="text-xs text-primary mt-1">ROI: { formatROIPercent(m.ROI) }</div>
+				}
+			}
+		}
+	}
+}
+
+templ rewatchRatingDriftCard(drifts []models.RewatchRatingDrift) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Rewatch Rating Changes", HelpText: "Rating changes from your first to latest rated watch. Movies rated more than once only.", Count: len(drifts), ScrollClass: "max-h-44"}) {
+		for _, d := range drifts {
+			@movieRow(d.MovieID, d.PosterPath, d.Title) {
+				@statLine(fmt.Sprintf("First %.1f/5 | Last %.1f/5 | Change %s", d.FirstRating, d.LastRating, formatSignedFloat(d.RatingChange)))
+				@statLine(fmt.Sprintf("%s | %s | %d rated watches", d.FirstWatchedDate.Format("Jan 2006"), d.LastWatchedDate.Format("Jan 2006"), d.RatedWatchCount))
+			}
+		}
+	}
+}
+
+templ runtimeTile(label, hint string, m *models.RuntimeMovie) {
+	if m != nil {
+		<div
+			{ movieNav(m.ID)... }
+			class="rounded-lg bg-muted/50 p-4 cursor-pointer hover:bg-muted/70 transition-colors"
+		>
+			@infohint.LabelMutedXs(label, hint)
+			<div class="flex items-center gap-3">
+				@moviePosterThumb(m.PosterPath, m.Title)
+				<div class="min-w-0">
+					<div class="font-semibold line-clamp-1">{ m.Title }</div>
+					<div class="text-sm text-muted-foreground">{ formatRuntimeMinutes(m.RuntimeMinutes) }</div>
+				</div>
+			</div>
+		</div>
+	} else {
+		<div class="rounded-lg bg-muted/50 p-4">
+			@infohint.LabelMutedXs(label, hint)
+			<div class="text-sm text-muted-foreground">No data</div>
+		</div>
+	}
+}
+
+templ runtimeExtremesCard(longest, shortest *models.RuntimeMovie) {
+	@card.Card(card.Props{Class: "h-full bg-card/40"}) {
+		@statsCardHeader("Longest & Shortest Movies", "Your watched movies with the longest and shortest runtimes.")
+		@card.Content(card.ContentProps{Class: "p-4 pt-3"}) {
+			<div class="space-y-2">
+				@runtimeTile("Longest", "Longest runtime among your watched movies.", longest)
+				@runtimeTile("Shortest", "Shortest runtime among your watched movies.", shortest)
+			</div>
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// People rows
+// ---------------------------------------------------------------------------
+templ actorRowAvatar(name, profilePath string) {
+	@avatar.Avatar(avatar.Props{Class: "h-9 w-9"}) {
+		if profilePath != "" {
+			@avatar.Image(avatar.ImageProps{
+				Src:   utils.TMDBImageURL("w185", profilePath),
+				Alt:   name,
+				Class: "object-cover",
+			})
+		} else {
+			@avatar.Fallback(avatar.FallbackProps{Class: "text-xs"}) {
+				{ personInitials(name) }
+			}
+		}
+	}
+}
+
+templ personRowBody(p personRow) {
+	@actorRowAvatar(p.Name, p.ProfilePath)
+	<div class="flex-1 min-w-0">
+		<div class="font-medium text-sm line-clamp-1">{ p.Name }</div>
+		for _, line := range p.Lines {
+			<div class="text-xs text-muted-foreground">{ line }</div>
+		}
+	</div>
+}
+
+templ peopleCard(title, helpText string, people []personRow, controls templ.Component) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: title, HelpText: helpText, Count: len(people), Controls: controls}) {
+		for _, p := range people {
+			if p.Href != "" {
+				<a
+					href={ templ.SafeURL(p.Href) }
+					{ personNav(p.Href)... }
+					class={ personRowClass + " cursor-pointer transition-colors hover:bg-muted/70" }
+				>
+					@personRowBody(p)
+				</a>
+			} else {
+				<div class={ personRowClass }>
+					@personRowBody(p)
+				</div>
+			}
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Studios & languages
+// ---------------------------------------------------------------------------
+templ studiosCard(stats *models.WatchedStats, limit int, state StatsRankingState) {
+	{{ studios := rankedStudios(stats.Studios, state[statsRankStudios], limit) }}
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{
+		Title:     "Studios",
+		HelpText:  fmt.Sprintf("Most watched includes rewatches. Highest rated uses your average ratings across at least %d distinct movies, weighted equally. Most rated counts distinct rated movies only. All credited production companies count. Country means studio origin, not filming location.", models.MinimumRatedMoviesForRanking),
+		Count:     len(studios),
+		Controls:  statsRankingSwitch(statsRankStudios, limit, state),
+		EmptyText: fmt.Sprintf("No matching studios in stored movie data. Highest rated needs %d rated movies; most rated needs 1.", models.MinimumRatedMoviesForRanking),
+	}) {
+		for _, studio := range studios {
+			<div class="flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-3">
+				<div class="flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md bg-background p-2">
+					if studio.LogoPath != "" {
+						<img src={ utils.TMDBImageURL("w185", studio.LogoPath) } alt={ studio.Name + " logo" } loading="lazy" class="max-h-full max-w-full object-contain"/>
+					} else {
+						@icon.Building(icon.Props{Class: "size-5 text-muted-foreground"})
+					}
+				</div>
+				<div class="min-w-0 flex-1">
+					<div class="text-sm font-medium">{ studio.Name }</div>
+					@statLine(studioMeta(studio))
+					@statLine(fmt.Sprintf("%s · %d rated movies", formatRatingValue(studio.AverageRating, studio.RatedMovieCount), studio.RatedMovieCount))
 				</div>
 			</div>
 		}
 	}
 }
 
-templ statsHeader(limit int) {
-	<div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-		<div class="space-y-2">
-			<h1 class="text-2xl sm:text-3xl font-bold">Statistics</h1>
-			<p class="text-muted-foreground text-sm sm:text-base max-w-2xl">
-				Overview of your movie watching habits and preferences.
-			</p>
-		</div>
-		<form
-			class="w-full sm:w-auto"
-			hx-get="/stats"
-			hx-target="#main-content"
-			hx-trigger="change"
-			hx-push-url="true"
-			hx-swap="innerHTML scroll:#main-scroll-container:top"
-			hx-indicator="#stats-loading"
-		>
-			@selectbox.SelectBox(selectbox.Props{Class: "w-full sm:w-36"}) {
-				@selectbox.Trigger(selectbox.TriggerProps{Name: "limit", Class: "sm:w-36"}) {
-					@selectbox.Value(selectbox.ValueProps{Placeholder: "Show"})
-				}
-				@selectbox.Content(selectbox.ContentProps{NoSearch: true}) {
-					@selectbox.Item(selectbox.ItemProps{Value: "5", Selected: limit == 5}) {
-						Show 5
-					}
-					@selectbox.Item(selectbox.ItemProps{Value: "10", Selected: limit == 10}) {
-						Show 10
-					}
-					@selectbox.Item(selectbox.ItemProps{Value: "15", Selected: limit == 15}) {
-						Show 15
-					}
-					@selectbox.Item(selectbox.ItemProps{Value: "20", Selected: limit == 20}) {
-						Show 20
-					}
-				}
-			}
-		</form>
-	</div>
-}
-
-templ statsMetricCard(label, value string, iconFunc func(...icon.Props) templ.Component) {
-	<div class="rounded-lg border border-border/60 bg-muted/20 p-3 sm:p-4 h-full">
-		<div class="flex items-start justify-between gap-2">
-			<div class="text-xs text-muted-foreground uppercase tracking-wide">{ label }</div>
-			<div class="rounded-md bg-primary/10 p-1.5">
-				@iconFunc(icon.Props{Class: "size-4 text-primary"})
+templ topLanguagesCard(languages []models.LanguageCount) {
+	@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{Title: "Languages", HelpText: "Original movie languages ranked by watches.", Count: len(languages), ScrollClass: "max-h-64"}) {
+		for _, language := range languages {
+			<div class="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
+				<div class="text-sm font-medium uppercase tracking-wide">{ language.Language }</div>
+				<div class="text-xs text-muted-foreground">{ fmt.Sprintf("%d watches", language.WatchCount) }</div>
 			</div>
-		</div>
-		<div class="mt-3 text-xl sm:text-2xl font-semibold leading-none">{ value }</div>
-	</div>
-}
-
-templ statsCharts(stats *models.WatchedStats) {
-	<div class="space-y-8">
-		<div>
-			<h2 class="text-xl font-semibold flex items-center gap-2">
-				@icon.ChartBar(icon.Props{Class: "size-5"})
-				Distribution
-			</h2>
-		</div>
-		<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-			@card.Card() {
-				@card.Header() {
-					@card.Title() {
-						Genres
-					}
-				}
-				@card.Content() {
-					@chart.Chart(chart.Props{
-						Variant:    chart.VariantPie,
-						Data:       prepareGenresData(stats.Genres),
-						Options:    chart.Options{Responsive: true, Legend: true},
-						ShowLegend: true,
-					})
-				}
-			}
-			@card.Card() {
-				@card.Header() {
-					@card.Title() {
-						Movies per Month
-					}
-				}
-				@card.Content() {
-					@chart.Chart(chart.Props{
-						Variant:     chart.VariantBar,
-						Data:        prepareMonthlyMoviesData(stats.MonthlyLastYear),
-						Options:     chart.Options{Responsive: true},
-						ShowXAxis:   true,
-						ShowXLabels: true,
-						ShowYAxis:   true,
-						ShowYLabels: true,
-						Class:       "h-50",
-					})
-					// Trend indicator below chart
-					<div class="mt-8 flex items-center justify-center gap-2 text-md">
-						switch stats.MonthlyMoviesTrendDirection {
-							case models.TrendUp:
-								@icon.TrendingUp(icon.Props{Class: "size-4 text-green-500"})
-								<span class="text-green-500">+{ stats.MonthlyMoviesTrendValue }</span> movies this month
-							case models.TrendDown:
-								@icon.TrendingDown(icon.Props{Class: "size-4 text-red-500"})
-								<span class="text-red-500">{ stats.MonthlyMoviesTrendValue }</span> movies this month
-							default:
-								<span class="text-muted-foreground">{ stats.MonthlyMoviesTrendValue }</span> movies this month
-						}
-					</div>
-				}
-			}
-			@card.Card() {
-				@card.Header() {
-					@card.Title() {
-						Theater vs Home
-					}
-				}
-				@card.Content() {
-					@chart.Chart(chart.Props{
-						Variant:    chart.VariantDoughnut,
-						Data:       prepareTheaterData(stats.TheaterVsHome),
-						Options:    chart.Options{Responsive: true, Legend: true},
-						ShowLegend: true,
-					})
-				}
-			}
-			@card.Card() {
-				@card.Header() {
-					@card.Title() {
-						Hours per Month 
-					}
-				}
-				@card.Content() {
-					@chart.Chart(chart.Props{
-						Variant:     chart.VariantBar,
-						Data:        prepareMonthlyHoursData(stats.MonthlyHoursLastYear),
-						Options:     chart.Options{Responsive: true},
-						ShowXAxis:   true,
-						ShowXLabels: true,
-						ShowYAxis:   true,
-						ShowYLabels: true,
-						Class:       "h-50",
-					})
-					// Trend indicator below chart
-					<div class="mt-8 flex items-center justify-center gap-2 text-md">
-						switch stats.MonthlyHoursTrendDirection {
-							case models.TrendUp:
-								@icon.TrendingUp(icon.Props{Class: "size-4 text-green-500"})
-								<span class="text-green-500">+{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
-							case models.TrendDown:
-								@icon.TrendingDown(icon.Props{Class: "size-4 text-red-500"})
-								<span class="text-red-500">{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
-							default:
-								<span class="text-muted-foreground">{ fmt.Sprintf("%.1f", stats.MonthlyHoursTrendValue) }</span> hours this month
-						}
-					</div>
-				}
-			}
-		</div>
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-			@card.Card() {
-				@card.Header() {
-					@card.Title() {
-						Weekday Distribution
-					}
-				}
-				@card.Content() {
-					@chart.Chart(chart.Props{
-						Variant:     chart.VariantBar,
-						Data:        prepareWeekdayData(stats.WeekdayDistribution),
-						Options:     chart.Options{Responsive: true},
-						ShowXAxis:   true,
-						ShowXLabels: true,
-						ShowYAxis:   true,
-						ShowYLabels: true,
-						Class:       "h-80",
-					})
-				}
-			}
-			@card.Card() {
-				@card.Header() {
-					@card.Title() {
-						Genres by Month 
-					}
-				}
-				@card.Content() {
-					@chart.Chart(chart.Props{
-						Variant:     chart.VariantBar,
-						Stacked:     true,
-						ShowLegend:  true,
-						ShowYGrid:   true,
-						ShowXLabels: true,
-						Data:        prepareGenresByMonthData(stats.MonthlyGenreBreakdown),
-						Class:       "h-80",
-					})
-				}
-			}
-		</div>
-	</div>
-}
-
-// Helper functions to prepare chart data
-func prepareGenresByMonthData(data []models.MonthlyGenreBreakdown) chart.Data {
-	if len(data) == 0 {
-		return chart.Data{}
-	}
-
-	// Collect all unique genres across all months
-	genreSet := make(map[string]bool)
-	for _, month := range data {
-		for genre := range month.Genres {
-			genreSet[genre] = true
 		}
 	}
+}
 
-	// Convert to slice (order will be consistent due to map iteration)
-	var genres []string
-	for genre := range genreSet {
-		genres = append(genres, genre)
-	}
-
-	// Use shared genre colors
-	colorPalette := getGenreColors()
-	borderPalette := getGenreBorderColors()
-
-	var labels []string
-	for _, month := range data {
-		// Parse YYYY-MM and format as abbreviated month name
-		if parsedTime, err := time.Parse("2006-01", month.Month); err == nil {
-			labels = append(labels, parsedTime.Format("Jan"))
-		} else {
-			labels = append(labels, month.Month) // fallback
+// ---------------------------------------------------------------------------
+// Ranking switch (Most watched / Highest rated / Most rated)
+// ---------------------------------------------------------------------------
+templ rankingStateInputs(state StatsRankingState, except string) {
+	for _, key := range statsRankingKeys {
+		if key != except && state[key] != "" {
+			<input type="hidden" name={ key } value={ state[key] }/>
 		}
 	}
+}
 
-	// Create datasets for each genre
-	var datasets []chart.Dataset
-	for i, genre := range genres {
-		var values []float64
-		for _, month := range data {
-			values = append(values, float64(month.Genres[genre]))
+templ statsRankingSwitch(key string, limit int, state StatsRankingState) {
+	<form hx-get="/stats" hx-target="#main-content" hx-trigger="change" hx-push-url="true" hx-swap="innerHTML">
+		<input type="hidden" name="limit" value={ strconv.Itoa(limit) }/>
+		@rankingStateInputs(state, key)
+		@selectbox.SelectBox() {
+			@selectbox.Trigger(selectbox.TriggerProps{Name: key, Attributes: templ.Attributes{"aria-label": statsRankLabel(key)}}) {
+				@selectbox.Value(selectbox.ValueProps{Placeholder: "Most watched"})
+			}
+			@selectbox.Content(selectbox.ContentProps{NoSearch: true}) {
+				@selectbox.Item(selectbox.ItemProps{Value: statsRankWatched, Selected: state[key] == "" || state[key] == statsRankWatched}) {
+					Most watched
+				}
+				@selectbox.Item(selectbox.ItemProps{Value: statsRankRated, Selected: state[key] == statsRankRated}) {
+					Highest rated
+				}
+				if key == statsRankStudios {
+					@selectbox.Item(selectbox.ItemProps{Value: statsRankMostRated, Selected: state[key] == statsRankMostRated}) {
+						Most rated
+					}
+				}
+			}
 		}
-
-		colorIndex := i % len(colorPalette)
-		datasets = append(datasets, chart.Dataset{
-			Label:           genre,
-			Data:            values,
-			BackgroundColor: []any{colorPalette[colorIndex]},
-			BorderColor:     []any{borderPalette[colorIndex]},
-			BorderWidth:     1,
-		})
-	}
-
-	return chart.Data{
-		Labels:   labels,
-		Datasets: datasets,
-	}
+	</form>
 }
 
-func prepareYearlyData(data []models.PeriodCount) chart.Data {
-	labels := make([]string, len(data))
-	values := make([]float64, len(data))
-	for i, pc := range data {
-		labels[i] = pc.Period
-		values[i] = float64(pc.Count)
-	}
-	return chart.Data{
-		Labels: labels,
-		Datasets: []chart.Dataset{{
-			Label:           "Watches",
-			Data:            values,
-			BorderColor:     []any{"rgba(16, 185, 129, 1)"},
-			BackgroundColor: []any{"rgba(16, 185, 129, 1)"},
-			BorderWidth:     1,
-		}},
-	}
-}
+// ---------------------------------------------------------------------------
+// Ranking state (query-string driven "Most watched" / "Highest rated" switches)
+// ---------------------------------------------------------------------------
 
-func prepareGenresData(data []models.GenreCount) chart.Data {
-	labels := make([]string, len(data))
-	values := make([]float64, len(data))
-	colors := getGenreColors()
-	for i, gc := range data {
-		labels[i] = gc.Name
-		values[i] = float64(gc.Count)
-	}
-	return chart.Data{
-		Labels: labels,
-		Datasets: []chart.Dataset{{
-			Label:           "Movies",
-			Data:            values,
-			BackgroundColor: colors,
-		}},
-	}
-}
+const (
+	statsRankMovies           = "rank_movies"
+	statsRankMaleActors       = "rank_male_actors"
+	statsRankFemaleActors     = "rank_female_actors"
+	statsRankDirectors        = "rank_directors"
+	statsRankWriters          = "rank_writers"
+	statsRankComposers        = "rank_composers"
+	statsRankCinematographers = "rank_cinematographers"
+	statsRankStudios          = "rank_studios"
+	statsRankWatched          = "watched"
+	statsRankRated            = "rated"
+	statsRankMostRated        = "most_rated"
+)
 
-func prepareTheaterData(data []models.TheaterCount) chart.Data {
-	labels := make([]string, len(data))
-	values := make([]float64, len(data))
-	colors := []any{
-		"rgba(59, 130, 246, 0.8)", // Theater
-		"rgba(16, 185, 129, 0.8)", // Home
-	}
-	for i, tc := range data {
-		if tc.InTheater {
-			labels[i] = "Theater"
-		} else {
-			labels[i] = "Home"
+// TMDB gender codes.
+const (
+	tmdbGenderFemale int64 = 1
+	tmdbGenderMale   int64 = 2
+)
+
+type StatsRankingState map[string]string
+
+var (
+	statsRankingKeys = [...]string{statsRankMovies, statsRankMaleActors, statsRankFemaleActors, statsRankDirectors, statsRankWriters, statsRankComposers, statsRankCinematographers, statsRankStudios}
+	limitOptions     = []int{5, 10, 15, 20}
+)
+
+func ParseStatsRankingState(query url.Values) StatsRankingState {
+	state := make(StatsRankingState)
+	for _, key := range statsRankingKeys {
+		value := query.Get(key)
+		if value == statsRankRated || (key == statsRankStudios && value == statsRankMostRated) {
+			state[key] = value
 		}
-		values[i] = float64(tc.Count)
 	}
-	return chart.Data{
-		Labels: labels,
-		Datasets: []chart.Dataset{{
-			Label:           "Watches",
-			Data:            values,
-			BackgroundColor: colors,
-		}},
+	return state
+}
+
+func statsRankLabel(key string) string {
+	return "Rank " + strings.ReplaceAll(strings.TrimPrefix(key, "rank_"), "_", " ") + " by"
+}
+
+// ---------------------------------------------------------------------------
+// htmx navigation attributes (shared by every clickable movie / person row)
+// ---------------------------------------------------------------------------
+
+func movieHref(id int64) string { return "/movie/" + strconv.FormatInt(id, 10) }
+
+func navAttrs(page, href, indicator string) templ.Attributes {
+	return templ.Attributes{
+		"data-page":    page,
+		"hx-get":       href,
+		"hx-target":    "#main-content",
+		"hx-push-url":  "true",
+		"hx-swap":      "scroll:#main-scroll-container:top",
+		"hx-indicator": indicator,
 	}
 }
 
-func prepareMonthlyMoviesData(data []models.PeriodCount) chart.Data {
-	// Create a map of period to count
-	dataMap := make(map[string]int64)
-	for _, pc := range data {
-		dataMap[pc.Period] = pc.Count
-	}
+func movieNav(id int64) templ.Attributes { return navAttrs("movie", movieHref(id), "#movie-loading") }
 
-	// Generate last 12 complete months
-	now := time.Now()
-	labels := make([]string, 12)
-	values := make([]float64, 12)
-	for i := 11; i >= 0; i-- {
-		month := now.AddDate(0, -i, 0)
-		period := month.Format("2006-01")
-		label := month.Format("Jan")
-		labels[11-i] = label
-		values[11-i] = float64(dataMap[period])
-	}
-
-	return chart.Data{
-		Labels: labels,
-		Datasets: []chart.Dataset{{
-			Label:           "Movies",
-			Data:            values,
-			BackgroundColor: []any{"rgba(59, 130, 246, 0.5)"}, // Blue theme
-			BorderColor:     []any{"rgba(59, 130, 246, 1)"},   // Blue theme
-			BorderWidth:     1,
-		}},
-	}
+func personNav(href string) templ.Attributes {
+	return navAttrs("person", href, "#person-loading")
 }
 
-func prepareWeekdayData(data []models.PeriodCount) chart.Data {
-	labels := make([]string, len(data))
-	values := make([]float64, len(data))
-	for i, pc := range data {
-		labels[i] = pc.Period
-		values[i] = float64(pc.Count)
-	}
-	return chart.Data{
-		Labels: labels,
-		Datasets: []chart.Dataset{{
-			Label:           "Watches",
-			Data:            values,
-			BackgroundColor: []any{"rgba(139, 92, 246, 0.5)"},
-			BorderColor:     []any{"rgba(139, 92, 246, 1)"},
-			BorderWidth:     1,
-		}},
-	}
+// ---------------------------------------------------------------------------
+// People rankings: one view-model for actors, crew, and "highest rated" people
+// ---------------------------------------------------------------------------
+
+type personRow struct {
+	Href, Name, ProfilePath string
+	Lines                   []string
 }
 
-func prepareRatingDistributionData(data []models.RatingBucketCount) chart.Data {
-	labels := make([]string, len(data))
-	values := make([]float64, len(data))
-	for i, item := range data {
-		labels[i] = fmt.Sprintf("%.1f", item.Rating)
-		values[i] = float64(item.Count)
-	}
-
-	return chart.Data{
-		Labels: labels,
-		Datasets: []chart.Dataset{{
-			Label:           "Ratings",
-			Data:            values,
-			BackgroundColor: []any{"rgba(245, 158, 11, 0.5)"},
-			BorderColor:     []any{"rgba(245, 158, 11, 1)"},
-			BorderWidth:     1,
-		}},
-	}
+type peopleRanking struct {
+	Key, Title, Help string
+	People           []personRow
 }
 
-func prepareMonthlyAverageRatingData(data []models.PeriodRating) chart.Data {
-	labels := make([]string, len(data))
-	values := make([]float64, len(data))
-	for i, item := range data {
-		if parsedTime, err := time.Parse("2006-01", item.Period); err == nil {
-			labels[i] = parsedTime.Format("Jan")
-		} else {
-			labels[i] = item.Period
+func highestRatedPeopleHelp() string {
+	return fmt.Sprintf("Ranked by your average movie ratings. At least %d distinct rated movies; each counts equally.", models.MinimumRatedMoviesForRanking)
+}
+
+func ratedSummary(avg float64, rated int64, sep string) string {
+	return fmt.Sprintf("%s%s%d rated movies", formatRatingValue(avg, rated), sep, rated)
+}
+
+func watchedRow(href, name, profilePath, watches string, avg float64, rated int64) personRow {
+	lines := []string{watches}
+	if rated > 0 {
+		lines = append(lines, ratedSummary(avg, rated, " · "))
+	}
+	return personRow{href, name, profilePath, lines}
+}
+
+func ratedPeopleRows(people []models.RatedPerson) []personRow {
+	rows := make([]personRow, len(people))
+	for i, p := range people {
+		rows[i] = personRow{
+			personPagePath(p.ID), p.Name, p.ProfilePath,
+			[]string{ratedSummary(p.AverageRating, p.RatedMovieCount, " | "), fmt.Sprintf("%d watches", p.WatchCount)},
 		}
-		values[i] = item.AverageRating
 	}
-
-	return chart.Data{
-		Labels: labels,
-		Datasets: []chart.Dataset{{
-			Label:           "Avg Rating",
-			Data:            values,
-			BackgroundColor: []any{"rgba(34, 197, 94, 0.45)"},
-			BorderColor:     []any{"rgba(34, 197, 94, 1)"},
-			BorderWidth:     1,
-		}},
-	}
+	return rows
 }
 
-func prepareReleaseDecadeRatingData(data []models.DecadeRating) chart.Data {
-	labels := make([]string, len(data))
-	values := make([]float64, len(data))
-	for i, item := range data {
-		labels[i] = fmt.Sprintf("%ds", item.Decade)
-		values[i] = item.AverageRating
-	}
-
-	return chart.Data{
-		Labels: labels,
-		Datasets: []chart.Dataset{{
-			Label:           "Avg Rating",
-			Data:            values,
-			BackgroundColor: []any{"rgba(59, 130, 246, 0.45)"},
-			BorderColor:     []any{"rgba(59, 130, 246, 1)"},
-			BorderWidth:     1,
-		}},
-	}
-}
-
-func prepareMonthlyHoursData(data []models.PeriodHours) chart.Data {
-	// Create a map of period to hours
-	dataMap := make(map[string]float64)
-	for _, ph := range data {
-		dataMap[ph.Period] = ph.Hours
-	}
-
-	// Generate last 12 complete months
-	now := time.Now()
-	labels := make([]string, 12)
-	values := make([]float64, 12)
-	for i := 11; i >= 0; i-- {
-		month := now.AddDate(0, -i, 0)
-		period := month.Format("2006-01")
-		label := month.Format("Jan")
-		labels[11-i] = label
-		values[11-i] = float64(dataMap[period])
-	}
-
-	return chart.Data{
-		Labels: labels,
-		Datasets: []chart.Dataset{{
-			Label:           "Hours",
-			Data:            values,
-			BackgroundColor: []any{"rgba(245, 158, 11, 0.5)"},
-			BorderColor:     []any{"rgba(245, 158, 11, 1)"},
-			BorderWidth:     1,
-		}},
-	}
-}
-
-func prepareReleaseYearDistributionData(data []models.ReleaseYearCount) chart.Data {
-	labels := make([]string, len(data))
-	values := make([]float64, len(data))
-
-	for i, item := range data {
-		labels[i] = strconv.Itoa(item.Year)
-		values[i] = float64(item.Count)
-	}
-
-	return chart.Data{
-		Labels: labels,
-		Datasets: []chart.Dataset{{
-			Label:           "Movies",
-			Data:            values,
-			BackgroundColor: []any{"rgba(34, 197, 94, 0.5)"},
-			BorderColor:     []any{"rgba(34, 197, 94, 1)"},
-			BorderWidth:     1,
-		}},
-	}
-}
-
-func prepareBudgetTierDistributionData(data []models.BudgetTierCount) chart.Data {
-	labels := make([]string, 0, len(data))
-	values := make([]float64, 0, len(data))
-	colors := []any{
-		"rgba(34, 197, 94, 0.8)",  // Indie
-		"rgba(59, 130, 246, 0.8)", // Mid
-		"rgba(245, 158, 11, 0.8)", // Blockbuster
-		"rgba(107, 114, 128, 0.8)",
-	}
-
-	for _, item := range data {
-		if item.Count == 0 {
+func ratedActorRows(actors []models.RatedPerson, gender int64, limit int) []personRow {
+	var filtered []models.RatedPerson
+	for _, a := range actors {
+		if a.Gender != gender {
 			continue
 		}
-
-		switch item.Tier {
-		case models.BudgetTierIndie:
-			labels = append(labels, "Indie")
-		case models.BudgetTierMid:
-			labels = append(labels, "Mid")
-		case models.BudgetTierBlockbuster:
-			labels = append(labels, "Blockbuster")
-		default:
-			labels = append(labels, "Unknown")
+		filtered = append(filtered, a)
+		if limit > 0 && len(filtered) >= limit {
+			break
 		}
-
-		values = append(values, float64(item.Count))
 	}
+	return ratedPeopleRows(filtered)
+}
 
-	return chart.Data{
-		Labels: labels,
-		Datasets: []chart.Dataset{{
-			Label:           "Movies",
-			Data:            values,
-			BackgroundColor: colors,
-		}},
+func topActorRows(actors []models.TopActor, gender int64, limit int) []personRow {
+	var rows []personRow
+	for _, a := range actors {
+		if a.Gender != gender {
+			continue
+		}
+		rows = append(rows, watchedRow(personPagePath(a.ID), a.Name, a.ProfilePath, fmt.Sprintf("%d watches", a.WatchCount), a.AverageRating, a.RatedMovieCount))
+		if limit > 0 && len(rows) >= limit {
+			break
+		}
 	}
+	return rows
+}
+
+func topCrewRows(people []models.TopCrewMember) []personRow {
+	rows := make([]personRow, len(people))
+	for i, p := range people {
+		rows[i] = watchedRow(personPagePath(p.ID), p.Name, p.ProfilePath, fmt.Sprintf("%d watches", p.WatchCount), p.AverageRating, p.RatedMovieCount)
+	}
+	return rows
+}
+
+// peopleRankings returns the cards for every person category in display order,
+// already switched to "watched" or "rated" according to state.
+func peopleRankings(stats *models.WatchedStats, limit int, state StatsRankingState) []peopleRanking {
+	r := stats.Ratings
+	build := func(key, title string, rated, watched []personRow) peopleRanking {
+		if state[key] == statsRankRated {
+			return peopleRanking{key, title, highestRatedPeopleHelp(), rated}
+		}
+		help := "Ranked by watches, including rewatches."
+		return peopleRanking{key, title, help, watched}
+	}
+	return []peopleRanking{
+		build(statsRankMaleActors, "Male Actors", ratedActorRows(r.FavoriteActors, tmdbGenderMale, limit), topActorRows(stats.MostWatchedActors, tmdbGenderMale, limit)),
+		build(statsRankFemaleActors, "Female Actors", ratedActorRows(r.FavoriteActors, tmdbGenderFemale, limit), topActorRows(stats.MostWatchedActors, tmdbGenderFemale, limit)),
+		build(statsRankDirectors, "Directors", ratedPeopleRows(r.FavoriteDirectors), topCrewRows(stats.TopDirectors)),
+		build(statsRankWriters, "Writers", ratedPeopleRows(r.FavoriteWriters), topCrewRows(stats.TopWriters)),
+		build(statsRankComposers, "Composers", ratedPeopleRows(r.FavoriteComposers), topCrewRows(stats.TopComposers)),
+		build(statsRankCinematographers, "Cinematographers", ratedPeopleRows(r.FavoriteCinematographers), topCrewRows(stats.TopCinematographers)),
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Studios
+// ---------------------------------------------------------------------------
+
+func rankedStudios(data []models.StudioStats, mode string, limit int) []models.StudioStats {
+	studios := slices.Clone(data)
+	switch mode {
+	case statsRankRated:
+		studios = slices.DeleteFunc(studios, func(s models.StudioStats) bool {
+			return s.RatedMovieCount < models.MinimumRatedMoviesForRanking
+		})
+		slices.SortFunc(studios, func(a, b models.StudioStats) int {
+			return cmp.Or(cmp.Compare(b.AverageRating, a.AverageRating), cmp.Compare(b.RatedMovieCount, a.RatedMovieCount), strings.Compare(a.Name, b.Name))
+		})
+	case statsRankMostRated:
+		studios = slices.DeleteFunc(studios, func(s models.StudioStats) bool { return s.RatedMovieCount == 0 })
+		slices.SortFunc(studios, func(a, b models.StudioStats) int {
+			return cmp.Or(cmp.Compare(b.RatedMovieCount, a.RatedMovieCount), cmp.Compare(b.AverageRating, a.AverageRating), strings.Compare(a.Name, b.Name))
+		})
+	}
+	if limit > 0 && len(studios) > limit {
+		studios = studios[:limit]
+	}
+	return studios
+}
+
+func studioMeta(s models.StudioStats) string {
+	country := "Unknown country"
+	if s.OriginCountry != "" {
+		country = strings.ToUpper(s.OriginCountry)
+	}
+	return fmt.Sprintf("%s · %d watches · %d movies", country, s.WatchCount, s.MovieCount)
+}
+
+// ---------------------------------------------------------------------------
+// Small derived values
+// ---------------------------------------------------------------------------
+
+func totalTheaterWatches(data []models.TheaterCount) int64 {
+	for _, item := range data {
+		if item.InTheater {
+			return item.Count
+		}
+	}
+	return 0
+}
+
+func theaterShare(theater int64, total float64) float64 {
+	if total <= 0 {
+		return 0
+	}
+	return float64(theater) / total
+}
+
+func findTheaterRating(data []models.TheaterRating, inTheater bool) models.TheaterRating {
+	for _, item := range data {
+		if item.InTheater == inTheater {
+			return item
+		}
+	}
+	return models.TheaterRating{InTheater: inTheater}
+}
+
+// lastTwelveMonths returns "2006-01" periods and "Jan" labels, oldest first,
+// ending with the month of now. Anchored at month start so dates near month end
+// cannot skip shorter months.
+func lastTwelveMonths(now time.Time) (periods, labels []string) {
+	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	for i := 11; i >= 0; i-- {
+		m := start.AddDate(0, -i, 0)
+		periods = append(periods, m.Format("2006-01"))
+		labels = append(labels, m.Format("Jan"))
+	}
+	return periods, labels
+}
+
+func busiestTheaterMonth(data []models.PeriodCount, now time.Time) models.PeriodCount {
+	periods, _ := lastTwelveMonths(now)
+	first, last := periods[0], periods[len(periods)-1]
+	var busiest models.PeriodCount
+	for _, month := range data {
+		if month.Period < first || month.Period > last {
+			continue
+		}
+		if month.Count > busiest.Count || (month.Count == busiest.Count && month.Period > busiest.Period) {
+			busiest = month
+		}
+	}
+	return busiest
+}
+
+func busiestMonthText(m models.PeriodCount) (value, detail string) {
+	if m.Count == 0 {
+		return "No data", "No theater watches in last 12 months"
+	}
+	return formatStatsMonth(m.Period), fmt.Sprintf("%d theater watches · last 12 months", m.Count)
+}
+
+// ---------------------------------------------------------------------------
+// Formatting
+// ---------------------------------------------------------------------------
+
+func formatWatchlistAge(age float64, count int) string {
+	if count == 0 {
+		return "N/A"
+	}
+	return fmt.Sprintf("%.1f days", age)
 }
 
 func formatRuntimeMinutes(minutes int64) string {
 	if minutes <= 0 {
 		return "N/A"
 	}
-
-	hours := minutes / 60
-	remainingMinutes := minutes % 60
-
-	if hours == 0 {
-		return fmt.Sprintf("%d min", remainingMinutes)
-	}
-
-	if remainingMinutes == 0 {
+	hours, mins := minutes/60, minutes%60
+	switch {
+	case hours == 0:
+		return fmt.Sprintf("%d min", mins)
+	case mins == 0:
 		return fmt.Sprintf("%dh", hours)
+	default:
+		return fmt.Sprintf("%dh %dm", hours, mins)
 	}
-
-	return fmt.Sprintf("%dh %dm", hours, remainingMinutes)
 }
 
 func formatLargeNumber(value int64) string {
-	if value >= 1_000_000_000 {
+	switch {
+	case value >= 1_000_000_000:
 		return fmt.Sprintf("%.1fB", float64(value)/1_000_000_000)
-	}
-	if value >= 1_000_000 {
+	case value >= 1_000_000:
 		return fmt.Sprintf("%.1fM", float64(value)/1_000_000)
-	}
-	if value >= 1_000 {
+	case value >= 1_000:
 		return fmt.Sprintf("%.1fK", float64(value)/1_000)
 	}
 	return strconv.FormatInt(value, 10)
 }
 
-func formatROIPercent(roi float64) string {
-	return fmt.Sprintf("%+.0f%%", roi*100)
+func financialLine(m models.MovieFinancial) string {
+	s := "Budget: $" + formatLargeNumber(m.Budget)
+	if m.Revenue > 0 {
+		s += " | Revenue: $" + formatLargeNumber(m.Revenue)
+	}
+	return s
+}
+
+func formatROIPercent(roi float64) string   { return fmt.Sprintf("%+.0f%%", roi*100) }
+func formatPercentage(value float64) string { return fmt.Sprintf("%.0f%%", value*100) }
+func formatSignedFloat(value float64) string {
+	return fmt.Sprintf("%+.1f", value)
 }
 
 func formatRatingValue(value float64, count int64) string {
@@ -1345,55 +955,305 @@ func formatRatingValue(value float64, count int64) string {
 	return fmt.Sprintf("%.1f/5", value)
 }
 
-func formatPercentage(value float64) string {
-	return fmt.Sprintf("%.0f%%", value*100)
-}
-
 func formatRatingDifference(value float64, count int64) string {
 	if count == 0 {
 		return "N/A"
 	}
-	return fmt.Sprintf("%+.1f", value)
+	return formatSignedFloat(value)
 }
 
-func formatSignedFloat(value float64) string {
-	return fmt.Sprintf("%+.1f", value)
+func formatStatsMonth(period string) string {
+	month, err := time.Parse("2006-01", period)
+	if err != nil {
+		return period
+	}
+	return month.Format("Jan 2006")
 }
 
-func findTheaterRating(data []models.TheaterRating, inTheater bool) models.TheaterRating {
-	for _, item := range data {
-		if item.InTheater == inTheater {
-			return item
-		}
+// ---------------------------------------------------------------------------
+// Colors
+// ---------------------------------------------------------------------------
+
+const (
+	rgbBlue    = "59, 130, 246"
+	rgbGreen   = "16, 185, 129"
+	rgbYellow  = "245, 158, 11"
+	rgbRed     = "239, 68, 68"
+	rgbPurple  = "139, 92, 246"
+	rgbPink    = "236, 72, 153"
+	rgbEmerald = "34, 197, 94"
+	rgbGray    = "107, 114, 128"
+)
+
+var genreRGB = [...]string{rgbBlue, rgbGreen, rgbYellow, rgbRed, rgbPurple, rgbPink}
+
+func tint(rgb string, alpha float64) string {
+	return "rgba(" + rgb + ", " + strconv.FormatFloat(alpha, 'f', -1, 64) + ")"
+}
+
+func genreColors(alpha float64) []any {
+	out := make([]any, len(genreRGB))
+	for i, c := range genreRGB {
+		out[i] = tint(c, alpha)
+	}
+	return out
+}
+
+// ---------------------------------------------------------------------------
+// Chart.Props presets
+// ---------------------------------------------------------------------------
+
+func barProps(data chart.Data, class string) chart.Props {
+	return chart.Props{
+		Variant:     chart.VariantBar,
+		Data:        data,
+		Options:     chart.Options{Responsive: true},
+		ShowXAxis:   true,
+		ShowXLabels: true,
+		ShowYAxis:   true,
+		ShowYLabels: true,
+		Class:       class,
+	}
+}
+
+func stackedBarProps(data chart.Data, class string) chart.Props {
+	p := barProps(data, class)
+	p.Stacked = true
+	p.ShowLegend = true
+	p.Options.Legend = true
+	return p
+}
+
+// ratingBarProps fixes the Y axis to the 0–5 rating scale.
+func ratingBarProps(data chart.Data, class string) chart.Props {
+	p := barProps(data, class)
+	yMin, yMax := 0.0, 5.0
+	p.YMin, p.YMax = &yMin, &yMax
+	return p
+}
+
+func genreStackProps(data chart.Data) chart.Props {
+	return chart.Props{
+		Variant:     chart.VariantBar,
+		Data:        data,
+		Stacked:     true,
+		ShowLegend:  true,
+		ShowYGrid:   true,
+		ShowXLabels: true,
+		Class:       "h-56 sm:h-64",
+	}
+}
+
+func pieProps(data chart.Data, class string) chart.Props {
+	return chart.Props{Variant: chart.VariantPie, Data: data, Options: chart.Options{Responsive: true, Legend: true}, ShowLegend: true, Class: class}
+}
+
+func doughnutProps(data chart.Data, class string) chart.Props {
+	return chart.Props{Variant: chart.VariantDoughnut, Data: data, Options: chart.Options{Responsive: true, Legend: true}, ShowLegend: true, Class: class}
+}
+
+// ---------------------------------------------------------------------------
+// Data builders
+// ---------------------------------------------------------------------------
+
+func mapSeries[T any](items []T, f func(T) (string, float64)) ([]string, []float64) {
+	labels := make([]string, len(items))
+	values := make([]float64, len(items))
+	for i, it := range items {
+		labels[i], values[i] = f(it)
+	}
+	return labels, values
+}
+
+// barSeries builds a single-dataset chart with one fill color.
+func barSeries(label string, labels []string, values []float64, rgb string, alpha float64) chart.Data {
+	return chart.Data{
+		Labels: labels,
+		Datasets: []chart.Dataset{{
+			Label:           label,
+			Data:            values,
+			BackgroundColor: []any{tint(rgb, alpha)},
+			BorderColor:     []any{tint(rgb, 1)},
+			BorderWidth:     1,
+		}},
+	}
+}
+
+// sliceSeries builds a single-dataset chart with one color per slice.
+func sliceSeries(label string, labels []string, values []float64, colors []any) chart.Data {
+	return chart.Data{
+		Labels:   labels,
+		Datasets: []chart.Dataset{{Label: label, Data: values, BackgroundColor: colors}},
+	}
+}
+
+func monthShort(period string) string {
+	if t, err := time.Parse("2006-01", period); err == nil {
+		return t.Format("Jan")
+	}
+	return period
+}
+
+func prepareGenresByMonthData(data []models.MonthlyGenreBreakdown) chart.Data {
+	if len(data) == 0 {
+		return chart.Data{}
 	}
 
-	return models.TheaterRating{InTheater: inTheater}
+	seen := make(map[string]struct{})
+	for _, m := range data {
+		for g := range m.Genres {
+			seen[g] = struct{}{}
+		}
+	}
+	genres := make([]string, 0, len(seen))
+	for g := range seen {
+		genres = append(genres, g)
+	}
+	slices.Sort(genres) // map iteration is random; sort so colors stay stable
+
+	fills, borders := genreColors(0.8), genreColors(1)
+	labels := make([]string, len(data))
+	for i, m := range data {
+		labels[i] = monthShort(m.Month)
+	}
+
+	datasets := make([]chart.Dataset, len(genres))
+	for i, genre := range genres {
+		values := make([]float64, len(data))
+		for j, m := range data {
+			values[j] = float64(m.Genres[genre])
+		}
+		c := i % len(fills)
+		datasets[i] = chart.Dataset{
+			Label:           genre,
+			Data:            values,
+			BackgroundColor: []any{fills[c]},
+			BorderColor:     []any{borders[c]},
+			BorderWidth:     1,
+		}
+	}
+	return chart.Data{Labels: labels, Datasets: datasets}
 }
 
-templ StatsLoading() {
-	<div id="stats-loading" class="htmx-indicator absolute inset-0 bg-background z-30 pointer-events-none overflow-hidden">
-		<div class="p-4 space-y-8">
-			// Header
-			<div class="space-y-4">
-				<div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-					<div class="space-y-2">
-						@skeleton.Skeleton(skeleton.Props{Class: "h-12 w-48 rounded-lg"})
-						@skeleton.Skeleton(skeleton.Props{Class: "h-4 w-64 rounded-lg"})
-					</div>
-					@skeleton.Skeleton(skeleton.Props{Class: "h-9 w-36 rounded-lg"})
-				</div>
-			</div>
-			// At a glance
-			@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-36 rounded-lg"})
-			@skeleton.Skeleton(skeleton.Props{Class: "h-40 w-full rounded-lg"})
-			// Main sections
-			for _ = range 6 {
-				@skeleton.Skeleton(skeleton.Props{Class: "h-6 w-44 rounded-lg"})
-				<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-					@skeleton.Skeleton(skeleton.Props{Class: "h-64 w-full rounded-lg"})
-					@skeleton.Skeleton(skeleton.Props{Class: "h-64 w-full rounded-lg"})
-				</div>
-			}
-		</div>
-	</div>
+func prepareYearlyData(data []models.PeriodCount) chart.Data {
+	labels, values := mapSeries(data, func(pc models.PeriodCount) (string, float64) { return pc.Period, float64(pc.Count) })
+	return barSeries("Watches", labels, values, rgbGreen, 1)
+}
+
+func prepareWatchlistAgeData(buckets []models.PeriodCount) chart.Data {
+	data := prepareYearlyData(buckets)
+	data.Datasets[0].Label = "Movies"
+	return data
+}
+
+func prepareWeekdayData(data []models.PeriodCount) chart.Data {
+	labels, values := mapSeries(data, func(pc models.PeriodCount) (string, float64) { return pc.Period, float64(pc.Count) })
+	return barSeries("Watches", labels, values, rgbPurple, 0.5)
+}
+
+func prepareGenresData(data []models.GenreCount) chart.Data {
+	labels, values := mapSeries(data, func(g models.GenreCount) (string, float64) { return g.Name, float64(g.Count) })
+	return sliceSeries("Movies", labels, values, genreColors(0.8))
+}
+
+func prepareTheaterData(data []models.TheaterCount) chart.Data {
+	labels, values := mapSeries(data, func(tc models.TheaterCount) (string, float64) {
+		if tc.InTheater {
+			return "Theater", float64(tc.Count)
+		}
+		return "Home", float64(tc.Count)
+	})
+	return sliceSeries("Watches", labels, values, []any{tint(rgbBlue, 0.8), tint(rgbGreen, 0.8)})
+}
+
+func prepareMonthlyMoviesData(data []models.PeriodCount) chart.Data {
+	counts := make(map[string]int64, len(data))
+	for _, pc := range data {
+		counts[pc.Period] = pc.Count
+	}
+	periods, labels := lastTwelveMonths(time.Now())
+	values := make([]float64, len(periods))
+	for i, p := range periods {
+		values[i] = float64(counts[p])
+	}
+	return barSeries("Movies", labels, values, rgbBlue, 0.5)
+}
+
+func prepareYearlyTheaterData(data []models.PeriodStats) chart.Data {
+	total := make([]models.PeriodCount, len(data))
+	theater := make([]models.PeriodCount, len(data))
+	for i, year := range data {
+		total[i] = models.PeriodCount{Period: year.Period, Count: year.Count}
+		theater[i] = models.PeriodCount{Period: year.Period, Count: year.TheaterCount}
+	}
+	return prepareTheaterStackData(prepareYearlyData(total), prepareYearlyData(theater))
+}
+
+func prepareMonthlyTheaterData(total, theater []models.PeriodCount) chart.Data {
+	return prepareTheaterStackData(prepareMonthlyMoviesData(total), prepareMonthlyMoviesData(theater))
+}
+
+// prepareTheaterStackData turns (total, theater) into stacked (home, theater).
+func prepareTheaterStackData(totalData, theaterData chart.Data) chart.Data {
+	home := totalData.Datasets[0]
+	home.Label = "Home"
+	home.BackgroundColor = []any{tint(rgbGreen, 0.8)}
+	home.BorderColor = []any{tint(rgbGreen, 1)}
+	for i := range home.Data {
+		home.Data[i] -= theaterData.Datasets[0].Data[i]
+	}
+
+	theater := theaterData.Datasets[0]
+	theater.Label = "Theater"
+	theater.BackgroundColor = []any{tint(rgbBlue, 0.8)}
+
+	return chart.Data{Labels: totalData.Labels, Datasets: []chart.Dataset{home, theater}}
+}
+
+func prepareRatingDistributionData(data []models.RatingBucketCount) chart.Data {
+	labels, values := mapSeries(data, func(i models.RatingBucketCount) (string, float64) {
+		return fmt.Sprintf("%.1f", i.Rating), float64(i.Count)
+	})
+	return barSeries("Ratings", labels, values, rgbYellow, 0.5)
+}
+
+func prepareMonthlyAverageRatingData(data []models.PeriodRating) chart.Data {
+	labels, values := mapSeries(data, func(i models.PeriodRating) (string, float64) { return monthShort(i.Period), i.AverageRating })
+	return barSeries("Avg Rating", labels, values, rgbEmerald, 0.45)
+}
+
+func prepareReleaseDecadeRatingData(data []models.DecadeRating) chart.Data {
+	labels, values := mapSeries(data, func(i models.DecadeRating) (string, float64) { return fmt.Sprintf("%ds", i.Decade), i.AverageRating })
+	return barSeries("Avg Rating", labels, values, rgbBlue, 0.45)
+}
+
+func prepareReleaseYearDistributionData(data []models.ReleaseYearCount) chart.Data {
+	labels, values := mapSeries(data, func(i models.ReleaseYearCount) (string, float64) { return strconv.Itoa(i.Year), float64(i.Count) })
+	return barSeries("Movies", labels, values, rgbEmerald, 0.5)
+}
+
+func prepareBudgetTierDistributionData(data []models.BudgetTierCount) chart.Data {
+	var (
+		labels []string
+		values []float64
+		colors []any
+	)
+	for _, item := range data {
+		if item.Count == 0 {
+			continue
+		}
+		label, rgb := "Unknown", rgbGray
+		switch item.Tier {
+		case models.BudgetTierIndie:
+			label, rgb = "Indie", rgbEmerald
+		case models.BudgetTierMid:
+			label, rgb = "Mid", rgbBlue
+		case models.BudgetTierBlockbuster:
+			label, rgb = "Blockbuster", rgbYellow
+		}
+		labels = append(labels, label)
+		values = append(values, float64(item.Count))
+		colors = append(colors, tint(rgb, 0.8))
+	}
+	return sliceSeries("Movies", labels, values, colors)
 }

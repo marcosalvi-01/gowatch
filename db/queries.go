@@ -1168,6 +1168,27 @@ func (d *SqliteDB) GetWatchlistID(ctx context.Context, userID int64) (int64, err
 	return id, nil
 }
 
+func (d *SqliteDB) GetStudioStats(ctx context.Context, userID int64) ([]models.StudioStats, error) {
+	data, err := d.queries.GetStudioStats(ctx, &userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get studio stats: %w", err)
+	}
+	result := make([]models.StudioStats, len(data))
+	for i, row := range data {
+		result[i] = models.StudioStats{
+			ID:              row.ID,
+			Name:            row.Name,
+			LogoPath:        row.LogoPath,
+			OriginCountry:   row.OriginCountry,
+			MovieCount:      row.MovieCount,
+			WatchCount:      row.WatchCount,
+			RatedMovieCount: row.RatedMovieCount,
+			AverageRating:   row.AverageRating,
+		}
+	}
+	return result, nil
+}
+
 func (d *SqliteDB) GetWatchedStatsPerMonthLastYear(ctx context.Context, userID int64) ([]models.PeriodStats, error) {
 	log.Debug("getting watched stats per month last year")
 
@@ -1184,9 +1205,10 @@ func (d *SqliteDB) GetWatchedStatsPerMonthLastYear(ctx context.Context, userID i
 			totalRuntime = *item.TotalRuntime
 		}
 		result[i] = models.PeriodStats{
-			Period: item.Month,
-			Count:  item.Count,
-			Hours:  totalRuntime / 60.0,
+			Period:       item.Month,
+			Count:        item.Count,
+			TheaterCount: item.TheaterCount,
+			Hours:        totalRuntime / 60.0,
 		}
 	}
 
@@ -1194,7 +1216,7 @@ func (d *SqliteDB) GetWatchedStatsPerMonthLastYear(ctx context.Context, userID i
 	return result, nil
 }
 
-func (d *SqliteDB) GetWatchedPerYear(ctx context.Context, userID int64) ([]models.PeriodCount, error) {
+func (d *SqliteDB) GetWatchedPerYear(ctx context.Context, userID int64) ([]models.PeriodStats, error) {
 	log.Debug("getting watched per year")
 
 	data, err := d.queries.GetWatchedPerYear(ctx, &userID)
@@ -1203,11 +1225,12 @@ func (d *SqliteDB) GetWatchedPerYear(ctx context.Context, userID int64) ([]model
 		return nil, fmt.Errorf("failed to get yearly data: %w", err)
 	}
 
-	result := make([]models.PeriodCount, len(data))
+	result := make([]models.PeriodStats, len(data))
 	for i, item := range data {
-		result[i] = models.PeriodCount{
-			Period: item.Year,
-			Count:  item.Count,
+		result[i] = models.PeriodStats{
+			Period:       item.Year,
+			Count:        item.Count,
+			TheaterCount: item.TheaterCount,
 		}
 	}
 
@@ -1307,7 +1330,14 @@ func (d *SqliteDB) GetMostWatchedMovies(ctx context.Context, userID int64, limit
 	}
 	result := make([]models.TopMovie, len(data))
 	for i, d := range data {
-		result[i] = models.TopMovie{Title: d.Title, ID: d.ID, WatchCount: d.WatchCount, PosterPath: d.PosterPath}
+		result[i] = models.TopMovie{
+			Title:           d.Title,
+			ID:              d.ID,
+			WatchCount:      d.WatchCount,
+			PosterPath:      d.PosterPath,
+			AverageRating:   d.AverageRating,
+			RatedWatchCount: d.RatedWatchCount,
+		}
 	}
 
 	log.Debug("retrieved most watched movies", "count", len(result))
@@ -1839,6 +1869,7 @@ func (d *SqliteDB) GetHighestRatedMovies(ctx context.Context, userID int64, limi
 			PosterPath:      row.PosterPath,
 			AverageRating:   row.AverageRating,
 			RatedWatchCount: row.RatedWatchCount,
+			WatchCount:      row.WatchCount,
 		}
 	}
 

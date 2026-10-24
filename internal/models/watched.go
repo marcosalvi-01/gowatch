@@ -109,7 +109,10 @@ type WatchedStats struct {
 	Ratings                     RatingStats
 	TheaterVsHome               []TheaterCount
 	MonthlyLastYear             []PeriodCount
-	YearlyAllTime               []PeriodCount
+	MonthlyTheaterLastYear      []PeriodCount
+	Studios                     []StudioStats
+	Watchlist                   WatchlistStats
+	YearlyAllTime               []PeriodStats
 	DailyWatchCountsLastYear    []DailyWatchCount
 	WeekdayDistribution         []PeriodCount
 	Genres                      []GenreCount
@@ -143,16 +146,19 @@ type WatchedStats struct {
 }
 
 type RatingStats struct {
-	Summary            RatingSummary
-	Distribution       []RatingBucketCount
-	MonthlyAverage     []PeriodRating
-	TheaterVsHome      []TheaterRating
-	HighestRatedMovies []RatedMovie
-	VsTMDB             RatingVsTMDB
-	ReleaseDecades     []DecadeRating
-	FavoriteDirectors  []RatedPerson
-	FavoriteActors     []RatedPerson
-	RewatchDrift       []RewatchRatingDrift
+	Summary                  RatingSummary
+	Distribution             []RatingBucketCount
+	MonthlyAverage           []PeriodRating
+	TheaterVsHome            []TheaterRating
+	HighestRatedMovies       []RatedMovie
+	VsTMDB                   RatingVsTMDB
+	ReleaseDecades           []DecadeRating
+	FavoriteDirectors        []RatedPerson
+	FavoriteActors           []RatedPerson
+	FavoriteWriters          []RatedPerson
+	FavoriteComposers        []RatedPerson
+	FavoriteCinematographers []RatedPerson
+	RewatchDrift             []RewatchRatingDrift
 }
 
 type RatingSummary struct {
@@ -185,6 +191,7 @@ type RatedMovie struct {
 	PosterPath      string
 	AverageRating   float64
 	RatedWatchCount int64
+	WatchCount      int64
 }
 
 type RatingVsTMDB struct {
@@ -207,6 +214,7 @@ type RatedPerson struct {
 	Gender          int64
 	AverageRating   float64
 	RatedMovieCount int64
+	WatchCount      int64
 }
 
 type RewatchRatingDrift struct {
@@ -237,9 +245,10 @@ type PeriodHours struct {
 }
 
 type PeriodStats struct {
-	Period string
-	Count  int64
-	Hours  float64
+	Period       string
+	Count        int64
+	TheaterCount int64
+	Hours        float64
 }
 
 type TotalStats struct {
@@ -257,11 +266,39 @@ type TheaterCount struct {
 	Count     int64
 }
 
+type StudioStats struct {
+	ID              int64
+	Name            string
+	LogoPath        string
+	OriginCountry   string
+	MovieCount      int64
+	WatchCount      int64
+	RatedMovieCount int64
+	AverageRating   float64
+}
+
+type WatchlistStats struct {
+	MovieCount          int
+	AverageAgeDays      float64
+	AddedThisMonth      int
+	TotalRuntimeMinutes int64
+	KnownRuntimeCount   int
+	AgeBuckets          []PeriodCount
+	OldestMovies        []WatchlistMovieAge
+}
+
+type WatchlistMovieAge struct {
+	Movie   MovieItem
+	AgeDays int64
+}
+
 type TopMovie struct {
-	Title      string
-	ID         int64
-	PosterPath string
-	WatchCount int64
+	Title           string
+	ID              int64
+	PosterPath      string
+	WatchCount      int64
+	AverageRating   float64
+	RatedWatchCount int64
 }
 
 type RewatchStats struct {
@@ -288,10 +325,12 @@ type ReleaseYearCount struct {
 }
 
 type TopCrewMember struct {
-	ID          int64
-	Name        string
-	ProfilePath string
-	WatchCount  int64
+	ID              int64
+	Name            string
+	ProfilePath     string
+	WatchCount      int64
+	AverageRating   float64
+	RatedMovieCount int64
 }
 
 type TopCrewRole string
@@ -356,11 +395,13 @@ type MovieFinancial struct {
 }
 
 type TopActor struct {
-	Name        string
-	ID          int64
-	ProfilePath string
-	WatchCount  int64
-	Gender      int64
+	Name            string
+	ID              int64
+	ProfilePath     string
+	WatchCount      int64
+	Gender          int64
+	AverageRating   float64
+	RatedMovieCount int64
 }
 
 type MostWatchedDay struct {

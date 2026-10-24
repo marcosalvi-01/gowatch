@@ -16,9 +16,65 @@ import (
 )
 
 const (
-	tmdbGenderFemale int64 = 1
-	tmdbGenderMale   int64 = 2
+	tmdbGenderFemale         int64 = 1
+	tmdbGenderMale           int64 = 2
+	watchlistAgeMonthDays          = 30
+	watchlistAgeHalfYearDays       = 180
+	watchlistAgeYearDays           = 365
 )
+
+func (s *WatchedService) getWatchlistStats(ctx context.Context, limit int, now time.Time) (models.WatchlistStats, error) {
+	stats := models.WatchlistStats{
+		AgeBuckets: []models.PeriodCount{
+			{Period: "0–29 days"},
+			{Period: "30–179 days"},
+			{Period: "180–364 days"},
+			{Period: "365+ days"},
+		},
+	}
+	watchlist, err := s.listService.GetWatchlist(ctx)
+	if errors.Is(err, sql.ErrNoRows) {
+		return stats, nil
+	}
+	if err != nil {
+		return models.WatchlistStats{}, fmt.Errorf("failed to get watchlist stats: %w", err)
+	}
+	stats.MovieCount = len(watchlist.Movies)
+	if stats.MovieCount == 0 {
+		return stats, nil
+	}
+
+	movies := slices.Clone(watchlist.Movies)
+	sortListMovies(movies, models.ListMovieSortDateAddedAsc)
+	today := normalizeDate(now)
+	for _, movie := range movies {
+		added := normalizeDate(movie.DateAdded.In(now.Location()))
+		if added.Year() == now.Year() && added.Month() == now.Month() {
+			stats.AddedThisMonth++
+		}
+		age := max(int64(today.Sub(added).Hours()/24), 0)
+		stats.AverageAgeDays += float64(age)
+		bucket := 0
+		switch {
+		case age >= watchlistAgeYearDays:
+			bucket = 3
+		case age >= watchlistAgeHalfYearDays:
+			bucket = 2
+		case age >= watchlistAgeMonthDays:
+			bucket = 1
+		}
+		stats.AgeBuckets[bucket].Count++
+		if movie.MovieDetails.Runtime > 0 {
+			stats.TotalRuntimeMinutes += int64(movie.MovieDetails.Runtime)
+			stats.KnownRuntimeCount++
+		}
+		if limit <= 0 || len(stats.OldestMovies) < limit {
+			stats.OldestMovies = append(stats.OldestMovies, models.WatchlistMovieAge{Movie: movie, AgeDays: age})
+		}
+	}
+	stats.AverageAgeDays /= float64(stats.MovieCount)
+	return stats, nil
+}
 
 func (s *WatchedService) getGenres(ctx context.Context) ([]models.GenreCount, error) {
 	s.log.Debug("retrieving watched by genre data")
@@ -33,6 +89,63 @@ func (s *WatchedService) getGenres(ctx context.Context) ([]models.GenreCount, er
 		return nil, fmt.Errorf("failed to get genre data: %w", err)
 	}
 	return s.aggregateGenres(genreData, MaxGenresDisplayed), nil
+}
+
+func ratedPeopleByID(people []models.RatedPerson) map[int64]models.RatedPerson {
+	result := make(map[int64]models.RatedPerson, len(people))
+	for _, person := range people {
+		result[person.ID] = person
+	}
+	return result
+}
+
+func finalizeRatedPeople(people []models.RatedPerson, watchCounts map[int64]int64, minimum, limit int) []models.RatedPerson {
+	var result []models.RatedPerson
+	for _, person := range people {
+		if person.RatedMovieCount < int64(minimum) {
+			continue
+		}
+		person.WatchCount = watchCounts[person.ID]
+		result = append(result, person)
+		if limit > 0 && len(result) >= limit {
+			break
+		}
+	}
+	return result
+}
+
+func crewRatingStats(crew []models.TopCrewMemberStat, ranks []models.RatedPersonRank, role models.TopCrewRole, limit int) ([]models.TopCrewMember, []models.RatedPerson) {
+	people := make(map[int64]models.TopCrewMember)
+	watchCounts := make(map[int64]int64)
+	for _, person := range filterTopCrewMembersByRole(crew, role, 0) {
+		people[person.ID] = person
+		watchCounts[person.ID] = person.WatchCount
+	}
+	var rated []models.RatedPerson
+	for _, rank := range ranks {
+		if rank.RoleKey != string(role) {
+			continue
+		}
+		person, ok := people[rank.ID]
+		if !ok {
+			continue
+		}
+		rated = append(rated, models.RatedPerson{
+			ID:              person.ID,
+			Name:            person.Name,
+			ProfilePath:     person.ProfilePath,
+			AverageRating:   rank.AverageRating,
+			RatedMovieCount: rank.RatedMovieCount,
+		})
+	}
+	watched := filterTopCrewMembersByRole(crew, role, limit)
+	ratings := ratedPeopleByID(rated)
+	for i := range watched {
+		rating := ratings[watched[i].ID]
+		watched[i].AverageRating = rating.AverageRating
+		watched[i].RatedMovieCount = rating.RatedMovieCount
+	}
+	return watched, finalizeRatedPeople(rated, watchCounts, models.MinimumRatedMoviesForRanking, limit)
 }
 
 func (s *WatchedService) getMostWatchedDay(ctx context.Context) (*models.MostWatchedDay, error) {

@@ -19,8 +19,8 @@ import (
 
 const (
 	MaxGenresDisplayed        = 11
-	minFavoriteDirectorMovies = 2
-	minFavoriteActorMovies    = 3
+	minFavoriteDirectorMovies = models.MinimumRatedMoviesForRanking
+	minFavoriteActorMovies    = models.MinimumRatedMoviesForRanking
 	minRewatchRatedWatches    = 2
 	minTMDBVoteCount          = 100
 	ratingBucketSize          = 0.5
@@ -484,6 +484,9 @@ func ratedPersonRanksByRole(ranks []models.RatedPersonRank) map[string]map[int64
 	previousAverage := make(map[string]float64)
 	for _, person := range ranks {
 		minimumRatings := int64(2)
+		if role, ok := models.PersonRoleDefinitionByKey(person.RoleKey); ok {
+			minimumRatings = role.MinimumRatings
+		}
 		if person.RoleKey == personRoleActor {
 			minimumRatings = minFavoriteActorMovies
 		}
@@ -600,6 +603,8 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 	var totalStats *models.TotalStats
 	var statsPerMonth []models.PeriodStats
 	var allActors []models.TopActor
+	actorWatchCounts := make(map[int64]int64)
+	directorWatchCounts := make(map[int64]int64)
 	var dateRange *models.DateRange
 	var rewatchStats *models.RewatchStats
 	var watchedDates []time.Time
@@ -613,6 +618,24 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 	var favoriteDirectorsByRating []models.RatedPerson
 	var favoriteActorsByRating []models.RatedPerson
 	var rewatchRatingDrift []models.RewatchRatingDrift
+
+	g.Go(func() error {
+		watchlist, err := s.getWatchlistStats(ctx, limit, time.Now())
+		if err != nil {
+			return err
+		}
+		stats.Watchlist = watchlist
+		return nil
+	})
+
+	g.Go(func() error {
+		studios, err := s.db.GetStudioStats(ctx, user.ID)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get studio stats: %w", err)
+		}
+		stats.Studios = studios
+		return nil
+	})
 
 	// Total Stats (Count & Hours)
 	g.Go(func() error {
@@ -744,6 +767,9 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 		}
 
 		allActors = make([]models.TopActor, 0, len(actors))
+		for _, actor := range actors {
+			actorWatchCounts[actor.ID] = actor.WatchCount
+		}
 		allActors = append(allActors, limitTopActorsByGender(actors, tmdbGenderMale, limit)...)
 		allActors = append(allActors, limitTopActorsByGender(actors, tmdbGenderFemale, limit)...)
 		s.log.Debug("GetWatchedStats: most watched actors fetched", "count", len(allActors), "duration", time.Since(t).String())
@@ -760,9 +786,18 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 		}
 
 		stats.TopDirectors = filterTopCrewMembersByRole(crewMembers, models.TopCrewRoleDirector, limit)
-		stats.TopWriters = filterTopCrewMembersByRole(crewMembers, models.TopCrewRoleWriter, limit)
-		stats.TopComposers = filterTopCrewMembersByRole(crewMembers, models.TopCrewRoleComposer, limit)
-		stats.TopCinematographers = filterTopCrewMembersByRole(crewMembers, models.TopCrewRoleCinematographer, limit)
+		for _, member := range crewMembers {
+			if member.RoleKey == models.TopCrewRoleDirector {
+				directorWatchCounts[member.ID] = member.WatchCount
+			}
+		}
+		ratedRanks, err := s.db.GetRatedPersonRanks(ctx, user.ID)
+		if err != nil {
+			return fmt.Errorf("GetWatchedStats: get rated crew ranks: %w", err)
+		}
+		stats.TopWriters, stats.Ratings.FavoriteWriters = crewRatingStats(crewMembers, ratedRanks, models.TopCrewRoleWriter, limit)
+		stats.TopComposers, stats.Ratings.FavoriteComposers = crewRatingStats(crewMembers, ratedRanks, models.TopCrewRoleComposer, limit)
+		stats.TopCinematographers, stats.Ratings.FavoriteCinematographers = crewRatingStats(crewMembers, ratedRanks, models.TopCrewRoleCinematographer, limit)
 		s.log.Debug(
 			"GetWatchedStats: top crew members fetched",
 			"directors", len(stats.TopDirectors),
@@ -958,7 +993,7 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 	g.Go(func() error {
 		s.log.Debug("GetWatchedStats: fetching favorite directors by rating")
 		t := time.Now()
-		favoriteDirectorsByRating, err = s.db.GetFavoriteDirectorsByRating(ctx, user.ID, minFavoriteDirectorMovies, limit)
+		favoriteDirectorsByRating, err = s.db.GetFavoriteDirectorsByRating(ctx, user.ID, 0, 0)
 		if err != nil {
 			return fmt.Errorf("GetWatchedStats: get favorite directors by rating: %w", err)
 		}
@@ -970,7 +1005,7 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 	g.Go(func() error {
 		s.log.Debug("GetWatchedStats: fetching favorite actors by rating")
 		t := time.Now()
-		favoriteActorsByRating, err = s.db.GetFavoriteActorsByRating(ctx, user.ID, minFavoriteActorMovies, limit)
+		favoriteActorsByRating, err = s.db.GetFavoriteActorsByRating(ctx, user.ID, 0, 0)
 		if err != nil {
 			return fmt.Errorf("GetWatchedStats: get favorite actors by rating: %w", err)
 		}
@@ -1035,8 +1070,20 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 	stats.Ratings.TheaterVsHome = theaterVsHomeAverageRating
 	stats.Ratings.HighestRatedMovies = highestRatedMovies
 	stats.Ratings.ReleaseDecades = ratingByReleaseDecade
-	stats.Ratings.FavoriteDirectors = favoriteDirectorsByRating
-	stats.Ratings.FavoriteActors = favoriteActorsByRating
+	stats.Ratings.FavoriteDirectors = finalizeRatedPeople(favoriteDirectorsByRating, directorWatchCounts, minFavoriteDirectorMovies, limit)
+	stats.Ratings.FavoriteActors = finalizeRatedPeople(favoriteActorsByRating, actorWatchCounts, minFavoriteActorMovies, 0)
+	actorRatings := ratedPeopleByID(favoriteActorsByRating)
+	for i := range stats.MostWatchedActors {
+		rating := actorRatings[stats.MostWatchedActors[i].ID]
+		stats.MostWatchedActors[i].AverageRating = rating.AverageRating
+		stats.MostWatchedActors[i].RatedMovieCount = rating.RatedMovieCount
+	}
+	directorRatings := ratedPeopleByID(favoriteDirectorsByRating)
+	for i := range stats.TopDirectors {
+		rating := directorRatings[stats.TopDirectors[i].ID]
+		stats.TopDirectors[i].AverageRating = rating.AverageRating
+		stats.TopDirectors[i].RatedMovieCount = rating.RatedMovieCount
+	}
 	stats.Ratings.RewatchDrift = rewatchRatingDrift
 	if ratingVsTMDB != nil {
 		stats.Ratings.VsTMDB = *ratingVsTMDB
@@ -1044,9 +1091,11 @@ func (s *WatchedService) GetWatchedStats(ctx context.Context, limit int) (*model
 
 	// Split monthly stats
 	stats.MonthlyLastYear = make([]models.PeriodCount, len(statsPerMonth))
+	stats.MonthlyTheaterLastYear = make([]models.PeriodCount, len(statsPerMonth))
 	stats.MonthlyHoursLastYear = make([]models.PeriodHours, len(statsPerMonth))
 	for i, item := range statsPerMonth {
 		stats.MonthlyLastYear[i] = models.PeriodCount{Period: item.Period, Count: item.Count}
+		stats.MonthlyTheaterLastYear[i] = models.PeriodCount{Period: item.Period, Count: item.TheaterCount}
 		stats.MonthlyHoursLastYear[i] = models.PeriodHours{Period: item.Period, Hours: item.Hours}
 	}
 

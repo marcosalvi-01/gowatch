@@ -37,9 +37,10 @@ type DB interface {
 	GetWatchedDates(ctx context.Context, userID int64) ([]time.Time, error)
 
 	// Watched stats.
+	GetStudioStats(ctx context.Context, userID int64) ([]models.StudioStats, error)
 	GetTotalWatchedStats(ctx context.Context, userID int64) (*models.TotalStats, error)
 	GetWatchedStatsPerMonthLastYear(ctx context.Context, userID int64) ([]models.PeriodStats, error)
-	GetWatchedPerYear(ctx context.Context, userID int64) ([]models.PeriodCount, error)
+	GetWatchedPerYear(ctx context.Context, userID int64) ([]models.PeriodStats, error)
 	GetWeekdayDistribution(ctx context.Context, userID int64) ([]models.PeriodCount, error)
 	GetDailyWatchCountsLastYear(ctx context.Context, userID int64) ([]models.DailyWatchCount, error)
 	GetRewatchStats(ctx context.Context, userID int64) (*models.RewatchStats, error)

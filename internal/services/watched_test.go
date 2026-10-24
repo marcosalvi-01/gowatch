@@ -780,8 +780,8 @@ func TestWatchedService_GetWatchedStats_RatingFields(t *testing.T) {
 		t.Fatalf("expected 3 release decade buckets, got %+v", stats.Ratings.ReleaseDecades)
 	}
 
-	if len(stats.Ratings.FavoriteDirectors) != 1 || stats.Ratings.FavoriteDirectors[0].Name != "Director One" {
-		t.Fatalf("expected Director One as favorite director, got %+v", stats.Ratings.FavoriteDirectors)
+	if len(stats.Ratings.FavoriteDirectors) != 0 {
+		t.Fatalf("expected no directors with at least 3 rated movies, got %+v", stats.Ratings.FavoriteDirectors)
 	}
 	if len(stats.Ratings.FavoriteActors) != 1 || stats.Ratings.FavoriteActors[0].Name != "Favorite Actor" {
 		t.Fatalf("expected Favorite Actor as favorite actor, got %+v", stats.Ratings.FavoriteActors)

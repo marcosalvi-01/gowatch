@@ -16,14 +16,15 @@ type Props struct {
 	EmptyText   string
 	CardClass   string
 	ScrollClass string
+	Controls    templ.Component
 }
 
 templ StatsCollectionCard(props Props) {
 	@card.Card(card.Props{
-		Class: utils.TwMerge("h-full", props.CardClass),
+		Class: utils.TwMerge("h-full bg-card/40", props.CardClass),
 	}) {
-		@card.Header(card.HeaderProps{Class: "flex flex-row items-center justify-between space-y-0 gap-3"}) {
-			@card.Title() {
+		@card.Header(card.HeaderProps{Class: "flex flex-row items-start justify-between space-y-0 gap-2 p-4 pb-0"}) {
+			@card.Title(card.TitleProps{Class: "text-sm font-semibold"}) {
 				{ props.Title }
 			}
 			<div class="flex items-center gap-2">
@@ -35,13 +36,18 @@ templ StatsCollectionCard(props Props) {
 				@infohint.Corner(props.HelpText, props.Title+" help")
 			</div>
 		}
-		@card.Content(card.ContentProps{Class: "pt-4"}) {
+		@card.Content(card.ContentProps{Class: "p-4 pt-3"}) {
+			if props.Controls != nil {
+				<div class="mb-3">
+					@props.Controls
+				</div>
+			}
 			if props.Count > 0 {
 				<div class={ collectionScrollClass(props.ScrollClass) }>
 					{ children... }
 				</div>
 			} else {
-				<div class="text-center text-muted-foreground py-8">{ collectionEmptyText(props.EmptyText) }</div>
+				<div class="text-center text-sm text-muted-foreground py-4">{ collectionEmptyText(props.EmptyText) }</div>
 			}
 		}
 	}
@@ -56,5 +62,5 @@ func collectionEmptyText(text string) string {
 }
 
 func collectionScrollClass(scrollClass string) string {
-	return utils.TwMerge("space-y-3 h-90 overflow-y-auto pr-1", scrollClass)
+	return utils.TwMerge("space-y-2 max-h-72 overflow-y-auto pr-1", scrollClass)
 }

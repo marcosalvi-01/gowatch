@@ -1005,21 +1005,24 @@ WITH rated_movies AS (
         CAST(
             COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL
         ) AS average_rating,
-        COUNT(watched.rating) AS rated_watch_count
+        COUNT(watched.rating) AS rated_watch_count,
+        COUNT(*) AS watch_count
     FROM
         watched
     WHERE
         watched.user_id = ?1
-        AND watched.rating IS NOT NULL
     GROUP BY
         watched.movie_id
+    HAVING
+        COUNT(watched.rating) > 0
 )
 SELECT
     movie.id,
     movie.title,
     movie.poster_path,
     rated_movies.average_rating,
-    rated_movies.rated_watch_count
+    rated_movies.rated_watch_count,
+    rated_movies.watch_count
 FROM
     rated_movies
     JOIN movie ON rated_movies.movie_id = movie.id
@@ -1042,6 +1045,7 @@ type GetHighestRatedMoviesRow struct {
 	PosterPath      string
 	AverageRating   float64
 	RatedWatchCount int64
+	WatchCount      int64
 }
 
 func (q *Queries) GetHighestRatedMovies(ctx context.Context, arg GetHighestRatedMoviesParams) ([]GetHighestRatedMoviesRow, error) {
@@ -1059,6 +1063,7 @@ func (q *Queries) GetHighestRatedMovies(ctx context.Context, arg GetHighestRated
 			&i.PosterPath,
 			&i.AverageRating,
 			&i.RatedWatchCount,
+			&i.WatchCount,
 		); err != nil {
 			return nil, err
 		}
@@ -1378,7 +1383,11 @@ SELECT
     movie.title,
     movie.id,
     movie.poster_path,
-    COUNT(*) AS watch_count
+    COUNT(*) AS watch_count,
+    CAST(
+        COALESCE(AVG(CAST(watched.rating AS REAL)), 0.0) AS REAL
+    ) AS average_rating,
+    COUNT(watched.rating) AS rated_watch_count
 FROM
     watched
     JOIN movie ON watched.movie_id = movie.id
@@ -1400,10 +1409,12 @@ type GetMostWatchedMoviesParams struct {
 }
 
 type GetMostWatchedMoviesRow struct {
-	Title      string
-	ID         int64
-	PosterPath string
-	WatchCount int64
+	Title           string
+	ID              int64
+	PosterPath      string
+	WatchCount      int64
+	AverageRating   float64
+	RatedWatchCount int64
 }
 
 func (q *Queries) GetMostWatchedMovies(ctx context.Context, arg GetMostWatchedMoviesParams) ([]GetMostWatchedMoviesRow, error) {
@@ -1420,6 +1431,8 @@ func (q *Queries) GetMostWatchedMovies(ctx context.Context, arg GetMostWatchedMo
 			&i.ID,
 			&i.PosterPath,
 			&i.WatchCount,
+			&i.AverageRating,
+			&i.RatedWatchCount,
 		); err != nil {
 			return nil, err
 		}
@@ -2546,6 +2559,86 @@ func (q *Queries) GetShortestWatchedMovie(ctx context.Context, userID *int64) (G
 	return i, err
 }
 
+const getStudioStats = `-- name: GetStudioStats :many
+WITH watched_movies AS (
+    SELECT
+        movie_id,
+        COUNT(*) AS watch_count,
+        AVG(CAST(rating AS REAL)) AS average_rating
+    FROM
+        watched
+    WHERE
+        user_id = ?
+    GROUP BY
+        movie_id
+)
+SELECT
+    production_company.id,
+    production_company.name,
+    production_company.logo_path,
+    production_company.origin_country,
+    COUNT(*) AS movie_count,
+    CAST(SUM(watched_movies.watch_count) AS INTEGER) AS watch_count,
+    COUNT(watched_movies.average_rating) AS rated_movie_count,
+    CAST(
+        COALESCE(AVG(watched_movies.average_rating), 0.0) AS REAL
+    ) AS average_rating
+FROM
+    watched_movies
+    JOIN movie_production_company ON movie_production_company.movie_id = watched_movies.movie_id
+    JOIN production_company ON production_company.id = movie_production_company.production_company_id
+GROUP BY
+    production_company.id
+ORDER BY
+    watch_count DESC,
+    rated_movie_count DESC,
+    production_company.name ASC
+`
+
+type GetStudioStatsRow struct {
+	ID              int64
+	Name            string
+	LogoPath        string
+	OriginCountry   string
+	MovieCount      int64
+	WatchCount      int64
+	RatedMovieCount int64
+	AverageRating   float64
+}
+
+// Watched stats.
+func (q *Queries) GetStudioStats(ctx context.Context, userID *int64) ([]GetStudioStatsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getStudioStats, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetStudioStatsRow
+	for rows.Next() {
+		var i GetStudioStatsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.LogoPath,
+			&i.OriginCountry,
+			&i.MovieCount,
+			&i.WatchCount,
+			&i.RatedMovieCount,
+			&i.AverageRating,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTheaterVsHomeAverageRating = `-- name: GetTheaterVsHomeAverageRating :many
 SELECT
     watched.watched_in_theater,
@@ -3375,7 +3468,15 @@ func (q *Queries) GetWatchedMoviesByPerson(ctx context.Context, arg GetWatchedMo
 const getWatchedPerYear = `-- name: GetWatchedPerYear :many
 SELECT
     CAST(strftime('%Y', watched_date) AS TEXT) AS year,
-    COUNT(*) AS count
+    COUNT(*) AS count,
+    CAST(
+        SUM(
+            CASE
+                WHEN watched_in_theater THEN 1
+                ELSE 0
+            END
+        ) AS INTEGER
+    ) AS theater_count
 FROM
     watched
 WHERE
@@ -3387,8 +3488,9 @@ ORDER BY
 `
 
 type GetWatchedPerYearRow struct {
-	Year  string
-	Count int64
+	Year         string
+	Count        int64
+	TheaterCount int64
 }
 
 func (q *Queries) GetWatchedPerYear(ctx context.Context, userID *int64) ([]GetWatchedPerYearRow, error) {
@@ -3400,7 +3502,7 @@ func (q *Queries) GetWatchedPerYear(ctx context.Context, userID *int64) ([]GetWa
 	var items []GetWatchedPerYearRow
 	for rows.Next() {
 		var i GetWatchedPerYearRow
-		if err := rows.Scan(&i.Year, &i.Count); err != nil {
+		if err := rows.Scan(&i.Year, &i.Count, &i.TheaterCount); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -3418,6 +3520,14 @@ const getWatchedStatsPerMonthLastYear = `-- name: GetWatchedStatsPerMonthLastYea
 SELECT
     CAST(strftime('%Y-%m', watched_date) AS TEXT) AS MONTH,
     COUNT(*) AS count,
+    CAST(
+        SUM(
+            CASE
+                WHEN watched.watched_in_theater THEN 1
+                ELSE 0
+            END
+        ) AS INTEGER
+    ) AS theater_count,
     SUM(movie.runtime) AS total_runtime
 FROM
     watched
@@ -3434,10 +3544,10 @@ ORDER BY
 type GetWatchedStatsPerMonthLastYearRow struct {
 	Month        string
 	Count        int64
+	TheaterCount int64
 	TotalRuntime *float64
 }
 
-// Watched stats.
 func (q *Queries) GetWatchedStatsPerMonthLastYear(ctx context.Context, userID *int64) ([]GetWatchedStatsPerMonthLastYearRow, error) {
 	rows, err := q.db.QueryContext(ctx, getWatchedStatsPerMonthLastYear, userID)
 	if err != nil {
@@ -3447,7 +3557,12 @@ func (q *Queries) GetWatchedStatsPerMonthLastYear(ctx context.Context, userID *i
 	var items []GetWatchedStatsPerMonthLastYearRow
 	for rows.Next() {
 		var i GetWatchedStatsPerMonthLastYearRow
-		if err := rows.Scan(&i.Month, &i.Count, &i.TotalRuntime); err != nil {
+		if err := rows.Scan(
+			&i.Month,
+			&i.Count,
+			&i.TheaterCount,
+			&i.TotalRuntime,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

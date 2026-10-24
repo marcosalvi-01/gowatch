@@ -2,6 +2,8 @@ package models
 
 import "strings"
 
+const MinimumRatedMoviesForRanking = 3
+
 type PersonRoleDefinition struct {
 	Key            string
 	Label          string
@@ -10,10 +12,10 @@ type PersonRoleDefinition struct {
 }
 
 var PersonRoles = []PersonRoleDefinition{
-	{Key: "director", Label: "Director", MinimumRatings: 2, WatchRole: TopCrewRoleDirector},
-	{Key: "writer", Label: "Writer", MinimumRatings: 2, WatchRole: TopCrewRoleWriter},
-	{Key: "composer", Label: "Composer", MinimumRatings: 2, WatchRole: TopCrewRoleComposer},
-	{Key: "cinematographer", Label: "Cinematographer", MinimumRatings: 2, WatchRole: TopCrewRoleCinematographer},
+	{Key: "director", Label: "Director", MinimumRatings: MinimumRatedMoviesForRanking, WatchRole: TopCrewRoleDirector},
+	{Key: "writer", Label: "Writer", MinimumRatings: MinimumRatedMoviesForRanking, WatchRole: TopCrewRoleWriter},
+	{Key: "composer", Label: "Composer", MinimumRatings: MinimumRatedMoviesForRanking, WatchRole: TopCrewRoleComposer},
+	{Key: "cinematographer", Label: "Cinematographer", MinimumRatings: MinimumRatedMoviesForRanking, WatchRole: TopCrewRoleCinematographer},
 	{Key: "producer", Label: "Producer", MinimumRatings: 2},
 }
 

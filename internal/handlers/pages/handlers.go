@@ -368,7 +368,7 @@ func (h *Handlers) StatsPage(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("retrieved watched stats", "totalWatched", stats.TotalWatched)
 
-	renderContentPage(w, r, pages.Stats(stats, limit))
+	renderContentPage(w, r, pages.Stats(stats, limit, pages.ParseStatsRankingState(r.URL.Query())))
 
 	log.Info("stats page served successfully")
 }
