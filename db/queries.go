@@ -13,6 +13,330 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
+func upsertMovieSummary(ctx context.Context, q *sqlc.Queries, movie models.Movie) error {
+	if movie.ID <= 0 {
+		return fmt.Errorf("invalid movie ID %d", movie.ID)
+	}
+	if err := q.UpsertMovieSummary(ctx, sqlc.UpsertMovieSummaryParams{
+		ID:            movie.ID,
+		Title:         movie.Title,
+		OriginalTitle: movie.OriginalTitle,
+		ReleaseDate:   date.NewFromPtr(movie.ReleaseDate),
+		PosterPath:    movie.PosterPath,
+		BackdropPath:  movie.BackdropPath,
+		Popularity:    float64(movie.Popularity),
+		VoteCount:     movie.VoteCount,
+		VoteAverage:   float64(movie.VoteAverage),
+	}); err != nil {
+		return fmt.Errorf("upsert movie summary %d: %w", movie.ID, err)
+	}
+	return nil
+}
+
+func (d *SqliteDB) GetPersonDetails(ctx context.Context, id int64) (*models.PersonDetailsPage, time.Time, error) {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("begin person details read: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	q := d.queries.WithTx(tx)
+	row, err := q.GetPerson(ctx, id)
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("get person %d: %w", id, err)
+	}
+	credits, err := q.GetPersonCredits(ctx, id)
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("get person %d credits: %w", id, err)
+	}
+	person := &models.PersonDetailsPage{
+		ID:            row.ID,
+		Name:          row.Name,
+		Biography:     row.Biography,
+		ProfilePath:   row.ProfilePath,
+		Birthday:      row.Birthday.ToTimePtr(),
+		Deathday:      row.Deathday.ToTimePtr(),
+		PlaceOfBirth:  row.PlaceOfBirth,
+		IMDbID:        row.ImdbID,
+		Homepage:      row.Homepage,
+		KnownFor:      []models.PersonCredit{},
+		ActingCredits: []models.PersonCredit{},
+		CrewCredits:   []models.PersonCredit{},
+	}
+	for _, row := range credits {
+		credit := models.PersonCredit{
+			ID:           row.ID,
+			CreditID:     row.CreditID,
+			MediaType:    row.MediaType,
+			Title:        row.Title,
+			Role:         row.Role,
+			Department:   row.Department,
+			EpisodeCount: int(row.EpisodeCount),
+			ReleaseDate:  row.ReleaseDate.ToTimePtr(),
+			BackdropPath: row.BackdropPath,
+			PosterPath:   row.PosterPath,
+			VoteAverage:  float32(row.VoteAverage),
+			VoteCount:    row.VoteCount,
+			Popularity:   float32(row.Popularity),
+		}
+		if row.RoleKind == string(models.PersonWatchRoleKindActing) {
+			person.ActingCredits = append(person.ActingCredits, credit)
+		} else {
+			person.CrewCredits = append(person.CrewCredits, credit)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, time.Time{}, fmt.Errorf("commit person details read: %w", err)
+	}
+	var updatedAt time.Time
+	if row.DetailsUpdatedAt != nil {
+		updatedAt = *row.DetailsUpdatedAt
+	}
+	return person, updatedAt, nil
+}
+
+func (d *SqliteDB) UpsertPersonDetails(ctx context.Context, person *models.PersonDetailsPage) error {
+	if person == nil || person.ID <= 0 {
+		return errors.New("valid person details are required")
+	}
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin person details refresh: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	q := d.queries.WithTx(tx)
+	if err := q.UpsertPersonDetails(ctx, sqlc.UpsertPersonDetailsParams{
+		ID:           person.ID,
+		Name:         person.Name,
+		ProfilePath:  person.ProfilePath,
+		Biography:    person.Biography,
+		Birthday:     date.NewFromPtr(person.Birthday),
+		Deathday:     date.NewFromPtr(person.Deathday),
+		PlaceOfBirth: person.PlaceOfBirth,
+		ImdbID:       person.IMDbID,
+		Homepage:     person.Homepage,
+	}); err != nil {
+		return fmt.Errorf("upsert person %d details: %w", person.ID, err)
+	}
+	if err := q.DeletePersonMovieCredits(ctx, person.ID); err != nil {
+		return fmt.Errorf("delete person %d movie credits: %w", person.ID, err)
+	}
+	if err := q.DeletePersonTVCredits(ctx, person.ID); err != nil {
+		return fmt.Errorf("delete person %d TV credits: %w", person.ID, err)
+	}
+	for _, group := range []struct {
+		kind    models.PersonWatchRoleKind
+		credits []models.PersonCredit
+	}{
+		{models.PersonWatchRoleKindActing, person.ActingCredits},
+		{models.PersonWatchRoleKindCrew, person.CrewCredits},
+	} {
+		for position, credit := range group.credits {
+			if err := insertPersonCredit(ctx, q, person.ID, string(group.kind), int64(position), credit); err != nil {
+				return fmt.Errorf("save person %d credit: %w", person.ID, err)
+			}
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit person %d refresh: %w", person.ID, err)
+	}
+	return nil
+}
+
+func insertPersonCredit(ctx context.Context, q *sqlc.Queries, personID int64, kind string, position int64, credit models.PersonCredit) error {
+	if credit.ID <= 0 {
+		return fmt.Errorf("invalid credit media ID %d", credit.ID)
+	}
+	switch credit.MediaType {
+	case string(models.SearchResultTypeMovie):
+		if err := upsertMovieSummary(ctx, q, models.Movie{
+			ID:           credit.ID,
+			Title:        credit.Title,
+			ReleaseDate:  credit.ReleaseDate,
+			PosterPath:   credit.PosterPath,
+			BackdropPath: credit.BackdropPath,
+			Popularity:   credit.Popularity,
+			VoteCount:    credit.VoteCount,
+			VoteAverage:  credit.VoteAverage,
+		}); err != nil {
+			return err
+		}
+		if err := q.InsertPersonMovieCredit(ctx, sqlc.InsertPersonMovieCreditParams{
+			PersonID:     personID,
+			MovieID:      credit.ID,
+			RoleKind:     kind,
+			Position:     position,
+			CreditID:     credit.CreditID,
+			Role:         credit.Role,
+			Department:   credit.Department,
+			EpisodeCount: int64(credit.EpisodeCount),
+		}); err != nil {
+			return fmt.Errorf("insert movie %d credit: %w", credit.ID, err)
+		}
+	case "tv":
+		if err := q.UpsertTVSummary(ctx, sqlc.UpsertTVSummaryParams{
+			ID:           credit.ID,
+			Title:        credit.Title,
+			ReleaseDate:  date.NewFromPtr(credit.ReleaseDate),
+			PosterPath:   credit.PosterPath,
+			BackdropPath: credit.BackdropPath,
+			Popularity:   float64(credit.Popularity),
+			VoteCount:    credit.VoteCount,
+			VoteAverage:  float64(credit.VoteAverage),
+		}); err != nil {
+			return fmt.Errorf("upsert TV summary %d: %w", credit.ID, err)
+		}
+		if err := q.InsertPersonTVCredit(ctx, sqlc.InsertPersonTVCreditParams{
+			PersonID:     personID,
+			TvID:         credit.ID,
+			RoleKind:     kind,
+			Position:     position,
+			CreditID:     credit.CreditID,
+			Role:         credit.Role,
+			Department:   credit.Department,
+			EpisodeCount: int64(credit.EpisodeCount),
+		}); err != nil {
+			return fmt.Errorf("insert TV %d credit: %w", credit.ID, err)
+		}
+	default:
+		return fmt.Errorf("unsupported credit media type %q", credit.MediaType)
+	}
+	return nil
+}
+
+func (d *SqliteDB) GetMovieRatings(ctx context.Context, id int64) (*models.MovieRatings, time.Time, error) {
+	movie, err := d.queries.GetMovieByID(ctx, id)
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("get movie %d ratings: %w", id, err)
+	}
+	ratings := &models.MovieRatings{}
+	if movie.ImdbRatingPresent {
+		ratings.IMDb = &models.IMDbRating{Score: movie.ImdbScore, URL: movie.ImdbRatingUrl}
+	}
+	if movie.RtRatingPresent {
+		ratings.RottenTomatoes = &models.RottenTomatoesRating{
+			CriticsScore:   movie.RtCriticsScore,
+			CriticsRating:  movie.RtCriticsRating,
+			AudienceScore:  movie.RtAudienceScore,
+			AudienceRating: movie.RtAudienceRating,
+			URL:            movie.RtRatingUrl,
+		}
+	}
+	var updatedAt time.Time
+	if movie.RatingsUpdatedAt != nil {
+		updatedAt = *movie.RatingsUpdatedAt
+	}
+	return ratings, updatedAt, nil
+}
+
+func (d *SqliteDB) UpsertMovieRatings(ctx context.Context, id int64, ratings *models.MovieRatings) error {
+	if ratings == nil {
+		return errors.New("movie ratings are required")
+	}
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin movie ratings refresh: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	q := d.queries.WithTx(tx)
+	if err := upsertMovieSummary(ctx, q, models.Movie{ID: id}); err != nil {
+		return err
+	}
+	params := sqlc.UpdateMovieRatingsParams{ID: id}
+	if ratings.IMDb != nil {
+		params.ImdbRatingPresent = true
+		params.ImdbScore = ratings.IMDb.Score
+		params.ImdbRatingUrl = ratings.IMDb.URL
+	}
+	if ratings.RottenTomatoes != nil {
+		params.RtRatingPresent = true
+		params.RtCriticsScore = ratings.RottenTomatoes.CriticsScore
+		params.RtCriticsRating = ratings.RottenTomatoes.CriticsRating
+		params.RtAudienceScore = ratings.RottenTomatoes.AudienceScore
+		params.RtAudienceRating = ratings.RottenTomatoes.AudienceRating
+		params.RtRatingUrl = ratings.RottenTomatoes.URL
+	}
+	if err := q.UpdateMovieRatings(ctx, params); err != nil {
+		return fmt.Errorf("update movie %d ratings: %w", id, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit movie %d ratings refresh: %w", id, err)
+	}
+	return nil
+}
+
+func (d *SqliteDB) GetRelatedMovies(ctx context.Context, id int64, kind string) ([]models.Movie, time.Time, error) {
+	if kind != MovieRelationshipRecommendations && kind != MovieRelationshipSimilar {
+		return nil, time.Time{}, fmt.Errorf("invalid movie relationship %q", kind)
+	}
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("begin related movies read: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	q := d.queries.WithTx(tx)
+	movie, err := q.GetMovieByID(ctx, id)
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("get movie %d relationship freshness: %w", id, err)
+	}
+	rows, err := q.GetRelatedMovies(ctx, sqlc.GetRelatedMoviesParams{MovieID: id, Kind: kind})
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("get movie %d %s: %w", id, kind, err)
+	}
+	movies := make([]models.Movie, len(rows))
+	for i, row := range rows {
+		movies[i] = toModelsMovieDetails(row.Movie).Movie
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, time.Time{}, fmt.Errorf("commit related movies read: %w", err)
+	}
+	updatedAt := movie.RecommendationsUpdatedAt
+	if kind == MovieRelationshipSimilar {
+		updatedAt = movie.SimilarUpdatedAt
+	}
+	if updatedAt == nil {
+		return movies, time.Time{}, nil
+	}
+	return movies, *updatedAt, nil
+}
+
+func (d *SqliteDB) UpsertRelatedMovies(ctx context.Context, id int64, kind string, movies []models.Movie) error {
+	if kind != MovieRelationshipRecommendations && kind != MovieRelationshipSimilar {
+		return fmt.Errorf("invalid movie relationship %q", kind)
+	}
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin related movies refresh: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	q := d.queries.WithTx(tx)
+	if err := upsertMovieSummary(ctx, q, models.Movie{ID: id}); err != nil {
+		return err
+	}
+	if err := q.DeleteMovieRelationships(ctx, sqlc.DeleteMovieRelationshipsParams{MovieID: id, Kind: kind}); err != nil {
+		return fmt.Errorf("delete movie %d %s: %w", id, kind, err)
+	}
+	for position, movie := range movies {
+		if err := upsertMovieSummary(ctx, q, movie); err != nil {
+			return err
+		}
+		if err := q.InsertMovieRelationship(ctx, sqlc.InsertMovieRelationshipParams{
+			MovieID:        id,
+			RelatedMovieID: movie.ID,
+			Kind:           kind,
+			Position:       int64(position),
+		}); err != nil {
+			return fmt.Errorf("insert movie %d %s relationship: %w", id, kind, err)
+		}
+	}
+	if err := q.UpdateMovieRelationshipsTimestamp(ctx, sqlc.UpdateMovieRelationshipsTimestampParams{MovieID: id, Kind: kind}); err != nil {
+		return fmt.Errorf("update movie %d %s freshness: %w", id, kind, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit movie %d %s refresh: %w", id, kind, err)
+	}
+	return nil
+}
+
 // UpsertMovie adds a new movie to the database
 func (d *SqliteDB) UpsertMovie(ctx context.Context, movie *models.MovieDetails) error {
 	log.Debug("inserting movie into database", "movieID", movie.Movie.ID, "title", movie.Movie.Title)
@@ -115,6 +439,16 @@ func (d *SqliteDB) UpsertMovie(ctx context.Context, movie *models.MovieDetails) 
 	}
 
 	log.Debug("inserted movie record, processing genres", "movieID", movie.Movie.ID, "genreCount", len(movie.Genres))
+
+	if err := qtx.DeleteMovieGenres(ctx, movie.Movie.ID); err != nil {
+		return fmt.Errorf("delete genres for movie %d: %w", movie.Movie.ID, err)
+	}
+	if err := qtx.DeleteMovieCast(ctx, movie.Movie.ID); err != nil {
+		return fmt.Errorf("delete cast for movie %d: %w", movie.Movie.ID, err)
+	}
+	if err := qtx.DeleteMovieCrew(ctx, movie.Movie.ID); err != nil {
+		return fmt.Errorf("delete crew for movie %d: %w", movie.Movie.ID, err)
+	}
 
 	for _, genre := range movie.Genres {
 		err := qtx.UpsertGenre(ctx, sqlc.UpsertGenreParams{

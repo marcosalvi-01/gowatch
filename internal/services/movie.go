@@ -153,7 +153,7 @@ func (s *MovieService) GetMovieDetails(ctx context.Context, id int64) (*models.M
 	s.log.Debug("getting movie details", "movieID", id)
 
 	movie, err := s.db.GetMovieDetailsByID(ctx, id)
-	if err == nil && time.Since(movie.Movie.UpdatedAt) <= s.cacheTTL {
+	if err == nil && !movie.Movie.UpdatedAt.IsZero() && time.Since(movie.Movie.UpdatedAt) <= s.cacheTTL {
 		s.log.Info("movie details cache hit", "movieID", id, "title", movie.Movie.Title)
 		return movie, nil
 	}
@@ -189,30 +189,82 @@ func (s *MovieService) GetMovieDetails(ctx context.Context, id int64) (*models.M
 }
 
 func (s *MovieService) GetMovieRecommendations(ctx context.Context, id int64) ([]models.SearchResult, error) {
-	results, err := s.seerr.movieRecommendations(ctx, id)
-	if err != nil {
-		return nil, fmt.Errorf("get Seerr movie recommendations for id %d: %w", id, err)
-	}
-	return mapSeerrMovieResults(results.Results), nil
+	return s.getRelatedMovies(ctx, id, db.MovieRelationshipRecommendations, s.seerr.movieRecommendations)
 }
 
 func (s *MovieService) GetSimilarMovies(ctx context.Context, id int64) ([]models.SearchResult, error) {
-	results, err := s.seerr.similarMovies(ctx, id)
-	if err != nil {
-		return nil, fmt.Errorf("get Seerr similar movies for id %d: %w", id, err)
-	}
-	return mapSeerrMovieResults(results.Results), nil
+	return s.getRelatedMovies(ctx, id, db.MovieRelationshipSimilar, s.seerr.similarMovies)
 }
 
-func mapSeerrMovieResults(results []seerrSearchResult) []models.SearchResult {
+func (s *MovieService) getRelatedMovies(ctx context.Context, id int64, kind string, fetch func(context.Context, int64) (*seerrMovieResultsResponse, error)) ([]models.SearchResult, error) {
+	if id <= 0 {
+		return nil, fmt.Errorf("invalid TMDB movie ID %d", id)
+	}
+	movies, updatedAt, err := s.db.GetRelatedMovies(ctx, id, kind)
+	if err == nil && !updatedAt.IsZero() && time.Since(updatedAt) <= s.cacheTTL {
+		return mapMoviesToSearchResults(movies), nil
+	}
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		s.log.Error("failed to read related movies, fetching from Seerr", "movieID", id, "kind", kind, "error", err)
+	}
+	results, err := fetch(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("get Seerr movie %s for id %d: %w", kind, id, err)
+	}
+	movies = make([]models.Movie, len(results.Results))
+	for i, result := range results.Results {
+		movies[i] = models.Movie{
+			ID:            result.ID,
+			Title:         result.Title,
+			OriginalTitle: result.OriginalTitle,
+			ReleaseDate:   parseMetadataDate(result.ReleaseDate),
+			PosterPath:    result.PosterPath,
+			BackdropPath:  result.BackdropPath,
+			Popularity:    result.Popularity,
+			VoteCount:     result.VoteCount,
+			VoteAverage:   result.VoteAverage,
+		}
+	}
+	if err := s.db.UpsertRelatedMovies(ctx, id, kind, movies); err != nil {
+		return nil, fmt.Errorf("save movie %d %s: %w", id, kind, err)
+	}
+	return mapMoviesToSearchResults(movies), nil
+}
+
+func (s *MovieService) GetMovieRatings(ctx context.Context, id int64) (*models.MovieRatings, error) {
+	if id <= 0 {
+		return nil, fmt.Errorf("invalid TMDB movie ID %d", id)
+	}
+	ratings, updatedAt, err := s.db.GetMovieRatings(ctx, id)
+	if err == nil && !updatedAt.IsZero() && time.Since(updatedAt) <= s.cacheTTL {
+		return ratings, nil
+	}
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		s.log.Error("failed to read movie ratings, fetching from Seerr", "movieID", id, "error", err)
+	}
+	ratings, err = s.seerr.MovieRatings(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("get Seerr movie ratings for id %d: %w", id, err)
+	}
+	if err := s.db.UpsertMovieRatings(ctx, id, ratings); err != nil {
+		return nil, fmt.Errorf("save movie %d ratings: %w", id, err)
+	}
+	return ratings, nil
+}
+
+func mapMoviesToSearchResults(results []models.Movie) []models.SearchResult {
 	movies := make([]models.SearchResult, len(results))
 	for i, result := range results {
+		var releaseDate string
+		if result.ReleaseDate != nil {
+			releaseDate = result.ReleaseDate.Format(metadataDateLayout)
+		}
 		movies[i] = mapSearchMovieToSearchResult(
 			result.ID,
 			result.Title,
 			result.OriginalTitle,
 			result.PosterPath,
-			result.ReleaseDate,
+			releaseDate,
 			result.VoteAverage,
 		)
 	}
@@ -323,12 +375,24 @@ func mapSeerrMovieMetadataToMovieDetails(details seerrMovieMetadata) (*models.Mo
 }
 
 func (s *MovieService) GetPersonDetails(ctx context.Context, id int64) (*models.PersonDetailsPage, error) {
+	if id <= 0 {
+		return nil, fmt.Errorf("invalid TMDB person ID %d", id)
+	}
 	if err := ctx.Err(); err != nil {
 		s.log.Error("request context canceled before person details fetch", "personID", id, "error", err)
 		return nil, fmt.Errorf("request context canceled before person details fetch: %w", err)
 	}
 
 	s.log.Debug("getting person details", "personID", id)
+
+	person, updatedAt, err := s.db.GetPersonDetails(ctx, id)
+	if err == nil && !updatedAt.IsZero() && time.Since(updatedAt) <= s.cacheTTL {
+		preparePersonFilmography(person)
+		return person, nil
+	}
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		s.log.Error("failed to read person details, fetching from Seerr", "personID", id, "error", err)
+	}
 
 	details, err := s.seerr.personMetadata(ctx, id)
 	if err != nil {
@@ -342,7 +406,10 @@ func (s *MovieService) GetPersonDetails(ctx context.Context, id int64) (*models.
 		return nil, fmt.Errorf("get Seerr person combined credits for id %d: %w", id, err)
 	}
 
-	person := mapSeerrPersonDetailsToPersonDetailsPage(*details, credits)
+	person = mapSeerrPersonDetailsToPersonDetailsPage(*details, credits)
+	if err := s.db.UpsertPersonDetails(ctx, person); err != nil {
+		return nil, fmt.Errorf("save person %d details: %w", id, err)
+	}
 
 	s.log.Info(
 		"person details fetched successfully",
@@ -423,15 +490,18 @@ func mapSeerrPersonDetailsToPersonDetailsPage(
 		))
 	}
 
+	preparePersonFilmography(person)
+	return person
+}
+
+func preparePersonFilmography(person *models.PersonDetailsPage) {
 	sortPersonCreditsByVoteAverageDesc(person.ActingCredits)
 	sortPersonCreditsByVoteAverageDesc(person.CrewCredits)
 
-	person.KnownFor = append([]models.PersonCredit{}, person.ActingCredits...)
+	person.KnownFor = person.ActingCredits
 	if len(person.KnownFor) == 0 {
-		person.KnownFor = append([]models.PersonCredit{}, person.CrewCredits...)
+		person.KnownFor = person.CrewCredits
 	}
-
-	return person
 }
 
 func mapPersonCastCreditToPersonCredit(

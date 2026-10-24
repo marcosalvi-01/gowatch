@@ -60,25 +60,37 @@ type ListMovie struct {
 }
 
 type Movie struct {
-	ID               int64
-	Title            string
-	OriginalTitle    string
-	OriginalLanguage string
-	Overview         string
-	ReleaseDate      date.Date
-	PosterPath       string
-	BackdropPath     string
-	Popularity       float64
-	VoteCount        int64
-	VoteAverage      float64
-	Budget           int64
-	Homepage         string
-	ImdbID           string
-	Revenue          int64
-	Runtime          int64
-	Status           string
-	Tagline          string
-	UpdatedAt        *time.Time
+	ID                       int64
+	Title                    string
+	OriginalTitle            string
+	OriginalLanguage         string
+	Overview                 string
+	ReleaseDate              date.Date
+	PosterPath               string
+	BackdropPath             string
+	Popularity               float64
+	VoteCount                int64
+	VoteAverage              float64
+	Budget                   int64
+	Homepage                 string
+	ImdbID                   string
+	Revenue                  int64
+	Runtime                  int64
+	Status                   string
+	Tagline                  string
+	UpdatedAt                *time.Time
+	ImdbRatingPresent        bool
+	ImdbScore                *float64
+	ImdbRatingUrl            string
+	RtRatingPresent          bool
+	RtCriticsScore           *float64
+	RtCriticsRating          string
+	RtAudienceScore          *float64
+	RtAudienceRating         string
+	RtRatingUrl              string
+	RatingsUpdatedAt         *time.Time
+	RecommendationsUpdatedAt *time.Time
+	SimilarUpdatedAt         *time.Time
 }
 
 type MovieProductionCompany struct {
@@ -102,12 +114,48 @@ type MovieRelatedVideo struct {
 	Site     string
 }
 
+type MovieRelationship struct {
+	MovieID        int64
+	RelatedMovieID int64
+	Kind           string
+	Position       int64
+}
+
 type Person struct {
-	ID          int64
-	Name        string
-	ProfilePath string
-	Gender      int64
-	UpdatedAt   *time.Time
+	ID               int64
+	Name             string
+	ProfilePath      string
+	Gender           int64
+	UpdatedAt        *time.Time
+	Biography        string
+	Birthday         date.Date
+	Deathday         date.Date
+	PlaceOfBirth     string
+	ImdbID           string
+	Homepage         string
+	DetailsUpdatedAt *time.Time
+}
+
+type PersonMovieCredit struct {
+	PersonID     int64
+	MovieID      int64
+	RoleKind     string
+	Position     int64
+	CreditID     string
+	Role         string
+	Department   string
+	EpisodeCount int64
+}
+
+type PersonTvCredit struct {
+	PersonID     int64
+	TvID         int64
+	RoleKind     string
+	Position     int64
+	CreditID     string
+	Role         string
+	Department   string
+	EpisodeCount int64
 }
 
 type ProductionCompany struct {
@@ -127,6 +175,17 @@ type Session struct {
 	UserID    int64
 	ExpiresAt time.Time
 	CreatedAt *time.Time
+}
+
+type Tv struct {
+	ID           int64
+	Title        string
+	ReleaseDate  date.Date
+	PosterPath   string
+	BackdropPath string
+	Popularity   float64
+	VoteCount    int64
+	VoteAverage  float64
 }
 
 type User struct {

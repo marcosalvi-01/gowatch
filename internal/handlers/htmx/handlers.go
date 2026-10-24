@@ -126,7 +126,7 @@ func (h *Handlers) RenderMovieRatings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ratings, err := h.seerrService.MovieRatings(r.Context(), movieID)
+	ratings, err := h.movieService.GetMovieRatings(r.Context(), movieID)
 	failed := err != nil
 	if failed {
 		log.Warn("failed to load external movie ratings", "movieID", movieID, "error", err)

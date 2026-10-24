@@ -24,7 +24,7 @@ func TestRemoveUnusedPersonColumns(t *testing.T) {
 				insertMigrationTestData(t, db)
 			}
 
-			if _, err := provider.Up(t.Context()); err != nil {
+			if _, err := provider.UpTo(t.Context(), 10); err != nil {
 				t.Fatalf("apply person column migration: %v", err)
 			}
 

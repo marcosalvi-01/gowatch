@@ -1,4 +1,118 @@
 -- Movie catalog and metadata.
+-- name: UpsertMovieSummary :exec
+INSERT INTO
+    movie (
+        id,
+        title,
+        original_title,
+        original_language,
+        overview,
+        release_date,
+        poster_path,
+        backdrop_path,
+        popularity,
+        vote_count,
+        vote_average,
+        budget,
+        homepage,
+        imdb_id,
+        revenue,
+        runtime,
+        STATUS,
+        tagline
+    )
+VALUES
+    (
+        ?,
+        ?,
+        ?,
+        '',
+        '',
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        0,
+        '',
+        '',
+        0,
+        0,
+        '',
+        ''
+    ) ON CONFLICT(id) DO
+UPDATE
+SET
+    title = excluded.title,
+    original_title = excluded.original_title,
+    release_date = excluded.release_date,
+    poster_path = excluded.poster_path,
+    backdrop_path = excluded.backdrop_path,
+    popularity = excluded.popularity,
+    vote_count = excluded.vote_count,
+    vote_average = excluded.vote_average
+WHERE
+    movie.updated_at IS NULL
+    AND excluded.title <> '';
+
+-- name: UpdateMovieRatings :exec
+UPDATE
+    movie
+SET
+    imdb_rating_present = ?,
+    imdb_score = ?,
+    imdb_rating_url = ?,
+    rt_rating_present = ?,
+    rt_critics_score = ?,
+    rt_critics_rating = ?,
+    rt_audience_score = ?,
+    rt_audience_rating = ?,
+    rt_rating_url = ?,
+    ratings_updated_at = CURRENT_TIMESTAMP
+WHERE
+    id = ?;
+
+-- name: GetRelatedMovies :many
+SELECT
+    sqlc.embed(movie)
+FROM
+    movie_relationship
+    JOIN movie ON movie.id = movie_relationship.related_movie_id
+WHERE
+    movie_relationship.movie_id = ?
+    AND movie_relationship.kind = ?
+ORDER BY
+    movie_relationship.position;
+
+-- name: DeleteMovieRelationships :exec
+DELETE FROM
+    movie_relationship
+WHERE
+    movie_id = ?
+    AND kind = ?;
+
+-- name: InsertMovieRelationship :exec
+INSERT INTO
+    movie_relationship (movie_id, related_movie_id, kind, position)
+VALUES
+    (?, ?, ?, ?);
+
+-- name: UpdateMovieRelationshipsTimestamp :exec
+UPDATE
+    movie
+SET
+    recommendations_updated_at = CASE
+        WHEN sqlc.arg(kind) = 'recommendations' THEN CURRENT_TIMESTAMP
+        ELSE recommendations_updated_at
+    END,
+    similar_updated_at = CASE
+        WHEN sqlc.arg(kind) = 'similar' THEN CURRENT_TIMESTAMP
+        ELSE similar_updated_at
+    END
+WHERE
+    id = sqlc.arg(movie_id);
+
 -- name: UpsertMovie :exec
 INSERT INTO
     movie (
@@ -83,6 +197,12 @@ VALUES
 UPDATE
 SET
     updated_at = CURRENT_TIMESTAMP;
+
+-- name: DeleteMovieGenres :exec
+DELETE FROM
+    genre_movie
+WHERE
+    movie_id = ?;
 
 -- name: UpsertProductionCompany :exec
 INSERT INTO
@@ -237,6 +357,177 @@ WHERE
     watched.user_id = ?;
 
 -- People and credits metadata.
+-- name: UpsertPersonDetails :exec
+INSERT INTO
+    person (
+        id,
+        name,
+        profile_path,
+        gender,
+        biography,
+        birthday,
+        deathday,
+        place_of_birth,
+        imdb_id,
+        homepage,
+        updated_at,
+        details_updated_at
+    )
+VALUES
+    (
+        ?,
+        ?,
+        ?,
+        0,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        CURRENT_TIMESTAMP,
+        CURRENT_TIMESTAMP
+    ) ON CONFLICT(id) DO
+UPDATE
+SET
+    name = excluded.name,
+    profile_path = excluded.profile_path,
+    biography = excluded.biography,
+    birthday = excluded.birthday,
+    deathday = excluded.deathday,
+    place_of_birth = excluded.place_of_birth,
+    imdb_id = excluded.imdb_id,
+    homepage = excluded.homepage,
+    updated_at = CURRENT_TIMESTAMP,
+    details_updated_at = CURRENT_TIMESTAMP;
+
+-- name: UpsertTVSummary :exec
+INSERT INTO
+    tv (
+        id,
+        title,
+        release_date,
+        poster_path,
+        backdrop_path,
+        popularity,
+        vote_count,
+        vote_average
+    )
+VALUES
+    (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO
+UPDATE
+SET
+    title = excluded.title,
+    release_date = excluded.release_date,
+    poster_path = excluded.poster_path,
+    backdrop_path = excluded.backdrop_path,
+    popularity = excluded.popularity,
+    vote_count = excluded.vote_count,
+    vote_average = excluded.vote_average;
+
+-- name: DeletePersonMovieCredits :exec
+DELETE FROM
+    person_movie_credit
+WHERE
+    person_id = ?;
+
+-- name: DeletePersonTVCredits :exec
+DELETE FROM
+    person_tv_credit
+WHERE
+    person_id = ?;
+
+-- name: InsertPersonMovieCredit :exec
+INSERT INTO
+    person_movie_credit (
+        person_id,
+        movie_id,
+        role_kind,
+        position,
+        credit_id,
+        role,
+        department,
+        episode_count
+    )
+VALUES
+    (?, ?, ?, ?, ?, ?, ?, ?);
+
+-- name: InsertPersonTVCredit :exec
+INSERT INTO
+    person_tv_credit (
+        person_id,
+        tv_id,
+        role_kind,
+        position,
+        credit_id,
+        role,
+        department,
+        episode_count
+    )
+VALUES
+    (?, ?, ?, ?, ?, ?, ?, ?);
+
+-- name: GetPersonCredits :many
+SELECT
+    movie.id,
+    'movie' AS media_type,
+    movie.title,
+    movie.release_date,
+    movie.poster_path,
+    movie.backdrop_path,
+    movie.popularity,
+    movie.vote_count,
+    movie.vote_average,
+    person_movie_credit.role_kind,
+    person_movie_credit.position,
+    person_movie_credit.credit_id,
+    person_movie_credit.role,
+    person_movie_credit.department,
+    person_movie_credit.episode_count
+FROM
+    person_movie_credit
+    JOIN movie ON movie.id = person_movie_credit.movie_id
+WHERE
+    person_movie_credit.person_id = ?1
+UNION
+ALL
+SELECT
+    tv.id,
+    'tv' AS media_type,
+    tv.title,
+    tv.release_date,
+    tv.poster_path,
+    tv.backdrop_path,
+    tv.popularity,
+    tv.vote_count,
+    tv.vote_average,
+    person_tv_credit.role_kind,
+    person_tv_credit.position,
+    person_tv_credit.credit_id,
+    person_tv_credit.role,
+    person_tv_credit.department,
+    person_tv_credit.episode_count
+FROM
+    person_tv_credit
+    JOIN tv ON tv.id = person_tv_credit.tv_id
+WHERE
+    person_tv_credit.person_id = ?1
+ORDER BY
+    role_kind,
+    position;
+
+-- name: DeleteMovieCast :exec
+DELETE FROM
+    cast
+WHERE
+    movie_id = ?;
+
+-- name: DeleteMovieCrew :exec
+DELETE FROM
+    crew
+WHERE
+    movie_id = ?;
+
 -- name: UpsertPerson :exec
 INSERT INTO
     person (

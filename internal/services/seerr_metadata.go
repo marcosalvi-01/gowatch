@@ -30,8 +30,11 @@ type seerrSearchResult struct {
 	OriginalTitle string  `json:"originalTitle"`
 	Name          string  `json:"name"`
 	PosterPath    string  `json:"posterPath"`
+	BackdropPath  string  `json:"backdropPath"`
 	ProfilePath   string  `json:"profilePath"`
 	ReleaseDate   string  `json:"releaseDate"`
+	Popularity    float32 `json:"popularity"`
+	VoteCount     int64   `json:"voteCount"`
 	VoteAverage   float32 `json:"voteAverage"`
 }
 

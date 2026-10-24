@@ -14,6 +14,12 @@ type DB interface {
 	// Movie catalog and metadata.
 	GetMovieDetailsByID(ctx context.Context, movieID int64) (*models.MovieDetails, error)
 	UpsertMovie(ctx context.Context, movie *models.MovieDetails) error
+	GetPersonDetails(ctx context.Context, personID int64) (*models.PersonDetailsPage, time.Time, error)
+	UpsertPersonDetails(ctx context.Context, person *models.PersonDetailsPage) error
+	GetMovieRatings(ctx context.Context, movieID int64) (*models.MovieRatings, time.Time, error)
+	UpsertMovieRatings(ctx context.Context, movieID int64, ratings *models.MovieRatings) error
+	GetRelatedMovies(ctx context.Context, movieID int64, kind string) ([]models.Movie, time.Time, error)
+	UpsertRelatedMovies(ctx context.Context, movieID int64, kind string, movies []models.Movie) error
 
 	// Watched history and activity.
 	InsertWatched(ctx context.Context, watched InsertWatched) error
@@ -97,6 +103,11 @@ type DB interface {
 	UpdateUserPassword(ctx context.Context, userID int64, passwordHash string) error
 	UpdatePasswordResetRequired(ctx context.Context, userID int64, reset bool) error
 }
+
+const (
+	MovieRelationshipRecommendations = "recommendations"
+	MovieRelationshipSimilar         = "similar"
+)
 
 type InsertList struct {
 	UserID      int64

@@ -2,12 +2,18 @@
 package db
 
 import (
+	"time"
+
 	"github.com/marcosalvi-01/gowatch/db/sqlc"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
 // toModelsMovie converts sqlc.Movie to models.Movie
 func toModelsMovieDetails(movie sqlc.Movie) models.MovieDetails {
+	var updatedAt time.Time
+	if movie.UpdatedAt != nil {
+		updatedAt = *movie.UpdatedAt
+	}
 	return models.MovieDetails{
 		Movie: models.Movie{
 			ID:               movie.ID,
@@ -21,7 +27,7 @@ func toModelsMovieDetails(movie sqlc.Movie) models.MovieDetails {
 			Popularity:       float32(movie.Popularity),
 			VoteCount:        movie.VoteCount,
 			VoteAverage:      float32(movie.VoteAverage),
-			UpdatedAt:        *movie.UpdatedAt,
+			UpdatedAt:        updatedAt,
 		},
 		Budget:   movie.Budget,
 		Homepage: movie.Homepage,
