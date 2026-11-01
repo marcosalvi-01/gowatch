@@ -4,9 +4,9 @@ package statscollectioncard
 import (
 	"fmt"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/infohint"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
-	"github.com/marcosalvi-01/gowatch/internal/ui/utils"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/badge"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/card"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcnutils"
 )
 
 type Props struct {
@@ -21,7 +21,7 @@ type Props struct {
 
 templ StatsCollectionCard(props Props) {
 	@card.Card(card.Props{
-		Class: utils.TwMerge("h-full bg-card/40", props.CardClass),
+		Class: utils.CN("h-full bg-card/40 py-0 gap-0", props.CardClass),
 	}) {
 		@card.Header(card.HeaderProps{Class: "flex flex-row items-start justify-between space-y-0 gap-2 p-4 pb-0"}) {
 			@card.Title(card.TitleProps{Class: "text-sm font-semibold"}) {
@@ -43,7 +43,7 @@ templ StatsCollectionCard(props Props) {
 				</div>
 			}
 			if props.Count > 0 {
-				<div class={ collectionScrollClass(props.ScrollClass) }>
+				<div class={ collectionScrollClass(props.ScrollClass) } role="region" aria-label={ props.Title } tabindex="0">
 					{ children... }
 				</div>
 			} else {
@@ -62,5 +62,5 @@ func collectionEmptyText(text string) string {
 }
 
 func collectionScrollClass(scrollClass string) string {
-	return utils.TwMerge("space-y-2 max-h-72 overflow-y-auto pr-1", scrollClass)
+	return utils.CN("space-y-2 max-h-72 overflow-y-auto no-scrollbar pr-1", scrollClass)
 }

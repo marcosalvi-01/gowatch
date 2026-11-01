@@ -11,8 +11,8 @@ formatters:
     - goimports
   exclusions:
     paths:
-      - "internal/ui/templui/.*"
-      - "internal/ui/utils/templui\\.go$"
+      - "internal/ui/shadcn/.*"
+      - "internal/ui/shadcnutils/.*"
 
 linters:
   default: standard
@@ -64,8 +64,8 @@ linters:
     paths:
       - "db/sqlc/.*"
       - "internal/ui/.*_templ\\.go$"
-      - "internal/ui/templui/.*"
-      - "internal/ui/utils/templui\\.go$"
+      - "internal/ui/shadcn/.*"
+      - "internal/ui/shadcnutils/.*"
 
 issues:
   max-issues-per-linter: 0

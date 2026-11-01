@@ -1,0 +1,146 @@
+package pages
+
+import (
+	"fmt"
+
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/chart"
+)
+
+type statsChartData struct {
+	Labels   []string
+	Datasets []statsChartSeries
+}
+
+type statsChartSeries struct {
+	Label           string
+	Data            []float64
+	BackgroundColor []string
+}
+
+type statsChartProps struct {
+	Variant                                                                        string
+	Data                                                                           statsChartData
+	Class                                                                          string
+	ShowAxes, ShowYGrid, Stacked bool
+	Domain []any
+}
+
+templ statsChart(p statsChartProps) {
+	{{ rows, config := statsChartRows(p.Data, p.Variant != "bar") }}
+	if p.Variant == "bar" {
+		@chart.Container(chart.ContainerProps{Class: "w-full aspect-auto " + p.Class, Config: config}) {
+			@chart.BarChart(chart.BarChartProps{Data: rows, AccessibilityLayer: true}) {
+				if p.ShowYGrid {
+					@chart.CartesianGrid(chart.CartesianGridProps{Vertical: chart.Bool(false)})
+				}
+				@chart.XAxis(chart.XAxisProps{DataKey: "label", AxisLine: p.ShowAxes})
+				@chart.YAxis(chart.YAxisProps{Hide: !p.ShowAxes, AxisLine: p.ShowAxes, Width: statsYAxisWidth(p.Data, p.Stacked), Domain: p.Domain})
+				@chart.Tooltip()
+				if p.Stacked {
+					@chart.Legend()
+				}
+				for i := range p.Data.Datasets {
+					@chart.Bar(chart.BarProps{DataKey: fmt.Sprintf("series%d", i), StackID: statsStackID(p.Stacked)})
+				}
+			}
+		}
+	} else {
+		<div class={ "flex items-center gap-3 " + p.Class }>
+			@chart.Container(chart.ContainerProps{Class: "h-full min-w-0 flex-1 aspect-auto", Config: config}) {
+				@chart.PieChart() {
+					@chart.Tooltip(chart.TooltipProps{Cursor: chart.Bool(false), Content: chart.TooltipContentProps{HideLabel: true, NameKey: "key"}})
+					{{ radius := 0.0
+					if p.Variant == "doughnut" { radius = 20 } }}
+					@chart.Pie(chart.PieProps{Data: rows, DataKey: "value", NameKey: "key", InnerRadius: radius})
+				}
+			}
+			if len(config) > 0 {
+				<div class="max-h-full w-2/5 shrink-0 space-y-1 overflow-y-auto text-xs" role="list" aria-label="Chart legend" tabindex="0">
+					for _, series := range config {
+						<div class="flex items-center gap-2" role="listitem">
+							<span class="size-2 shrink-0 rounded-sm" style={ "background-color:" + series.Color }></span>
+							<span>{ series.Label }</span>
+						</div>
+					}
+				</div>
+			}
+		</div>
+	}
+}
+
+func statsYAxisWidth(data statsChartData, stacked bool) float64 {
+	// ponytail: approximate tick widths; measure rendered labels if unusually large values need more space.
+	var largest float64
+	for i := range data.Labels {
+		var total float64
+		for _, series := range data.Datasets {
+			if i < len(series.Data) {
+				if stacked {
+					total += series.Data[i]
+				} else {
+					total = max(total, series.Data[i])
+				}
+			}
+		}
+		largest = max(largest, total)
+	}
+	switch {
+	case largest < 10:
+		return 28
+	case largest < 100:
+		return 32
+	case largest < 1000:
+		return 36
+	default:
+		return 60
+	}
+}
+
+func statsStackID(stacked bool) string {
+	if stacked {
+		return "watches"
+	}
+	return ""
+}
+
+func statsChartRows(data statsChartData, pie bool) ([]chart.Datum, chart.Config) {
+	rows := make([]chart.Datum, len(data.Labels))
+	config := make(chart.Config, 0, len(data.Datasets))
+	if pie {
+		if len(data.Datasets) == 0 {
+			return nil, nil
+		}
+		series := data.Datasets[0]
+		for i, label := range data.Labels {
+			key := fmt.Sprintf("slice%d", i)
+			value := 0.0
+			if i < len(series.Data) {
+				value = series.Data[i]
+			}
+			color := statsChartColor(series.BackgroundColor, i)
+			rows[i] = chart.Datum{"key": key, "value": value, "fill": color}
+			config = append(config, chart.Series{Key: key, Label: label, Color: color})
+		}
+		return rows, config
+	}
+	for i, label := range data.Labels {
+		rows[i] = chart.Datum{"label": label}
+	}
+	for i, series := range data.Datasets {
+		key := fmt.Sprintf("series%d", i)
+		config = append(config, chart.Series{Key: key, Label: series.Label, Color: statsChartColor(series.BackgroundColor, 0)})
+		for j := range rows {
+			if j < len(series.Data) {
+				rows[j][key] = series.Data[j]
+			}
+		}
+	}
+	return rows, config
+}
+
+func statsChartColor(colors []string, i int) string {
+	if len(colors) > 0 {
+		return colors[i%len(colors)]
+	}
+	return "var(--chart-1)"
+}

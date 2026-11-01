@@ -3,33 +3,31 @@ package htmx
 import (
 	"net/http"
 
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/toast"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/toast"
 )
 
-const toastID = "toast"
-
 func RenderErrorToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
-	renderToast(w, r, title, description, toast.VariantError, duration)
+	renderToast(w, r, title, description, toast.TypeError, duration)
 }
 
 func RenderSuccessToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
-	renderToast(w, r, title, description, toast.VariantSuccess, duration)
+	renderToast(w, r, title, description, toast.TypeSuccess, duration)
 }
 
 func RenderWarningToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
-	renderToast(w, r, title, description, toast.VariantWarning, duration)
+	renderToast(w, r, title, description, toast.TypeWarning, duration)
 }
 
 func RenderInfoToast(w http.ResponseWriter, r *http.Request, title, description string, duration int) {
-	renderToast(w, r, title, description, toast.VariantInfo, duration)
+	renderToast(w, r, title, description, toast.TypeInfo, duration)
 }
 
-func renderToast(w http.ResponseWriter, r *http.Request, title, description string, variant toast.Variant, duration int) {
+func renderToast(w http.ResponseWriter, r *http.Request, title, description string, variant toast.Type, duration int) {
 	if duration == 0 {
 		switch variant {
-		case toast.VariantError:
+		case toast.TypeError:
 			duration = 4000
-		case toast.VariantSuccess:
+		case toast.TypeSuccess:
 			duration = 2000
 		default:
 			duration = 3000
@@ -37,14 +35,10 @@ func renderToast(w http.ResponseWriter, r *http.Request, title, description stri
 	}
 
 	if err := toast.Toast(toast.Props{
-		ID:            toastID,
-		Title:         title,
-		Description:   description,
-		Variant:       variant,
-		Position:      toast.PositionBottomCenter,
-		Duration:      duration,
-		ShowIndicator: true,
-		Icon:          true,
+		Title:       title,
+		Description: description,
+		Type:        variant,
+		Timeout:     duration,
 	}).Render(r.Context(), w); err != nil {
 		log.Error("failed to render toast", "variant", variant, "error", err)
 		http.Error(w, "Failed to render "+string(variant)+" notification", http.StatusInternalServerError)

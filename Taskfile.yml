@@ -1,0 +1,122 @@
+version: "3"
+
+dotenv: [".env"]
+
+vars:
+  TAILWIND_VERSION: '{{.TAILWIND_VERSION | default "v4.1.12"}}'
+  TAILWIND_BIN: ./tmp/bin/tailwindcss
+  VERSION:
+    sh: git describe --tags --abbrev=0 2>/dev/null || echo dev
+
+tasks:
+  dev:
+    desc: Start development server and asset watchers
+    cmds:
+      - task: gen
+      - task --parallel tailwind scripts-watch templ
+
+  templ:
+    env:
+      SHADCN_TEMPL_DEV: "true"
+    cmds:
+      - >-
+        go tool templ generate --watch --proxy="http://localhost:${PORT:-8080}"
+        --open-browser=false
+        --watch-pattern='\.(go|templ|sql|css|js)$'
+        --ignore-pattern='(_templ\.go$|_test\.go$|/db/sqlc/|/node_modules/|/tmp/)'
+        --cmd='sqlc generate && CGO_ENABLED=0 go run . start'
+
+  tailwind:
+    cmds:
+      - '{{.TAILWIND_BIN}} -i ./internal/handlers/static/static/css/input.css -o ./internal/handlers/static/static/css/output.css --minify --watch'
+
+  scripts-watch:
+    cmds:
+      - go tool shadcn-templ bundle --watch
+
+  assets:
+    desc: Generate CSS and JavaScript bundle
+    cmds:
+      - task: tailwind-install
+      - '{{.TAILWIND_BIN}} -i ./internal/handlers/static/static/css/input.css -o ./internal/handlers/static/static/css/output.css --minify'
+      - go tool shadcn-templ bundle
+
+  gen:
+    desc: Generate assets, SQL, and templates
+    cmds:
+      - task: assets
+      - sqlc generate
+      - go tool templ generate
+
+  build:
+    desc: Build application with production assets
+    cmds:
+      - task: gen
+      - 'CGO_ENABLED=0 go build -ldflags="-X gowatch/cmd.Version={{.VERSION}}" -o ./tmp/gowatch .'
+
+  setup:
+    desc: Install development dependencies
+    cmds:
+      - go mod download
+      - go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+      - go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+      - task: tailwind-install
+
+  tailwind-install:
+    desc: Install standalone Tailwind CSS
+    status:
+      - test -x {{.TAILWIND_BIN}}
+    cmds:
+      - mkdir -p ./tmp/bin
+      - |
+        os=$(uname -s); arch=$(uname -m)
+        case "$os/$arch" in
+          Linux/x86_64) asset="tailwindcss-linux-x64" ;;
+          Linux/aarch64|Linux/arm64) asset="tailwindcss-linux-arm64" ;;
+          Darwin/x86_64) asset="tailwindcss-macos-x64" ;;
+          Darwin/arm64) asset="tailwindcss-macos-arm64" ;;
+          *) echo "Unsupported platform: $os/$arch"; exit 1 ;;
+        esac
+        curl -fsSL "https://github.com/tailwindlabs/tailwindcss/releases/download/{{.TAILWIND_VERSION}}/$asset" -o "{{.TAILWIND_BIN}}"
+        chmod +x "{{.TAILWIND_BIN}}"
+
+  fmt:
+    desc: Format Go code
+    cmds:
+      - golangci-lint fmt -E gofumpt -E goimports ./...
+
+  fmt-check:
+    desc: Check Go formatting
+    cmds:
+      - golangci-lint fmt --diff -E gofumpt -E goimports ./...
+
+  vet:
+    desc: Run Go and SQL checks
+    cmds:
+      - go vet ./...
+      - sqlc vet
+
+  lint:
+    desc: Run linters
+    cmds:
+      - golangci-lint run ./...
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test ./...
+
+  check:
+    desc: Generate assets and run all checks
+    cmds:
+      - task: assets
+      - task: fmt-check
+      - task: vet
+      - task: lint
+      - task: test
+
+  clean:
+    desc: Remove generated SQL and build artifacts
+    cmds:
+      - rm -rf db/sqlc
+      - rm -f ./tmp/*

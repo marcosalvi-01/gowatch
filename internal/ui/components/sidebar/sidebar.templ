@@ -4,18 +4,19 @@ package sidebar
 import (
 	"fmt"
 	"github.com/marcosalvi-01/gowatch/internal/models"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/avatar"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/collapsible"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dropdown"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/form"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/input"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/sidebar"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/textarea"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/avatar"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/badge"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/collapsible"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/dialog"
+	dropdown "github.com/marcosalvi-01/gowatch/internal/ui/shadcn/dropdownmenu"
+	form "github.com/marcosalvi-01/gowatch/internal/ui/shadcn/field"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/input"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/sidebar"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/skeleton"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/textarea"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcnutils"
 )
 
 type Props struct {
@@ -35,13 +36,14 @@ templ Sidebar(props Props) {
 	@CreateListDialog()
 	@ImportDataDialog()
 	@sidebar.Sidebar(sidebar.Props{
-		ID:        "sidebar",
-		Collapsed: props.Collapsed,
+		ID:          "sidebar",
+		Collapsed:   &props.Collapsed,
+		Collapsible: sidebar.CollapsibleIcon,
 	}) {
 		@header()
 		@sidebar.Content() {
 			@sidebar.Group() {
-				@sidebar.Menu() {
+				@sidebar.Menu(sidebar.MenuProps{Class: "gap-1"}) {
 					@homeMenuItem(props.CurrentPage)
 					@watchedMenuItem(props.CurrentPage, props.WatchedCount)
 					@watchlistMenuItem(props.Watchlist, props.CurrentPage)
@@ -57,48 +59,43 @@ templ Sidebar(props Props) {
 		@sidebar.Footer() {
 			@sidebar.Menu() {
 				@sidebar.MenuItem() {
-					@dropdown.Dropdown() {
-						@dropdown.Trigger() {
-							@sidebar.MenuButton(sidebar.MenuButtonProps{
-								Size: sidebar.MenuButtonSizeLg,
-							}) {
-								@avatar.Avatar(avatar.Props{Class: "size-8 rounded-lg"}) {
-									@avatar.Image(avatar.ImageProps{
-										Src: "/static/favicon.svg",
-									})
-								}
-								<div class="grid flex-1 text-left text-sm leading-tight">
-									<span class="truncate text-sm font-bold">{ props.User.Name }</span>
-								</div>
-								@icon.ChevronsUpDown(icon.Props{Class: "ml-auto size-4"})
+					@dropdown.DropdownMenu() {
+						@sidebar.MenuButton(sidebar.MenuButtonProps{
+							Size:       sidebar.MenuButtonSizeLg,
+							Tooltip:    "Account",
+							Attributes: dropdown.Trigger(ctx),
+						}) {
+							@avatar.Avatar(avatar.Props{Class: "size-8 rounded-lg"}) {
+								@avatar.Image(avatar.ImageProps{
+									Src: "/static/favicon.svg",
+								})
 							}
+							<div class="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+								<span class="truncate text-sm font-bold">{ props.User.Name }</span>
+							</div>
+							@icon.ChevronsUpDown(icon.Props{Class: "ml-auto size-4 group-data-[collapsible=icon]:hidden"})
 						}
 						@dropdown.Content(dropdown.ContentProps{
-							Class:     "w-56",
-							Placement: dropdown.PlacementTopStart,
+							Class: "w-56",
+							Side:  dropdown.SideTop,
+							Align: dropdown.AlignStart,
 						}) {
 							@dropdown.Label() {
 								{ props.User.Email }
 							}
 							@dropdown.Separator()
-							@dialog.Trigger(dialog.TriggerProps{
-								For: "import-data-dialog",
-								Attributes: templ.Attributes{
-									"data-sidebar-import-btn": "true",
-								},
-							}) {
-								@dropdown.Item() {
-									<span class="flex items-center">
-										@icon.Import(icon.Props{Class: "mr-2 size-4"})
-										Import data
-									</span>
-								}
+							{{ importAttrs := dialog.TriggerFor("import-data-dialog") }}
+							{{ delete(importAttrs, "data-slot")
+delete(importAttrs, "tabindex") }}
+							@dropdown.Item(dropdown.ItemProps{Attributes: utils.MergeAttributes(importAttrs, templ.Attributes{"data-sidebar-import-btn": "true"})}) {
+								<span class="flex items-center">
+									@icon.Import(icon.Props{Class: "mr-2 size-4"})
+									Import data
+								</span>
 							}
-							@dropdown.Item() {
-								<a href="/api/v1/export" download="gowatch_data.json" class="flex items-center w-full">
-									@icon.Download(icon.Props{Class: "mr-2 size-4"})
-									Export data
-								</a>
+							@dropdown.Item(dropdown.ItemProps{Href: "/api/v1/export", Attributes: templ.Attributes{"download": "gowatch_data.json"}}) {
+								@icon.Download(icon.Props{Class: "mr-2 size-4"})
+								Export data
 							}
 							@dropdown.Separator()
 							@dropdown.Item(dropdown.ItemProps{
@@ -160,7 +157,7 @@ templ watchedMenuItem(currentPage string, watchedCount int64) {
 			if watchedCount > 0 {
 				@badge.Badge(badge.Props{
 					Variant: badge.VariantSecondary,
-					Class:   "ml-auto",
+					Class:   "ml-auto group-data-[collapsible=icon]:hidden",
 				}) {
 					{ fmt.Sprintf("%d", watchedCount) }
 				}
@@ -210,7 +207,7 @@ templ watchlistMenuItem(watchlist *models.List, currentPage string) {
 				if len(watchlist.Movies) > 0 {
 					@badge.Badge(badge.Props{
 						Variant: badge.VariantSecondary,
-						Class:   "ml-auto",
+						Class:   "ml-auto group-data-[collapsible=icon]:hidden",
 					}) {
 						{ fmt.Sprintf("%d", len(watchlist.Movies)) }
 					}
@@ -221,22 +218,16 @@ templ watchlistMenuItem(watchlist *models.List, currentPage string) {
 }
 
 templ listsSection(lists []models.ListEntry, currentPage string, listsOpen bool) {
-	{{ contentClass := "" }}
-	if listsOpen {
-		{{ contentClass = "tui-collapsible-open" }}
-	}
-
-	@sidebar.Group() {
+	@sidebar.Group(sidebar.GroupProps{Class: "group-data-[collapsible=icon]:p-0"}) {
 		@sidebar.Menu() {
 			@sidebar.MenuItem() {
 				@collapsible.Collapsible(collapsible.Props{
-					Open:  listsOpen,
-					Class: "group/collapsible w-full",
+					DefaultOpen: listsOpen,
+					Class:       "group/collapsible w-full",
+					Attributes:  templ.Attributes{"data-sidebar-lists-collapsible": "true"},
 				}) {
 					@listsCollapsibleTrigger()
-					@collapsible.Content(collapsible.ContentProps{
-						Class: contentClass,
-					}) {
+					@collapsible.Content() {
 						@sidebar.MenuSub() {
 							@listItems(lists, currentPage)
 							@createListTriggerButton()
@@ -249,17 +240,18 @@ templ listsSection(lists []models.ListEntry, currentPage string, listsOpen bool)
 }
 
 templ listsCollapsibleTrigger() {
-	@collapsible.Trigger() {
-		@sidebar.MenuButton(sidebar.MenuButtonProps{
-			Tooltip: "Lists",
-			Class:   "cursor-pointer",
-		}) {
-			@icon.List(icon.Props{Class: "size-4"})
-			<span>Lists</span>
-			@icon.ChevronRight(icon.Props{
-				Class: "ml-auto size-4 transition-transform group-data-[tui-collapsible-state=open]/collapsible:rotate-90",
-			})
-		}
+	{{ attrs := collapsible.Trigger(ctx) }}
+	{{ attrs["data-sidebar-lists-collapsible-trigger"] = "true" }}
+	@sidebar.MenuButton(sidebar.MenuButtonProps{
+		Tooltip:    "Lists",
+		Class:      "cursor-pointer",
+		Attributes: attrs,
+	}) {
+		@icon.List(icon.Props{Class: "size-4"})
+		<span>Lists</span>
+		@icon.ChevronRight(icon.Props{
+			Class: "ml-auto size-4 transition-transform group-data-open/collapsible:rotate-90 group-data-[collapsible=icon]:hidden",
+		})
 	}
 }
 
@@ -285,15 +277,12 @@ templ listItems(lists []models.ListEntry, currentPage string) {
 
 templ createListTriggerButton() {
 	@sidebar.MenuSubItem() {
-		@dialog.Trigger(dialog.TriggerProps{
-			For: "add-to-list-dialog",
+		@sidebar.MenuSubButton(sidebar.MenuSubButtonProps{
+			Class:      "cursor-pointer",
+			Attributes: dialog.TriggerFor("add-to-list-dialog"),
 		}) {
-			@sidebar.MenuSubButton(sidebar.MenuSubButtonProps{
-				Class: "cursor-pointer",
-			}) {
-				@icon.Plus(icon.Props{Class: "size-[18px]"})
-				Create New List
-			}
+			@icon.Plus(icon.Props{Class: "size-[18px]"})
+			Create New List
 		}
 	}
 }
@@ -303,14 +292,10 @@ templ CreateListDialog() {
 		ID: "add-to-list-dialog",
 	}) {
 		// Movie page keeps add-list dialog mounted so newly created list can be selected immediately.
-		<form
-			hx-post="/htmx/lists"
-			hx-target="#toast"
-			hx-on::after-request="this.reset(); if (event.detail.successful) { window.tui?.dialog?.open('add-movie-to-list-dialog') }"
-		>
-			@dialog.Content(dialog.ContentProps{
-				Class: "max-w-md",
-			}) {
+		@dialog.Content(dialog.ContentProps{
+			Class: "max-w-md",
+		}) {
+			<form hx-post="/htmx/lists" hx-target="#toast" hx-on::after-request="this.reset(); if (event.detail.successful) { window.templ?.dialog?.open(document.getElementById('add-movie-to-list-dialog')) }">
 				@dialog.Header() {
 					@dialog.Title() {
 						Create New List
@@ -321,15 +306,15 @@ templ CreateListDialog() {
 				}
 				@createListFormFields()
 				@createListDialogFooter()
-			}
-		</form>
+			</form>
+		}
 	}
 }
 
 templ createListFormFields() {
-	<div class="space-y-4">
+	<div class="mb-4 mt-2 space-y-4">
 		<div class="space-y-2">
-			@form.Item() {
+			@form.Field() {
 				@form.Label(form.LabelProps{
 					For: "add-list-name-input",
 				}) {
@@ -356,20 +341,18 @@ templ createListFormFields() {
 }
 
 templ createListDialogFooter() {
-	@dialog.Footer() {
-		@dialog.Close() {
-			@button.Button(button.Props{
-				Variant: button.VariantOutline,
-			}) {
-				Cancel
-			}
+	@dialog.Footer(dialog.FooterProps{Class: "p-2"}) {
+		@button.Button(button.Props{
+			Variant:    button.VariantOutline,
+			Attributes: dialog.Close(ctx),
+		}) {
+			Cancel
 		}
-		@dialog.Close() {
-			@button.Button(button.Props{
-				Type: button.TypeSubmit,
-			}) {
-				Create List
-			}
+		@button.Button(button.Props{
+			Type:       button.TypeSubmit,
+			Attributes: templ.Attributes{"data-templ-dialog-close": "add-to-list-dialog"},
+		}) {
+			Create List
 		}
 	}
 }
@@ -378,14 +361,10 @@ templ ImportDataDialog() {
 	@dialog.Dialog(dialog.Props{
 		ID: "import-data-dialog",
 	}) {
-		<form
-			hx-post="/htmx/import"
-			hx-target="#toast"
-			hx-encoding="multipart/form-data"
-		>
-			@dialog.Content(dialog.ContentProps{
-				Class: "max-w-md",
-			}) {
+		@dialog.Content(dialog.ContentProps{
+			Class: "max-w-md",
+		}) {
+			<form hx-post="/htmx/import" hx-target="#toast" hx-encoding="multipart/form-data">
 				@dialog.Header() {
 					@dialog.Title() {
 						Import data
@@ -396,14 +375,14 @@ templ ImportDataDialog() {
 				}
 				@importDataFormFields()
 				@importDataDialogFooter()
-			}
-		</form>
+			</form>
+		}
 	}
 }
 
 templ importDataFormFields() {
-	<div class="space-y-4">
-		@form.Item() {
+	<div class="mb-4 mt-2 space-y-4">
+		@form.Field() {
 			@form.Label(form.LabelProps{
 				For: "import-file-input",
 			}) {
@@ -411,9 +390,9 @@ templ importDataFormFields() {
 			}
 			@input.Input(input.Props{
 				ID:          "import-file-input",
-				Type:        input.TypeFile,
+				Type:        "file",
 				Name:        "import-file",
-				FileAccept:  ".json",
+				Accept:      ".json",
 				Placeholder: "test",
 			})
 		}
@@ -421,20 +400,18 @@ templ importDataFormFields() {
 }
 
 templ importDataDialogFooter() {
-	@dialog.Footer() {
-		@dialog.Close() {
-			@button.Button(button.Props{
-				Variant: button.VariantOutline,
-			}) {
-				Cancel
-			}
+	@dialog.Footer(dialog.FooterProps{Class: "p-2"}) {
+		@button.Button(button.Props{
+			Variant:    button.VariantOutline,
+			Attributes: dialog.Close(ctx),
+		}) {
+			Cancel
 		}
-		@dialog.Close() {
-			@button.Button(button.Props{
-				Type: button.TypeSubmit,
-			}) {
-				Import data
-			}
+		@button.Button(button.Props{
+			Type:       button.TypeSubmit,
+			Attributes: templ.Attributes{"data-templ-dialog-close": "import-data-dialog"},
+		}) {
+			Import data
 		}
 	}
 }
@@ -448,10 +425,10 @@ templ header() {
 			hx-target="#main-content"
 			hx-swap="innerHTML show:#main-scroll-container:top"
 			hx-push-url="true"
-			class="cursor-pointer flex items-center gap-8"
+			class="cursor-pointer flex items-center gap-8 group-data-[collapsible=icon]:gap-0"
 		>
-			<img src="/static/favicon.svg" alt="Gowatch" class="w-20 h-20"/>
-			Gowatch
+			<img src="/static/favicon.svg" alt="Gowatch" class="w-20 h-20 group-data-[collapsible=icon]:size-8"/>
+			<span class="group-data-[collapsible=icon]:hidden">Gowatch</span>
 		</div>
 	}
 }
@@ -459,7 +436,9 @@ templ header() {
 // SidebarLoading is just a sidebar without anything inside to show a loading state
 templ SidebarLoading(collapsed bool) {
 	@sidebar.Sidebar(sidebar.Props{
-		Collapsed: collapsed,
+		ID:          "sidebar",
+		Collapsed:   &collapsed,
+		Collapsible: sidebar.CollapsibleIcon,
 	}) {
 		@header()
 		@sidebar.Content() {

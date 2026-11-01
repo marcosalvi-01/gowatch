@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/infohint"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/tooltip"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/card"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/tooltip"
 	"time"
 )
 
 templ CalendarHeatmapCard(data []models.DailyWatchCount) {
 	@card.Card(card.Props{Class: "h-full"}) {
-		@card.Header(card.HeaderProps{Class: "flex-row items-start justify-between space-y-0 gap-3"}) {
+		@card.Header(card.HeaderProps{Class: "flex flex-row items-start justify-between space-y-0 gap-3"}) {
 			@card.Title() {
 				Calendar Heatmap
 			}
@@ -67,11 +67,9 @@ templ CalendarHeatmapCard(data []models.DailyWatchCount) {
 									{{ level := heatmapLevel(count, maxCount) }}
 									{{ tooltipID := fmt.Sprintf("calendar-heatmap-tooltip-%d-%d", dayIndex, week) }}
 									{{ tooltipLabel := fmt.Sprintf("%s - %d watches", currentDate.Format("2006-01-02"), count) }}
-									@tooltip.Tooltip() {
-										@tooltip.Trigger(tooltip.TriggerProps{Class: "inline-flex"}) {
-											<div class={ heatmapCellClass(level) }></div>
-										}
-										@tooltip.Content(tooltip.ContentProps{ID: tooltipID, Position: tooltip.PositionTop, Class: "text-xs"}) {
+									@tooltip.Tooltip(tooltip.Props{ID: tooltipID}) {
+										<div class={ heatmapCellClass(level) } { tooltip.Trigger(ctx)... }></div>
+										@tooltip.Content(tooltip.ContentProps{Side: tooltip.SideTop, Class: "text-xs"}) {
 											{ tooltipLabel }
 										}
 									}

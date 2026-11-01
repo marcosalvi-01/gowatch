@@ -4,24 +4,14 @@ package pages
 import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/moviecard"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/sidebar"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/avatar"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/calendar"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/chart"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/checkbox"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/collapsible"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/datepicker"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dropdown"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/input"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/popover"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/rating"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/selectbox"
-	templSidebar "github.com/marcosalvi-01/gowatch/internal/ui/templui/sidebar"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/textarea"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/toast"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/watcheddate"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/input"
+	templSidebar "github.com/marcosalvi-01/gowatch/internal/ui/shadcn/sidebar"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/skeleton"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/toast"
 )
 
 templ Layout() {
@@ -31,12 +21,15 @@ templ Layout() {
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>Gowatch</title>
+			<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap"/>
 			<link rel="stylesheet" href="/static/css/output.css"/>
+			@shadcn.Scripts()
 			@Scripts()
 			@Favicons()
 		</head>
 		<body class="bg-background">
-			@templSidebar.Layout(templSidebar.LayoutProps{
+			@toast.Toaster()
+			@templSidebar.Provider(templSidebar.ProviderProps{
 				Class: "w-full h-screen",
 			}) {
 				// by default show a loading version, when loading get the real sidebar content
@@ -47,11 +40,9 @@ templ Layout() {
 					<div id="toast"></div>
 					// Header
 					<div class="flex items-center gap-2 p-2 flex-shrink-0 sticky z-10 top-0 border-b-1 bg-background">
-						<div class="md:hidden">
-							@templSidebar.Trigger(templSidebar.TriggerProps{
-								Target: "sidebar",
-							})
-						</div>
+						@templSidebar.Trigger(templSidebar.TriggerProps{
+							Target: "sidebar",
+						})
 						@SearchBar("")
 						@ThemeSwitcher()
 					</div>
@@ -81,11 +72,14 @@ templ AuthLayout() {
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>Gowatch</title>
+			<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap"/>
 			<link rel="stylesheet" href="/static/css/output.css"/>
+			@shadcn.Scripts()
 			@Scripts()
 			@Favicons()
 		</head>
 		<body class="bg-background min-h-screen flex items-center justify-center">
+			@toast.Toaster()
 			<div class="w-full max-w-md p-4">
 				{ children... }
 			</div>
@@ -125,8 +119,8 @@ templ ThemeSwitcher() {
 		Variant: button.VariantGhost,
 		Size:    button.SizeIcon,
 		Attributes: templ.Attributes{
-			"onclick":    "toggleTheme()",
-			"aria-label": "Toggle theme",
+			"data-theme-toggle": "",
+			"aria-label":        "Toggle theme",
 		},
 	}) {
 		@icon.Moon(icon.Props{Class: "dark:hidden"})
@@ -136,80 +130,17 @@ templ ThemeSwitcher() {
 
 templ Scripts() {
 	<script src="/static/js/htmx.min.js"></script>
-	<script>
-	  document.addEventListener("DOMContentLoaded", () => {
-		const initTemplUI = (target) => {
-		  if (!window.templUI) {
-			return;
-		  }
-
-		  Object.values(window.templUI).forEach((comp) => {
-			comp.init?.(target);
-		  });
-		};
-
-		const forceChartRefresh = () => {
-		  const root = document.documentElement;
-		  if (!root) {
-			return;
-		  }
-
-		  // Toggle a temporary CSS variable so chart.min.js MutationObservers
-		  // detect a document style change and remount canvas charts.
-		  // The token avoids deleting a newer value if multiple refreshes overlap.
-		  const token = String(Date.now());
-		  root.style.setProperty("--tui-chart-refresh", token);
-
-		  requestAnimationFrame(() => {
-			if (root.style.getPropertyValue("--tui-chart-refresh") === token) {
-			  root.style.removeProperty("--tui-chart-refresh");
-			}
-		  });
-		};
-
-		// Re-initialize templUI components after HTMX swaps
-		document.body.addEventListener("htmx:afterSwap", (e) => {
-		  initTemplUI(e.detail?.elt ?? document);
-		});
-
-		// Re-initialize components after out-of-band swaps
-		document.body.addEventListener("htmx:oobAfterSwap", (e) => {
-		  initTemplUI(e.detail?.target ?? document);
-		});
-
-		// HTMX history restoration reuses cached DOM; force chart remount.
-		document.body.addEventListener("htmx:historyRestore", () => {
-		  initTemplUI(document);
-		  forceChartRefresh();
-		});
-	  });
-	</script>
 	@SidebarNavigationScript()
+	@watcheddate.Script()
 	@ThemeScript()
-	// for the sidebar
-	@templSidebar.Script()
-	@popover.Script()
-	@dropdown.Script()
-	@dialog.Script()
-	@avatar.Script()
-	@dialog.Script()
-	@datepicker.Script()
-	@calendar.Script()
-	@toast.Script()
-	@collapsible.Script()
-	@textarea.Script()
-	@chart.Script()
-	@selectbox.Script()
-	@input.Script()
-	@checkbox.Script()
-	@rating.Script()
+	<script defer src="/static/js/rating.js"></script>
 	@moviecard.Script()
 }
 
 templ SidebarNavigationScript() {
 	<script>
 	document.addEventListener("DOMContentLoaded", () => {
-	  const navSelector = "[data-tui-sidebar=menu-button][data-nav-url], [data-tui-sidebar=menu-sub-button][data-nav-url]";
+	  const navSelector = "[data-sidebar=menu-button][data-nav-url], [data-sidebar=menu-sub-button][data-nav-url]";
 	  const sidebarSelectedPathCookieName = "sidebar_selected_path";
 	  const sidebarListsOpenCookieName = "sidebar_lists_open";
 	  const sidebarCookieDurationSeconds = 60 * 60 * 24 * 7;
@@ -261,7 +192,7 @@ templ SidebarNavigationScript() {
 		  return;
 		}
 
-		const isOpen = listsCollapsible.getAttribute("data-tui-collapsible-state") === "open";
+		const isOpen = listsCollapsible.hasAttribute("data-open");
 		setSidebarListsOpen(isOpen);
 	  }
 
@@ -280,15 +211,26 @@ templ SidebarNavigationScript() {
 
 		allNavButtons.forEach(btn => {
 		  if (btn.getAttribute("data-nav-url") === path) {
-			btn.setAttribute("data-tui-sidebar-active", "true");
+			btn.setAttribute("data-active", "");
 		  } else {
-			btn.removeAttribute("data-tui-sidebar-active");
+			btn.removeAttribute("data-active");
 		  }
 		});
 	  }
 
 	  const initialPath = getPath(window.location.pathname);
 	  syncSidebarSelection(initialPath);
+
+	  document.addEventListener("click", e => {
+		const trigger = e.target.closest?.("[data-sidebar-lists-collapsible-trigger='true']");
+		const sidebar = window.templ?.sidebar;
+		if (!trigger || !sidebar || sidebar.isMobile() || sidebar.state("sidebar") !== "collapsed") return;
+		sidebar.setOpen(true, "sidebar");
+		if (trigger.closest("[data-sidebar-lists-collapsible]")?.hasAttribute("data-open")) {
+		  e.preventDefault();
+		  e.stopPropagation();
+		}
+	  }, true);
 
 	  document.body.addEventListener("click", e => {
 		const listsTrigger = e.target.closest("[data-sidebar-lists-collapsible-trigger='true']");
@@ -331,11 +273,11 @@ templ ThemeScript() {
 	<script>
 	(() => {
 	  const root = document.documentElement;
-	  const themeColorMeta = document.querySelector("meta[name='theme-color']");
 	  const lightThemeColor = "#ffffff";
 	  const darkThemeColor = "#09090b";
 
 	  const syncThemeColor = () => {
+		const themeColorMeta = document.querySelector("meta[name='theme-color']");
 		if (!themeColorMeta) {
 		  return;
 		}
@@ -349,12 +291,14 @@ templ ThemeScript() {
 	    root.classList.add("dark");
 	  }
 	  syncThemeColor();
+	  document.addEventListener("DOMContentLoaded", syncThemeColor);
 
-	  window.toggleTheme = () => {
+	  document.addEventListener("click", (event) => {
+	    if (!event.target.closest?.("[data-theme-toggle]")) return;
 	    const isDark = root.classList.toggle("dark");
 	    localStorage.setItem("theme", isDark ? "dark" : "light");
 	    syncThemeColor();
-	  };
+	  });
 	})();
 	</script>
 }
@@ -389,7 +333,7 @@ templ SearchBar(searchContent string) {
 	<div class="relative flex items-center flex-1">
 		@icon.Search(icon.Props{Class: "absolute left-3 size-5 text-muted-foreground"})
 		@input.Input(input.Props{
-			Type:        input.TypeSearch,
+			Type:        "search",
 			Placeholder: "Search movies or people...",
 			Class:       "pl-10",
 			Value:       searchContent,

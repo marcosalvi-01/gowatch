@@ -10,11 +10,11 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/listcard"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/moviecard"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/sidebar"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/card"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/dialog"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/skeleton"
 	"github.com/marcosalvi-01/gowatch/internal/utils"
 )
 
@@ -73,7 +73,7 @@ templ homeHeader(name string) {
 templ homeAtGlance(stats models.HomeStatsSummary) {
 	<div class="space-y-4">
 		@homeSectionHeader("At a Glance", icon.Sparkles)
-		@card.Card(card.Props{Class: "bg-card/40"}) {
+		@card.Card(card.Props{Class: "bg-card/40 py-0"}) {
 			@card.Content(card.ContentProps{Class: "p-4 sm:p-6"}) {
 				<div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
 					@statsMetricCard("Total Watched", fmt.Sprintf("%d", stats.TotalWatched), icon.Film)
@@ -104,7 +104,7 @@ templ homeActivitySection(heatmapData []models.DailyWatchCount, movies []models.
 }
 
 templ homeRecentActivityCard(movies []models.WatchedMovieInDay) {
-	@card.Card(card.Props{Class: "h-full bg-card/40"}) {
+	@card.Card(card.Props{Class: "h-full bg-card/40 py-0 gap-0"}) {
 		@card.Header(card.HeaderProps{Class: "flex-row flex-wrap items-center justify-between gap-3 space-y-0 p-4 pb-0"}) {
 			@card.Title(card.TitleProps{Class: "text-sm font-semibold"}) {
 				Recently Watched
@@ -167,7 +167,7 @@ templ homeWatchNextSection(movies []models.MovieItem, watchlistMovieCount int) {
 				@icon.ArrowRight(icon.Props{Class: "size-4"})
 			}
 		</div>
-		@card.Card(card.Props{Class: "h-full bg-card/40"}) {
+		@card.Card(card.Props{Class: "h-full bg-card/40 py-0 gap-0"}) {
 			@card.Header(card.HeaderProps{Class: "flex-row flex-wrap items-center justify-between gap-2 space-y-0 p-4 pb-0"}) {
 				<div class="flex items-center gap-2 text-sm text-muted-foreground">
 					<span>From your watchlist</span>
@@ -216,14 +216,12 @@ templ HomeLists(lists []models.ListEntry) {
 	<div class="space-y-4">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			@homeSectionHeader("Your Lists", icon.List)
-			@dialog.Trigger(dialog.TriggerProps{For: "add-to-list-dialog"}) {
-				@button.Button(button.Props{Variant: button.VariantOutline, Size: button.SizeSm}) {
+				@button.Button(button.Props{Variant: button.VariantOutline, Size: button.SizeSm, Attributes: dialog.TriggerFor("add-to-list-dialog")}) {
 					@icon.Plus(icon.Props{Class: "size-4"})
 					New List
 				}
-			}
 		</div>
-		@card.Card(card.Props{Class: "bg-card/40"}) {
+		@card.Card(card.Props{Class: "bg-card/40 py-0"}) {
 			@card.Content(card.ContentProps{Class: "p-4"}) {
 				if len(lists) == 0 {
 					<div class="rounded-lg bg-muted/50 p-6 text-center">

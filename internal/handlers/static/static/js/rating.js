@@ -42,12 +42,15 @@
   }
   
   function getCurrentValue(ratingElement) {
-    return parseFloat(ratingElement.getAttribute('data-tui-rating-current')) || 
-           parseFloat(ratingElement.getAttribute('data-tui-rating-initial-value')) || 0;
+    const current = ratingElement.getAttribute('data-tui-rating-current');
+    return current === null ? getConfig(ratingElement).value : Number(current);
   }
   
   function setCurrentValue(ratingElement, value) {
     ratingElement.setAttribute('data-tui-rating-current', value);
+    if (ratingElement.getAttribute('role') === 'slider') {
+      ratingElement.setAttribute('aria-valuenow', value);
+    }
     const hiddenInput = ratingElement.querySelector('[data-tui-rating-hidden-input]');
     if (hiddenInput) {
       hiddenInput.value = value.toFixed(2);
@@ -85,6 +88,33 @@
   }
   
   // Event handlers
+  document.addEventListener('keydown', (e) => {
+    const ratingElement = e.target.closest('[data-tui-rating-component][role="slider"]');
+    if (!ratingElement || getConfig(ratingElement).readonly) return;
+    const config = getConfig(ratingElement);
+    const maxValue = getMaxValue(ratingElement);
+    const currentValue = getCurrentValue(ratingElement);
+    const step = config.onlyInteger ? 1 : config.precision;
+    let value;
+    switch (e.key) {
+      case 'ArrowRight':
+      case 'ArrowUp': value = currentValue + step; break;
+      case 'ArrowLeft':
+      case 'ArrowDown': value = currentValue - step; break;
+      case 'Home': value = 0; break;
+      case 'End': value = maxValue; break;
+      default: return;
+    }
+    e.preventDefault();
+    value = Math.max(0, Math.min(maxValue, Math.round(value / step) * step));
+    setCurrentValue(ratingElement, value);
+    updateItemStyles(ratingElement, 0);
+    ratingElement.dispatchEvent(new CustomEvent('rating-change', {
+      bubbles: true,
+      detail: { name: config.name, value, maxValue }
+    }));
+  });
+
   document.addEventListener('click', (e) => {
     const item = e.target.closest('[data-tui-rating-item]');
     if (!item) return;
@@ -154,10 +184,12 @@
     const ratingElement = e.target.closest('[data-tui-rating-component]');
     if (ratingElement) {
       const value = parseFloat(e.target.value) || 0;
-      const config = getConfig(ratingElement);
       const maxValue = getMaxValue(ratingElement);
       const clampedValue = Math.max(0, Math.min(maxValue, value));
       ratingElement.setAttribute('data-tui-rating-current', clampedValue);
+      if (ratingElement.getAttribute('role') === 'slider') {
+        ratingElement.setAttribute('aria-valuenow', clampedValue);
+      }
       updateItemStyles(ratingElement, 0);
     }
   });
@@ -195,6 +227,9 @@
 
       // Set cursor styles
       const config = getConfig(ratingElement);
+      if (!config.readonly) {
+        ratingElement.setAttribute('aria-valuemax', getMaxValue(ratingElement));
+      }
       if (config.readonly) {
         ratingElement.style.cursor = 'default';
         ratingElement.querySelectorAll('[data-tui-rating-item]').forEach(item => {

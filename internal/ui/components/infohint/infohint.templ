@@ -1,21 +1,19 @@
 package infohint
 
 import (
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/tooltip"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/tooltip"
 	"strings"
 )
 
 templ iconTooltip(helpText, ariaLabel string) {
 	if helpText != "" {
 		{{ tooltipID := strings.ToLower(strings.ReplaceAll(ariaLabel, " ", "-")) + "-tooltip" }}
-		@tooltip.Tooltip() {
-			@tooltip.Trigger(tooltip.TriggerProps{Class: "inline-flex items-center text-muted-foreground hover:text-foreground cursor-help"}) {
-				<span aria-label={ ariaLabel }>
-					@icon.Info(icon.Props{Class: "size-4"})
-				</span>
-			}
-			@tooltip.Content(tooltip.ContentProps{ID: tooltipID, Position: tooltip.PositionTop, Class: "max-w-xs text-xs leading-relaxed"}) {
+		@tooltip.Tooltip(tooltip.Props{ID: tooltipID}) {
+			<span class="inline-flex items-center text-muted-foreground hover:text-foreground cursor-help" aria-label={ ariaLabel } tabindex="0" { tooltip.Trigger(ctx)... }>
+				@icon.Info(icon.Props{Class: "size-4"})
+			</span>
+			@tooltip.Content(tooltip.ContentProps{Side: tooltip.SideTop, Class: "max-w-xs text-xs leading-relaxed"}) {
 				{ helpText }
 			}
 		}

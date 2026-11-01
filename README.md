@@ -69,14 +69,14 @@ The application will be available at `http://localhost:8080`.
 
 ### Local Development
 
-1. Ensure you have Go 1.27 and curl installed.
+1. Ensure you have Go 1.27, [Task](https://taskfile.dev/docs/installation), and curl installed.
 
 2. Clone the repository and install dependencies:
 
    ```bash
    git clone https://github.com/yourusername/gowatch.git
    cd gowatch
-   make setup
+   task setup
    ```
 
 3. Create a `.env` file with your Seerr URL and API key:
@@ -88,10 +88,10 @@ The application will be available at `http://localhost:8080`.
 
 4. Start the development server:
    ```bash
-   make dev
+   task dev
    ```
 
-The application will be available at `http://localhost:8080`.
+The development proxy will be available at `http://localhost:7331`.
 
 ### CLI Installation
 
@@ -166,6 +166,7 @@ Both Seerr values are required at startup. Restart GoWatch after changing either
 ### Prerequisites
 
 - Go 1.27
+- [Task](https://taskfile.dev/docs/installation)
 - curl (for Tailwind standalone binary download)
 - A Seerr instance and API key
 
@@ -174,19 +175,19 @@ Both Seerr values are required at startup. Restart GoWatch after changing either
 1. Install dependencies:
 
    ```bash
-   make setup
+   task setup
    ```
 
 2. Start development server with hot reload:
    ```bash
-   make dev
+   task dev
    ```
 
 ### Build Commands
 
-- `make build`: Build the application
-- `make vet`: Run linting and checks
-- `make clean`: Clean build artifacts
+- `task build`: Build the application
+- `task check`: Run formatting, vet, lint, and tests
+- `task clean`: Clean build artifacts
 
 ### Project Structure
 

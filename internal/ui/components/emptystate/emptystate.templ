@@ -1,9 +1,9 @@
 package emptystate
 
 import (
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/card"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/dialog"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/icon"
 )
 
 type Props struct {
@@ -31,9 +31,7 @@ templ EmptyState(props Props) {
 		}
 		if props.ShowImport {
 			<div class="grid grid-cols-1 gap-4 w-full max-w-md mx-auto pt-4">
-				@dialog.Trigger(dialog.TriggerProps{
-					For: "import-data-dialog",
-				}) {
+				<button class="w-full text-left" { dialog.TriggerFor("import-data-dialog")... }>
 					@card.Card(card.Props{
 						Class: "flex flex-col items-center p-8 space-y-4 cursor-pointer hover:bg-muted transition-all group",
 					}) {
@@ -45,7 +43,7 @@ templ EmptyState(props Props) {
 							<p class="text-sm text-muted-foreground">{ props.ImportDescription }</p>
 						</div>
 					}
-				}
+				</button>
 			</div>
 		}
 	</div>

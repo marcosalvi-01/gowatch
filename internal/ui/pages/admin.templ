@@ -3,13 +3,14 @@ package pages
 import (
 	"fmt"
 	"github.com/marcosalvi-01/gowatch/internal/models"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/table"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/tooltip"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/badge"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/card"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/dialog"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/table"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/tooltip"
+	uiutils "github.com/marcosalvi-01/gowatch/internal/ui/shadcnutils"
 	"github.com/marcosalvi-01/gowatch/internal/utils"
 )
 
@@ -75,15 +76,12 @@ templ AdminUsers(users []models.UserWithStats) {
 											@table.Cell(table.CellProps{Class: "flex items-center justify-end space-x-2"}) {
 												@dialog.Dialog() {
 													@tooltip.Tooltip() {
-														@tooltip.Trigger() {
-															@dialog.Trigger() {
-																@button.Button(button.Props{
-																	Size:    button.SizeSm,
-																	Variant: button.VariantOutline,
-																}) {
-																	@icon.Key(icon.Props{Class: "size-4"})
-																}
-															}
+														@button.Button(button.Props{
+															Size:       button.SizeSm,
+															Variant:    button.VariantOutline,
+															Attributes: uiutils.MergeAttributes(tooltip.Trigger(ctx), dialog.Trigger(ctx), templ.Attributes{"aria-label": "Reset password"}),
+														}) {
+															@icon.Key(icon.Props{Class: "size-4"})
 														}
 														@tooltip.Content() {
 															Reset Password 
@@ -98,17 +96,15 @@ templ AdminUsers(users []models.UserWithStats) {
 																Are you sure you want to reset the password for <strong>{ u.Name }</strong>?
 															}
 														}
-														@dialog.Footer() {
-															@dialog.Close() {
-																@button.Button(button.Props{Variant: button.VariantOutline}) {
-																	Cancel 
-																}
+														@dialog.Footer(dialog.FooterProps{Class: "p-2"}) {
+															@button.Button(button.Props{Variant: button.VariantOutline, Attributes: dialog.Close(ctx)}) {
+																Cancel 
 															}
 															@button.Button(button.Props{
 																Attributes: templ.Attributes{
 																	"hx-post":              fmt.Sprintf("/admin/users/%d/reset-password", u.ID),
 																	"hx-target":            "#toast",
-																	"hx-on::after-request": "if(event.detail.successful) this.closest('[data-tui-dialog]').querySelector('[data-tui-dialog-close]').click()",
+																	"hx-on::after-request": "if(event.detail.successful) this.closest('[data-slot=dialog-content]')?.querySelector('[data-templ-dialog-close]')?.click()",
 																},
 															}) {
 																Confirm Reset 
@@ -117,44 +113,38 @@ templ AdminUsers(users []models.UserWithStats) {
 													}
 												}
 												if !u.Admin {
-													@dialog.Trigger(dialog.TriggerProps{
-														For: fmt.Sprintf("delete-user-%d", u.ID),
-													}) {
-														@tooltip.Tooltip() {
-															@tooltip.Trigger() {
-																@button.Button(button.Props{
-																	Size:    button.SizeSm,
-																	Variant: button.VariantDestructive,
-																	Type:    button.TypeButton,
-																}) {
-																	@icon.Trash(icon.Props{Class: "size-4"})
-																}
-															}
-															@tooltip.Content() {
-																Delete User 
-															}
+													@tooltip.Tooltip() {
+														@button.Button(button.Props{
+															Size:       button.SizeSm,
+															Variant:    button.VariantDestructive,
+															Type:       button.TypeButton,
+															Attributes: uiutils.MergeAttributes(tooltip.Trigger(ctx), dialog.TriggerFor(fmt.Sprintf("delete-user-%d", u.ID)), templ.Attributes{"aria-label": "Delete user"}),
+														}) {
+															@icon.Trash(icon.Props{Class: "size-4"})
+														}
+														@tooltip.Content() {
+															Delete User 
 														}
 													}
-													@dialog.Dialog(dialog.Props{
-														ID: fmt.Sprintf("delete-user-%d", u.ID),
-													}) {
-														@dialog.Content() {
-															@dialog.Header() {
-																@dialog.Title() {
-																	Delete User 
-																}
+												}
+												@dialog.Dialog(dialog.Props{
+													ID: fmt.Sprintf("delete-user-%d", u.ID),
+												}) {
+													@dialog.Content() {
+														@dialog.Header() {
+															@dialog.Title() {
+																Delete User 
 																@dialog.Description() {
 																	Are you sure you want to delete user <strong>{ u.Name }</strong>? This action cannot be undone.
 																}
 															}
-															@dialog.Footer() {
-																@dialog.Close() {
-																	@button.Button(button.Props{
-																		Variant: button.VariantOutline,
-																		Type:    button.TypeButton,
-																	}) {
-																		Cancel 
-																	}
+															@dialog.Footer(dialog.FooterProps{Class: "p-2"}) {
+																@button.Button(button.Props{
+																	Variant:    button.VariantOutline,
+																	Type:       button.TypeButton,
+																	Attributes: dialog.Close(ctx),
+																}) {
+																	Cancel 
 																}
 																@button.Button(button.Props{
 																	Variant: button.VariantDestructive,
@@ -163,7 +153,7 @@ templ AdminUsers(users []models.UserWithStats) {
 																		"hx-delete":            fmt.Sprintf("/admin/users/%d", u.ID),
 																		"hx-target":            fmt.Sprintf("#user-row-%d", u.ID),
 																		"hx-swap":              "outerHTML",
-																		"hx-on::after-request": "if(event.detail.successful) this.closest('[data-tui-dialog]').querySelector('[data-tui-dialog-close]').click()",
+																		"hx-on::after-request": "if(event.detail.successful) this.closest('[data-slot=dialog-content]')?.querySelector('[data-templ-dialog-close]')?.click()",
 																	},
 																}) {
 																	Delete User 

@@ -2,9 +2,9 @@
 package moviecard
 
 import (
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/aspectratio"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/aspectratio"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/card"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/icon"
 	apputils "github.com/marcosalvi-01/gowatch/internal/utils"
 	"strconv"
 )
@@ -65,14 +65,15 @@ templ cardContent(props Props) {
 		{{ class = "w-[90px] sm:w-[120px] md:w-[160px] border-0 group" }}
 	}
 	@card.Card(card.Props{
-		Class: class,
+		Class: class + " py-0 bg-transparent ring-0 overflow-visible",
 	}) {
 		<div class="overflow-hidden w-full rounded-lg relative border-2 border-zinc-800">
 			@aspectratio.AspectRatio(aspectratio.Props{
 				ID:    "poster",
-				Ratio: aspectratio.RatioPortrait,
+				Ratio: "3/4",
 				Class: "h-full w-full",
 			}) {
+				<div class="absolute inset-0">
 				if props.PosterPath != "" {
 					<img
 						src={ apputils.TMDBImageURL("w500", props.PosterPath) }
@@ -121,6 +122,7 @@ templ cardContent(props Props) {
 						{ children... }
 					</div>
 				}
+				</div>
 			}
 		</div>
 	}
@@ -145,11 +147,11 @@ templ Script() {
 					"label",
 					"summary",
 					"[role='button']",
-					"[data-tui-dialog-trigger]",
-					"[data-tui-dialog-close]",
-					"[data-tui-popover-trigger]",
-					"[data-tui-popover-content]",
-					"[data-tui-dropdown-trigger]",
+					"[data-slot='dialog-trigger']",
+					"[data-slot='dialog-close']",
+					"[data-slot='popover-trigger']",
+					"[data-slot='popover-content']",
+					"[data-slot='dropdown-menu-trigger']",
 				].join(", ");
 
 				function shouldUseTapToExpand() {

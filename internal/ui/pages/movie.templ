@@ -5,21 +5,21 @@ import (
 	"fmt"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/moviecard"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/avatar"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/checkbox"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/collapsible"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/datepicker"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dropdown"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/form"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/rating"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/separator"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/textarea"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/rating"
+	"github.com/marcosalvi-01/gowatch/internal/ui/components/watcheddate"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/avatar"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/badge"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/card"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/checkbox"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/collapsible"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/dialog"
+	dropdown "github.com/marcosalvi-01/gowatch/internal/ui/shadcn/dropdownmenu"
+	form "github.com/marcosalvi-01/gowatch/internal/ui/shadcn/field"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/separator"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/skeleton"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/textarea"
 	"github.com/marcosalvi-01/gowatch/internal/utils"
 	"net/url"
 	"slices"
@@ -203,143 +203,128 @@ templ movieInfo(movie models.MovieDetails, isDark, isInWatchlist, hasLists, canR
 
 templ actionButtons(movieID int64, hasLists, canRequestSeerr bool) {
 	<div class="grid w-full grid-cols-[repeat(auto-fit,minmax(min(100%,14rem),1fr))] gap-2 pt-2 sm:gap-3 sm:pt-4 [&_button]:h-auto [&_button]:min-h-9 [&_button]:whitespace-normal [&_a]:h-auto [&_a]:min-h-9 [&_a]:whitespace-normal">
-		<form
-			class="w-full"
-			hx-post="/htmx/movies/watched"
-			hx-target="#toast"
-			hx-on::after-request="this.reset()"
-		>
-			<input type="hidden" name="movie_id" value={ movieID }/>
+		<div class="w-full">
 			@dialog.Dialog(dialog.Props{
 				ID: "default-dialog-watched",
 			}) {
-				@dialog.Trigger() {
-					@button.Button(button.Props{Class: "w-full justify-center"}) {
-						@icon.Check()
-						Mark as Watched
-					}
+				@button.Button(button.Props{Class: "w-full justify-center", Attributes: dialog.Trigger(ctx)}) {
+					@icon.Check()
+					Mark as Watched
 				}
 				@dialog.Content(dialog.ContentProps{
 					Class: "max-w-md",
 				}) {
-					@dialog.Header() {
-						@dialog.Title() {
-							Mark as Watched
+					<form hx-post="/htmx/movies/watched" hx-target="#toast" hx-on::after-request="this.reset()">
+						<input type="hidden" name="movie_id" value={ movieID }/>
+						@dialog.Header() {
+							@dialog.Title() {
+								Mark as Watched
+							}
+							@dialog.Description() {
+								Mark this movie as watched by adding it to the Watched List. Click save when you're done.
+							}
 						}
-						@dialog.Description() {
-							Mark this movie as watched by adding it to the Watched List. Click save when you're done.
-						}
-					}
-					<div class="space-y-4">
-						@watchedFormFields("add-watched", time.Now(), 0, false)
-					</div>
-					@dialog.Footer() {
-						@dialog.Close() {
+						<div class="mb-4 mt-2 space-y-4">
+							@watchedFormFields("add-watched", time.Now(), 0, false)
+						</div>
+						@dialog.Footer(dialog.FooterProps{Class: "p-2"}) {
 							@button.Button(button.Props{
-								Variant: button.VariantOutline,
+								Variant:    button.VariantOutline,
+								Attributes: dialog.Close(ctx),
 							}) {
 								Cancel
 							}
-						}
-						@dialog.Close() {
 							@button.Button(button.Props{
-								Type: button.TypeSubmit,
+								Type:       button.TypeSubmit,
+								Attributes: templ.Attributes{"data-templ-dialog-close": "default-dialog-watched"},
 							}) {
 								Add to Watched
 							}
 						}
-					}
+					</form>
 				}
 			}
-		</form>
+		</div>
 		// TODO add hx-indicator for loading state?
-		<form
+		<div
 			class={
 				"w-full",
 				templ.KV("hidden", !hasLists),
 			}
-			hx-post="/htmx/lists/items"
-			hx-target="#toast"
-			hx-on::after-request="this.reset()"
 		>
-			<input type="hidden" name="movie_id" value={ movieID }/>
 			@dialog.Dialog(dialog.Props{
 				ID: "add-movie-to-list-dialog",
 			}) {
 				if hasLists {
-					@dialog.Trigger(dialog.TriggerProps{Class: "w-full"}) {
-						@button.Button(button.Props{
-							Variant: button.VariantOutline,
-							Class:   "w-full justify-center",
-						}) {
-							@icon.Plus()
-							Add to List
-						}
+					@button.Button(button.Props{
+						Variant:    button.VariantOutline,
+						Class:      "w-full justify-center",
+						Attributes: dialog.Trigger(ctx),
+					}) {
+						@icon.Plus()
+						Add to List
 					}
 				}
 				@dialog.Content(dialog.ContentProps{
 					Class: "max-w-md",
 				}) {
-					@dialog.Header() {
-						@dialog.Title() {
-							Add this Movie to a List
-						}
-						@dialog.Description() {
-							Add this movie to a list to keep track of it in a specific way.
-						}
-					}
-					<div class="space-y-4">
-						<div
-							hx-get="/htmx/lists/add-movie-dialog"
-							hx-trigger="load, refreshLists from:body"
-							hx-swap="innerHTML"
-							hx-target="this"
-						></div>
-						<div class="space-y-2">
-							@form.Label(form.LabelProps{
-								For: "movie-note",
-							}) {
-								Add a note (optional)
+					<form hx-post="/htmx/lists/items" hx-target="#toast" hx-on::after-request="this.reset()">
+						<input type="hidden" name="movie_id" value={ movieID }/>
+						@dialog.Header() {
+							@dialog.Title() {
+								Add this Movie to a List
 							}
-							@textarea.Textarea(textarea.Props{
-								ID:          "movie-note",
-								Name:        "note",
-								Rows:        3,
-								Placeholder: "Why did you add this movie to your list? Any thoughts or reminders...",
-							})
+							@dialog.Description() {
+								Add this movie to a list to keep track of it in a specific way.
+							}
+						}
+						<div class="mb-4 mt-2 space-y-4">
+							<div
+								hx-get="/htmx/lists/add-movie-dialog"
+								hx-trigger="load, refreshLists from:body"
+								hx-swap="innerHTML"
+								hx-target="this"
+							></div>
+							<div class="space-y-2">
+								@form.Label(form.LabelProps{
+									For: "movie-note",
+								}) {
+									Add a note (optional)
+								}
+								@textarea.Textarea(textarea.Props{
+									ID:          "movie-note",
+									Name:        "note",
+									Rows:        3,
+									Placeholder: "Why did you add this movie to your list? Any thoughts or reminders...",
+								})
+							</div>
 						</div>
-					</div>
-					@dialog.Footer() {
-						@dialog.Close() {
+						@dialog.Footer(dialog.FooterProps{Class: "p-2"}) {
 							@button.Button(button.Props{
-								Variant: button.VariantOutline,
+								Variant:    button.VariantOutline,
+								Attributes: dialog.Close(ctx),
 							}) {
 								Cancel
 							}
-						}
-						@dialog.Close() {
 							@button.Button(button.Props{
-								Type: button.TypeSubmit,
+								Type:       button.TypeSubmit,
+								Attributes: templ.Attributes{"data-templ-dialog-close": "add-movie-to-list-dialog"},
 							}) {
 								Add to List
 							}
 						}
-					}
+					</form>
 				}
 			}
-		</form>
+		</div>
 		if !hasLists {
-			@dialog.Trigger(dialog.TriggerProps{
-				For:   "add-to-list-dialog",
-				Class: "w-full",
+			@button.Button(button.Props{
+				Variant:    button.VariantOutline,
+				Class:      "w-full justify-center",
+				Attributes: dialog.TriggerFor("add-to-list-dialog"),
 			}) {
-				@button.Button(button.Props{
-					Variant: button.VariantOutline,
-					Class:   "w-full justify-center",
-				}) {
-					@icon.Plus()
-					Create List
-				}
+				@icon.Plus()
+				Create List
 			}
 		}
 		<div
@@ -473,7 +458,7 @@ templ movieOverview(movie models.MovieDetails) {
 	if movie.Movie.Overview != "" || len(movie.Genres) > 0 {
 		<section class="space-y-4">
 			@movieSectionHeader("Overview", icon.FileText)
-			@card.Card(card.Props{Class: "bg-card/40"}) {
+			@card.Card(card.Props{Class: "bg-card/40 py-0"}) {
 				@card.Content(card.ContentProps{Class: "space-y-4 p-5 sm:p-6"}) {
 					if movie.Movie.Overview != "" {
 						<p class="text-sm leading-relaxed text-muted-foreground sm:text-base">{ movie.Movie.Overview }</p>
@@ -522,7 +507,7 @@ templ movieTrailerSection(videos []models.RelatedVideo) {
 templ MovieRatings(movie models.Movie, canLoadExternal bool) {
 	<section id="movie-ratings" class="space-y-4">
 		@movieSectionHeader("Ratings", icon.Star)
-		@card.Card(card.Props{Class: "bg-card/40"}) {
+		@card.Card(card.Props{Class: "bg-card/40 py-0"}) {
 			@card.Content(card.ContentProps{Class: "space-y-4 p-5"}) {
 				if movie.VoteAverage > 0 {
 					@ratingEntry("TMDB", float64(movie.VoteAverage), "TMDB", fmt.Sprintf("%.1f/10", movie.VoteAverage), fmt.Sprintf("%s votes", formatNumber(movie.VoteCount)), "")
@@ -674,7 +659,7 @@ templ movieSectionHeader(title string, iconFn func(...icon.Props) templ.Componen
 templ MovieActivity(records []models.WatchedMovieRecord) {
 	<section id="movie-activity-section" class="space-y-4">
 		@movieSectionHeader("Your Activity", icon.Activity)
-		@card.Card(card.Props{Class: "bg-card/40"}) {
+		@card.Card(card.Props{Class: "bg-card/40 py-0"}) {
 			if len(records) == 0 {
 				@card.Content(card.ContentProps{Class: "flex items-center gap-3 p-4"}) {
 					@icon.Film(icon.Props{Class: "size-5 shrink-0 text-muted-foreground"})
@@ -683,16 +668,17 @@ templ MovieActivity(records []models.WatchedMovieRecord) {
 			} else {
 				@card.Content(card.ContentProps{Class: "space-y-4 p-4"}) {
 					@activityStats(records)
-					<details class="group border-t pt-3">
-						<summary class="cursor-pointer text-sm font-medium hover:text-primary">
-							Watch history ({ len(records) })
-						</summary>
-						<div class="mt-3 max-h-64 space-y-2 overflow-auto">
+					@collapsible.Collapsible(collapsible.Props{Class: "group/history border-t pt-3"}) {
+						<button class="flex w-full cursor-pointer items-center justify-between gap-3 rounded-md text-left text-sm font-medium hover:text-primary focus-visible:outline-2 focus-visible:outline-ring" { collapsible.Trigger(ctx)... }>
+							<span>Watch history ({ len(records) })</span>
+							@icon.ChevronDown(icon.Props{Class: "size-4 shrink-0 transition-transform group-data-open/history:rotate-180"})
+						</button>
+						@collapsible.Content(collapsible.ContentProps{Class: "mt-3 max-h-64 space-y-2 overflow-auto"}) {
 							for _, record := range records {
 								@watchHistoryItem(record)
 							}
-						</div>
-					</details>
+						}
+					}
 				}
 			}
 		}
@@ -705,7 +691,7 @@ templ movieMetadata(movie models.MovieDetails) {
 	if hasMovieFacts(movie) || homepageURL != "" || imdbURL != "" {
 		<section class="space-y-4">
 			@movieSectionHeader("At a Glance", icon.FileText)
-			@card.Card(card.Props{Class: "bg-card/40"}) {
+			@card.Card(card.Props{Class: "bg-card/40 py-0"}) {
 				@card.Content(card.ContentProps{Class: "p-5"}) {
 					<dl class="divide-y divide-border text-sm">
 						if movie.Movie.ReleaseDate != nil {
@@ -777,7 +763,18 @@ templ castSection(cast []models.Cast) {
 			</div>
 			if len(sortedCast) > movieVisibleCastLimit {
 				@collapsible.Collapsible(collapsible.Props{Class: "group/collapsible mt-4"}) {
-					@collapsible.Content(collapsible.ContentProps{Class: "mb-4"}) {
+					<button class="flex w-full cursor-pointer items-center justify-between gap-3 rounded-md text-left text-sm font-medium hover:text-primary focus-visible:outline-2 focus-visible:outline-ring" aria-label="Toggle full cast" { collapsible.Trigger(ctx)... }>
+						<span class="group-data-open/collapsible:hidden">
+							{ fmt.Sprintf("Show %d more cast members", len(sortedCast)-movieVisibleCastLimit) }
+						</span>
+						<span class="hidden group-data-open/collapsible:inline">
+							Show less cast
+						</span>
+						@icon.ChevronDown(icon.Props{
+							Class: "size-4 shrink-0 transition-transform group-data-open/collapsible:rotate-180",
+						})
+					</button>
+					@collapsible.Content(collapsible.ContentProps{Class: "mt-3"}) {
 						<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
 							for i, member := range sortedCast {
 								if i < movieVisibleCastLimit {
@@ -786,24 +783,6 @@ templ castSection(cast []models.Cast) {
 								@castMemberCard(member)
 							}
 						</div>
-					}
-					@collapsible.Trigger(collapsible.TriggerProps{
-						Class: "inline-flex items-center gap-2 text-sm font-medium text-primary cursor-pointer hover:underline",
-						Attributes: templ.Attributes{
-							"role":       "button",
-							"tabindex":   "0",
-							"aria-label": "Toggle full cast",
-						},
-					}) {
-						<span class="group-data-[tui-collapsible-state=open]/collapsible:hidden">
-							{ fmt.Sprintf("Show %d more cast members", len(sortedCast)-movieVisibleCastLimit) }
-						</span>
-						<span class="hidden group-data-[tui-collapsible-state=open]/collapsible:inline">
-							Show less cast
-						</span>
-						@icon.ChevronRight(icon.Props{
-							Class: "size-4 transition-transform group-data-[tui-collapsible-state=open]/collapsible:rotate-90",
-						})
 					}
 				}
 			}
@@ -814,7 +793,7 @@ templ castSection(cast []models.Cast) {
 templ castMemberCard(cast models.Cast) {
 	{{ personHref := personPagePath(cast.Person.ID) }}
 	@card.Card(card.Props{
-		Class: "transition-colors duration-300",
+		Class: "py-0 transition-colors duration-300",
 	}) {
 		if personHref != "" {
 			<div
@@ -879,7 +858,18 @@ templ crewSection(crew []models.Crew) {
 			</div>
 			if len(keyCrew) > movieVisibleCastLimit {
 				@collapsible.Collapsible(collapsible.Props{Class: "group/collapsible mt-4"}) {
-					@collapsible.Content(collapsible.ContentProps{Class: "mb-4"}) {
+					<button class="flex w-full cursor-pointer items-center justify-between gap-3 rounded-md text-left text-sm font-medium hover:text-primary focus-visible:outline-2 focus-visible:outline-ring" aria-label="Toggle full crew" { collapsible.Trigger(ctx)... }>
+						<span class="group-data-open/collapsible:hidden">
+							{ fmt.Sprintf("Show %d more crew members", len(keyCrew)-movieVisibleCastLimit) }
+						</span>
+						<span class="hidden group-data-open/collapsible:inline">
+							Show less crew
+						</span>
+						@icon.ChevronDown(icon.Props{
+							Class: "size-4 shrink-0 transition-transform group-data-open/collapsible:rotate-180",
+						})
+					</button>
+					@collapsible.Content(collapsible.ContentProps{Class: "mt-3"}) {
 						<div class="grid grid-cols-1 gap-4 pt-1 sm:grid-cols-2 lg:grid-cols-3">
 							for i, member := range keyCrew {
 								if i < movieVisibleCastLimit {
@@ -889,24 +879,6 @@ templ crewSection(crew []models.Crew) {
 							}
 						</div>
 					}
-					@collapsible.Trigger(collapsible.TriggerProps{
-						Class: "inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-primary hover:underline",
-						Attributes: templ.Attributes{
-							"role":       "button",
-							"tabindex":   "0",
-							"aria-label": "Toggle full crew",
-						},
-					}) {
-						<span class="group-data-[tui-collapsible-state=open]/collapsible:hidden">
-							{ fmt.Sprintf("Show %d more crew members", len(keyCrew)-movieVisibleCastLimit) }
-						</span>
-						<span class="hidden group-data-[tui-collapsible-state=open]/collapsible:inline">
-							Show less crew
-						</span>
-						@icon.ChevronRight(icon.Props{
-							Class: "size-4 transition-transform group-data-[tui-collapsible-state=open]/collapsible:rotate-90",
-						})
-					}
 				}
 			}
 		</div>
@@ -915,7 +887,7 @@ templ crewSection(crew []models.Crew) {
 
 templ crewMemberCard(crew models.Crew) {
 	{{ personHref := personPagePath(crew.Person.ID) }}
-	@card.Card(card.Props{Class: "transition-colors duration-300"}) {
+	@card.Card(card.Props{Class: "py-0 transition-colors duration-300"}) {
 		if personHref != "" {
 			<div
 				data-page="person"
@@ -1005,54 +977,54 @@ templ watchHistoryItem(record models.WatchedMovieRecord) {
 			<div class="hidden text-xs text-muted-foreground sm:block">
 				{ formatTimeAgo(record.Date) }
 			</div>
-			@dropdown.Dropdown() {
-				@dropdown.Trigger() {
-					@button.Button(button.Props{
-						Variant: button.VariantGhost,
-						Size:    button.SizeIcon,
-						Type:    button.TypeButton,
-					}) {
-						@icon.EllipsisVertical(icon.Props{Class: "size-4"})
-					}
+			@dropdown.DropdownMenu() {
+				@button.Button(button.Props{
+					Variant:    button.VariantGhost,
+					Size:       button.SizeIcon,
+					Type:       button.TypeButton,
+					Attributes: dropdown.Trigger(ctx),
+				}) {
+					@icon.EllipsisVertical(icon.Props{Class: "size-4"})
 				}
 				@dropdown.Content(dropdown.ContentProps{
-					Class:     "w-40",
-					Placement: dropdown.PlacementBottomEnd,
+					Class: "w-40",
+					Side:  dropdown.SideBottom,
+					Align: dropdown.AlignEnd,
 				}) {
-					@dialog.Trigger(dialog.TriggerProps{
-						For: editDialogID,
-					}) {
-						@dropdown.Item() {
-							<span class="flex items-center gap-2">
-								@icon.Pencil(icon.Props{Class: "size-4"})
-								Edit entry
-							</span>
-						}
+					{{
+						editAttrs := dialog.TriggerFor(editDialogID)
+						delete(editAttrs, "data-slot")
+						delete(editAttrs, "tabindex")
+					}}
+					@dropdown.Item(dropdown.ItemProps{Attributes: editAttrs}) {
+						<span class="flex items-center gap-2">
+							@icon.Pencil(icon.Props{Class: "size-4"})
+							Edit entry
+						</span>
 					}
-					@dialog.Trigger(dialog.TriggerProps{
-						For: deleteDialogID,
+					{{
+						deleteAttrs := dialog.TriggerFor(deleteDialogID)
+						delete(deleteAttrs, "data-slot")
+						delete(deleteAttrs, "tabindex")
+					}}
+					@dropdown.Item(dropdown.ItemProps{
+						Class:      "text-destructive focus:text-destructive",
+						Attributes: deleteAttrs,
 					}) {
-						@dropdown.Item(dropdown.ItemProps{
-							Class: "text-destructive focus:text-destructive",
-						}) {
-							<span class="flex items-center gap-2">
-								@icon.Trash(icon.Props{Class: "size-4"})
-								Remove entry
-							</span>
-						}
+						<span class="flex items-center gap-2">
+							@icon.Trash(icon.Props{Class: "size-4"})
+							Remove entry
+						</span>
 					}
 				}
 			}
-			<form
-				hx-patch={ fmt.Sprintf("/htmx/movies/watched/%d", record.ID) }
-				hx-target="#toast"
-			>
-				@dialog.Dialog(dialog.Props{
-					ID: editDialogID,
+			@dialog.Dialog(dialog.Props{
+				ID: editDialogID,
+			}) {
+				@dialog.Content(dialog.ContentProps{
+					Class: "max-w-md",
 				}) {
-					@dialog.Content(dialog.ContentProps{
-						Class: "max-w-md",
-					}) {
+					<form hx-patch={ fmt.Sprintf("/htmx/movies/watched/%d", record.ID) } hx-target="#toast">
 						@dialog.Header() {
 							@dialog.Title() {
 								Edit Watched Entry
@@ -1061,38 +1033,33 @@ templ watchHistoryItem(record models.WatchedMovieRecord) {
 								Update the date, rating, or location for this watch.
 							}
 						}
-						<div class="space-y-4">
+						<div class="mb-4 mt-2 space-y-4">
 							@watchedFormFields(fmt.Sprintf("edit-watched-%d", record.ID), record.Date, watchedRating, record.InTheaters)
 						</div>
-						@dialog.Footer() {
-							@dialog.Close() {
-								@button.Button(button.Props{
-									Variant: button.VariantOutline,
-								}) {
-									Cancel
-								}
+						@dialog.Footer(dialog.FooterProps{Class: "p-2"}) {
+							@button.Button(button.Props{
+								Variant:    button.VariantOutline,
+								Attributes: dialog.Close(ctx),
+							}) {
+								Cancel
 							}
-							@dialog.Close() {
-								@button.Button(button.Props{
-									Type: button.TypeSubmit,
-								}) {
-									Save Changes
-								}
+							@button.Button(button.Props{
+								Type:       button.TypeSubmit,
+								Attributes: templ.Attributes{"data-templ-dialog-close": editDialogID},
+							}) {
+								Save Changes
 							}
 						}
-					}
+					</form>
 				}
-			</form>
-			<form
-				hx-delete={ fmt.Sprintf("/htmx/movies/watched/%d", record.ID) }
-				hx-target="#toast"
-			>
-				@dialog.Dialog(dialog.Props{
-					ID: deleteDialogID,
+			}
+			@dialog.Dialog(dialog.Props{
+				ID: deleteDialogID,
+			}) {
+				@dialog.Content(dialog.ContentProps{
+					Class: "max-w-md",
 				}) {
-					@dialog.Content(dialog.ContentProps{
-						Class: "max-w-md",
-					}) {
+					<form hx-delete={ fmt.Sprintf("/htmx/movies/watched/%d", record.ID) } hx-target="#toast">
 						@dialog.Header() {
 							@dialog.Title() {
 								Remove Watched Entry
@@ -1101,44 +1068,35 @@ templ watchHistoryItem(record models.WatchedMovieRecord) {
 								Are you sure you want to remove the watched entry from { record.Date.Format("January 2, 2006") }? This action cannot be undone.
 							}
 						}
-						@dialog.Footer() {
-							@dialog.Close() {
-								@button.Button(button.Props{
-									Variant: button.VariantOutline,
-								}) {
-									Cancel
-								}
+						@dialog.Footer(dialog.FooterProps{Class: "mt-4 p-2"}) {
+							@button.Button(button.Props{
+								Variant:    button.VariantOutline,
+								Attributes: dialog.Close(ctx),
+							}) {
+								Cancel
 							}
-							@dialog.Close() {
-								@button.Button(button.Props{
-									Variant: button.VariantDestructive,
-									Type:    button.TypeSubmit,
-								}) {
-									Remove Entry
-								}
+							@button.Button(button.Props{
+								Variant:    button.VariantDestructive,
+								Type:       button.TypeSubmit,
+								Attributes: templ.Attributes{"data-templ-dialog-close": deleteDialogID},
+							}) {
+								Remove Entry
 							}
 						}
-					}
+					</form>
 				}
-			</form>
+			}
 		</div>
 	</div>
 }
 
 templ watchedFormFields(idPrefix string, watchedDate time.Time, watchedRating float64, inTheaters bool) {
-	<div class="space-y-2">
-		@form.Label(form.LabelProps{
-			For: idPrefix + "-date",
-		}) {
-			When did you watch this movie?
-		}
-		@datepicker.DatePicker(datepicker.Props{
-			ID:       idPrefix + "-date",
-			Name:     "watched_date",
-			HasError: false,
-			Value:    watchedDate,
-		})
-	</div>
+	@form.Label(form.LabelProps{
+		For: idPrefix + "-date",
+	}) {
+		When did you watch this movie?
+	}
+	@watcheddate.Picker(idPrefix+"-date", watchedDate)
 	<div class="space-y-2">
 		@form.Label(form.LabelProps{
 			For: idPrefix + "-rating",
@@ -1164,10 +1122,10 @@ templ watchedFormFields(idPrefix string, watchedDate time.Time, watchedRating fl
 	</div>
 	<div class="flex items-start space-x-3">
 		@checkbox.Checkbox(checkbox.Props{
-			ID:      idPrefix + "-theater",
-			Name:    "watched_at_theater",
-			Value:   "theater",
-			Checked: inTheaters,
+			ID:             idPrefix + "-theater",
+			Name:           "watched_at_theater",
+			Value:          "theater",
+			DefaultChecked: inTheaters,
 		})
 		@form.Label(form.LabelProps{
 			For:   idPrefix + "-theater",

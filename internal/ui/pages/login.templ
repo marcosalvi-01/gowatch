@@ -1,11 +1,11 @@
 package pages
 
 import (
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/form"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/input"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/card"
+	form "github.com/marcosalvi-01/gowatch/internal/ui/shadcn/field"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/input"
 )
 
 templ Login() {
@@ -33,27 +33,26 @@ templ Login() {
 						hx-target="#toast"
 						class="space-y-4"
 					>
-						@form.Item() {
+						@form.Field() {
 							@form.Label(form.LabelProps{For: "email"}) {
 								Email
 							}
 							@input.Input(input.Props{
-								Type:        input.TypeEmail,
+								Type:        "email",
 								ID:          "email",
 								Name:        "email",
 								Placeholder: "your@email.com",
 							})
 						}
-						@form.Item() {
+						@form.Field() {
 							@form.Label(form.LabelProps{For: "password"}) {
 								Password
 							}
 							@input.Input(input.Props{
-								Type:             input.TypePassword,
+								Type:             "password",
 								ID:               "password",
 								Name:             "password",
 								Placeholder:      "••••••••",
-								NoTogglePassword: false,
 							})
 						}
 						@button.Button(button.Props{

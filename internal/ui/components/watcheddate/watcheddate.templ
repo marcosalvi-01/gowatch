@@ -1,0 +1,60 @@
+package watcheddate
+
+import (
+	"time"
+
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/calendar"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/popover"
+)
+
+templ Picker(id string, value time.Time) {
+	{{
+		date := ""
+		display := "Select a date"
+		if !value.IsZero() {
+			date = value.Format("2006-01-02")
+			display = value.Format("Jan 2, 2006")
+		}
+		required := true
+	}}
+	<input id={ id + "-value" } type="hidden" name="watched_date" value={ date }/>
+	@popover.Popover(popover.Props{ID: id + "-popover"}) {
+		{{ trigger := popover.Trigger(ctx) }}
+		{{ trigger["id"] = id }}
+		@button.Button(button.Props{Variant: button.VariantOutline, Class: "w-full justify-between font-normal", Attributes: trigger}) {
+			<span data-watched-date-display>{ display }</span>
+			@icon.Calendar(icon.Props{Class: "size-4"})
+		}
+		@popover.Content(popover.ContentProps{Class: "w-auto p-0", Align: popover.AlignStart}) {
+			@calendar.Calendar(calendar.Props{
+				Mode: calendar.ModeSingle,
+				Selected: value,
+				DefaultMonth: value,
+				WeekStartsOn: calendar.Monday,
+				Required: &required,
+				Attributes: templ.Attributes{"data-watched-date": id},
+			})
+		}
+	}
+}
+
+templ Script() {
+	<script>
+		document.addEventListener("calendar-select", (event) => {
+			if (!(event.target instanceof Element)) return;
+			const calendar = event.target.closest("[data-watched-date]");
+			const date = event.detail?.selected;
+			if (!calendar || !(date instanceof Date)) return;
+			const id = calendar.getAttribute("data-watched-date");
+			const input = document.getElementById(id + "-value");
+			const trigger = document.getElementById(id);
+			if (!input || !trigger) return;
+			const pad = (value) => String(value).padStart(2, "0");
+			input.value = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+			trigger.querySelector("[data-watched-date-display]").textContent = date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+			window.templ.popover.close(id + "-popover");
+		});
+	</script>
+}

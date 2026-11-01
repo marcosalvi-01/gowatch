@@ -3,10 +3,10 @@ package pages
 import (
 	"fmt"
 	"github.com/marcosalvi-01/gowatch/internal/models"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/selectbox"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/dialog"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/select"
 	"strconv"
 )
 
@@ -35,17 +35,17 @@ templ listHeader(data models.ListViewData) {
 							@icon.List(icon.Props{Class: "size-5"})
 						</div>
 						<div class="space-y-1">
-						{{
-							title := data.List.Name
-							if data.List.IsWatchlist {
-								title = "My Watchlist"
+							{{
+								title := data.List.Name
+								if data.List.IsWatchlist {
+									title = "My Watchlist"
+								}
+							}}
+							if data.IsEditing && !data.List.IsWatchlist {
+								@listDetailsForm(data)
+							} else {
+								<h1 class="text-2xl sm:text-3xl font-bold tracking-tight">{ title }</h1>
 							}
-						}}
-						if data.IsEditing && !data.List.IsWatchlist {
-							@listDetailsForm(data)
-						} else {
-							<h1 class="text-2xl sm:text-3xl font-bold tracking-tight">{ title }</h1>
-						}
 						</div>
 					</div>
 					if !data.IsEditing && data.List.Description != nil && *data.List.Description != "" {
@@ -114,8 +114,18 @@ templ listDetailsForm(data models.ListViewData) {
 	</form>
 }
 
-
 templ listSortForm(data models.ListViewData) {
+	{{
+		items := []selectcomp.ItemData{
+			{Value: string(models.ListMovieSortCustom), Label: "Custom order"},
+			{Value: string(models.ListMovieSortDateAddedDesc), Label: "Recently added"},
+			{Value: string(models.ListMovieSortDateAddedAsc), Label: "Oldest added"},
+			{Value: string(models.ListMovieSortTitleAsc), Label: "Title A-Z"},
+			{Value: string(models.ListMovieSortRatingDesc), Label: "Highest rated"},
+			{Value: string(models.ListMovieSortReleaseDateDesc), Label: "Newest release"},
+			{Value: string(models.ListMovieSortReleaseStatus), Label: "Upcoming / Released"},
+		}
+	}}
 	<form
 		class="w-full"
 		hx-patch={ fmt.Sprintf("/htmx/lists/%d/display-sort", data.List.ID) }
@@ -127,31 +137,20 @@ templ listSortForm(data models.ListViewData) {
 		}
 		<div class="space-y-2">
 			<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Display order</p>
-			@selectbox.SelectBox(selectbox.Props{Class: "w-full lg:w-64"}) {
-				@selectbox.Trigger(selectbox.TriggerProps{Name: "sort", Class: "w-full lg:w-64", Disabled: !data.IsEditing}) {
-					@selectbox.Value(selectbox.ValueProps{Placeholder: "Sort movies"})
+			@selectcomp.Select(selectcomp.Props{Name: "sort", DefaultValue: string(data.Sort), Disabled: !data.IsEditing, Items: items}) {
+				@selectcomp.Trigger(selectcomp.TriggerProps{Class: "w-full lg:w-64", Attributes: templ.Attributes{"aria-label": "Display order"}}) {
+					@selectcomp.Value(selectcomp.ValueProps{Placeholder: "Sort movies"})
 				}
-				@selectbox.Content(selectbox.ContentProps{NoSearch: true}) {
-					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortCustom), Selected: data.Sort == models.ListMovieSortCustom}) {
-						Custom order
-					}
-					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortDateAddedDesc), Selected: data.Sort == models.ListMovieSortDateAddedDesc}) {
-						Recently added
-					}
-					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortDateAddedAsc), Selected: data.Sort == models.ListMovieSortDateAddedAsc}) {
-						Oldest added
-					}
-					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortTitleAsc), Selected: data.Sort == models.ListMovieSortTitleAsc}) {
-						Title A-Z
-					}
-					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortRatingDesc), Selected: data.Sort == models.ListMovieSortRatingDesc}) {
-						Highest rated
-					}
-					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortReleaseDateDesc), Selected: data.Sort == models.ListMovieSortReleaseDateDesc}) {
-						Newest release
-					}
-					@selectbox.Item(selectbox.ItemProps{Value: string(models.ListMovieSortReleaseStatus), Selected: data.Sort == models.ListMovieSortReleaseStatus}) {
-						Upcoming / Released
+				@selectcomp.Content() {
+					@selectcomp.Group() {
+						@selectcomp.Label() {
+							Display order 
+						}
+						for _, item := range items {
+							@selectcomp.Item(selectcomp.ItemProps{Value: item.Value}) {
+								{ item.Label.(string) }
+							}
+						}
 					}
 				}
 			}
@@ -165,62 +164,56 @@ templ listActions(list *models.List) {
 
 templ listEditAction(data models.ListViewData) {
 	{{
-			label := "Edit list"
-			variant := button.VariantOutline
-			attributes := templ.Attributes{
-				"hx-get":      data.ToggleEditURL,
-				"hx-target":   "#main-content",
-				"hx-push-url": "true",
-				"hx-swap":     "innerHTML",
-			}
-			if data.List.IsWatchlist {
-				label = "Edit watchlist"
-			}
-			if data.IsEditing {
-				label = "Done"
-				variant = button.VariantDefault
-				if !data.List.IsWatchlist {
-					attributes = templ.Attributes{
-						"hx-patch":   fmt.Sprintf("/htmx/lists/%d", data.List.ID),
-						"hx-include": "#list-details-form",
-						"hx-target":  "#toast",
-					}
+		label := "Edit list"
+		variant := button.VariantOutline
+		attributes := templ.Attributes{
+			"hx-get":      data.ToggleEditURL,
+			"hx-target":   "#main-content",
+			"hx-push-url": "true",
+			"hx-swap":     "innerHTML",
+		}
+		if data.List.IsWatchlist {
+			label = "Edit watchlist"
+		}
+		if data.IsEditing {
+			label = "Done"
+			variant = button.VariantDefault
+			if !data.List.IsWatchlist {
+				attributes = templ.Attributes{
+					"hx-patch":   fmt.Sprintf("/htmx/lists/%d", data.List.ID),
+					"hx-include": "#list-details-form",
+					"hx-target":  "#toast",
 				}
 			}
+		}
 	}}
 	@button.Button(button.Props{
-			Variant: variant,
-			Class:   "h-8 gap-2 px-3",
-			Attributes: attributes,
+		Variant:    variant,
+		Class:      "h-8 gap-2 px-3",
+		Attributes: attributes,
 	}) {
-			@icon.Pencil(icon.Props{Class: "size-4"})
-			{ label }
+		@icon.Pencil(icon.Props{Class: "size-4"})
+		{ label }
 	}
 }
 
 templ deleteListDialog(list *models.List) {
-	<form
-		hx-delete="/htmx/lists"
-		hx-target="#toast"
-	>
-		<input type="hidden" name="list_id" value={ strconv.FormatInt(list.ID, 10) }/>
-		@dialog.Dialog(dialog.Props{
-			ID: "delete-list-dialog",
+	@dialog.Dialog(dialog.Props{
+		ID: "delete-list-dialog",
+	}) {
+		@button.Button(button.Props{
+			Variant:    button.VariantDestructive,
+			Size:       button.SizeSm,
+			Attributes: dialog.Trigger(ctx),
 		}) {
-			@dialog.Trigger(dialog.TriggerProps{
-				For: "delete-list-dialog",
-			}) {
-				@button.Button(button.Props{
-					Variant: button.VariantDestructive,
-					Size:    button.SizeSm,
-				}) {
-					@icon.Trash(icon.Props{Class: "size-4"})
-					Delete List
-				}
-			}
-			@dialog.Content(dialog.ContentProps{
-				Class: "max-w-md",
-			}) {
+			@icon.Trash(icon.Props{Class: "size-4"})
+			Delete List
+		}
+		@dialog.Content(dialog.ContentProps{
+			Class: "max-w-md",
+		}) {
+			<form hx-delete="/htmx/lists" hx-target="#toast">
+				<input type="hidden" name="list_id" value={ strconv.FormatInt(list.ID, 10) }/>
 				@dialog.Header() {
 					@dialog.Title() {
 						Delete List
@@ -229,7 +222,7 @@ templ deleteListDialog(list *models.List) {
 						Are you sure you want to delete <strong>{ list.Name }</strong>? This action cannot be undone.
 					}
 				}
-				<div class="space-y-4">
+				<div class="mb-4 mt-2 space-y-4">
 					if len(list.Movies) > 0 {
 						<div class="p-3 bg-destructive/10 rounded-lg">
 							<p class="text-sm text-destructive">
@@ -238,29 +231,23 @@ templ deleteListDialog(list *models.List) {
 						</div>
 					}
 				</div>
-				@dialog.Footer() {
-					@dialog.Close(dialog.CloseProps{
-						For: "delete-list-dialog",
+				@dialog.Footer(dialog.FooterProps{Class: "p-2"}) {
+					@button.Button(button.Props{
+						Variant:    button.VariantOutline,
+						Type:       button.TypeButton,
+						Attributes: dialog.Close(ctx),
 					}) {
-						@button.Button(button.Props{
-							Variant: button.VariantOutline,
-							Type:    button.TypeButton,
-						}) {
-							Cancel
-						}
+						Cancel
 					}
-					@dialog.Close(dialog.CloseProps{
-						For: "delete-list-dialog",
+					@button.Button(button.Props{
+						Variant:    button.VariantDestructive,
+						Type:       button.TypeSubmit,
+						Attributes: templ.Attributes{"data-templ-dialog-close": "delete-list-dialog"},
 					}) {
-						@button.Button(button.Props{
-							Variant: button.VariantDestructive,
-							Type:    button.TypeSubmit,
-						}) {
-							Delete List
-						}
+						Delete List
 					}
 				}
-			}
+			</form>
 		}
-	</form>
+	}
 }

@@ -13,12 +13,11 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/calendarheatmap"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/infohint"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/statscollectioncard"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/avatar"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/chart"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/selectbox"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/avatar"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/card"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/select"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/skeleton"
 	"github.com/marcosalvi-01/gowatch/internal/utils"
 )
 
@@ -43,6 +42,12 @@ templ Stats(stats *models.WatchedStats, limit int, state StatsRankingState) {
 }
 
 templ statsHeader(limit int, state StatsRankingState) {
+	{{
+		items := make([]selectcomp.ItemData, 0, len(limitOptions))
+		for _, n := range limitOptions {
+			items = append(items, selectcomp.ItemData{Value: strconv.Itoa(n), Label: "Show " + strconv.Itoa(n)})
+		}
+	}}
 	<div class="flex flex-col gap-4 rounded-lg border bg-card/40 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
 		<div class="space-y-2">
 			<h1 class="text-3xl sm:text-4xl font-bold leading-tight">Statistics</h1>
@@ -60,14 +65,19 @@ templ statsHeader(limit int, state StatsRankingState) {
 			hx-indicator="#stats-loading"
 		>
 			@rankingStateInputs(state, "")
-			@selectbox.SelectBox(selectbox.Props{Class: "w-full sm:w-36"}) {
-				@selectbox.Trigger(selectbox.TriggerProps{Name: "limit", Class: "sm:w-36"}) {
-					@selectbox.Value(selectbox.ValueProps{Placeholder: "Show"})
+			@selectcomp.Select(selectcomp.Props{Name: "limit", DefaultValue: strconv.Itoa(limit), Items: items}) {
+				@selectcomp.Trigger(selectcomp.TriggerProps{Class: "w-full sm:w-36", Attributes: templ.Attributes{"aria-label": "Results limit"}}) {
+					@selectcomp.Value(selectcomp.ValueProps{Placeholder: "Show"})
 				}
-				@selectbox.Content(selectbox.ContentProps{NoSearch: true}) {
-					for _, n := range limitOptions {
-						@selectbox.Item(selectbox.ItemProps{Value: strconv.Itoa(n), Selected: limit == n}) {
-							Show { strconv.Itoa(n) }
+				@selectcomp.Content() {
+					@selectcomp.Group() {
+						@selectcomp.Label() {
+							Results limit 
+						}
+						for _, n := range limitOptions {
+							@selectcomp.Item(selectcomp.ItemProps{Value: strconv.Itoa(n)}) {
+								Show { strconv.Itoa(n) }
+							}
 						}
 					}
 				}
@@ -79,7 +89,7 @@ templ statsHeader(limit int, state StatsRankingState) {
 templ statsAtGlance(stats *models.WatchedStats) {
 	<div class="space-y-4">
 		@statsSectionHeader("At a Glance", icon.Sparkles)
-		@card.Card(card.Props{Class: "bg-card/40"}) {
+		@card.Card(card.Props{Class: "bg-card/40 py-0"}) {
 			@card.Content(card.ContentProps{Class: "p-4 sm:p-6"}) {
 				<div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
 					@statsMetricCard("Total Watched", fmt.Sprintf("%d", stats.TotalWatched), icon.Film)
@@ -126,13 +136,13 @@ templ statsActivitySection(stats *models.WatchedStats) {
 		</div>
 		<div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
 			@chartCard("Watches by Month", "Home and theater watches over the last 12 months, including this month. Counts movies, not theater visits.", "flex flex-col lg:col-span-2 lg:row-span-2", "min-h-0 flex-1") {
-				@chart.Chart(stackedBarProps(prepareMonthlyTheaterData(stats.MonthlyLastYear, stats.MonthlyTheaterLastYear), "h-64 sm:h-72 lg:h-full lg:min-h-80"))
+				@statsChart(stackedBarProps(prepareMonthlyTheaterData(stats.MonthlyLastYear, stats.MonthlyTheaterLastYear), "h-64 sm:h-72 lg:h-full lg:min-h-80"))
 			}
 			@chartCard("Watches by Year", "Home and theater watches by year, over your full history. Counts movies, not theater visits.", "", "") {
-				@chart.Chart(stackedBarProps(prepareYearlyTheaterData(stats.YearlyAllTime), "h-36"))
+				@statsChart(stackedBarProps(prepareYearlyTheaterData(stats.YearlyAllTime), "h-36"))
 			}
 			@chartCard("Watches by Weekday", "Watches by day of the week, over your full history.", "", "") {
-				@chart.Chart(barProps(prepareWeekdayData(stats.WeekdayDistribution), "h-36"))
+				@statsChart(barProps(prepareWeekdayData(stats.WeekdayDistribution), "h-36"))
 			}
 		</div>
 	</div>
@@ -159,19 +169,19 @@ templ statsTasteSection(stats *models.WatchedStats) {
 	<div class="space-y-4">
 		<div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
 			@chartCard("Genres by Month", "Genres watched over the last 12 months. Each watch counts toward every genre the movie has.", "lg:col-span-2", "") {
-				@chart.Chart(genreStackProps(prepareGenresByMonthData(stats.MonthlyGenreBreakdown)))
+				@statsChart(genreStackProps(prepareGenresByMonthData(stats.MonthlyGenreBreakdown)))
 			}
 			@topLanguagesCard(stats.TopLanguages)
 		</div>
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
 			@chartCard("Genres", "Your most watched genres, all time. Movies can count toward multiple genres.", "", "") {
-				@chart.Chart(pieProps(prepareGenresData(stats.Genres), "h-44"))
+				@statsChart(pieProps(prepareGenresData(stats.Genres), "h-44"))
 			}
 			@chartCard("Theater vs Home", "Watches marked as theater or home.", "", "") {
-				@chart.Chart(doughnutProps(prepareTheaterData(stats.TheaterVsHome), "h-44"))
+				@statsChart(doughnutProps(prepareTheaterData(stats.TheaterVsHome), "h-44"))
 			}
 			@chartCard("Release Years", "Watched movies by release year, not watch date.", "md:col-span-2 xl:col-span-1", "") {
-				@chart.Chart(barProps(prepareReleaseYearDistributionData(stats.ReleaseYearDistribution), "h-44"))
+				@statsChart(barProps(prepareReleaseYearDistributionData(stats.ReleaseYearDistribution), "h-44"))
 			}
 		</div>
 	</div>
@@ -188,13 +198,13 @@ templ statsRatingsSection(stats *models.WatchedStats) {
 		</div>
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
 			@chartCard("Ratings", "How often you gave each score. Rated watches only.", "", "") {
-				@chart.Chart(barProps(prepareRatingDistributionData(ratings.Distribution), "h-44"))
+				@statsChart(barProps(prepareRatingDistributionData(ratings.Distribution), "h-44"))
 			}
 			@chartCard("Avg Rating by Month", "Your monthly average rating. Months without ratings are excluded.", "", "") {
-				@chart.Chart(ratingBarProps(prepareMonthlyAverageRatingData(ratings.MonthlyAverage), "h-44"))
+				@statsChart(ratingBarProps(prepareMonthlyAverageRatingData(ratings.MonthlyAverage), "h-44"))
 			}
 			@chartCard("Rating by Release Decade", "Your average rating by release decade. Rated movies only.", "", "") {
-				@chart.Chart(ratingBarProps(prepareReleaseDecadeRatingData(ratings.ReleaseDecades), "h-44"))
+				@statsChart(ratingBarProps(prepareReleaseDecadeRatingData(ratings.ReleaseDecades), "h-44"))
 			}
 			@rewatchRatingDriftCard(ratings.RewatchDrift)
 		</div>
@@ -215,7 +225,7 @@ templ statsWatchlistSection(stats models.WatchlistStats) {
 				if stats.MovieCount == 0 {
 					<div class="py-8 text-center text-muted-foreground">Your watchlist is empty</div>
 				} else {
-					@chart.Chart(barProps(prepareWatchlistAgeData(stats.AgeBuckets), "h-48"))
+					@statsChart(barProps(prepareWatchlistAgeData(stats.AgeBuckets), "h-48"))
 				}
 			}
 			@statscollectioncard.StatsCollectionCard(statscollectioncard.Props{
@@ -243,7 +253,7 @@ templ statsRuntimeFinancialSection(stats *models.WatchedStats) {
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
 			@runtimeExtremesCard(stats.LongestMovieWatched, stats.ShortestMovieWatched)
 			@chartCard("Budgets", "Watched movies by budget: indie, mid-budget, blockbuster, or unknown.", "", "") {
-				@chart.Chart(doughnutProps(prepareBudgetTierDistributionData(stats.BudgetTierDistribution), "h-44"))
+				@statsChart(doughnutProps(prepareBudgetTierDistributionData(stats.BudgetTierDistribution), "h-44"))
 			}
 			@movieFinancialCard("Highest Returns", "Watched movies with the highest return on budget (ROI).", stats.TopReturnOnInvestmentMovies, true)
 			@movieFinancialCard("Biggest Budgets", "Watched movies with the highest reported production budgets.", stats.BiggestBudgetMovies, false)
@@ -287,7 +297,7 @@ templ statsSectionHeader(title string, iconFn func(...icon.Props) templ.Componen
 }
 
 templ statsCardHeader(title, helpText string) {
-	@card.Header(card.HeaderProps{Class: "flex-row items-start justify-between space-y-0 gap-3 p-4 pb-0"}) {
+	@card.Header(card.HeaderProps{Class: "flex flex-row items-start justify-between space-y-0 gap-3 p-4 pb-0"}) {
 		@card.Title(card.TitleProps{Class: "text-sm font-semibold"}) {
 			{ title }
 		}
@@ -297,7 +307,7 @@ templ statsCardHeader(title, helpText string) {
 
 // chartCard wraps any chart (passed as children) in a titled card with a help hint.
 templ chartCard(title, helpText, cardClass, contentClass string) {
-	@card.Card(card.Props{Class: "h-full bg-card/40 " + cardClass}) {
+	@card.Card(card.Props{Class: "h-full bg-card/40 py-0 gap-0 " + cardClass}) {
 		@statsCardHeader(title, helpText)
 		@card.Content(card.ContentProps{Class: "p-4 pt-3 " + contentClass}) {
 			{ children... }
@@ -331,7 +341,7 @@ templ glanceTile(label, help, class string) {
 }
 
 templ metricShell(iconFn func(...icon.Props) templ.Component) {
-	@card.Card(card.Props{Class: "h-full bg-card/40"}) {
+	@card.Card(card.Props{Class: "h-full bg-card/40 py-0"}) {
 		@card.Content(card.ContentProps{Class: "p-4 h-full"}) {
 			<div class="flex h-full items-start justify-between gap-4">
 				<div class="min-w-0 flex-1">
@@ -492,7 +502,7 @@ templ runtimeTile(label, hint string, m *models.RuntimeMovie) {
 }
 
 templ runtimeExtremesCard(longest, shortest *models.RuntimeMovie) {
-	@card.Card(card.Props{Class: "h-full bg-card/40"}) {
+	@card.Card(card.Props{Class: "h-full bg-card/40 py-0 gap-0"}) {
 		@statsCardHeader("Longest & Shortest Movies", "Your watched movies with the longest and shortest runtimes.")
 		@card.Content(card.ContentProps{Class: "p-4 pt-3"}) {
 			<div class="space-y-2">
@@ -606,23 +616,32 @@ templ rankingStateInputs(state StatsRankingState, except string) {
 }
 
 templ statsRankingSwitch(key string, limit int, state StatsRankingState) {
+	{{
+		selected := state[key]
+		if selected == "" {
+			selected = statsRankWatched
+		}
+		items := []selectcomp.ItemData{{Value: statsRankWatched, Label: "Most watched"}, {Value: statsRankRated, Label: "Highest rated"}}
+		if key == statsRankStudios {
+			items = append(items, selectcomp.ItemData{Value: statsRankMostRated, Label: "Most rated"})
+		}
+	}}
 	<form hx-get="/stats" hx-target="#main-content" hx-trigger="change" hx-push-url="true" hx-swap="innerHTML">
 		<input type="hidden" name="limit" value={ strconv.Itoa(limit) }/>
 		@rankingStateInputs(state, key)
-		@selectbox.SelectBox() {
-			@selectbox.Trigger(selectbox.TriggerProps{Name: key, Attributes: templ.Attributes{"aria-label": statsRankLabel(key)}}) {
-				@selectbox.Value(selectbox.ValueProps{Placeholder: "Most watched"})
+		@selectcomp.Select(selectcomp.Props{Name: key, DefaultValue: selected, Items: items}) {
+			@selectcomp.Trigger(selectcomp.TriggerProps{Attributes: templ.Attributes{"aria-label": statsRankLabel(key)}}) {
+				@selectcomp.Value(selectcomp.ValueProps{Placeholder: "Most watched"})
 			}
-			@selectbox.Content(selectbox.ContentProps{NoSearch: true}) {
-				@selectbox.Item(selectbox.ItemProps{Value: statsRankWatched, Selected: state[key] == "" || state[key] == statsRankWatched}) {
-					Most watched
-				}
-				@selectbox.Item(selectbox.ItemProps{Value: statsRankRated, Selected: state[key] == statsRankRated}) {
-					Highest rated
-				}
-				if key == statsRankStudios {
-					@selectbox.Item(selectbox.ItemProps{Value: statsRankMostRated, Selected: state[key] == statsRankMostRated}) {
-						Most rated
+			@selectcomp.Content() {
+				@selectcomp.Group() {
+					@selectcomp.Label() {
+						{ statsRankLabel(key) }
+					}
+					for _, item := range items {
+						@selectcomp.Item(selectcomp.ItemProps{Value: item.Value}) {
+							{ item.Label.(string) }
+						}
 					}
 				}
 			}
@@ -990,8 +1009,8 @@ func tint(rgb string, alpha float64) string {
 	return "rgba(" + rgb + ", " + strconv.FormatFloat(alpha, 'f', -1, 64) + ")"
 }
 
-func genreColors(alpha float64) []any {
-	out := make([]any, len(genreRGB))
+func genreColors(alpha float64) []string {
+	out := make([]string, len(genreRGB))
 	for i, c := range genreRGB {
 		out[i] = tint(c, alpha)
 	}
@@ -1002,53 +1021,44 @@ func genreColors(alpha float64) []any {
 // Chart.Props presets
 // ---------------------------------------------------------------------------
 
-func barProps(data chart.Data, class string) chart.Props {
-	return chart.Props{
-		Variant:     chart.VariantBar,
+func barProps(data statsChartData, class string) statsChartProps {
+	return statsChartProps{
+		Variant:     "bar",
 		Data:        data,
-		Options:     chart.Options{Responsive: true},
-		ShowXAxis:   true,
-		ShowXLabels: true,
-		ShowYAxis:   true,
-		ShowYLabels: true,
+		ShowAxes:    true,
 		Class:       class,
 	}
 }
 
-func stackedBarProps(data chart.Data, class string) chart.Props {
+func stackedBarProps(data statsChartData, class string) statsChartProps {
 	p := barProps(data, class)
 	p.Stacked = true
-	p.ShowLegend = true
-	p.Options.Legend = true
 	return p
 }
 
 // ratingBarProps fixes the Y axis to the 0–5 rating scale.
-func ratingBarProps(data chart.Data, class string) chart.Props {
+func ratingBarProps(data statsChartData, class string) statsChartProps {
 	p := barProps(data, class)
-	yMin, yMax := 0.0, 5.0
-	p.YMin, p.YMax = &yMin, &yMax
+	p.Domain = []any{0.0, 5.0}
 	return p
 }
 
-func genreStackProps(data chart.Data) chart.Props {
-	return chart.Props{
-		Variant:     chart.VariantBar,
+func genreStackProps(data statsChartData) statsChartProps {
+	return statsChartProps{
+		Variant:     "bar",
 		Data:        data,
 		Stacked:     true,
-		ShowLegend:  true,
 		ShowYGrid:   true,
-		ShowXLabels: true,
 		Class:       "h-56 sm:h-64",
 	}
 }
 
-func pieProps(data chart.Data, class string) chart.Props {
-	return chart.Props{Variant: chart.VariantPie, Data: data, Options: chart.Options{Responsive: true, Legend: true}, ShowLegend: true, Class: class}
+func pieProps(data statsChartData, class string) statsChartProps {
+	return statsChartProps{Variant: "pie", Data: data, Class: class}
 }
 
-func doughnutProps(data chart.Data, class string) chart.Props {
-	return chart.Props{Variant: chart.VariantDoughnut, Data: data, Options: chart.Options{Responsive: true, Legend: true}, ShowLegend: true, Class: class}
+func doughnutProps(data statsChartData, class string) statsChartProps {
+	return statsChartProps{Variant: "doughnut", Data: data, Class: class}
 }
 
 // ---------------------------------------------------------------------------
@@ -1065,24 +1075,22 @@ func mapSeries[T any](items []T, f func(T) (string, float64)) ([]string, []float
 }
 
 // barSeries builds a single-dataset chart with one fill color.
-func barSeries(label string, labels []string, values []float64, rgb string, alpha float64) chart.Data {
-	return chart.Data{
+func barSeries(label string, labels []string, values []float64, rgb string, alpha float64) statsChartData {
+	return statsChartData{
 		Labels: labels,
-		Datasets: []chart.Dataset{{
+		Datasets: []statsChartSeries{{
 			Label:           label,
 			Data:            values,
-			BackgroundColor: []any{tint(rgb, alpha)},
-			BorderColor:     []any{tint(rgb, 1)},
-			BorderWidth:     1,
+			BackgroundColor: []string{tint(rgb, alpha)},
 		}},
 	}
 }
 
 // sliceSeries builds a single-dataset chart with one color per slice.
-func sliceSeries(label string, labels []string, values []float64, colors []any) chart.Data {
-	return chart.Data{
+func sliceSeries(label string, labels []string, values []float64, colors []string) statsChartData {
+	return statsChartData{
 		Labels:   labels,
-		Datasets: []chart.Dataset{{Label: label, Data: values, BackgroundColor: colors}},
+		Datasets: []statsChartSeries{{Label: label, Data: values, BackgroundColor: colors}},
 	}
 }
 
@@ -1093,9 +1101,9 @@ func monthShort(period string) string {
 	return period
 }
 
-func prepareGenresByMonthData(data []models.MonthlyGenreBreakdown) chart.Data {
+func prepareGenresByMonthData(data []models.MonthlyGenreBreakdown) statsChartData {
 	if len(data) == 0 {
-		return chart.Data{}
+		return statsChartData{}
 	}
 
 	seen := make(map[string]struct{})
@@ -1110,62 +1118,60 @@ func prepareGenresByMonthData(data []models.MonthlyGenreBreakdown) chart.Data {
 	}
 	slices.Sort(genres) // map iteration is random; sort so colors stay stable
 
-	fills, borders := genreColors(0.8), genreColors(1)
+	fills := genreColors(0.8)
 	labels := make([]string, len(data))
 	for i, m := range data {
 		labels[i] = monthShort(m.Month)
 	}
 
-	datasets := make([]chart.Dataset, len(genres))
+	datasets := make([]statsChartSeries, len(genres))
 	for i, genre := range genres {
 		values := make([]float64, len(data))
 		for j, m := range data {
 			values[j] = float64(m.Genres[genre])
 		}
 		c := i % len(fills)
-		datasets[i] = chart.Dataset{
+		datasets[i] = statsChartSeries{
 			Label:           genre,
 			Data:            values,
-			BackgroundColor: []any{fills[c]},
-			BorderColor:     []any{borders[c]},
-			BorderWidth:     1,
+			BackgroundColor: []string{fills[c]},
 		}
 	}
-	return chart.Data{Labels: labels, Datasets: datasets}
+	return statsChartData{Labels: labels, Datasets: datasets}
 }
 
-func prepareYearlyData(data []models.PeriodCount) chart.Data {
+func prepareYearlyData(data []models.PeriodCount) statsChartData {
 	labels, values := mapSeries(data, func(pc models.PeriodCount) (string, float64) { return pc.Period, float64(pc.Count) })
 	return barSeries("Watches", labels, values, rgbGreen, 1)
 }
 
-func prepareWatchlistAgeData(buckets []models.PeriodCount) chart.Data {
+func prepareWatchlistAgeData(buckets []models.PeriodCount) statsChartData {
 	data := prepareYearlyData(buckets)
 	data.Datasets[0].Label = "Movies"
 	return data
 }
 
-func prepareWeekdayData(data []models.PeriodCount) chart.Data {
+func prepareWeekdayData(data []models.PeriodCount) statsChartData {
 	labels, values := mapSeries(data, func(pc models.PeriodCount) (string, float64) { return pc.Period, float64(pc.Count) })
 	return barSeries("Watches", labels, values, rgbPurple, 0.5)
 }
 
-func prepareGenresData(data []models.GenreCount) chart.Data {
+func prepareGenresData(data []models.GenreCount) statsChartData {
 	labels, values := mapSeries(data, func(g models.GenreCount) (string, float64) { return g.Name, float64(g.Count) })
 	return sliceSeries("Movies", labels, values, genreColors(0.8))
 }
 
-func prepareTheaterData(data []models.TheaterCount) chart.Data {
+func prepareTheaterData(data []models.TheaterCount) statsChartData {
 	labels, values := mapSeries(data, func(tc models.TheaterCount) (string, float64) {
 		if tc.InTheater {
 			return "Theater", float64(tc.Count)
 		}
 		return "Home", float64(tc.Count)
 	})
-	return sliceSeries("Watches", labels, values, []any{tint(rgbBlue, 0.8), tint(rgbGreen, 0.8)})
+	return sliceSeries("Watches", labels, values, []string{tint(rgbBlue, 0.8), tint(rgbGreen, 0.8)})
 }
 
-func prepareMonthlyMoviesData(data []models.PeriodCount) chart.Data {
+func prepareMonthlyMoviesData(data []models.PeriodCount) statsChartData {
 	counts := make(map[string]int64, len(data))
 	for _, pc := range data {
 		counts[pc.Period] = pc.Count
@@ -1178,7 +1184,7 @@ func prepareMonthlyMoviesData(data []models.PeriodCount) chart.Data {
 	return barSeries("Movies", labels, values, rgbBlue, 0.5)
 }
 
-func prepareYearlyTheaterData(data []models.PeriodStats) chart.Data {
+func prepareYearlyTheaterData(data []models.PeriodStats) statsChartData {
 	total := make([]models.PeriodCount, len(data))
 	theater := make([]models.PeriodCount, len(data))
 	for i, year := range data {
@@ -1188,54 +1194,53 @@ func prepareYearlyTheaterData(data []models.PeriodStats) chart.Data {
 	return prepareTheaterStackData(prepareYearlyData(total), prepareYearlyData(theater))
 }
 
-func prepareMonthlyTheaterData(total, theater []models.PeriodCount) chart.Data {
+func prepareMonthlyTheaterData(total, theater []models.PeriodCount) statsChartData {
 	return prepareTheaterStackData(prepareMonthlyMoviesData(total), prepareMonthlyMoviesData(theater))
 }
 
 // prepareTheaterStackData turns (total, theater) into stacked (home, theater).
-func prepareTheaterStackData(totalData, theaterData chart.Data) chart.Data {
+func prepareTheaterStackData(totalData, theaterData statsChartData) statsChartData {
 	home := totalData.Datasets[0]
 	home.Label = "Home"
-	home.BackgroundColor = []any{tint(rgbGreen, 0.8)}
-	home.BorderColor = []any{tint(rgbGreen, 1)}
+	home.BackgroundColor = []string{tint(rgbGreen, 0.8)}
 	for i := range home.Data {
 		home.Data[i] -= theaterData.Datasets[0].Data[i]
 	}
 
 	theater := theaterData.Datasets[0]
 	theater.Label = "Theater"
-	theater.BackgroundColor = []any{tint(rgbBlue, 0.8)}
+	theater.BackgroundColor = []string{tint(rgbBlue, 0.8)}
 
-	return chart.Data{Labels: totalData.Labels, Datasets: []chart.Dataset{home, theater}}
+	return statsChartData{Labels: totalData.Labels, Datasets: []statsChartSeries{home, theater}}
 }
 
-func prepareRatingDistributionData(data []models.RatingBucketCount) chart.Data {
+func prepareRatingDistributionData(data []models.RatingBucketCount) statsChartData {
 	labels, values := mapSeries(data, func(i models.RatingBucketCount) (string, float64) {
 		return fmt.Sprintf("%.1f", i.Rating), float64(i.Count)
 	})
 	return barSeries("Ratings", labels, values, rgbYellow, 0.5)
 }
 
-func prepareMonthlyAverageRatingData(data []models.PeriodRating) chart.Data {
+func prepareMonthlyAverageRatingData(data []models.PeriodRating) statsChartData {
 	labels, values := mapSeries(data, func(i models.PeriodRating) (string, float64) { return monthShort(i.Period), i.AverageRating })
 	return barSeries("Avg Rating", labels, values, rgbEmerald, 0.45)
 }
 
-func prepareReleaseDecadeRatingData(data []models.DecadeRating) chart.Data {
+func prepareReleaseDecadeRatingData(data []models.DecadeRating) statsChartData {
 	labels, values := mapSeries(data, func(i models.DecadeRating) (string, float64) { return fmt.Sprintf("%ds", i.Decade), i.AverageRating })
 	return barSeries("Avg Rating", labels, values, rgbBlue, 0.45)
 }
 
-func prepareReleaseYearDistributionData(data []models.ReleaseYearCount) chart.Data {
+func prepareReleaseYearDistributionData(data []models.ReleaseYearCount) statsChartData {
 	labels, values := mapSeries(data, func(i models.ReleaseYearCount) (string, float64) { return strconv.Itoa(i.Year), float64(i.Count) })
 	return barSeries("Movies", labels, values, rgbEmerald, 0.5)
 }
 
-func prepareBudgetTierDistributionData(data []models.BudgetTierCount) chart.Data {
+func prepareBudgetTierDistributionData(data []models.BudgetTierCount) statsChartData {
 	var (
 		labels []string
 		values []float64
-		colors []any
+		colors []string
 	)
 	for _, item := range data {
 		if item.Count == 0 {

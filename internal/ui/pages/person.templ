@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/moviecard"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/badge"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/card"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/collapsible"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/selectbox"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/separator"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/skeleton"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/badge"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/card"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/collapsible"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/select"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/separator"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/skeleton"
 	"github.com/marcosalvi-01/gowatch/internal/utils"
 	"math/rand/v2"
 	"slices"
@@ -29,7 +29,6 @@ const (
 	personFilmographyMaxCredits   = 240
 	personFilmographyMinimumVotes = 50
 	personFeaturedBackdropLimit   = 20
-	personKnownForVisibleLimit    = 3
 )
 
 const (
@@ -158,50 +157,7 @@ templ personHeroInfo(person models.PersonDetailsPage, isDark bool) {
 		>
 			{ personHeroSubtitle(person) }
 		</p>
-		if len(person.KnownFor) > 0 {
-			<div class="space-y-1.5 sm:space-y-2">
-				<p class="text-[11px] sm:text-xs font-semibold uppercase tracking-wide text-white">
-					Known For
-				</p>
-				<div class="flex flex-wrap gap-1.5 sm:gap-2">
-					for i, credit := range person.KnownFor {
-						if i >= personKnownForVisibleLimit {
-							{{ break }}
-						}
-						@personKnownForCredit(credit)
-					}
-				</div>
-			</div>
-		}
 	</div>
-}
-
-templ personKnownForCredit(credit models.PersonCredit) {
-	{{ href := personCreditHref(credit) }}
-	if href != "" {
-		<span
-			data-page="movie"
-			hx-get={ href }
-			hx-target="#main-content"
-			hx-push-url="true"
-			hx-swap="scroll:#main-scroll-container:top"
-			hx-indicator="#movie-loading"
-			class="cursor-pointer"
-		>
-			@personKnownForBadge(credit.Title)
-		</span>
-	} else {
-		@personKnownForBadge(credit.Title)
-	}
-}
-
-templ personKnownForBadge(title string) {
-	@badge.Badge(badge.Props{
-		Variant: badge.VariantSecondary,
-		Class:   "rounded-full whitespace-normal",
-	}) {
-		{ title }
-	}
 }
 
 templ personSectionHeader(title string, iconFn func(...icon.Props) templ.Component) {
@@ -214,7 +170,7 @@ templ personSectionHeader(title string, iconFn func(...icon.Props) templ.Compone
 templ personBiographySection(person models.PersonDetailsPage) {
 	<div class="space-y-4">
 		@personSectionHeader("Biography", icon.FileText)
-		@card.Card(card.Props{Class: "bg-card/40"}) {
+		@card.Card(card.Props{Class: "bg-card/40 py-0"}) {
 			@card.Content(card.ContentProps{Class: "p-5 sm:p-6"}) {
 				@personBiography(person.Biography)
 			}
@@ -225,7 +181,7 @@ templ personBiographySection(person models.PersonDetailsPage) {
 templ personDetailsSection(person models.PersonDetailsPage) {
 	<div class="space-y-4">
 		@personSectionHeader("At a Glance", icon.FileText)
-		@card.Card(card.Props{Class: "bg-card/40"}) {
+		@card.Card(card.Props{Class: "bg-card/40 py-0"}) {
 			@card.Content(card.ContentProps{Class: "p-5"}) {
 				<dl class="divide-y divide-border text-sm">
 					@personDetailFact("Born", utils.FormatLongDate(person.Birthday))
@@ -271,21 +227,14 @@ templ personBiography(biography string) {
 		<p class="max-w-4xl text-sm leading-relaxed text-muted-foreground sm:text-base">{ preview }</p>
 	} else {
 		@collapsible.Collapsible(collapsible.Props{Class: "group/collapsible space-y-2"}) {
-			<p class="max-w-4xl text-sm leading-relaxed text-muted-foreground sm:text-base group-data-[tui-collapsible-state=open]/collapsible:hidden">{ preview }</p>
+			<p class="max-w-4xl text-sm leading-relaxed text-muted-foreground sm:text-base group-data-open/collapsible:hidden">{ preview }</p>
+			<button class="flex w-full cursor-pointer items-center justify-between gap-3 rounded-md text-left text-sm font-medium hover:text-primary focus-visible:outline-2 focus-visible:outline-ring" aria-label="Toggle full biography" { collapsible.Trigger(ctx)... }>
+				<span class="group-data-open/collapsible:hidden">Read full biography</span>
+				<span class="hidden group-data-open/collapsible:inline">Show less</span>
+				@icon.ChevronDown(icon.Props{Class: "size-4 shrink-0 transition-transform group-data-open/collapsible:rotate-180"})
+			</button>
 			@collapsible.Content() {
 				<p class="max-w-4xl text-sm leading-relaxed text-muted-foreground sm:text-base">{ personBiographyText(biography) }</p>
-			}
-			@collapsible.Trigger(collapsible.TriggerProps{
-				Class: "inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-primary hover:underline",
-				Attributes: templ.Attributes{
-					"role":       "button",
-					"tabindex":   "0",
-					"aria-label": "Toggle full biography",
-				},
-			}) {
-				<span class="group-data-[tui-collapsible-state=open]/collapsible:hidden">Read full biography</span>
-				<span class="hidden group-data-[tui-collapsible-state=open]/collapsible:inline">Show less</span>
-				@icon.ChevronRight(icon.Props{Class: "size-4 transition-transform group-data-[tui-collapsible-state=open]/collapsible:rotate-90"})
 			}
 		}
 	}
@@ -294,7 +243,7 @@ templ personBiography(biography string) {
 templ personWatchActivitySection(activity models.PersonWatchActivity) {
 	<section class="space-y-4">
 		@personSectionHeader("Your Activity", icon.Activity)
-		@card.Card(card.Props{Class: "bg-card/40"}) {
+		@card.Card(card.Props{Class: "bg-card/40 py-0"}) {
 			if len(activity.Movies) == 0 {
 				@card.Content(card.ContentProps{Class: "flex items-center gap-3 p-4"}) {
 					@icon.Film(icon.Props{Class: "size-5 shrink-0 text-muted-foreground"})
@@ -308,12 +257,15 @@ templ personWatchActivitySection(activity models.PersonWatchActivity) {
 							@personWatchRankings(activity.Ranks)
 						</div>
 					}
-					<details class="group border-t pt-3">
-						<summary class="cursor-pointer text-sm font-medium hover:text-primary">
-							Watch history ({ len(activity.Movies) })
-						</summary>
-						@personWatchHistory(activity.Movies)
-					</details>
+					@collapsible.Collapsible(collapsible.Props{Class: "group/history border-t pt-3"}) {
+						<button class="flex w-full cursor-pointer items-center justify-between gap-3 rounded-md text-left text-sm font-medium hover:text-primary focus-visible:outline-2 focus-visible:outline-ring" { collapsible.Trigger(ctx)... }>
+							<span>Watch history ({ len(activity.Movies) })</span>
+							@icon.ChevronDown(icon.Props{Class: "size-4 shrink-0 transition-transform group-data-open/history:rotate-180"})
+						</button>
+						@collapsible.Content() {
+							@personWatchHistory(activity.Movies)
+						}
+					}
 				}
 			}
 		}
@@ -498,20 +450,27 @@ templ personFilmographyControls(personID int64, state PersonFilmographyState, ro
 }
 
 templ personFilmographySelect(name, label, selected string, options []personFilmographyRoleOption) {
+	{{
+		items := make([]selectcomp.ItemData, 0, len(options))
+		for _, option := range options {
+			items = append(items, selectcomp.ItemData{Value: option.Key, Label: option.Label})
+		}
+	}}
 	<div class="min-w-[9rem] flex-1 space-y-1 sm:flex-none">
 		<p class="text-xs font-medium text-muted-foreground">{ label }</p>
-		@selectbox.SelectBox(selectbox.Props{Class: "w-full sm:w-40"}) {
-			@selectbox.Trigger(selectbox.TriggerProps{Name: name, Class: "w-full"}) {
-				for _, option := range options {
-					if option.Key == selected {
-						@selectbox.Value(selectbox.ValueProps{Placeholder: option.Label})
-					}
-				}
+		@selectcomp.Select(selectcomp.Props{Name: name, DefaultValue: selected, Items: items}) {
+			@selectcomp.Trigger(selectcomp.TriggerProps{Class: "w-full sm:w-40", Attributes: templ.Attributes{"aria-label": label}}) {
+				@selectcomp.Value()
 			}
-			@selectbox.Content(selectbox.ContentProps{NoSearch: true}) {
-				for _, option := range options {
-					@selectbox.Item(selectbox.ItemProps{Value: option.Key, Selected: option.Key == selected}) {
-						{ option.Label }
+			@selectcomp.Content() {
+				@selectcomp.Group() {
+					@selectcomp.Label() {
+						{ label }
+					}
+					for _, option := range options {
+						@selectcomp.Item(selectcomp.ItemProps{Value: option.Key}) {
+							{ option.Label }
+						}
 					}
 				}
 			}

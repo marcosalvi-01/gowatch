@@ -5,9 +5,9 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/models"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/emptystate"
 	"github.com/marcosalvi-01/gowatch/internal/ui/components/moviecard"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/button"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/dialog"
-	"github.com/marcosalvi-01/gowatch/internal/ui/templui/icon"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/button"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/dialog"
+	"github.com/marcosalvi-01/gowatch/internal/ui/shadcn/icon"
 	"github.com/marcosalvi-01/gowatch/internal/utils"
 	"strconv"
 )
@@ -59,7 +59,7 @@ templ comingSoonMovieSection(listID int64, movies []models.MovieItem, isEditing,
 			<h2 class="text-xl font-semibold">Coming Soon</h2>
 			<div class="flex flex-wrap gap-4 md:gap-6 w-full">
 				for _, movie := range movies {
-@releaseStatusMovieItem(listID, movie, comingSoonReleaseDateLabel(movie), isEditing, isWatchlist)
+					@releaseStatusMovieItem(listID, movie, comingSoonReleaseDateLabel(movie), isEditing, isWatchlist)
 				}
 			</div>
 		</div>
@@ -72,7 +72,7 @@ templ releasedMovieSection(listID int64, movies []models.MovieItem, isEditing, i
 			<h2 class="text-xl font-semibold">Released</h2>
 			<div class="flex flex-wrap gap-4 md:gap-6 w-full">
 				for _, movie := range movies {
-@releaseStatusMovieItem(listID, movie, utils.FormatYear(movie.MovieDetails.Movie.ReleaseDate), isEditing, isWatchlist)
+					@releaseStatusMovieItem(listID, movie, utils.FormatYear(movie.MovieDetails.Movie.ReleaseDate), isEditing, isWatchlist)
 				}
 			</div>
 		</div>
@@ -189,17 +189,14 @@ templ listMovieCardTopHoverInfo(movie models.MovieItem) {
 }
 
 templ listMovieRemoveAction(listID int64, movie models.MovieItem) {
-	@dialog.Trigger(dialog.TriggerProps{
-		For: "list-movie-menu-" + strconv.Itoa(int(listID)) + "-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+	@button.Button(button.Props{
+		Variant:    button.VariantDestructive,
+		Size:       button.SizeSm,
+		Class:      "w-full gap-2",
+		Attributes: dialog.TriggerFor("list-movie-menu-" + strconv.Itoa(int(listID)) + "-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID))),
 	}) {
-		@button.Button(button.Props{
-			Variant: button.VariantDestructive,
-			Size:    button.SizeSm,
-			Class:   "w-full gap-2",
-		}) {
-			@icon.Trash(icon.Props{Class: "size-3"})
-			Remove
-		}
+		@icon.Trash(icon.Props{Class: "size-3"})
+		Remove
 	}
 }
 
@@ -241,18 +238,15 @@ templ movieCardDetails(movie models.MovieItem, releaseDateLabel string) {
 }
 
 templ listConfirmRemoveMovieDialog(listID int64, movie models.MovieItem, isWatchlist bool) {
-	<form
-		hx-delete="/htmx/lists/items"
-		hx-target="#toast"
-	>
-		<input type="hidden" name="movie_id" value={ strconv.FormatInt(movie.MovieDetails.Movie.ID, 10) }/>
-		<input type="hidden" name="list_id" value={ strconv.FormatInt(listID, 10) }/>
-		@dialog.Dialog(dialog.Props{
-			ID: "list-movie-menu-" + strconv.Itoa(int(listID)) + "-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+	@dialog.Dialog(dialog.Props{
+		ID: "list-movie-menu-" + strconv.Itoa(int(listID)) + "-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+	}) {
+		@dialog.Content(dialog.ContentProps{
+			Class: "max-w-md",
 		}) {
-			@dialog.Content(dialog.ContentProps{
-				Class: "max-w-md",
-			}) {
+			<form hx-delete="/htmx/lists/items" hx-target="#toast">
+				<input type="hidden" name="movie_id" value={ strconv.FormatInt(movie.MovieDetails.Movie.ID, 10) }/>
+				<input type="hidden" name="list_id" value={ strconv.FormatInt(listID, 10) }/>
 				@dialog.Header() {
 					@dialog.Title() {
 						Remove Movie
@@ -269,16 +263,13 @@ templ listConfirmRemoveMovieDialog(listID int64, movie models.MovieItem, isWatch
 						Are you sure you want to remove <strong>{ movie.MovieDetails.Movie.Title }</strong> from { listType }?
 					}
 				}
-				@dialog.Footer() {
-					@dialog.Close(dialog.CloseProps{
-						For: "list-movie-menu-" + strconv.Itoa(int(listID)) + "-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+				@dialog.Footer(dialog.FooterProps{Class: "mt-4 p-2"}) {
+					@button.Button(button.Props{
+						Variant:    button.VariantOutline,
+						Type:       button.TypeButton,
+						Attributes: dialog.Close(ctx),
 					}) {
-						@button.Button(button.Props{
-							Variant: button.VariantOutline,
-							Type:    button.TypeButton,
-						}) {
-							Cancel
-						}
+						Cancel
 					}
 					{{
 						var buttonText string
@@ -288,20 +279,17 @@ templ listConfirmRemoveMovieDialog(listID int64, movie models.MovieItem, isWatch
 							buttonText = "Remove from List"
 						}
 					}}
-					@dialog.Close(dialog.CloseProps{
-						For: "list-movie-menu-" + strconv.Itoa(int(listID)) + "-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID)),
+					@button.Button(button.Props{
+						Variant:    button.VariantDestructive,
+						Type:       button.TypeSubmit,
+						Attributes: templ.Attributes{"data-templ-dialog-close": "list-movie-menu-" + strconv.Itoa(int(listID)) + "-" + strconv.Itoa(int(movie.MovieDetails.Movie.ID))},
 					}) {
-						@button.Button(button.Props{
-							Variant: button.VariantDestructive,
-							Type:    button.TypeSubmit,
-						}) {
-							{ buttonText }
-						}
+						{ buttonText }
 					}
 				}
-			}
+			</form>
 		}
-	</form>
+	}
 }
 
 func comingSoonReleaseDateLabel(movie models.MovieItem) string {
