@@ -247,13 +247,28 @@ func (h *Handlers) PersonPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filmographyState := pages.ParsePersonFilmographyState(r.URL.Query())
+	var watched map[int64]bool
+	if filmographyState.Watched != "all" {
+		days, err := h.watchedService.GetAllWatchedMoviesInDay(ctx)
+		if err != nil {
+			log.Error("failed to get watched movies", "personID", id, "error", err)
+			render500Error(w, r)
+			return
+		}
+		watched = make(map[int64]bool)
+		for _, day := range days {
+			for _, movie := range day.Movies {
+				watched[movie.MovieDetails.Movie.ID] = true
+			}
+		}
+	}
 	hxTarget := r.Header.Get("HX-Target")
 	if strings.HasPrefix(hxTarget, "person-filmography-more-") {
-		templ.Handler(pages.PersonFilmographyPage(*personDetails, filmographyState)).ServeHTTP(w, r)
+		templ.Handler(pages.PersonFilmographyPage(*personDetails, filmographyState, watched)).ServeHTTP(w, r)
 		return
 	}
 	if hxTarget == "person-filmography" {
-		templ.Handler(pages.PersonFilmography(*personDetails, filmographyState)).ServeHTTP(w, r)
+		templ.Handler(pages.PersonFilmography(*personDetails, filmographyState, watched)).ServeHTTP(w, r)
 		return
 	}
 
@@ -264,7 +279,7 @@ func (h *Handlers) PersonPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderContentPage(w, r, pages.Person(*personDetails, activity, filmographyState))
+	renderContentPage(w, r, pages.Person(*personDetails, activity, filmographyState, watched))
 
 	log.Info("person page served successfully", "personID", id, "name", personDetails.Name)
 }

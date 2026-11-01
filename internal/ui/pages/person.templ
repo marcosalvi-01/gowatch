@@ -46,8 +46,8 @@ const (
 	personFilmographySortPopular    = "popular"
 )
 
-templ Person(person models.PersonDetailsPage, activity models.PersonWatchActivity, state PersonFilmographyState) {
-	{{ prepared := preparePersonFilmography(person.ActingCredits, person.CrewCredits, state) }}
+templ Person(person models.PersonDetailsPage, activity models.PersonWatchActivity, state PersonFilmographyState, watched map[int64]bool) {
+	{{ prepared := preparePersonFilmography(person.ActingCredits, person.CrewCredits, state, watched) }}
 	@Layout() {
 		@templ.Fragment("content") {
 			@personHero(person, personBackdropPath(prepared.Credits))
@@ -69,8 +69,8 @@ templ Person(person models.PersonDetailsPage, activity models.PersonWatchActivit
 	}
 }
 
-templ PersonFilmography(person models.PersonDetailsPage, state PersonFilmographyState) {
-	{{ prepared := preparePersonFilmography(person.ActingCredits, person.CrewCredits, state) }}
+templ PersonFilmography(person models.PersonDetailsPage, state PersonFilmographyState, watched map[int64]bool) {
+	{{ prepared := preparePersonFilmography(person.ActingCredits, person.CrewCredits, state, watched) }}
 	@personFilmographyPrepared(person, state, prepared)
 }
 
@@ -382,11 +382,6 @@ type personFilmographyYearGroup struct {
 	Credits []personFilmographyCredit
 }
 
-templ personFilmography(person models.PersonDetailsPage, state PersonFilmographyState) {
-	{{ prepared := preparePersonFilmography(person.ActingCredits, person.CrewCredits, state) }}
-	@personFilmographyPrepared(person, state, prepared)
-}
-
 templ personFilmographyPrepared(person models.PersonDetailsPage, state PersonFilmographyState, prepared personPreparedFilmography) {
 	<div class="space-y-4">
 		@personSectionHeader("Filmography", icon.Film)
@@ -414,8 +409,8 @@ templ personFilmographyPrepared(person models.PersonDetailsPage, state PersonFil
 	</div>
 }
 
-templ PersonFilmographyPage(person models.PersonDetailsPage, state PersonFilmographyState) {
-	{{ prepared := preparePersonFilmography(person.ActingCredits, person.CrewCredits, state) }}
+templ PersonFilmographyPage(person models.PersonDetailsPage, state PersonFilmographyState, watched map[int64]bool) {
+	{{ prepared := preparePersonFilmography(person.ActingCredits, person.CrewCredits, state, watched) }}
 	<div class="contents">
 		@personFilmographyCount(prepared.LoadedCount, prepared.Total, true)
 		if prepared.State.Sort == personFilmographySortNewest || prepared.State.Sort == personFilmographySortOldest {
@@ -443,6 +438,7 @@ templ personFilmographyControls(personID int64, state PersonFilmographyState, ro
 		@personFilmographySelect("credit_type", "Credit type", state.Type, []personFilmographyRoleOption{{Key: personFilmographyTypeAll, Label: "All credits"}, {Key: personFilmographyTypeActing, Label: "Acting"}, {Key: personFilmographyTypeCrew, Label: "Crew"}})
 		@personFilmographySelect("role", "Role", state.Role, append([]personFilmographyRoleOption{{Key: personFilmographyRoleAll, Label: "All roles"}}, roles...))
 		@personFilmographySelect("media", "Media", state.Media, []personFilmographyRoleOption{{Key: personFilmographyMediaAll, Label: "Movies and TV"}, {Key: personMovieMediaType, Label: "Movies"}, {Key: "tv", Label: "TV"}})
+		@personFilmographySelect("watched", "Watch status", state.Watched, []personFilmographyRoleOption{{Key: "all", Label: "All"}, {Key: "watched", Label: "Watched"}, {Key: "unwatched", Label: "Not watched"}})
 		@personFilmographySelect("quality", "Quality", state.Quality, []personFilmographyRoleOption{{Key: personFilmographyQualityPopular, Label: "Popular credits"}, {Key: personFilmographyQualityAll, Label: "All credits"}})
 		@personFilmographySelect("sort", "Sort", state.Sort, []personFilmographyRoleOption{{Key: personFilmographySortFeatured, Label: "Featured"}, {Key: personFilmographySortNewest, Label: "Newest first"}, {Key: personFilmographySortOldest, Label: "Oldest first"}, {Key: personFilmographySortRating, Label: "Highest rated"}, {Key: personFilmographySortPopular, Label: "Most popular"}})
 		@personFilmographyCount(loadedCount, total, false)
@@ -614,7 +610,7 @@ func buildPersonFilmography(actingCredits, crewCredits []models.PersonCredit) []
 	return credits
 }
 
-func filterPersonFilmography(credits []personFilmographyCredit, state PersonFilmographyState) []personFilmographyCredit {
+func filterPersonFilmography(credits []personFilmographyCredit, state PersonFilmographyState, watched map[int64]bool) []personFilmographyCredit {
 	filtered := make([]personFilmographyCredit, 0, len(credits))
 	for _, credit := range credits {
 		if state.Type == personFilmographyTypeActing && !credit.IsActing || state.Type == personFilmographyTypeCrew && !credit.IsCrew {
@@ -622,6 +618,11 @@ func filterPersonFilmography(credits []personFilmographyCredit, state PersonFilm
 		}
 		if state.Media != personFilmographyMediaAll && !strings.EqualFold(state.Media, credit.Credit.MediaType) {
 			continue
+		}
+		if state.Watched == "watched" || state.Watched == "unwatched" {
+			if !strings.EqualFold(credit.Credit.MediaType, personMovieMediaType) || watched[credit.Credit.ID] != (state.Watched == "watched") {
+				continue
+			}
 		}
 		if state.Quality == personFilmographyQualityPopular && credit.Credit.VoteCount < personFilmographyMinimumVotes {
 			continue

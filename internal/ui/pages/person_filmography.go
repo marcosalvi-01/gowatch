@@ -13,6 +13,7 @@ type PersonFilmographyState struct {
 	Media   string
 	Sort    string
 	Quality string
+	Watched string
 	Page    int
 }
 
@@ -23,6 +24,7 @@ func ParsePersonFilmographyState(values url.Values) PersonFilmographyState {
 		Media:   values.Get("media"),
 		Sort:    values.Get("sort"),
 		Quality: values.Get("quality"),
+		Watched: values.Get("watched"),
 	}
 
 	if state.Type != personFilmographyTypeActing && state.Type != personFilmographyTypeCrew {
@@ -31,11 +33,14 @@ func ParsePersonFilmographyState(values url.Values) PersonFilmographyState {
 	if state.Role == "" {
 		state.Role = personFilmographyRoleAll
 	}
-	if state.Media != personMovieMediaType && state.Media != "tv" {
-		state.Media = personFilmographyMediaAll
+	if state.Media != personFilmographyMediaAll && state.Media != "tv" {
+		state.Media = personMovieMediaType
 	}
 	if state.Quality != personFilmographyQualityAll {
 		state.Quality = personFilmographyQualityPopular
+	}
+	if state.Watched != "watched" && state.Watched != "unwatched" {
+		state.Watched = "all"
 	}
 	switch state.Sort {
 	case personFilmographySortNewest, personFilmographySortOldest, personFilmographySortRating, personFilmographySortPopular:
@@ -60,11 +65,11 @@ type personPreparedFilmography struct {
 	Total       int
 }
 
-func preparePersonFilmography(actingCredits, crewCredits []models.PersonCredit, state PersonFilmographyState) personPreparedFilmography {
+func preparePersonFilmography(actingCredits, crewCredits []models.PersonCredit, state PersonFilmographyState, watched map[int64]bool) personPreparedFilmography {
 	credits := buildPersonFilmography(actingCredits, crewCredits)
 	roles := personFilmographyRoleOptions(credits)
 	state.Role = personFilmographyRoleSelection(state.Role, roles)
-	filtered := filterPersonFilmography(credits, state)
+	filtered := filterPersonFilmography(credits, state, watched)
 	sorted := sortPersonFilmography(filtered, state.Sort)
 	sorted = sorted[:min(len(sorted), personFilmographyMaxCredits)]
 	visible, hasMore, loadedCount := personFilmographyPage(sorted, state.Sort, state.Page)
@@ -91,6 +96,7 @@ func personFilmographyPath(personID int64, state PersonFilmographyState, page in
 	query.Set("media", state.Media)
 	query.Set("sort", state.Sort)
 	query.Set("quality", state.Quality)
+	query.Set("watched", state.Watched)
 	query.Set("page", strconv.Itoa(page))
 	return personPagePath(personID) + "?" + query.Encode()
 }

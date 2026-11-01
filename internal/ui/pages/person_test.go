@@ -19,19 +19,29 @@ func TestParsePersonFilmographyState(t *testing.T) {
 			name: "valid values",
 			values: url.Values{
 				"credit_type": {"crew"}, "role": {"director"}, "media": {"movie"},
-				"quality": {"all"}, "sort": {"oldest"}, "page": {"2"},
+				"quality": {"all"}, "sort": {"oldest"}, "page": {"2"}, "watched": {"watched"},
 			},
-			want: PersonFilmographyState{Type: personFilmographyTypeCrew, Role: "director", Media: personMovieMediaType, Quality: personFilmographyQualityAll, Sort: personFilmographySortOldest, Page: 2},
+			want: PersonFilmographyState{Type: personFilmographyTypeCrew, Role: "director", Media: personMovieMediaType, Quality: personFilmographyQualityAll, Sort: personFilmographySortOldest, Watched: "watched", Page: 2},
 		},
 		{
 			name:   "missing and invalid values",
 			values: url.Values{"sort": {"invalid"}, "page": {"-1"}},
-			want:   PersonFilmographyState{Type: personFilmographyTypeAll, Role: personFilmographyRoleAll, Media: personFilmographyMediaAll, Quality: personFilmographyQualityPopular, Sort: personFilmographySortFeatured},
+			want:   PersonFilmographyState{Type: personFilmographyTypeAll, Role: personFilmographyRoleAll, Media: personMovieMediaType, Quality: personFilmographyQualityPopular, Sort: personFilmographySortFeatured, Watched: "all"},
 		},
 		{
 			name:   "page capped",
 			values: url.Values{"page": {"999"}},
-			want:   PersonFilmographyState{Type: personFilmographyTypeAll, Role: personFilmographyRoleAll, Media: personFilmographyMediaAll, Quality: personFilmographyQualityPopular, Sort: personFilmographySortFeatured, Page: personFilmographyMaxCredits / personFilmographyPageSize},
+			want:   PersonFilmographyState{Type: personFilmographyTypeAll, Role: personFilmographyRoleAll, Media: personMovieMediaType, Quality: personFilmographyQualityPopular, Sort: personFilmographySortFeatured, Watched: "all", Page: personFilmographyMaxCredits / personFilmographyPageSize},
+		},
+		{
+			name:   "all media",
+			values: url.Values{"media": {"all"}},
+			want:   PersonFilmographyState{Type: personFilmographyTypeAll, Role: personFilmographyRoleAll, Media: personFilmographyMediaAll, Quality: personFilmographyQualityPopular, Sort: personFilmographySortFeatured, Watched: "all"},
+		},
+		{
+			name:   "tv media",
+			values: url.Values{"media": {"tv"}},
+			want:   PersonFilmographyState{Type: personFilmographyTypeAll, Role: personFilmographyRoleAll, Media: "tv", Quality: personFilmographyQualityPopular, Sort: personFilmographySortFeatured, Watched: "all"},
 		},
 	}
 	for _, tt := range tests {
@@ -76,7 +86,7 @@ func TestFilterPersonFilmographyByQuality(t *testing.T) {
 		Role:    personFilmographyRoleAll,
 		Media:   personFilmographyMediaAll,
 		Quality: personFilmographyQualityPopular,
-	})
+	}, nil)
 	if len(popular) != 1 || popular[0].Credit.Title != "Popular" {
 		t.Fatalf("unexpected popular credits: %v", filmographyTitles(popular))
 	}
@@ -86,9 +96,35 @@ func TestFilterPersonFilmographyByQuality(t *testing.T) {
 		Role:    personFilmographyRoleAll,
 		Media:   personFilmographyMediaAll,
 		Quality: personFilmographyQualityAll,
-	})
+	}, nil)
 	if len(all) != 2 {
 		t.Fatalf("expected all credits, got %d", len(all))
+	}
+}
+
+func TestFilterPersonFilmographyByWatchStatus(t *testing.T) {
+	credits := buildPersonFilmography([]models.PersonCredit{
+		{ID: 1, MediaType: "movie", Title: "Watched"},
+		{ID: 2, MediaType: "movie", Title: "Unwatched"},
+		{ID: 1, MediaType: "tv", Title: "TV"},
+	}, nil)
+	for _, tt := range []struct {
+		status string
+		want   []string
+	}{
+		{"all", []string{"Watched", "Unwatched", "TV"}},
+		{"watched", []string{"Watched"}},
+		{"unwatched", []string{"Unwatched"}},
+	} {
+		state := PersonFilmographyState{Type: "all", Role: "all", Media: "all", Quality: "all", Watched: tt.status}
+		got := filmographyTitles(filterPersonFilmography(credits, state, map[int64]bool{1: true}))
+		if !slices.Equal(got, tt.want) {
+			t.Errorf("status %q: got %v, want %v", tt.status, got, tt.want)
+		}
+		path, err := url.Parse(personFilmographyPath(123, state, 1))
+		if err != nil || path.Query().Get("watched") != tt.status {
+			t.Errorf("status %q lost from pagination URL", tt.status)
+		}
 	}
 }
 
