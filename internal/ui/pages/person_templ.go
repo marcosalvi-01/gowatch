@@ -1832,7 +1832,7 @@ func personFilmographyControls(personID int64, state PersonFilmographyState, rol
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = personFilmographySelect("watched", "Watch status", state.Watched, []personFilmographyRoleOption{{Key: "all", Label: "All"}, {Key: "watched", Label: "Watched"}, {Key: "unwatched", Label: "Not watched"}}).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = personFilmographySelect(personFilmographyWatched, "Watch status", state.Watched, []personFilmographyRoleOption{{Key: "all", Label: "All"}, {Key: personFilmographyWatched, Label: "Watched"}, {Key: personFilmographyUnwatched, Label: "Not watched"}}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -2496,8 +2496,8 @@ func filterPersonFilmography(credits []personFilmographyCredit, state PersonFilm
 		if state.Media != personFilmographyMediaAll && !strings.EqualFold(state.Media, credit.Credit.MediaType) {
 			continue
 		}
-		if state.Watched == "watched" || state.Watched == "unwatched" {
-			if !strings.EqualFold(credit.Credit.MediaType, personMovieMediaType) || watched[credit.Credit.ID] != (state.Watched == "watched") {
+		if state.Watched == personFilmographyWatched || state.Watched == personFilmographyUnwatched {
+			if !strings.EqualFold(credit.Credit.MediaType, personMovieMediaType) || watched[credit.Credit.ID] != (state.Watched == personFilmographyWatched) {
 				continue
 			}
 		}

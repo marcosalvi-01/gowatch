@@ -438,7 +438,7 @@ templ personFilmographyControls(personID int64, state PersonFilmographyState, ro
 		@personFilmographySelect("credit_type", "Credit type", state.Type, []personFilmographyRoleOption{{Key: personFilmographyTypeAll, Label: "All credits"}, {Key: personFilmographyTypeActing, Label: "Acting"}, {Key: personFilmographyTypeCrew, Label: "Crew"}})
 		@personFilmographySelect("role", "Role", state.Role, append([]personFilmographyRoleOption{{Key: personFilmographyRoleAll, Label: "All roles"}}, roles...))
 		@personFilmographySelect("media", "Media", state.Media, []personFilmographyRoleOption{{Key: personFilmographyMediaAll, Label: "Movies and TV"}, {Key: personMovieMediaType, Label: "Movies"}, {Key: "tv", Label: "TV"}})
-		@personFilmographySelect("watched", "Watch status", state.Watched, []personFilmographyRoleOption{{Key: "all", Label: "All"}, {Key: "watched", Label: "Watched"}, {Key: "unwatched", Label: "Not watched"}})
+		@personFilmographySelect(personFilmographyWatched, "Watch status", state.Watched, []personFilmographyRoleOption{{Key: "all", Label: "All"}, {Key: personFilmographyWatched, Label: "Watched"}, {Key: personFilmographyUnwatched, Label: "Not watched"}})
 		@personFilmographySelect("quality", "Quality", state.Quality, []personFilmographyRoleOption{{Key: personFilmographyQualityPopular, Label: "Popular credits"}, {Key: personFilmographyQualityAll, Label: "All credits"}})
 		@personFilmographySelect("sort", "Sort", state.Sort, []personFilmographyRoleOption{{Key: personFilmographySortFeatured, Label: "Featured"}, {Key: personFilmographySortNewest, Label: "Newest first"}, {Key: personFilmographySortOldest, Label: "Oldest first"}, {Key: personFilmographySortRating, Label: "Highest rated"}, {Key: personFilmographySortPopular, Label: "Most popular"}})
 		@personFilmographyCount(loadedCount, total, false)
@@ -619,8 +619,8 @@ func filterPersonFilmography(credits []personFilmographyCredit, state PersonFilm
 		if state.Media != personFilmographyMediaAll && !strings.EqualFold(state.Media, credit.Credit.MediaType) {
 			continue
 		}
-		if state.Watched == "watched" || state.Watched == "unwatched" {
-			if !strings.EqualFold(credit.Credit.MediaType, personMovieMediaType) || watched[credit.Credit.ID] != (state.Watched == "watched") {
+		if state.Watched == personFilmographyWatched || state.Watched == personFilmographyUnwatched {
+			if !strings.EqualFold(credit.Credit.MediaType, personMovieMediaType) || watched[credit.Credit.ID] != (state.Watched == personFilmographyWatched) {
 				continue
 			}
 		}

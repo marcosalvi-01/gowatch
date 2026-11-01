@@ -7,6 +7,11 @@ import (
 	"github.com/marcosalvi-01/gowatch/internal/models"
 )
 
+const (
+	personFilmographyWatched   = "watched"
+	personFilmographyUnwatched = "unwatched"
+)
+
 type PersonFilmographyState struct {
 	Type    string
 	Role    string
@@ -24,7 +29,7 @@ func ParsePersonFilmographyState(values url.Values) PersonFilmographyState {
 		Media:   values.Get("media"),
 		Sort:    values.Get("sort"),
 		Quality: values.Get("quality"),
-		Watched: values.Get("watched"),
+		Watched: values.Get(personFilmographyWatched),
 	}
 
 	if state.Type != personFilmographyTypeActing && state.Type != personFilmographyTypeCrew {
@@ -39,7 +44,7 @@ func ParsePersonFilmographyState(values url.Values) PersonFilmographyState {
 	if state.Quality != personFilmographyQualityAll {
 		state.Quality = personFilmographyQualityPopular
 	}
-	if state.Watched != "watched" && state.Watched != "unwatched" {
+	if state.Watched != personFilmographyWatched && state.Watched != personFilmographyUnwatched {
 		state.Watched = "all"
 	}
 	switch state.Sort {
@@ -96,7 +101,7 @@ func personFilmographyPath(personID int64, state PersonFilmographyState, page in
 	query.Set("media", state.Media)
 	query.Set("sort", state.Sort)
 	query.Set("quality", state.Quality)
-	query.Set("watched", state.Watched)
+	query.Set(personFilmographyWatched, state.Watched)
 	query.Set("page", strconv.Itoa(page))
 	return personPagePath(personID) + "?" + query.Encode()
 }
