@@ -107,7 +107,7 @@ func splitMoviesByReleaseStatus(movies []models.MovieItem, now time.Time) ([]mod
 func isUpcomingMovie(movie models.MovieItem, today time.Time) bool {
 	releaseDate := movie.MovieDetails.Movie.ReleaseDate
 	if releaseDate == nil {
-		return false
+		return true
 	}
 
 	return normalizeDayUTC(*releaseDate).After(today)

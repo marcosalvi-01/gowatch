@@ -25,8 +25,8 @@ func TestSplitMoviesByReleaseStatus_SplitsAndSorts(t *testing.T) {
 
 	upcoming, released := splitMoviesByReleaseStatus(movies, now)
 
-	assertMovieIDs(t, upcoming, []int64{3, 2, 1})
-	assertMovieIDs(t, released, []int64{6, 5, 4})
+	assertMovieIDs(t, upcoming, []int64{3, 2, 1, 5})
+	assertMovieIDs(t, released, []int64{6, 4})
 }
 
 func TestIsUpcomingMovie_UsesDateBoundary(t *testing.T) {
